@@ -112,11 +112,13 @@ The following steps apply to self-hosted deployments. They are minimum-baseline 
 1. **Replace default credentials before network exposure.** Default database credentials shipped for local development must be rotated before any networked deployment. Store secrets in a secrets manager (Vault, AWS Secrets Manager, or equivalent); never in environment files checked into version control.
 
 2. **Enforce append-only grants on the audit log table.** The `audit_events` table must grant `INSERT` only — no `UPDATE` or `DELETE`. Verify the grant with:
+
    ```sql
    SELECT grantee, privilege_type
    FROM information_schema.role_table_grants
    WHERE table_name = 'audit_events';
    ```
+
    Any `UPDATE` or `DELETE` privilege on this table indicates a misconfiguration.
 
 3. **Do not expose the substrate API directly to the public internet.** Place the Attestplane API behind a private network boundary, reverse proxy with authentication, or API gateway. No publicly routable endpoint without authentication is supported.
@@ -126,12 +128,14 @@ The following steps apply to self-hosted deployments. They are minimum-baseline 
 5. **Pin and verify dependency checksums.** Use lockfiles (`poetry.lock`, `Cargo.lock`) and verify them against published hashes. Do not use floating version constraints in production.
 
 6. **Run dependency vulnerability audits on a scheduled basis.**
+
    ```bash
    # Rust
    cargo audit
    # Python
    pip-audit
    ```
+
    Integrate these into CI and treat High/Critical advisories as blocking.
 
 7. **Validate Sigstore release signatures before deploying new versions.** From M5 W4 onwards, all releases will carry a Sigstore bundle. Verify with `cosign verify` before deploying any new release into production.

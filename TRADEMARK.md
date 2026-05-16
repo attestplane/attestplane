@@ -334,7 +334,7 @@ relief in any jurisdiction where infringement occurs.
 
 ## Quick Reference
 
-### Can I...
+### Common questions
 
 | Question | Answer |
 |---|---|

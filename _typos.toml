@@ -5,6 +5,8 @@ extend-ignore-identifiers-re = [
 
 [default.extend-words]
 attestplane = "attestplane"
+# BaFin = Bundesanstalt für Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority)
+BaFin = "BaFin"
 
 [files]
 extend-exclude = [
