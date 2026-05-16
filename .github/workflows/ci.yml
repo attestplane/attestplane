@@ -1,0 +1,109 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdown-lint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v17
+        with:
+          globs: |
+            **/*.md
+            !.github/**
+
+  yaml-lint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: frenck/action-yamllint@v1.5
+
+  typos:
+    name: Spell check (typos)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1.26.0
+
+  link-check:
+    name: Link check (lychee)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --max-concurrency 4
+            --accept 200,204,206,301,302,308
+            --exclude-mail
+            './**/*.md'
+          fail: true
+
+  dco-check:
+    name: DCO sign-off check (PRs only)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify Signed-off-by on all PR commits
+        run: |
+          set -e
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          missing=""
+          for sha in $(git log --format='%H' "$base..$head"); do
+            if ! git log -1 --format='%B' "$sha" | grep -q '^Signed-off-by: '; then
+              subject=$(git log -1 --format='%s' "$sha")
+              missing="$missing\n  - ${sha} (${subject})"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            printf "::error::Commits missing DCO Signed-off-by line:%s\n" "$missing"
+            echo ""
+            echo "See CONTRIBUTING.md section 1 and DCO.txt. Sign off with: git commit -s --amend"
+            exit 1
+          fi
+          echo "All commits in PR have DCO sign-off."
+
+  policy-invariants:
+    name: Project policy invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run policy checks
+        run: bash scripts/check-policy.sh
+
+  license-detection:
+    name: License detection (GitHub API)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify GitHub detects Apache-2.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          detected=$(gh api "repos/${{ github.repository }}" -q '.license.spdx_id')
+          if [ "$detected" != "Apache-2.0" ]; then
+            echo "::error::License detection failed: got '$detected', expected 'Apache-2.0'"
+            exit 1
+          fi
+          echo "License correctly detected as Apache-2.0"

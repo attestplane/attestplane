@@ -1,0 +1,13 @@
+# First-party domains: Cloudflare DNS registered 2026-05-17 but websites
+# not yet deployed. Re-enable each entry as the corresponding surface ships.
+https://attestplane\.io.*
+https://attestplane\.com.*
+https://attestplane\.ai.*
+https://attestplane\.dev.*
+https://attestplane\.app.*
+https://docs\.attestplane\.dev.*
+https://app\.attestplane\.app.*
+
+# In-tree placeholders referenced by CONTRIBUTING.md but not yet created
+docs/runbooks/.*
+docs/adr/.*

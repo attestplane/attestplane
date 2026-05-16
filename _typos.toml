@@ -1,0 +1,15 @@
+[default]
+extend-ignore-identifiers-re = [
+  "[A-Z][a-z]*[0-9]+",
+]
+
+[default.extend-words]
+attestplane = "attestplane"
+
+[files]
+extend-exclude = [
+  "LICENSE",
+  "DCO.txt",
+  ".lycheeignore",
+  "_typos.toml",
+]
