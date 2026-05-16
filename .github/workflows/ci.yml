@@ -49,6 +49,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: codespell-project/actions-codespell@v2
+        with:
+          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal
+          skip: .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore
 
   link-check:
     name: Link check (lychee)
