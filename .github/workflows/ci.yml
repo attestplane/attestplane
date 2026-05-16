@@ -22,8 +22,8 @@ jobs:
     name: Markdown lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: DavidAnson/markdownlint-cli2-action@v17
+      - uses: actions/checkout@v6
+      - uses: DavidAnson/markdownlint-cli2-action@v23
         with:
           globs: |
             **/*.md
@@ -33,21 +33,21 @@ jobs:
     name: YAML lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: frenck/action-yamllint@v1.5
 
   typos:
     name: Spell check (typos)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: crate-ci/typos@v1.26.0
+      - uses: actions/checkout@v6
+      - uses: crate-ci/typos@v1.46.2
 
   codespell:
     name: Spell check (codespell)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: codespell-project/actions-codespell@v2
         with:
           ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal
@@ -57,7 +57,7 @@ jobs:
     name: Link check (lychee)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: lycheeverse/lychee-action@v2
         with:
           args: >-
@@ -73,7 +73,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Verify Signed-off-by on all PR commits
@@ -100,7 +100,7 @@ jobs:
     name: Project policy invariants
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run policy checks
         run: bash scripts/check-policy.sh
 
@@ -108,7 +108,7 @@ jobs:
     name: GitHub Actions lint (actionlint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run actionlint via docker
         run: |
           docker run --rm \
@@ -121,7 +121,7 @@ jobs:
     name: Shell script lint (shellcheck)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run shellcheck on scripts/
         run: |
           set -e
@@ -137,8 +137,8 @@ jobs:
     name: REUSE compliance (SPDX headers)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: fsfe/reuse-action@v5
+      - uses: actions/checkout@v6
+      - uses: fsfe/reuse-action@v6
 
   license-detection:
     name: License detection (GitHub API)
