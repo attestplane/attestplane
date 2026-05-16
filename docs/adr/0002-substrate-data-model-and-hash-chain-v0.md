@@ -1,4 +1,5 @@
 # 0002. Substrate core data model and hash chain (v0.0.1)
+
 - **Date**: 2026-05-17
 - **Status**: Accepted
 - **Deciders**: @merchloubna70-dot (founder, sole maintainer at decision time)
@@ -113,6 +114,7 @@ The substrate is append-only and provides no truncation API. Retention period ma
 ## Consequences
 
 ### Positive
+
 - External auditors can re-compute the hash chain from this ADR plus `vectors.json` alone, without depending on Attestplane code.
 - TypeScript and Rust SDKs in M6 will have a precise conformance target (the vectors file) rather than a prose spec.
 - The pure-function chain primitives compose cleanly with M6 multi-writer backends and M7 signature schemes without API breaks.
@@ -120,16 +122,19 @@ The substrate is append-only and provides no truncation API. Retention period ma
 - EU AI Act Art. 12(2)(a) field coverage is present from day one; early customers' logs remain valid through M5+.
 
 ### Negative
+
 - Three Python types (`EventDraft`, `AuditEvent`, `ChainedEvent`) instead of one. Mitigated by `EventDraft` being constructable with kwargs.
 - Forbidding `float` in payloads is a surface friction; callers must round to integers (e.g., basis points, microseconds) or use base64 bytes. Documented in README.
 - The restricted JSON profile is stricter than JCS; some JCS test corpora won't apply. Mitigated by `vectors.json` becoming the authoritative conformance suite.
 - `vectors.json` is a permanent contract. A bug discovered in v0.0.1's canonicalization that changes any hex value would force a `schema_version = 2` migration and dual-verification logic forever.
 
 ### Risks accepted
+
 - The `jcs` Python library and the eventual TypeScript/Rust JCS libraries may have subtle differences in surrogate handling. We accept this risk by requiring `vectors.json` to pass in all three languages before each release; cross-language CI is a release blocker.
 - `uuid_utils` (PyO3-backed) is a binary dependency. We accept this for performance; a pure-Python fallback will be added if it becomes a packaging burden.
 
 ### Reversibility
+
 - API shape changes before v0.0.1 release: trivial, no published artifacts.
 - API shape changes after v0.0.1 release: a breaking 0.x bump, requires migration documentation; `vectors.json` hex values remain frozen.
 - Canonicalization profile changes after v0.0.1 release: requires `schema_version` increment; old vectors stay valid; never retroactive.

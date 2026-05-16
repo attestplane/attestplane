@@ -42,6 +42,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
       - name: Install with dev extras
@@ -64,6 +65,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
       - name: Set up Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
       - name: Install with dev extras
@@ -79,6 +81,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
       - name: Set up Python 3.12
         run: uv python install 3.12
       - name: Install with dev extras
