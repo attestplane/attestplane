@@ -1,0 +1,4 @@
+[codespell]
+skip = .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,scripts/check-policy.sh
+ignore-words-list = BaFin,attestplane,nd
+check-hidden = true

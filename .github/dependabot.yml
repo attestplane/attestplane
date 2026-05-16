@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Singapore
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    labels:
+      - "type:feature"
+      - "area:governance"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

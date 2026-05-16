@@ -123,7 +123,7 @@ scope 对应 crate 或 SDK 包名，例如 `feat(attestchain)`、`fix(python-sdk
 
 - Review 聚焦**行为契约**：审计链不变量是否被满足，而不是风格偏好。
 - 任何 **load-bearing 架构决定**（新框架映射、hash chain 算法变更、TSA 集成方式、安全边界调整）
-  必须附带 ADR（Architecture Decision Record），放入 `docs/adr/`（目录将在第一个 ADR 提交时创建）。
+  必须附带 ADR（Architecture Decision Record），放入 [`docs/adr/`](docs/adr/README.md)，遵循 [`docs/adr/0000-template.md`](docs/adr/0000-template.md) 模板。
   没有对应 ADR 的 load-bearing PR 不会被 merge。
 - Review 意见用具体的代码行引用，不要只写"这里不对"。
 - ADR 格式参考目录内已有文件；ADR 编号递增，不可跳号。
