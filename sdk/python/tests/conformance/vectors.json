@@ -1,0 +1,212 @@
+{
+  "entries": [
+    {
+      "canonical_bytes_sha256_hex": "cbdd375231953c1da6d95bb78897947a42189699e25a2c326bdbf5e61bc42c79",
+      "description": "smallest legal EventDraft: event_type + actor only",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {}
+      },
+      "event_hash_hex": "cbdd375231953c1da6d95bb78897947a42189699e25a2c326bdbf5e61bc42c79",
+      "event_id": "00000000-0000-7000-8000-000000000001",
+      "name": "minimal",
+      "prev_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "dbecc340dd0693f8de897cdf4994af183150da1e82ebd2c697c779aff9c7c06f",
+      "description": "ASCII string and integer in payload",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {
+          "outcome": "approved",
+          "score": 9120
+        }
+      },
+      "event_hash_hex": "dbecc340dd0693f8de897cdf4994af183150da1e82ebd2c697c779aff9c7c06f",
+      "event_id": "00000000-0000-7000-8000-000000000002",
+      "name": "payload_ascii_string",
+      "prev_hash_hex": "cbdd375231953c1da6d95bb78897947a42189699e25a2c326bdbf5e61bc42c79",
+      "seq": 1,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "9b17b65d69dd59a2aef5e0d866aeb25eb84fa0393ac65f5741ff52f4be6968dd",
+      "description": "object key ordering must canonicalize alphabetically",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {
+          "outer": {
+            "a": 2,
+            "m": [
+              3,
+              2,
+              1
+            ],
+            "z": 1
+          }
+        }
+      },
+      "event_hash_hex": "9b17b65d69dd59a2aef5e0d866aeb25eb84fa0393ac65f5741ff52f4be6968dd",
+      "event_id": "00000000-0000-7000-8000-000000000003",
+      "name": "payload_nested_object",
+      "prev_hash_hex": "dbecc340dd0693f8de897cdf4994af183150da1e82ebd2c697c779aff9c7c06f",
+      "seq": 2,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "d8abc38c88649b36ddf793563235ce799c5d1fb06a456a7e44b691086214f59b",
+      "description": "SubjectRef with scheme opaque",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {},
+        "subject_ref": {
+          "scheme": "opaque",
+          "value": "user-42"
+        }
+      },
+      "event_hash_hex": "d8abc38c88649b36ddf793563235ce799c5d1fb06a456a7e44b691086214f59b",
+      "event_id": "00000000-0000-7000-8000-000000000004",
+      "name": "subject_ref_opaque",
+      "prev_hash_hex": "9b17b65d69dd59a2aef5e0d866aeb25eb84fa0393ac65f5741ff52f4be6968dd",
+      "seq": 3,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "1b14ba08e20820898724316d45ad2429a4845535352a88ce9f89dede5323d480",
+      "description": "SubjectRef with scheme sha256_salted",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {},
+        "subject_ref": {
+          "scheme": "sha256_salted",
+          "value": "2c1b00000000000000000000000000000000000000000000000000000000e9"
+        }
+      },
+      "event_hash_hex": "1b14ba08e20820898724316d45ad2429a4845535352a88ce9f89dede5323d480",
+      "event_id": "00000000-0000-7000-8000-000000000005",
+      "name": "subject_ref_sha256_salted",
+      "prev_hash_hex": "d8abc38c88649b36ddf793563235ce799c5d1fb06a456a7e44b691086214f59b",
+      "seq": 4,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "782b88d6856e84f9c3e32ef117e264ac5e5f48924bf8166713b81ebcda9b153a",
+      "description": "all four Art. 12 fields populated",
+      "draft": {
+        "actor": "agent://verifier/v1",
+        "event_type": "biometric_match",
+        "human_verifier": {
+          "scheme": "opaque",
+          "value": "reviewer-7"
+        },
+        "matched_input_ref": "sha256:abcdef0123",
+        "payload": {
+          "top_k": 3
+        },
+        "reference_db_ref": "db://watchlist/v3",
+        "session_id": "session-2026-05-17-abc",
+        "subject_ref": {
+          "scheme": "opaque",
+          "value": "data-subject-01"
+        }
+      },
+      "event_hash_hex": "782b88d6856e84f9c3e32ef117e264ac5e5f48924bf8166713b81ebcda9b153a",
+      "event_id": "00000000-0000-7000-8000-000000000006",
+      "name": "art12_full",
+      "prev_hash_hex": "1b14ba08e20820898724316d45ad2429a4845535352a88ce9f89dede5323d480",
+      "seq": 5,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "2ecb3fbea688d72ed70802d814034a12c4060d13501e1994324b07330fdb6ab6",
+      "description": "NFC-normalized non-ASCII string survives canonicalization",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {
+          "city": "München",
+          "name": "café"
+        }
+      },
+      "event_hash_hex": "2ecb3fbea688d72ed70802d814034a12c4060d13501e1994324b07330fdb6ab6",
+      "event_id": "00000000-0000-7000-8000-000000000007",
+      "name": "payload_utf8_nfc",
+      "prev_hash_hex": "782b88d6856e84f9c3e32ef117e264ac5e5f48924bf8166713b81ebcda9b153a",
+      "seq": 6,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "1b139afcdbaa9b27c02324944dd1b23e9a686e618a5710a89ae7fc0971746295",
+      "description": "bytes are encoded as base64url without padding",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {
+          "blob_b64u": "AAEC"
+        }
+      },
+      "event_hash_hex": "1b139afcdbaa9b27c02324944dd1b23e9a686e618a5710a89ae7fc0971746295",
+      "event_id": "00000000-0000-7000-8000-000000000008",
+      "name": "payload_bytes_base64url",
+      "prev_hash_hex": "2ecb3fbea688d72ed70802d814034a12c4060d13501e1994324b07330fdb6ab6",
+      "seq": 7,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "20814472175b4b39ec35b041eac679479d78dfee861affe9faac9eaf7bf29696",
+      "description": "negative integers and int64 boundary values",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {
+          "max": 9223372036854775807,
+          "min": -9223372036854775808,
+          "neg": -1
+        }
+      },
+      "event_hash_hex": "20814472175b4b39ec35b041eac679479d78dfee861affe9faac9eaf7bf29696",
+      "event_id": "00000000-0000-7000-8000-000000000009",
+      "name": "payload_negative_and_int64_bounds",
+      "prev_hash_hex": "1b139afcdbaa9b27c02324944dd1b23e9a686e618a5710a89ae7fc0971746295",
+      "seq": 8,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    },
+    {
+      "canonical_bytes_sha256_hex": "055d02265e6e9f3ab1f9281fee4f8ba6030430a944830aaed9a36ca6dc6127cf",
+      "description": "arrays preserve insertion order, unlike objects",
+      "draft": {
+        "actor": "agent://test/v1",
+        "event_type": "ai_decision",
+        "payload": {
+          "ints": [
+            3,
+            1,
+            2
+          ],
+          "items": [
+            "z",
+            "a",
+            "m"
+          ]
+        }
+      },
+      "event_hash_hex": "055d02265e6e9f3ab1f9281fee4f8ba6030430a944830aaed9a36ca6dc6127cf",
+      "event_id": "00000000-0000-7000-8000-000000000010",
+      "name": "payload_array_order_preserved",
+      "prev_hash_hex": "20814472175b4b39ec35b041eac679479d78dfee861affe9faac9eaf7bf29696",
+      "seq": 9,
+      "timestamp": "2026-05-17T12:00:00.000000Z"
+    }
+  ],
+  "final_chain_head_hex": "055d02265e6e9f3ab1f9281fee4f8ba6030430a944830aaed9a36ca6dc6127cf",
+  "generated_with": "sdk/python @ attestplane v0.0.1",
+  "schema_version": 1,
+  "spec": "Attestplane restricted-JCS canonicalization, ADR-0002"
+}

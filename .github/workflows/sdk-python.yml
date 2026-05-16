@@ -1,0 +1,91 @@
+name: sdk-python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sdk/python/**"
+      - ".github/workflows/sdk-python.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "sdk/python/**"
+      - ".github/workflows/sdk-python.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-python-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+defaults:
+  run:
+    working-directory: sdk/python
+
+jobs:
+  lint-and-typecheck:
+    name: Ruff + mypy --strict (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+      - name: Install with dev extras
+        run: uv pip install --system -e '.[dev]'
+      - name: Ruff
+        run: ruff check src tests
+      - name: Mypy strict
+        run: mypy
+
+  test:
+    name: pytest (py${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+      - name: Install with dev extras
+        run: uv pip install --system -e '.[dev]'
+      - name: Pytest with coverage gate
+        run: pytest --cov --cov-report=term --cov-fail-under=90
+
+  conformance-vectors-frozen:
+    name: Conformance vectors are byte-frozen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+      - name: Install with dev extras
+        run: uv pip install --system -e '.[dev]'
+      - name: Regenerate vectors.json into temp file
+        run: |
+          python -m tests.conformance.generate_vectors > /tmp/regenerated.json
+      - name: Confirm regenerated vectors match the committed file
+        run: |
+          diff -u tests/conformance/vectors.json /tmp/regenerated.json
