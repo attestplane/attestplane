@@ -7,5 +7,9 @@
   "MD024": { "siblings_only": true },
   "MD036": false,
   "MD040": false,
-  "MD046": false
+  "MD046": false,
+  // MD060 enforces "padded" pipe-table style (| --- | --- |). We use compact
+  // (|---|---|) consistently across all tables; both are valid Markdown and
+  // the compact form is what every existing table in this repo uses.
+  "MD060": false
 }
