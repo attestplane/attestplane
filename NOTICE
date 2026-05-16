@@ -1,0 +1,24 @@
+Attestplane
+Copyright 2026 The Attestplane Authors.
+
+This product includes software developed by
+The Attestplane Authors and project contributors (see git history).
+
+The "Attestplane" and "Attestplane Certified" word marks, as well as any
+associated logos, are trademarks of Attestplane Pte. Ltd. (Singapore,
+in formation as of 2026-05-17). USPTO and EUIPO registration in Class 9
+and Class 42 are intended to be filed in 2026; until registration is
+confirmed in the relevant jurisdiction, the marks are used with the ™
+symbol and will switch to ® only upon successful registration.
+
+Use of the trademarks is governed by TRADEMARK.md in this repository.
+The Apache License 2.0 grants do not extend to use of the trademarks.
+
+------------------------------------------------------------------------
+
+Portions of this software include third-party components distributed
+under their own license terms. Each such component retains its original
+copyright and license notice in its source tree. A consolidated
+attributions file may be added as the project ships compiled artifacts;
+until then, see individual component LICENSE files in `vendor/`,
+`third_party/`, and Cargo / npm / pip dependency manifests.
