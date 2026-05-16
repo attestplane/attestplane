@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Attestplane — verifiable audit substrate for AI agents.
 
 EU AI Act Article 12 ready. Apache-2.0 licensed. See:

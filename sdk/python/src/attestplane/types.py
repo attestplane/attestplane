@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Core data types for the Attestplane substrate.
 
 Three-layer envelope model from ADR-0002:

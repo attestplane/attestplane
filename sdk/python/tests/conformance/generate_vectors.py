@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Generate the conformance vector set for the restricted-JCS profile.
 
 This script is run once per ``schema_version`` to produce ``vectors.json``,

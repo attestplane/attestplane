@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Restricted-JCS canonicalization for audit-event hashing.
 
 This module implements the restricted JSON profile defined in ADR-0002. The

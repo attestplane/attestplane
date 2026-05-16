@@ -104,6 +104,42 @@ jobs:
       - name: Run policy checks
         run: bash scripts/check-policy.sh
 
+  actionlint:
+    name: GitHub Actions lint (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint via docker
+        run: |
+          docker run --rm \
+            -v "${PWD}:/repo:ro" \
+            --workdir /repo \
+            rhysd/actionlint:1.7.7 \
+            -color
+
+  shellcheck:
+    name: Shell script lint (shellcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck on scripts/
+        run: |
+          set -e
+          shopt -s nullglob
+          files=(scripts/*.sh)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no shell scripts to check"
+            exit 0
+          fi
+          shellcheck --severity=warning --shell=bash "${files[@]}"
+
+  reuse-lint:
+    name: REUSE compliance (SPDX headers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fsfe/reuse-action@v5
+
   license-detection:
     name: License detection (GitHub API)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'

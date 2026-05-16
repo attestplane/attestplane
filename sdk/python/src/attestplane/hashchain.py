@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Pure-function hash-chain primitives.
 
 This module is intentionally I/O-free and stateless. All state lives in the

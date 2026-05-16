@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Tests for the restricted-JCS canonicalization layer."""
 
 from __future__ import annotations

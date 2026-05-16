@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 # Project policy invariants. Run by CI; safe to run locally too.
 set -uo pipefail
 
@@ -9,7 +11,7 @@ echo "=== check: registered-mark symbol restricted to NOTICE and TRADEMARK.md ==
 # NOTICE and TRADEMARK.md (and only there as policy-explanation text).
 # In every other doc, marks must use the ™ symbol.
 allowed_files=("NOTICE" "TRADEMARK.md")
-for f in $(find . -maxdepth 2 -type f \( -name '*.md' -o -name 'NOTICE' -o -name 'LICENSE' -o -name 'DCO.txt' \) -not -path './.git/*'); do
+while IFS= read -r -d '' f; do
   basename_f=$(basename "$f")
   is_allowed=false
   for allow in "${allowed_files[@]}"; do
@@ -20,7 +22,7 @@ for f in $(find . -maxdepth 2 -type f \( -name '*.md' -o -name 'NOTICE' -o -name
     grep -n '®' "$f" | sed 's/^/    /'
     fail=1
   fi
-done
+done < <(find . -maxdepth 2 -type f \( -name '*.md' -o -name 'NOTICE' -o -name 'LICENSE' -o -name 'DCO.txt' \) -not -path './.git/*' -print0)
 
 echo ""
 echo "=== check: Cyrillic homoglyphs in latin-script content ==="

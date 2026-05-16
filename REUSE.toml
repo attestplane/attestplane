@@ -1,0 +1,19 @@
+version = 1
+SPDX-PackageName = "attestplane"
+SPDX-PackageSupplier = "The Attestplane Authors"
+SPDX-PackageDownloadLocation = "https://github.com/attestplane/attestplane"
+
+# Default annotation: every file in the repo is © The Attestplane Authors,
+# licensed under Apache-2.0. Files with their own SPDX headers will use those
+# (precedence = aggregate); files without headers fall through to this rule.
+#
+# Source files SHOULD still carry inline SPDX headers — see CONTRIBUTING.md.
+# This block exists primarily to cover binary, data, and dot-file types that
+# cannot host comment headers (JSON, empty marker files, configuration files
+# with strict syntax, generated SBOMs, etc.).
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The Attestplane Authors"
+SPDX-License-Identifier = "Apache-2.0"

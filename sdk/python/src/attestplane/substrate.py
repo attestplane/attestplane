@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """``AttestSubstrate`` — append-only audit-event container.
 
 This is a thin wrapper around the pure ``hashchain`` functions plus a process-

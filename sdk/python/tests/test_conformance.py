@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
 """Conformance test against the frozen ``vectors.json``.
 
 If this test fails, the canonicalization or chain-extend semantics have drifted
