@@ -1,0 +1,74 @@
+name: Feature request
+description: Suggest a new capability, integration, or compliance-framework mapping.
+title: "feat: "
+labels: ["type:feature", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Substantive design proposals (new framework mappings, hash chain algorithm changes, TSA integration shapes, security boundary changes) require an ADR per [CONTRIBUTING.md §5](https://github.com/attestplane/attestplane/blob/main/CONTRIBUTING.md). Use this issue to discuss before drafting the ADR.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user need or compliance requirement is currently unmet?
+      placeholder: "e.g., NIS2 Article 21 incident reporting requires X but Attestplane currently captures only Y."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Outline the capability or integration you have in mind. Be specific about the API surface if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you weighed and why you rejected them. ("None" is an acceptable answer; "I didn't consider any" is not.)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: framework
+    attributes:
+      label: Compliance framework (if applicable)
+      multiple: true
+      options:
+        - EU AI Act
+        - DORA
+        - GDPR
+        - NIS2
+        - CRA (Cyber Resilience Act)
+        - SOC 2
+        - ISO 27001
+        - FedRAMP
+        - Other / not applicable
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Substantive architectural changes need an ADR before implementation.
+      options:
+        - Documentation only
+        - Small API addition / new helper
+        - New integration (TSA, transparency log, framework mapping)
+        - Architectural change (hash chain, security boundary, threat model)
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: I understand that load-bearing changes will require an ADR before implementation.
+          required: true

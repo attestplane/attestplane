@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/attestplane/attestplane/blob/main/SECURITY.md
+    about: Please report security vulnerabilities privately per SECURITY.md — do NOT open a public issue.
+  - name: Commercial / licensing / partnership questions
+    url: https://github.com/attestplane/attestplane/blob/main/TRADEMARK.md
+    about: Trademark use, certification program, or commercial licensing — see TRADEMARK.md or email trademark@attestplane.com.
+  - name: Compliance interpretation questions
+    url: https://github.com/attestplane/attestplane/blob/main/GOVERNANCE.md#10-service-boundaries
+    about: Attestplane provides technical compliance mapping, not legal advice. See GOVERNANCE.md §10 for service boundaries.

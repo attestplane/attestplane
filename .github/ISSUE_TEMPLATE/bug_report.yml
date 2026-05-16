@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a defect in Attestplane substrate, SDK, or documentation.
+title: "bug: "
+labels: ["type:bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please **do not** report security vulnerabilities here — see [SECURITY.md](https://github.com/attestplane/attestplane/blob/main/SECURITY.md) instead.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing what is broken.
+      placeholder: "e.g., AttestSubstrate.audit() emits duplicate hash chain entries when called concurrently from two FastAPI workers."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Minimum steps to reproduce. A failing test or a runnable snippet is ideal.
+      value: |
+        1.
+        2.
+        3.
+
+        Expected:
+        Actual:
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Attestplane version
+      description: Output of `attestplane --version` or commit SHA if running from source.
+      placeholder: "v0.0.0 or commit 3faa770"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: SDK / language binding
+      options:
+        - Python
+        - TypeScript / Node
+        - Rust
+        - Other / not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, runtime version, deployment shape (single host, container, k8s, etc.), TSA endpoint in use.
+      placeholder: |
+        OS: macOS 14.5 / Ubuntu 24.04 / Debian 12
+        Runtime: Python 3.12.3 / Node 20.11
+        TSA: freetsa.org / DigiCert / DFN-Cert
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      description: Paste only the relevant portions. Redact any secrets.
+      render: text
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go via SECURITY.md, not here).
+          required: true
+        - label: I am willing to discuss this issue further and provide additional context if asked.
+          required: true
