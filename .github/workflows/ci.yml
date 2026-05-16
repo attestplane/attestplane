@@ -22,8 +22,8 @@ jobs:
     name: Markdown lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: DavidAnson/markdownlint-cli2-action@v23
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd # v23
         with:
           globs: |
             **/*.md
@@ -33,22 +33,22 @@ jobs:
     name: YAML lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: frenck/action-yamllint@v1.5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: frenck/action-yamllint@34b4bbcaeabedcfefad6adea8c5bbc42af0e2d47 # v1.5
 
   typos:
     name: Spell check (typos)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: crate-ci/typos@v1.46.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: crate-ci/typos@aca895bf05aec0cb7dffa6f94495e923224d9f17 # v1.46.2
 
   codespell:
     name: Spell check (codespell)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: codespell-project/actions-codespell@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: codespell-project/actions-codespell@406322ec52dd7b488e48c1c4b82e2a8b3a1bf630 # v2
         with:
           ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal
           skip: .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore
@@ -57,8 +57,8 @@ jobs:
     name: Link check (lychee)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: lycheeverse/lychee-action@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2
         with:
           args: >-
             --no-progress
@@ -73,7 +73,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
       - name: Verify Signed-off-by on all PR commits
@@ -100,7 +100,7 @@ jobs:
     name: Project policy invariants
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run policy checks
         run: bash scripts/check-policy.sh
 
@@ -108,7 +108,7 @@ jobs:
     name: GitHub Actions lint (actionlint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run actionlint via docker
         run: |
           docker run --rm \
@@ -121,7 +121,7 @@ jobs:
     name: Shell script lint (shellcheck)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Run shellcheck on scripts/
         run: |
           set -e
@@ -137,8 +137,8 @@ jobs:
     name: REUSE compliance (SPDX headers)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: fsfe/reuse-action@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6
 
   license-detection:
     name: License detection (GitHub API)
