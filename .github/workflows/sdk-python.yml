@@ -43,14 +43,12 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: sdk/python/pyproject.toml
-      - name: Set up Python ${{ matrix.python }}
-        run: uv python install ${{ matrix.python }}
-      - name: Install with dev extras
-        run: uv pip install --system -e '.[dev]'
-      - name: Ruff
-        run: ruff check src tests
-      - name: Mypy strict
-        run: mypy
+      - name: Install and run lint/type checks
+        run: |
+          uv venv --python ${{ matrix.python }} .venv
+          uv pip install -e '.[dev]'
+          .venv/bin/ruff check src tests
+          .venv/bin/mypy
 
   test:
     name: pytest (py${{ matrix.python }}, ${{ matrix.os }})
@@ -66,12 +64,11 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: sdk/python/pyproject.toml
-      - name: Set up Python ${{ matrix.python }}
-        run: uv python install ${{ matrix.python }}
-      - name: Install with dev extras
-        run: uv pip install --system -e '.[dev]'
-      - name: Pytest with coverage gate
-        run: pytest --cov --cov-report=term --cov-fail-under=90
+      - name: Install and run pytest
+        run: |
+          uv venv --python ${{ matrix.python }} .venv
+          uv pip install -e '.[dev]'
+          .venv/bin/pytest --cov --cov-report=term --cov-fail-under=90
 
   conformance-vectors-frozen:
     name: Conformance vectors are byte-frozen
@@ -82,13 +79,10 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: sdk/python/pyproject.toml
-      - name: Set up Python 3.12
-        run: uv python install 3.12
-      - name: Install with dev extras
-        run: uv pip install --system -e '.[dev]'
-      - name: Regenerate vectors.json into temp file
+      - name: Install and re-generate vectors
         run: |
-          python -m tests.conformance.generate_vectors > /tmp/regenerated.json
+          uv venv --python 3.12 .venv
+          uv pip install -e '.[dev]'
+          .venv/bin/python -m tests.conformance.generate_vectors > /tmp/regenerated.json
       - name: Confirm regenerated vectors match the committed file
-        run: |
-          diff -u tests/conformance/vectors.json /tmp/regenerated.json
+        run: diff -u tests/conformance/vectors.json /tmp/regenerated.json
