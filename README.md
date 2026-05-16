@@ -2,8 +2,9 @@
 
 **Open Trust Substrate for AI Agents**
 
-[![Apache 2.0 License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/attestplane/attestplane/ci.yml?branch=main)](https://github.com/attestplane/attestplane/actions)
+[![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplane/commits/main)
+[![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplane/stargazers)
 [![Alpha — API may change](https://img.shields.io/badge/status-alpha-orange.svg)](#roadmap)
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
