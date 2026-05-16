@@ -5,7 +5,10 @@ extend-ignore-identifiers-re = [
 
 [default.extend-words]
 attestplane = "attestplane"
-# BaFin = Bundesanstalt für Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority)
+
+[default.extend-identifiers]
+# BaFin = Bundesanstalt fur Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority).
+# Listed as identifier so typos does not split it into "Ba"+"Fin" and flag "Ba".
 BaFin = "BaFin"
 
 [files]
