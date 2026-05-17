@@ -40,11 +40,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from attestplane.anchoring.base import (
     ANCHOR_SCHEMA_VERSION,
     AnchorRecord,
+    AnchorVerificationError,
 )
 from attestplane.hashchain import verify_chain
 from attestplane.types import ChainedEvent
@@ -98,16 +99,57 @@ class AnchorVerificationResult:
 def verify_chain_with_anchors(
     events: list[ChainedEvent],
     anchors: list[AnchorRecord],
+    *,
+    trust_roots_der: list[bytes] | None = None,
+    verification_time: datetime | None = None,
 ) -> AnchorVerificationResult:
     """Re-walk the chain AND check every anchor against it.
 
-    See module docstring for the v1 scope (cross-reference checks only;
-    no ASN.1 / OCSP yet).
+    Cross-reference checks (always performed):
+
+    - ``anchor_schema_version`` equals v1
+    - ``anchored_seq`` is in range
+    - ``anchored_event_hash`` matches the chain head at that seq
+    - ``issued_at_claimed`` is UTC
+    - ``tsa_cert_chain`` and ``ocsp_responses`` are both non-empty
+      (CAdES-A requirement per ADR-0003 § 6)
+
+    Full signature verification (performed when ``trust_roots_der`` is
+    provided AND the ``cryptography`` + ``asn1crypto`` extras are
+    installed):
+
+    - The TSA's RSA signature over the SignedAttributes verifies
+      against the leaf cert embedded in the TimeStampToken.
+    - The TimeStampToken's messageImprint matches the AnchorRecord's
+      ``anchored_event_hash``.
+    - The leaf cert chains (single hop) to one of the configured
+      trust roots by issuer-DN match + root-key signature check.
+    - The leaf cert is within its validity window at
+      ``verification_time`` (defaults to "now").
+
+    When ``trust_roots_der`` is ``None``, cross-reference-correct
+    anchors are reported with ``cert_status="VALID_UNVERIFIED"`` —
+    this is the v1 substrate-only behaviour preserved for callers who
+    have not installed the anchor extras.
     """
     chain_result = verify_chain(events)
     seqs_in_chain = {ev.seq for ev in events}
     anchor_results: list[SingleAnchorResult] = []
     anchored_seqs: set[int] = set()
+
+    # Lazy-import the rfc3161 module so substrate-only installs that
+    # never call verify_chain_with_anchors(trust_roots_der=...) do not
+    # need the anchor extras.
+    _rfc3161: Any = None
+    if trust_roots_der is not None:
+        try:
+            from attestplane.anchoring import rfc3161 as _rfc3161_mod
+            _rfc3161 = _rfc3161_mod
+        except ImportError as exc:  # pragma: no cover
+            raise AnchorVerificationError(
+                "trust_roots_der was provided but the 'anchor' extras are "
+                "not installed; install with: pip install attestplane[anchor]"
+            ) from exc
 
     for anchor in anchors:
         provider = anchor.tsa_provider_id
@@ -187,17 +229,43 @@ def verify_chain_with_anchors(
             ))
             continue
 
-        # v1 reaches here when cross-references all match. Mark valid
-        # but flag cert_status as VALID_UNVERIFIED until the M5 follow-up
-        # ships ASN.1 / OCSP signature checks.
-        anchor_results.append(SingleAnchorResult(
-            seq=anchor.anchored_seq,
-            provider=provider,
-            valid=True,
-            cert_status="VALID_UNVERIFIED",
-            ltv_artifacts_present=True,
-            reason=None,
-        ))
+        # Cross-reference checks have all passed. Decide cert_status:
+        if _rfc3161 is not None and trust_roots_der is not None:
+            try:
+                parsed = _rfc3161.parse_timestamp_response(anchor.tsa_token)
+                _rfc3161.verify_timestamp_token(
+                    parsed,
+                    expected_digest=anchor.anchored_event_hash,
+                    trust_roots_der=trust_roots_der,
+                    verification_time=verification_time,
+                )
+            except AnchorVerificationError as exc:
+                anchor_results.append(SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=True,
+                    reason=str(exc),
+                ))
+                continue
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=True,
+                cert_status="VALID",
+                ltv_artifacts_present=True,
+                reason=None,
+            ))
+        else:
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=True,
+                cert_status="VALID_UNVERIFIED",
+                ltv_artifacts_present=True,
+                reason=None,
+            ))
         anchored_seqs.add(anchor.anchored_seq)
 
     unanchored_seqs = seqs_in_chain - anchored_seqs

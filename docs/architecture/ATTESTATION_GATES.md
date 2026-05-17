@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # ATTESTATION_GATES — Attestplane A1–A5
 
-> **Status:** v0.0.1-alpha 定义稿。A1–A4 pre-merge 强制；A5 nightly + release blocker（M5 起激活）。
+> **Status:** v0.0.2-alpha 修订稿。A1–A4 pre-merge 强制；**A5 已激活**（pre-merge 校验 + nightly 完整 RFC-3161 信任链）。
 > 任何 A 失败 = 阻塞合并或阻塞发布，不接受绕过。
 >
 > **命名沿革：** 本文件的 gate 编号沿用项目早期 `acceptance` 分支命名传统（AIOS Q1–Q20 → Attestplane A1–A5），与 AIOS `ACCEPTANCE_CRITERIA.md` 同源；详见 `docs/architecture/aios_to_attestplane_migration_plan_20260517.md` § 命名沿革。
@@ -16,13 +16,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ### 验收清单编号
 
-| 范围                  | 编号 | 触发时机             | 当前状态           |
-|-----------------------|------|----------------------|--------------------|
-| 规范化字节确定性      | A1   | pre-merge            | v0.0.1-alpha 通过  |
-| 单事件 hash 完整性    | A2   | pre-merge            | v0.0.1-alpha 通过  |
-| 重排序与删除检测      | A3   | pre-merge            | v0.0.1-alpha 通过  |
-| 跨语言字节一致性      | A4   | pre-merge            | v0.0.1-alpha 通过  |
-| 段基数可验证（锚定）  | A5   | nightly + release    | M5 起激活          |
+| 范围                  | 编号 | 触发时机                          | 当前状态                       |
+|-----------------------|------|-----------------------------------|--------------------------------|
+| 规范化字节确定性      | A1   | pre-merge                         | v0.0.1-alpha 通过              |
+| 单事件 hash 完整性    | A2   | pre-merge                         | v0.0.1-alpha 通过              |
+| 重排序与删除检测      | A3   | pre-merge                         | v0.0.1-alpha 通过              |
+| 跨语言字节一致性      | A4   | pre-merge                         | v0.0.1-alpha 通过              |
+| 段基数可验证（锚定）  | A5   | pre-merge + nightly + release     | **v0.0.2-alpha 激活**          |
 
 ### 失败语义
 
@@ -179,10 +179,19 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 ### A5：段基数可验证（Segment cardinality via RFC-3161 anchoring）
 
 **类别**：Anchoring + Audit
-**Milestone 强制**：v0.1.0 / M5（实现 ADR-0003 后激活）
-**触发时机**：nightly + release blocker
+**Milestone 强制**：**v0.0.2-alpha 激活**（设计骨架 + 真 RFC-3161 实现已合入 `main`）
+**触发时机**：pre-merge + nightly + release blocker
 
-**测试方法**（M5 起执行；当前仅占位）：
+**v0.0.2-alpha 已实施的部分**：
+
+- `attestplane.anchoring.{base,mock,composite,verifier,worker,rfc3161,testing}` Python 模块全部 ship
+- `attestplane/anchoring.ts` TypeScript 端骨架 ship
+- `TestTSAAuthority` 自签 CA + leaf 证书 + 真 RSA-PKCS1v15-SHA256 签名 + asn1crypto RFC-3161 编解码
+- `parse_timestamp_response` + `verify_timestamp_token` 真签名校验：messageImprint、leaf 签名、信任根链路、validity window
+- `sdk/python/tests/conformance/anchor_vectors.json` 3 个 frozen vector，每次 CI 重放
+- 79 个 anchoring 测试（base 41 + worker 15 + rfc3161 14 + anchor_vectors 9）pre-merge 全绿
+
+**测试方法**：
 
 - 步骤 1: 执行一组连续 100 个事件，分为 10 个 segment（每段 10 个事件），每段结束调用 `seal_segment(chain, segment_id, tsa_url)`，从 RFC-3161 TSA 获取 timestamp token（TST），将 TST + 段头 hash + 段尾 hash + 段基数 N=10 写入 `segment_anchors` 持久化。
 - 步骤 2: 调用 `verify_anchored_chain(events, anchors)`，重算每段头尾 hash 并比对 TST 中嵌入的 messageImprint 是否匹配；同时校验段基数 `count(events_in_segment) == anchor.cardinality`。
@@ -196,11 +205,14 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 - TST messageImprint 不匹配 → `ChainVerificationError`，`error.code == "ANCHOR_HASH_MISMATCH"`。
 - TSA 时间倒退 → `ChainVerificationError`，`error.code == "ANCHOR_TIME_REGRESSION"`。
 
-**测试位置**（M5 计划，当前不存在）：
+**测试位置**：
 
-- `sdk/python/tests/anchoring/test_a5_segment_anchor.py`
-- `sdk/typescript/test/anchoring.test.ts`
-- nightly 工作流：`.github/workflows/nightly-anchor.yml`（M5 创建）
+- `sdk/python/tests/anchoring/test_anchoring.py` —— 设计骨架 41 个用例（pre-merge）
+- `sdk/python/tests/anchoring/test_worker.py` —— Anchorer 后台 worker 15 个用例（pre-merge）
+- `sdk/python/tests/anchoring/test_rfc3161.py` —— TestTSAAuthority 端到端 14 个用例（pre-merge）
+- `sdk/python/tests/anchoring/test_anchor_vectors.py` —— frozen `anchor_vectors.json` 重放 9 个用例（pre-merge）
+- `sdk/typescript/test/anchoring.test.ts` —— TypeScript 端 38 个用例（pre-merge）
+- nightly 工作流（M5 创建）：对真 FreeTSA / DigiCert endpoint 发起 1 次锚定请求，验证完整 trust chain
 
 **反例**（绕过则视为违规）：
 
@@ -208,8 +220,10 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 - 段基数字段允许 caller 在 verify 时覆盖（如 `verify_anchored_chain(events, anchors, override_cardinality=True)`）。
 - TST 使用本地时间而非 TSA 返回的 `genTime`。
 - 段头尾 hash 不写入 anchor（仅写入 segment_id），导致段内任意篡改可绕过。
+- 不传 `trust_roots_der` 时 verifier 把 `cert_status` 标 `VALID` 而非 `VALID_UNVERIFIED`（绕过真签名校验）。
+- TSA 返回 `granted_with_mods` 之外的状态时仍构造 `AnchorRecord`（必须 `AnchorVerificationError`）。
 
-**当前占位**：M5 之前，A5 在 `docs/policy/forbidden_claims.md` 中被列为"Designed toward but not yet shipped" — 任何宣称 Attestplane "已锚定 RFC-3161" 的对外材料均违反 claims policy。
+**Public-claim 升级**：v0.0.2-alpha 起，凡引用 `docs/spec/anchor_vectors.json` 或 `verify_chain_with_anchors(..., trust_roots_der=[...])` 走 `cert_status="VALID"` 路径的对外材料，可使用 `field_supported` / `verified_in_test` 措辞引用 ADR-0003。直接使用 `MockTSAProvider` 或 v0.0.1-alpha 时期 `cert_status="VALID_UNVERIFIED"` 路径的，仍只能用 `designed_toward` 措辞。
 
 ---
 
@@ -221,7 +235,7 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 | A2  | 单事件 payload 篡改 → verify_chain fail   | HashChain         | v0.0.1-alpha | pre-merge        |
 | A3  | reorder / delete / insert → verify fail   | HashChain         | v0.0.1-alpha | pre-merge        |
 | A4  | Python ↔ TypeScript 同 vector 字节相同    | Conformance       | v0.0.1-alpha | pre-merge        |
-| A5  | RFC-3161 anchor 段基数与段头尾 hash 一致  | Anchoring + Audit | v0.1.0 / M5  | nightly + release|
+| A5  | RFC-3161 anchor 段基数与段头尾 hash 一致  | Anchoring + Audit | v0.0.2-alpha | pre-merge + nightly + release|
 
 ---
 

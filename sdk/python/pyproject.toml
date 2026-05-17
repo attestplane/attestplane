@@ -42,6 +42,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+anchor = [
+    "cryptography>=43",
+    "asn1crypto>=1.5",
+]
 dev = [
     "pytest>=8",
     "pytest-cov>=5",
@@ -50,6 +54,8 @@ dev = [
     "hypothesis>=6.100",
     "cyclonedx-bom>=4.5",
     "build>=1.2",
+    "cryptography>=43",
+    "asn1crypto>=1.5",
 ]
 
 [project.scripts]
@@ -97,6 +103,10 @@ warn_unreachable = true
 warn_unused_ignores = true
 disallow_any_explicit = false
 files = ["src/attestplane"]
+
+[[tool.mypy.overrides]]
+module = ["asn1crypto", "asn1crypto.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
