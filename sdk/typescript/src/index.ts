@@ -15,6 +15,12 @@ export {
 } from './adapters.js';
 export { CanonicalizationError, canonicalize } from './canonical.js';
 export {
+  CanonicalTextError,
+  canonicalizeText,
+  textHash,
+  textHashHex,
+} from './canonical_text.js';
+export {
   ALL_EVENT_TYPES_V1,
   BUDGET_EVENT,
   EVAL_EVENT,

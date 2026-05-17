@@ -1,0 +1,91 @@
+{
+  "$schema_version": 1,
+  "description": "Frozen conformance vectors for the v1 canonical-text canonicalizer. Cross-language byte stable: a conforming TypeScript implementation MUST reproduce every canonical_utf8_hex and text_hash_hex value byte-for-byte.",
+  "entries": [
+    {
+      "canonical_utf8_hex": "6167656e745f616c706861",
+      "description": "Plain ASCII lowercase passes through.",
+      "input": "agent_alpha",
+      "name": "ascii_lowercase",
+      "text_hash_hex": "605ca4a53539a0955e88aae14a738b757daf9613cb304fa8adf0371e61537abd"
+    },
+    {
+      "canonical_utf8_hex": "6167656e745f616c706861",
+      "description": "Mixed case → lowercase.",
+      "input": "Agent_Alpha",
+      "name": "ascii_mixed_case",
+      "text_hash_hex": "605ca4a53539a0955e88aae14a738b757daf9613cb304fa8adf0371e61537abd"
+    },
+    {
+      "canonical_utf8_hex": "6167656e7420616c706861",
+      "description": "Runs of whitespace collapse, edges trim.",
+      "input": "  Agent\t Alpha\n",
+      "name": "ascii_whitespace_fold",
+      "text_hash_hex": "ac6e7ef7a3e19f7503db9b6ae0efe773f96642b710b4378f960dbcf9c6cdf329"
+    },
+    {
+      "canonical_utf8_hex": "6167656e745f636166c3a9",
+      "description": "NFD-decomposed é (e + combining acute) normalises to single NFC code point.",
+      "input": "agent_café",
+      "name": "nfc_decomposed_to_composed",
+      "text_hash_hex": "a46cfc01f4cf27281c470955bbb03032ae45aa3d5fbe95b43a9fe741da1c1431"
+    },
+    {
+      "canonical_utf8_hex": "6167656e745f636166c3a9",
+      "description": "Same input but caller provided decomposed form; result MUST equal the composed-form vector's hash.",
+      "input": "agent_café",
+      "name": "nfc_decomposed_input",
+      "text_hash_hex": "a46cfc01f4cf27281c470955bbb03032ae45aa3d5fbe95b43a9fe741da1c1431"
+    },
+    {
+      "canonical_utf8_hex": "6167656e74616c706861",
+      "description": "U+200B disappears.",
+      "input": "agent​alpha",
+      "name": "zero_width_space_stripped",
+      "text_hash_hex": "6e4bbacf1eb32fa118f3350f86ff6317c13adf5c0cf15bb10aaf8f540ba1fde0"
+    },
+    {
+      "canonical_utf8_hex": "6167656e74616c706861",
+      "description": "U+200D disappears.",
+      "input": "agent‍alpha",
+      "name": "zero_width_joiner_stripped",
+      "text_hash_hex": "6e4bbacf1eb32fa118f3350f86ff6317c13adf5c0cf15bb10aaf8f540ba1fde0"
+    },
+    {
+      "canonical_utf8_hex": "6167656e745f616c706861",
+      "description": "U+FEFF disappears.",
+      "input": "﻿agent_alpha",
+      "name": "bom_stripped",
+      "text_hash_hex": "605ca4a53539a0955e88aae14a738b757daf9613cb304fa8adf0371e61537abd"
+    },
+    {
+      "canonical_utf8_hex": "6167656e7420616c7068612062657461",
+      "description": "Combination of all four stages on one input.",
+      "input": "  Agent​  Alpha‍ \tBeta  ",
+      "name": "mixed_whitespace_and_zero_width",
+      "text_hash_hex": "597aa31191126478a008451ad08f4988db9940914c7f3bcbbbe837142a5e1a10"
+    },
+    {
+      "canonical_utf8_hex": "e4bba3e79086e4baba20616c706861",
+      "description": "CJK characters are not affected by lowercase; NFC + whitespace fold still apply.",
+      "input": "  代理‍人　Alpha  ",
+      "name": "cjk_passthrough",
+      "text_hash_hex": "6cc336e0c68c1767d0514947761047716ae5d6f43132a16883606f18825ecdcf"
+    },
+    {
+      "canonical_utf8_hex": "",
+      "description": "Pure whitespace folds to empty string.",
+      "input": "  \t  \n  ",
+      "name": "empty_after_fold",
+      "text_hash_hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "canonical_utf8_hex": "6167656e7420616c706861",
+      "description": "Single intermediate space remains.",
+      "input": "agent alpha",
+      "name": "single_space_preserved",
+      "text_hash_hex": "ac6e7ef7a3e19f7503db9b6ae0efe773f96642b710b4378f960dbcf9c6cdf329"
+    }
+  ],
+  "spec": "docs/spec/canonical-text-v1.md"
+}

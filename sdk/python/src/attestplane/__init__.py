@@ -13,6 +13,12 @@ from attestplane.adapters import (
     GenericRuntimeAdapter,
 )
 from attestplane.canonical import CanonicalizationError, canonicalize
+from attestplane.canonical_text import (
+    CanonicalTextError,
+    canonicalize_text,
+    text_hash,
+    text_hash_hex,
+)
 from attestplane.event_types import (
     ALL_EVENT_TYPES_V1,
     BUDGET_EVENT,
@@ -99,6 +105,7 @@ __all__ = [
     "AdapterTranslationError",
     "AttestSubstrate",
     "AuditEvent",
+    "CanonicalTextError",
     "CanonicalizationError",
     "ChainHead",
     "ChainedEvent",
@@ -126,10 +133,13 @@ __all__ = [
     "genesis_head",
     "hash_event",
     "build_auditor_export",
+    "canonicalize_text",
     "is_known_v1_event_type",
     "load_all_registries",
     "load_dora_article_8",
     "load_eu_ai_act_article_12",
+    "text_hash",
+    "text_hash_hex",
     "verify_chain",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
