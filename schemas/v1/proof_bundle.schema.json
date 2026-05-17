@@ -231,6 +231,73 @@
         "bundle": { "type": "string", "description": "Base64-encoded Sigstore bundle bytes." },
         "covers_canonical_sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
       }
+    },
+    "signatures": {
+      "type": "array",
+      "description": "Optional per-event or per-segment-head Ed25519 signatures produced by an ADR-0005 Signer. Strictly additive in v1 — bundles produced before ADR-0005 ship omit this field entirely. Verifier semantics (signature_status, plurality, coverage transitivity) locked in docs/architecture/adr_0005_t3_t4_review_20260517.md § 1 D10–D12.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "signature_schema_version",
+          "signed_seq",
+          "signed_event_hash_hex",
+          "signature_hex",
+          "key_id",
+          "public_key_der_b64",
+          "signing_cert_chain_b64",
+          "signed_at",
+          "signature_mode",
+          "signed_payload_b64"
+        ],
+        "properties": {
+          "signature_schema_version": {
+            "type": "integer",
+            "const": 1,
+            "description": "Frozen at 1 for v1. Bumping requires a new ADR + deprecation window per ADR-0005 plan § 7."
+          },
+          "signed_seq": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signed_event_hash_hex": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "signature_hex": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{128}$",
+            "description": "Ed25519 signature (64 bytes = 128 hex chars)."
+          },
+          "key_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "description": "16-byte hex fingerprint (first 16 bytes of SHA-256 over public_key_der)."
+          },
+          "public_key_der_b64": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SubjectPublicKeyInfo DER bytes (Ed25519) base64-encoded."
+          },
+          "signing_cert_chain_b64": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Empty in v1 (bring-your-own-key path). ADR-0007 fills with Fulcio short-lived certs without bumping schema."
+          },
+          "signed_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+          },
+          "signature_mode": {
+            "enum": ["segment_head", "per_event"]
+          },
+          "signed_payload_b64": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The canonical-JSON bytes that Ed25519 signed. Verifier reconstructs and compares for defense in depth."
+          }
+        }
+      }
     }
   }
 }

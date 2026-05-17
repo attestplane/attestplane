@@ -1,0 +1,222 @@
+{
+  "$schema_version": 1,
+  "description": "Frozen signature vectors for ADR-0005 T7 conformance. Each entry is byte-stable across Python and TypeScript implementations of the signing scheme. Cross-language gate: TS T6 reads this file and reproduces canonical_payload_b64 + verifies signature_hex using public_key_der_b64; any drift fails CI.",
+  "frozen_at": "2026-05-17T12:00:00+00:00",
+  "shared_chain": {
+    "chain_id_prefix": "vec-",
+    "events": [
+      {
+        "event_hash_hex": "aab4716640768a30955247dc1443b74027e601f811df4771895cc856ef67a45a",
+        "seq": 0
+      },
+      {
+        "event_hash_hex": "9d0ea81cfd087981eefe499afa71d8185e556e5c21df247a406dd264ffbaf798",
+        "seq": 1
+      },
+      {
+        "event_hash_hex": "a04ac25b65988c67246f646b71c0de040af333e155f0a10d0d652ba3e1b7fddc",
+        "seq": 2
+      },
+      {
+        "event_hash_hex": "205d2505c3727e947c1f903c12a77ea1b8d69a5ee04646898846383bad76601e",
+        "seq": 3
+      },
+      {
+        "event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "seq": 4
+      }
+    ],
+    "verification_time": "2026-05-17T12:00:00+00:00"
+  },
+  "spec": "docs/architecture/adr_0005_t3_t4_review_20260517.md",
+  "vectors": [
+    {
+      "canonical_payload_b64": "eyJjaGFpbl9pZCI6InZlYy0xIiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+      "description": "Segment-head mode, seed=0x00\u00d732, chain_id='vec-1', seq=4. Locks the 5-key canonical-JSON recipe per ADR-0005 T3+T4 review \u00a7 1 D1.",
+      "expected_verifier_status": "valid",
+      "input": {
+        "chain_id": "vec-1",
+        "mode": "segment_head",
+        "seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_seq": 4
+      },
+      "name": "segment_head_signed_seed00",
+      "record": {
+        "key_id": "339e2ff917630507b6a423b5ce084e28",
+        "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+        "signature_hex": "10aaad69e6648fc905d5471f48e2e44f3e85d1521e92b3e3a0f678d377927b18c6f5c844a24d1e441ae32c2e2097484359dff2ae2f771c58bfda4e8353fc020f",
+        "signature_mode": "segment_head",
+        "signature_schema_version": 1,
+        "signed_at": "2026-05-17T12:00:00.000000Z",
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_payload_b64": "eyJjaGFpbl9pZCI6InZlYy0xIiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+        "signed_seq": 4,
+        "signing_cert_chain_b64": []
+      },
+      "trust_roots": [
+        {
+          "key_id": "339e2ff917630507b6a423b5ce084e28",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_until": "2027-12-31T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "canonical_payload_b64": "eyJhY3RvciI6ImEyIiwiZXZlbnRfaWQiOiIwMDAwMDAwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiLCJldmVudF90eXBlIjoiZXZhbF9ldmVudCIsImh1bWFuX3ZlcmlmaWVyIjpudWxsLCJtYXRjaGVkX2lucHV0X3JlZiI6bnVsbCwicGF5bG9hZCI6eyJpIjoyfSwicmVmZXJlbmNlX2RiX3JlZiI6bnVsbCwic2NoZW1hX3ZlcnNpb24iOjEsInNlc3Npb25faWQiOm51bGwsInN1YmplY3RfcmVmIjpudWxsLCJ0aW1lc3RhbXAiOiIyMDI2LTA1LTE3VDEyOjAwOjAwLjAwMDAwMFoifQ==",
+      "description": "Per-event mode, seed=0x01\u00d732, signing the canonicalize(AuditEvent) bytes of chain[2]. Byte-identical to what hash_event() consumes.",
+      "expected_verifier_status": "valid",
+      "input": {
+        "chain_id": "vec-2",
+        "mode": "per_event",
+        "seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+        "signed_event_hash_hex": "a04ac25b65988c67246f646b71c0de040af333e155f0a10d0d652ba3e1b7fddc",
+        "signed_seq": 2
+      },
+      "name": "per_event_signed_seed01",
+      "record": {
+        "key_id": "fd110d301d2f077de1414b8f99f441b1",
+        "public_key_der_b64": "MCowBQYDK2VwAyEAiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+        "signature_hex": "3eaeb6958babf273fc71972e370b557552fe198db41cd43335ebeb39f72fbe93486d3ff24ee9c60d3e0b5012d15d9d11727f6e067cf902449f2d1fd2aed68002",
+        "signature_mode": "per_event",
+        "signature_schema_version": 1,
+        "signed_at": "2026-05-17T12:00:00.000000Z",
+        "signed_event_hash_hex": "a04ac25b65988c67246f646b71c0de040af333e155f0a10d0d652ba3e1b7fddc",
+        "signed_payload_b64": "eyJhY3RvciI6ImEyIiwiZXZlbnRfaWQiOiIwMDAwMDAwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiLCJldmVudF90eXBlIjoiZXZhbF9ldmVudCIsImh1bWFuX3ZlcmlmaWVyIjpudWxsLCJtYXRjaGVkX2lucHV0X3JlZiI6bnVsbCwicGF5bG9hZCI6eyJpIjoyfSwicmVmZXJlbmNlX2RiX3JlZiI6bnVsbCwic2NoZW1hX3ZlcnNpb24iOjEsInNlc3Npb25faWQiOm51bGwsInN1YmplY3RfcmVmIjpudWxsLCJ0aW1lc3RhbXAiOiIyMDI2LTA1LTE3VDEyOjAwOjAwLjAwMDAwMFoifQ==",
+        "signed_seq": 2,
+        "signing_cert_chain_b64": []
+      },
+      "trust_roots": [
+        {
+          "key_id": "fd110d301d2f077de1414b8f99f441b1",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_until": "2027-12-31T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "canonical_payload_b64": "eyJjaGFpbl9pZCI6InZlYy0zIiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+      "description": "Two seeds (0x00, 0x02) sign the same segment head. Both records share signed_payload but differ in key_id and signature. Verifier: both valid; signed_segment_count=5 (covers seqs 0..4 via transitivity).",
+      "expected_verifier_status": "valid",
+      "input": {
+        "chain_id": "vec-3",
+        "mode": "segment_head",
+        "seeds_hex": [
+          "0000000000000000000000000000000000000000000000000000000000000000",
+          "0202020202020202020202020202020202020202020202020202020202020202"
+        ],
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_seq": 4
+      },
+      "name": "multi_signer_plurality",
+      "records": [
+        {
+          "key_id": "339e2ff917630507b6a423b5ce084e28",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+          "signature_hex": "dea797f7acc54d7cbf39bd7817ada28e153a5eea47cab7ef7027b2b7083cd82aee039a16c79a1f1f44b5a9e905b8e6523dca6efdbed805af395bddb1ee742d06",
+          "signature_mode": "segment_head",
+          "signature_schema_version": 1,
+          "signed_at": "2026-05-17T12:00:00.000000Z",
+          "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+          "signed_payload_b64": "eyJjaGFpbl9pZCI6InZlYy0zIiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+          "signed_seq": 4,
+          "signing_cert_chain_b64": []
+        },
+        {
+          "key_id": "47dea58ea00fae9417ee19d76755bfef",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAgTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+          "signature_hex": "2626a52d49aa359a1016a82b754c210680571fc0036843c1d069bc6570ae73cbb3554df1b474740c96ce7fd2de09a2fd98a33af7491f238dd0de69695b372a06",
+          "signature_mode": "segment_head",
+          "signature_schema_version": 1,
+          "signed_at": "2026-05-17T12:00:00.000000Z",
+          "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+          "signed_payload_b64": "eyJjaGFpbl9pZCI6InZlYy0zIiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+          "signed_seq": 4,
+          "signing_cert_chain_b64": []
+        }
+      ],
+      "trust_roots": [
+        {
+          "key_id": "339e2ff917630507b6a423b5ce084e28",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_until": "2027-12-31T00:00:00Z"
+        },
+        {
+          "key_id": "47dea58ea00fae9417ee19d76755bfef",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAgTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_until": "2027-12-31T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "canonical_payload_b64": "eyJjaGFpbl9pZCI6InZlYy00IiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+      "description": "Signature produced with seed=0xff\u00d732 but trust roots only contain seed=0x00. Verifier: unknown_key (per-seq AND bundle).",
+      "expected_verifier_status": "unknown_key",
+      "input": {
+        "chain_id": "vec-4",
+        "mode": "segment_head",
+        "seed_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_seq": 4
+      },
+      "name": "unknown_key_replay",
+      "record": {
+        "key_id": "8d5eb75dbb64464ac9369d2416a026c9",
+        "public_key_der_b64": "MCowBQYDK2VwAyEAdqFZIESm5PURJlvKc6YE2QsFKdHfYCvjChmpJXZg0fU=",
+        "signature_hex": "f4bed953623457fe7c67f4d11276882fc1550a3661780d68bb737e10e57bb7299088d204aa76da7328847f5fe9463f17a89f5851fe6a4156d9e074df0d0d9501",
+        "signature_mode": "segment_head",
+        "signature_schema_version": 1,
+        "signed_at": "2026-05-17T12:00:00.000000Z",
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_payload_b64": "eyJjaGFpbl9pZCI6InZlYy00IiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+        "signed_seq": 4,
+        "signing_cert_chain_b64": []
+      },
+      "trust_roots": [
+        {
+          "key_id": "339e2ff917630507b6a423b5ce084e28",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_until": "2027-12-31T00:00:00Z"
+        }
+      ]
+    },
+    {
+      "canonical_payload_b64": "eyJjaGFpbl9pZCI6InZlYy01IiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+      "description": "Signature byte flipped (first byte XOR 0x01); Ed25519 verify fails. Verifier: invalid.",
+      "expected_verifier_status": "invalid",
+      "input": {
+        "chain_id": "vec-5",
+        "mode": "segment_head",
+        "seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_seq": 4
+      },
+      "name": "tampered_payload",
+      "record": {
+        "key_id": "339e2ff917630507b6a423b5ce084e28",
+        "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+        "signature_hex": "b44ab2642b537e6b90217d21e2ec7db6fbfe5ec048af5534c89fd8273758ba9fe4ce1ab4fab784a884499699fbb88f9a14ba94725853fcd5bfe4036197718507",
+        "signature_mode": "segment_head",
+        "signature_schema_version": 1,
+        "signed_at": "2026-05-17T12:00:00.000000Z",
+        "signed_event_hash_hex": "d11565ee24729ff24d743b4f3acd3d93367b3ce357442f03afe5bcf0e1a6f815",
+        "signed_payload_b64": "eyJjaGFpbl9pZCI6InZlYy01IiwiZXZlbnRfaGFzaCI6ImQxMTU2NWVlMjQ3MjlmZjI0ZDc0M2I0ZjNhY2QzZDkzMzY3YjNjZTM1NzQ0MmYwM2FmZTViY2YwZTFhNmY4MTUiLCJzY2hlbWFfdmVyc2lvbiI6MSwic2VxIjo0LCJzaWduYXR1cmVfc2NoZW1hX3ZlcnNpb24iOjF9",
+        "signed_seq": 4,
+        "signing_cert_chain_b64": []
+      },
+      "trust_roots": [
+        {
+          "key_id": "339e2ff917630507b6a423b5ce084e28",
+          "public_key_der_b64": "MCowBQYDK2VwAyEAO2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ik=",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_until": "2027-12-31T00:00:00Z"
+        }
+      ]
+    }
+  ]
+}

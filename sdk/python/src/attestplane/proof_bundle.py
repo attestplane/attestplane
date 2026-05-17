@@ -40,6 +40,85 @@ def _sdk_version() -> str:
     from attestplane import __version__ as v
     return v
 
+
+def _serialize_signature_record(record: Any) -> dict[str, Any]:
+    """Wire-format encoding of a :class:`~attestplane.signing.SignatureRecord`.
+
+    Convention (parallels :func:`_serialize_chained_event`):
+
+    - Fixed-length crypto values use hex (event_hash, signature).
+    - Variable-length binary blobs use base64 (public_key_der,
+      signing_cert_chain, signed_payload).
+    - Datetimes use the substrate's RFC 3339 µs-Z form.
+    - Enums + strings + ints pass through as-is.
+    """
+    from base64 import standard_b64encode
+    return {
+        "signature_schema_version": record.signature_schema_version,
+        "signed_seq": record.signed_seq,
+        "signed_event_hash_hex": record.signed_event_hash.hex(),
+        "signature_hex": record.signature.hex(),
+        "key_id": record.key_id,
+        "public_key_der_b64": standard_b64encode(record.public_key_der).decode("ascii"),
+        "signing_cert_chain_b64": [
+            standard_b64encode(c).decode("ascii") for c in record.signing_cert_chain
+        ],
+        "signed_at": record.signed_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z",
+        "signature_mode": record.signature_mode,
+        "signed_payload_b64": standard_b64encode(record.signed_payload).decode("ascii"),
+    }
+
+
+def deserialize_signature_record(raw: dict[str, Any]) -> Any:
+    """Inverse of :func:`_serialize_signature_record`.
+
+    Returns a :class:`~attestplane.signing.SignatureRecord` (typed as
+    Any because the signing module is an optional import). Raises
+    :class:`ValueError` on malformed input.
+    """
+    from base64 import standard_b64decode
+    from datetime import UTC
+
+    try:
+        from attestplane.signing import SignatureRecord
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "deserialize_signature_record requires attestplane[signing]"
+        ) from exc
+
+    required = {
+        "signature_schema_version", "signed_seq", "signed_event_hash_hex",
+        "signature_hex", "key_id", "public_key_der_b64",
+        "signing_cert_chain_b64", "signed_at", "signature_mode",
+        "signed_payload_b64",
+    }
+    missing = required - set(raw.keys())
+    if missing:
+        raise ValueError(
+            f"deserialize_signature_record: missing fields {sorted(missing)}"
+        )
+
+    ts_text = raw["signed_at"]
+    if ts_text.endswith("Z"):
+        signed_at = datetime.strptime(ts_text, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=UTC)
+    else:
+        signed_at = datetime.fromisoformat(ts_text)
+
+    return SignatureRecord(
+        signature_schema_version=int(raw["signature_schema_version"]),
+        signed_seq=int(raw["signed_seq"]),
+        signed_event_hash=bytes.fromhex(raw["signed_event_hash_hex"]),
+        signature=bytes.fromhex(raw["signature_hex"]),
+        key_id=str(raw["key_id"]),
+        public_key_der=standard_b64decode(raw["public_key_der_b64"]),
+        signing_cert_chain=tuple(
+            standard_b64decode(c) for c in raw["signing_cert_chain_b64"]
+        ),
+        signed_at=signed_at,
+        signature_mode=raw["signature_mode"],
+        signed_payload=standard_b64decode(raw["signed_payload_b64"]),
+    )
+
 DEFAULT_FORBIDDEN_FIELDS: Final[tuple[str, ...]] = (
     "customer_names",
     "person_names",
@@ -94,6 +173,12 @@ class ProofBundleBuilder:
     framework_mappings: list[FrameworkMapping] = field(default_factory=list)
     forbidden_fields: tuple[str, ...] = DEFAULT_FORBIDDEN_FIELDS
     anchor_ref: str | None = None
+    signatures: list[Any] = field(default_factory=list)
+    """Optional list of :class:`~attestplane.signing.SignatureRecord`
+    instances accumulated via :meth:`extend_signatures`. Defaults to
+    empty; populated via T5 of the ADR-0005 plan. Typed as ``list[Any]``
+    to avoid pulling in the ``[signing]`` extras transitively when only
+    chain bundles are needed."""
 
     def extend(self, events: list[ChainedEvent]) -> None:
         self.events.extend(events)
@@ -106,6 +191,27 @@ class ProofBundleBuilder:
                     f"event index {idx} but bundle has only {len(self.events)} events"
                 )
         self.framework_mappings.append(mapping)
+
+    def extend_signatures(self, records: list[Any]) -> None:
+        """Add :class:`~attestplane.signing.SignatureRecord` instances.
+
+        Lightly typed as ``list[Any]`` so this method works for callers
+        without the ``[signing]`` extras installed; runtime type checks
+        on serialisation catch malformed entries.
+        """
+        # Late validation: every entry must look like a SignatureRecord
+        # (duck-typed; full type would require the [signing] extras).
+        for r in records:
+            if not all(hasattr(r, attr) for attr in (
+                "signature_schema_version", "signed_seq", "signed_event_hash",
+                "signature", "key_id", "public_key_der", "signing_cert_chain",
+                "signed_at", "signature_mode", "signed_payload",
+            )):
+                raise ValueError(
+                    f"extend_signatures: object missing SignatureRecord fields: "
+                    f"{type(r).__name__}"
+                )
+        self.signatures.extend(records)
 
     def build(self, *, now: datetime | None = None) -> dict[str, Any]:
         """Produce the bundle dict.
@@ -151,6 +257,14 @@ class ProofBundleBuilder:
                 for m in self.framework_mappings
             ],
             "forbidden_fields": list(self.forbidden_fields),
+            # T5 of ADR-0005 plan: additive `signatures` field. Only
+            # emitted when ≥ 1 SignatureRecord has been added; absent
+            # otherwise to keep existing tests + consumers untouched.
+            **(
+                {"signatures": [_serialize_signature_record(r) for r in self.signatures]}
+                if self.signatures
+                else {}
+            ),
         }
 
 
@@ -294,4 +408,5 @@ __all__ = [
     "build_auditor_export",
     "bundle_to_dsse_envelope",
     "bundle_to_in_toto_statement",
+    "deserialize_signature_record",
 ]
