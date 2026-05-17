@@ -8,6 +8,11 @@
  * docs/adr/0002-substrate-data-model-and-hash-chain-v0.md for the design.
  */
 
+export {
+  AdapterError,
+  AdapterTranslationError,
+  GenericRuntimeAdapter,
+} from './adapters.js';
 export { CanonicalizationError, canonicalize } from './canonical.js';
 export {
   GENESIS_HASH,
