@@ -66,6 +66,17 @@ try:
 except ImportError:  # pragma: no cover
     _HTTP_AVAILABLE = False
 
+# eIDAS Trusted List loader; pure-stdlib XML parsing, no extras required.
+from attestplane.anchoring.eidas import (
+    ETSI_QTST_URI,
+    ETSI_TSA_URI,
+    EidasError,
+    QualifiedTsaEntry,
+    TrustedListParseError,
+    load_qualified_tsa_trust_roots,
+    parse_trusted_list,
+)
+
 __all__ = [
     "ANCHOR_SCHEMA_VERSION",
     "AnchorBoundaryError",
@@ -79,19 +90,26 @@ __all__ = [
     "AnchorVerificationResult",
     "CertStatus",
     "DigiCertProvider",
+    "ETSI_QTST_URI",
+    "ETSI_TSA_URI",
+    "EidasError",
     "FreeTSAProvider",
     "HttpTransport",
     "MockTSAProvider",
     "MultiTSAProvider",
     "PendingAnchor",
+    "QualifiedTsaEntry",
     "RecordedHttpTransport",
     "Rfc3161HttpProvider",
     "SingleAnchorResult",
     "TimestampRequest",
+    "TrustedListParseError",
     "TSAProvider",
     "TSAUnavailableError",
     "UrllibHttpTransport",
     "WorkerStats",
+    "load_qualified_tsa_trust_roots",
     "make_replay_transport",
+    "parse_trusted_list",
     "verify_chain_with_anchors",
 ]
