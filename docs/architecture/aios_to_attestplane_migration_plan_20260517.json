@@ -1,0 +1,195 @@
+{
+  "$schema": "https://attestplane.org/schemas/v1/migration_plan.schema.json",
+  "document": "AIOS_TO_ATTESTPLANE_MIGRATION_PLAN",
+  "version": "1.0",
+  "date": "2026-05-17",
+  "attestplane_head_at_plan_time": "f16048f",
+  "aios_head_at_scan_time": "main",
+  "author": "Founder + Claude Opus 4.7 main-loop synthesis (after opus-architect agent timed out)",
+  "verdict": "GO_FOR_PHASE_0",
+  "naming_history": [
+    "acceptance (earliest AIOS branch name)",
+    "Veriplane (intermediate brand, AIOS commit a1a0b98)",
+    "Attestplane (current)"
+  ],
+  "license_status": {
+    "aios_root": "Apache-2.0",
+    "aios_workspace_declaration": "license.workspace = true",
+    "copyleft_dependencies": 0,
+    "spdx_headers_on_aios_files": 0,
+    "founder_sole_copyright_holder": true,
+    "re_licensable_into_attestplane": true,
+    "mechanical_steps_per_file": [
+      "add SPDX header (2 lines)",
+      "rename aios_* to attestplane_*"
+    ]
+  },
+  "reconciliation_decisions": {
+    "hash_algorithm": {
+      "decision": "SHA-256 forever for Attestplane",
+      "aios_canonical_uses": "SHA-256 (per AIOS ADR-0047)",
+      "aios_audit_uses": "BLAKE3 (internal DB perf only)",
+      "interop_required": false
+    },
+    "chain_scoping": {
+      "decision": "global chain stays; add verify_segment for sub-chains",
+      "anticipated_adr": "0005"
+    },
+    "schema_language": {
+      "decision": "frozen dataclasses + auto-generated JSON Schema artifacts",
+      "authoritative": "vectors.json",
+      "publish_namespace": "attestplane.org/schemas/v1/"
+    }
+  },
+  "aios_inventory": {
+    "rust_crates_attestation_related_loc": 9209,
+    "rust_workspace_path": "/Users/macworkers/aios/Cargo.toml",
+    "key_crates": [
+      { "path": "crates/aios-audit/src/lib.rs", "loc": 473, "classification": "INTEGRATE-REFACTOR" },
+      { "path": "crates/aios-canonical/", "loc": 498, "classification": "INTEGRATE-DIRECT" },
+      { "path": "crates/aios-py-canonical/", "loc": 220, "classification": "INTEGRATE-REFACTOR" },
+      { "path": "crates/aios-sdk-evidence/", "loc": 465, "classification": "INTEGRATE-REFACTOR" },
+      { "path": "crates/aios-sdk-protocol/", "loc": 681, "classification": "REFERENCE-ONLY" },
+      { "path": "crates/aios-replay-runner/", "loc": 969, "classification": "REFERENCE-ONLY" },
+      { "path": "crates/aios-eval-gate/", "loc": 1945, "classification": "KEEP-IN-AIOS" },
+      { "path": "crates/aios-claude-code-sidecar/", "loc": 1444, "classification": "KEEP-IN-AIOS" },
+      { "path": "crates/aios-cp/src/api/audit.rs", "loc": 353, "classification": "REFERENCE-ONLY" },
+      { "path": "crates/aios-cp/src/repo/audit.rs", "loc": 868, "classification": "REFERENCE-ONLY" },
+      { "path": "crates/aios-cp/src/audit_anchor_job.rs", "loc": 430, "classification": "REFERENCE-ONLY" }
+    ],
+    "schemas": [
+      { "path": "schemas/evidence/external_customer_evidence.schema.json", "classification": "INTEGRATE-REFACTOR" },
+      { "path": "schemas/replay/replay_proof.schema.json", "classification": "INTEGRATE-REFACTOR" },
+      { "path": "schemas/policy/policy.schema.json", "classification": "INTEGRATE-REFACTOR" },
+      { "path": "schemas/lease/", "classification": "KEEP-IN-AIOS-COMMERCIAL" },
+      { "path": "schemas/settlement/", "classification": "KEEP-IN-AIOS-COMMERCIAL" }
+    ],
+    "docs": [
+      { "path": "docs/architecture/ACCEPTANCE_CRITERIA.md", "classification": "INTEGRATE-REFACTOR-STRUCTURE-ONLY", "note": "Q1-Q20 three-tier gate structure adopted as Attestplane A1-A5" },
+      { "path": "docs/customer_validation/templates/customer_acceptance_attestation_template.md", "classification": "INTEGRATE-DIRECT", "note": "redaction rules seed for proof_bundle forbidden_fields" },
+      { "path": "docs/claims/forbidden_claims.md", "classification": "INTEGRATE-REFACTOR" },
+      { "path": "docs/audit/", "classification": "KEEP-IN-AIOS" },
+      { "path": "docs/audits/", "classification": "KEEP-IN-AIOS-COMMERCIAL" },
+      { "path": "docs/compliance/", "classification": "KEEP-IN-AIOS-COMMERCIAL" },
+      { "path": "docs/customer_validation/attestation_collection/", "classification": "REFERENCE-ONLY" }
+    ],
+    "tests": [
+      { "path": "tests/integration/test_phase{2-8}_acceptance.py", "count": 74, "classification": "INTEGRATE-REFACTOR-STRUCTURE-ONLY" }
+    ],
+    "tools": [
+      { "path": "tools/specs/assertions/005_acceptance_q_headings.sh", "classification": "INTEGRATE-REFACTOR" },
+      { "path": "tools/specs/assertions/010_q_markers_in_acceptance.sh", "classification": "INTEGRATE-REFACTOR" },
+      { "path": "scripts/local_ci/", "count": "15+", "classification": "REFERENCE-ONLY", "note": "revisit M6 when contributor count > 1" }
+    ],
+    "examples": [
+      { "path": "examples/lawyer_real_case_demo.py", "classification": "DO-NOT-PORT", "reason": "belongs in ~/legal-workspace" }
+    ],
+    "session_supplementary_findings": [
+      "feat/attestplane-landing branch has 0 file diff vs main",
+      "AIOS has /v1/auditor/* HTTP endpoints with utoipa OpenAPI annotations (commit 68b103a)",
+      "AIOS ADRs go to at least 0069+ (not just 0001-0003)"
+    ]
+  },
+  "boundary_decisions": [
+    { "capability": "Lease granting authority", "enters_attestplane": false, "evidence_event": "lease_lifecycle_event" },
+    { "capability": "Budget routing / optimizer", "enters_attestplane": false, "evidence_event": "budget_event" },
+    { "capability": "Settlement execution", "enters_attestplane": false, "evidence_event": "settlement_event" },
+    { "capability": "Worker scheduling", "enters_attestplane": false, "evidence_event": "worker_assignment_event" },
+    { "capability": "Runtime process management", "enters_attestplane": false, "evidence_event": "runtime_lifecycle_event" },
+    { "capability": "Gateway write authority", "enters_attestplane": false, "evidence_event": "gateway_decision_event" },
+    { "capability": "UI read model", "enters_attestplane": false, "evidence_event": null },
+    { "capability": "Enterprise tenant admin", "enters_attestplane": false, "evidence_event": "admin_action_event" },
+    { "capability": "Distributed worker orchestration", "enters_attestplane": false, "evidence_event": "distributed_dispatch_event" },
+    { "capability": "Policy decision authority", "enters_attestplane": false, "evidence_event": "policy_check_event" }
+  ],
+  "attestation_gates": [
+    { "id": "A1", "name": "chain replay-able", "derived_from_aios_q": 8, "phase": "v0.0.1-alpha (already passing)", "trigger": "pre-merge" },
+    { "id": "A2", "name": "event_hash integrity", "derived_from_aios_q": 11, "phase": "v0.0.1-alpha (already passing)", "trigger": "pre-merge" },
+    { "id": "A3", "name": "tamper detection at any position", "derived_from_aios_q": 16, "phase": "v0.0.1-alpha (already passing)", "trigger": "pre-merge" },
+    { "id": "A4", "name": "cross-language conformance", "derived_from_aios_q": 17, "phase": "v0.0.1-alpha (already passing)", "trigger": "pre-merge" },
+    { "id": "A5", "name": "segment cardinality verifiable", "derived_from_aios_q": 20, "phase": "v0.1.0 / M5 (new)", "trigger": "nightly" }
+  ],
+  "roadmap": {
+    "phase_0_planning_pd": 3.5,
+    "phase_1_v0_1_m5_pd": 22,
+    "phase_2_runtime_adapters_pd": 12,
+    "phase_3_anchoring_pd": 7,
+    "phase_4_storage_replay_pd": 11,
+    "phase_5_cloud_enterprise": "out of scope this plan"
+  },
+  "tickets": [
+    { "id": 1, "title": "AIOS-to-Attestplane boundary ADR", "port": "Spec-Only", "priority": "P0", "effort_pd": 1, "phase": 0 },
+    { "id": 2, "title": "Evidence event taxonomy v1 (12 event types)", "port": "Spec+Refactor", "priority": "P0", "effort_pd": 1.5, "phase": 0 },
+    { "id": 3, "title": "GenericRuntimeAdapter interface", "port": "Spec-Only", "priority": "P0", "effort_pd": 0.5, "phase": 0 },
+    { "id": 4, "title": "AIOS adapter spec (doc only)", "port": "Spec-Only", "priority": "P0", "effort_pd": 0.5, "phase": 0 },
+    { "id": 5, "title": "AIOS adapter implementation", "port": "Adapt", "priority": "P1", "effort_pd": 3, "phase": 2 },
+    { "id": 6, "title": "tool_call_event type", "port": "Refactor", "priority": "P1", "effort_pd": 0.5, "phase": 1 },
+    { "id": 7, "title": "policy_check_event type", "port": "Refactor", "priority": "P1", "effort_pd": 0.5, "phase": 1 },
+    { "id": 8, "title": "human_approval_event type", "port": "Refactor", "priority": "P1", "effort_pd": 0.5, "phase": 1 },
+    { "id": 9, "title": "lease_lifecycle_event type (record only)", "port": "Refactor", "priority": "P1", "effort_pd": 0.5, "phase": 1 },
+    { "id": 10, "title": "budget/settlement/worker_assignment evidence event types", "port": "Refactor", "priority": "P1", "effort_pd": 0.75, "phase": 1 },
+    { "id": 11, "title": "Port forbidden_claims.md (de-AIOS-ify)", "port": "Refactor", "priority": "P0", "effort_pd": 0.5, "phase": 0 },
+    { "id": 12, "title": "verify_proof_bundle() library API", "port": "Reference", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 13, "title": "attestplane verify CLI", "port": "Adapt", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 14, "title": "Proof bundle schema", "port": "Refactor", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 15, "title": "Auditor export schema", "port": "Refactor", "priority": "P1", "effort_pd": 1, "phase": 1 },
+    { "id": 16, "title": "Negative conformance vectors", "port": "Direct-new", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 17, "title": "Canonical JSON v1 spec doc", "port": "Reference", "priority": "P1", "effort_pd": 1, "phase": 1 },
+    { "id": 18, "title": "Canonical TEXT port + spec", "port": "Direct", "priority": "P1", "effort_pd": 2, "phase": 1 },
+    { "id": 19, "title": "EU AI Act Article 12 obligation registry", "port": "New", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 20, "title": "DORA Article 8 obligation registry", "port": "New", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 21, "title": "JSONL storage backend", "port": "New", "priority": "P1", "effort_pd": 1.5, "phase": 1 },
+    { "id": 22, "title": "Storage backend interface", "port": "New", "priority": "P1", "effort_pd": 0.5, "phase": 1 },
+    { "id": 23, "title": "RFC-3161 / TSA implementation per ADR-0003", "port": "Reference", "priority": "P2", "effort_pd": 4, "phase": 3 },
+    { "id": 24, "title": "AIOS-run-to-proof-bundle example", "port": "New", "priority": "P2", "effort_pd": 1, "phase": 2 },
+    { "id": 25, "title": "README architecture update with safe claims", "port": "Refactor", "priority": "P1", "effort_pd": 0.5, "phase": 1 },
+    { "id": 26, "title": "Attestation gates A1-A5 doc + test scaffolding", "port": "Refactor", "priority": "P0", "effort_pd": 2, "phase": "0+1" }
+  ],
+  "top_10_absorb": [
+    "aios-canonical text-hash primitive",
+    "AIOS Q1-Q20 acceptance criteria structure (→ Attestplane A1-A5)",
+    "customer_acceptance_attestation_template.md redaction rules",
+    "aios-sdk-evidence::EvidenceBundle shape",
+    "schemas/replay/replay_proof.schema.json (minus tenant_id)",
+    "AIOS /v1/auditor/* OpenAPI surface (utoipa)",
+    "aios-audit::CardinalityError concept",
+    "schemas/evidence/external_customer_evidence.schema.json (minus test_fixture)",
+    "AIOS phase-gated acceptance test pattern",
+    "docs/claims/forbidden_claims.md"
+  ],
+  "top_10_do_not_port": [
+    "aios-eval-gate (1945 LOC) — control-plane authority",
+    "schemas/lease/* — commercial moat",
+    "schemas/settlement/* — billing primitive",
+    "python/aios_evolver/ — self-modification engine",
+    "aios-claude-code-sidecar (1444 LOC) — concrete adapter",
+    "aios-runtime / aios-supervisor / aios-runtime-product-shims",
+    "aios-cp/src/api/*.rs (full HTTP surface)",
+    "aios-secret-broker",
+    "aios-evolver + aios-gene-resolver",
+    "examples/lawyer_real_case_demo.py"
+  ],
+  "top_10_v0_1_priority": [
+    { "rank": 1, "module": "docs/policy/forbidden_claims.md", "port": "Refactor", "phase": 0, "effort_pd": 0.5 },
+    { "rank": 2, "module": "attestplane/canonical_text + canonical-text.ts", "port": "Direct", "phase": 1, "effort_pd": 2 },
+    { "rank": 3, "module": "docs/architecture/ATTESTATION_GATES.md + tests/gates/", "port": "Refactor", "phase": "0+1", "effort_pd": 2 },
+    { "rank": 4, "module": "attestplane/verifier.py + cli/verify.py", "port": "Adapt", "phase": 1, "effort_pd": 3 },
+    { "rank": 5, "module": "schemas/v1/proof_bundle.schema.json + dataclass", "port": "Refactor", "phase": 1, "effort_pd": 1.5 },
+    { "rank": 6, "module": "attestplane/obligations/eu_ai_act_article_12.json + registry", "port": "New", "phase": 1, "effort_pd": 1.5 },
+    { "rank": 7, "module": "attestplane/obligations/dora_article_8.json", "port": "New", "phase": 1, "effort_pd": 1.5 },
+    { "rank": 8, "module": "sdk/python/tests/conformance/negative/", "port": "New", "phase": 1, "effort_pd": 1.5 },
+    { "rank": 9, "module": "docs/spec/canonical-json-v1.md", "port": "Reference", "phase": 1, "effort_pd": 1 },
+    { "rank": 10, "module": "attestplane/storage/jsonl.py + storage/base.py", "port": "New", "phase": 1, "effort_pd": 2 }
+  ],
+  "hard_constraints_compliance": {
+    "read_only_this_round": true,
+    "cite_paths_everywhere": true,
+    "no_direct_port_for_control_plane_code": true,
+    "authority_execution_do_not_port": true,
+    "no_production_ready_claims": true,
+    "no_license_change": true,
+    "no_cla_introduced": true,
+    "no_aios_state_mutation": true,
+    "explicit_go_no_go_verdict": "GO_FOR_PHASE_0"
+  }
+}
