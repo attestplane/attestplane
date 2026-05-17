@@ -59,3 +59,24 @@ ADR:
 
 - [ ] All commits in this PR include a `Signed-off-by:` trailer matching the commit author.
 - [ ] I have read [CONTRIBUTING.md](https://github.com/attestplane/attestplane/blob/main/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](https://github.com/attestplane/attestplane/blob/main/CODE_OF_CONDUCT.md).
+
+## AI tool disclosure (transparency, not gatekeeping)
+
+<!--
+Was any part of this PR (code, tests, docs) authored with the assistance of an
+AI coding tool such as GitHub Copilot, Claude Code, Cursor, Codex, Gemini Code
+Assist, or similar?
+
+We are happy to receive AI-assisted contributions. We just ask you to declare
+which tool you used and confirm that:
+- You have read every line you submit and stand behind it.
+- The DCO sign-off applies to you (the human submitter), not the tool.
+- You did not paste output verbatim without verifying license compatibility.
+
+This disclosure is for transparency; it does not affect whether the PR is
+accepted.
+-->
+
+- [ ] No AI tool was used.
+- [ ] AI tool was used. Tool / model: `<fill in, e.g. "Claude Sonnet 4.6" or "GitHub Copilot">`
+- [ ] I have read every line I am submitting and stand behind it as my own.

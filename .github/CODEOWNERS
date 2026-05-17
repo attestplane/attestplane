@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Code owners — GitHub will auto-request these reviewers on every PR that
+# touches a matching path. See
+# https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customization/customizing-your-repository/about-code-owners
+#
+# At v0.0.1 the project has a single maintainer, so the catch-all is the only
+# rule. As the team grows, add path-specific rules ABOVE the catch-all (later
+# rules override earlier ones, last match wins). Suggested future structure:
+#
+#   /sdk/python/        @py-maintainer @merchloubna70-dot
+#   /sdk/typescript/    @ts-maintainer @merchloubna70-dot
+#   /docs/adr/          @merchloubna70-dot
+#   /.github/           @merchloubna70-dot
+#   *                   @merchloubna70-dot
+#
+# Required-review enforcement via branch protection is intentionally NOT
+# enabled yet — with a single maintainer it would self-lock. Re-evaluate
+# once the contributor team is > 1.
+
+*  @merchloubna70-dot

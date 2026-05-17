@@ -212,6 +212,7 @@ If you are an EU-regulated entity (DORA, BaFin, NIS2 scope) evaluating Attestpla
 | [SECURITY.md](SECURITY.md) | Vulnerability disclosure policy and contact |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution workflow, DCO sign-off requirements |
+| [CONTRIBUTORS.md](CONTRIBUTORS.md) | People who have contributed to this project |
 
 **License:** Apache 2.0. Contributions are accepted under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/); sign off your commits with `git commit -s`.
 
