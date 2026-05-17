@@ -1,0 +1,27 @@
+# ADR frozen-block hash lock
+#
+# Locks the `## Decision` section of every Accepted ADR. Recompute with:
+#   ./scripts/check-adr-frozen-blocks.sh --update
+# Verify with:
+#   ./scripts/check-adr-frozen-blocks.sh
+#
+# Editing an Accepted ADR Decision is governance-level. The PR must either
+# supersede the ADR (per ADR-0000-template) or carry founder sign-off in the
+# commit message, AND update this lock in the same commit.
+#
+# Format: <sha256>  <filename>
+#
+
+7c168e9252ceb7cce4db9a0908b56b13a8ab716a329ee4b04ce739419a2c92e2  0001-use-apache-2-0-license.md
+600ef8b29eb39ecf6139a9654949d04e79873fdf0487b67a91e9b6ad0301c508  0002-substrate-data-model-and-hash-chain-v0.md
+db385d4968f64cb45f660c3995469bfa9d7c5d60062d5f1279061ad30cab4a8b  0003-tsa-rfc-3161-anchoring.md
+306fab4e6417dd9d2e08c466943455a05516eb9a8883862a31f464db49ac7ce6  0004-aios-to-attestplane-boundary.md
+f19bb57f99fe94d3516b9a189c0451632f185c65e7f48e3a63b3bd982cded241  0005-event-signing-scheme.md
+d0effb559e9aecb6db0c41cff9f0e7ff50c67167c2aa4225814db73b52ccd1c2  0006-sigstore-rekor-redundant-anchor.md
+dbab84f48d75d6013eef59da0af41860e82502a46b9e826dbb7c8cd3032a62a1  0008-evidence-event-taxonomy-v1.md
+3c4e5d988e482c6ab0440ac9a88be2ed462c78bc9b50b32412bfb6b42d643932  0009-aios-absorption-boundary.md
+05cfa00dfe8b3b4c9f69d621894c66edfd7c210319ece74f3ceaf6a670e79bd5  0010-verification-reason-codes.md
+5ff4b8815868195775d0c5a50e4821fb0c10c2dfbe1f1a2cd1633d70dad1b2a0  0011-canonical-text-v1.md
+62af266fc7f301f7e6ca0f01a2520f181976ac718dcdd92ab560ccd02ef7c087  0012-proof-bundle-policy-trace-refs.md
+d730ee52d232bb8b0836c4991758003cc10ae0fded7f979bf86c66eb78a1643b  0013-generic-runtime-adapter-abc.md
+0b10a3df596e68a092193ec5feb5cf80ea4ed23745bd92c248b8d8f96dcbdf4c  0014-adapter-conformance-fixture-pinning.md
