@@ -281,7 +281,7 @@ attestplane/adapters/
 - executes runtime actions
 - grants leases
 - modifies AIOS or any runtime's internal state
-- has writeable side effects beyond Attestplane's substrate
+- has writable side effects beyond Attestplane's substrate
 
 This invariant is enforced by `GenericRuntimeAdapter`'s API surface: it exposes only `translate(runtime_event) → EventDraft`. There is no `execute()`, `grant()`, `decide()`.
 
