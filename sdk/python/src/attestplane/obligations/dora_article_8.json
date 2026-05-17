@@ -1,0 +1,106 @@
+{
+  "$schema": "./registry.schema.json",
+  "framework": "DORA",
+  "framework_source": "Regulation (EU) 2022/2554 of the European Parliament and of the Council of 14 December 2022 on digital operational resilience for the financial sector (Digital Operational Resilience Act), OJ L 333, 27.12.2022",
+  "registry_version": 1,
+  "last_reviewed": "2026-05-17",
+  "entries": [
+    {
+      "framework": "DORA",
+      "article": "8",
+      "paragraph": "1",
+      "obligation_id": "dora.art8.1.identification_and_documentation",
+      "regulatory_text": "As part of the ICT risk management framework, financial entities shall identify, classify and adequately document all ICT supported business functions, roles and responsibilities, the information assets and ICT assets supporting those functions, and their roles and dependencies in relation to ICT risk.",
+      "required_evidence_fields": ["event_type", "timestamp"],
+      "optional_evidence_fields": ["actor", "session_id", "reference_db_ref"],
+      "event_type_mapping": [
+        "runtime_lifecycle_event",
+        "worker_assignment_event",
+        "gateway_decision_event",
+        "policy_check_event"
+      ],
+      "verifier_expectation": "Recorded events sufficient to reconstruct which ICT assets supported which business functions over the audit window — runtime starts/stops, worker assignments, gateway-level admission decisions, and policy gates applied — are present.",
+      "implementation_status": "designed_toward",
+      "legal_disclaimer": "Mapping target only. Attestplane records ICT-asset-level events when adapters emit them; identification, classification, and documentation of business functions, asset criticality, and dependencies are deployer responsibilities outside the substrate's scope. The substrate is one component supporting a DORA Article 8(1) implementation, not the implementation itself.",
+      "source_citation": "Regulation (EU) 2022/2554, Article 8(1).",
+      "notes": "regulatory_text is a paraphrase pending final verification against OJ L 333, 27.12.2022; the substantive obligation is correctly summarised. Public-facing material citing this entry must include the legal_disclaimer per claims_policy.md."
+    },
+    {
+      "framework": "DORA",
+      "article": "8",
+      "paragraph": "3",
+      "obligation_id": "dora.art8.3.classification_and_yearly_review",
+      "regulatory_text": "Information assets and ICT assets shall be classified by financial entities, with the classification reviewed as necessary and at least on a yearly basis.",
+      "required_evidence_fields": ["event_type", "timestamp"],
+      "optional_evidence_fields": ["actor", "reference_db_ref", "human_verifier"],
+      "event_type_mapping": [
+        "policy_check_event",
+        "human_approval_event",
+        "state_transition_event"
+      ],
+      "verifier_expectation": "At least one event per calendar year exists per classified asset; events recording the yearly review carry a human_verifier when the review is human-led.",
+      "implementation_status": "designed_toward",
+      "legal_disclaimer": "Mapping target only. The substrate can record classification-review events when they occur; whether the yearly cadence has been met is a deployer-side schedule discipline outside the substrate's enforcement scope.",
+      "source_citation": "Regulation (EU) 2022/2554, Article 8(3).",
+      "notes": "regulatory_text is a paraphrase pending final verification against OJ L 333, 27.12.2022."
+    },
+    {
+      "framework": "DORA",
+      "article": "8",
+      "paragraph": "5",
+      "obligation_id": "dora.art8.5.privileged_access_inventory",
+      "regulatory_text": "Financial entities shall identify and document the user accounts, including those used by ICT third-party service providers, with privileged or administrative access.",
+      "required_evidence_fields": ["event_type", "timestamp", "actor"],
+      "optional_evidence_fields": ["subject_ref", "human_verifier", "session_id"],
+      "event_type_mapping": [
+        "policy_check_event",
+        "gateway_decision_event",
+        "state_transition_event"
+      ],
+      "verifier_expectation": "Events with administrative or privileged-access semantics carry the acting actor and, where applicable, a SubjectRef wrapper for the operator identity per GDPR Article 4(5) pseudonymisation.",
+      "implementation_status": "field_supported",
+      "legal_disclaimer": "Mapping target only. The actor field and SubjectRef type enable recording privileged-access events without storing raw identifiers; building and maintaining the inventory itself is a deployer responsibility.",
+      "source_citation": "Regulation (EU) 2022/2554, Article 8(5).",
+      "notes": "regulatory_text is a paraphrase pending final verification against OJ L 333, 27.12.2022."
+    },
+    {
+      "framework": "DORA",
+      "article": "8",
+      "paragraph": "7",
+      "obligation_id": "dora.art8.7.third_party_dependency_mapping",
+      "regulatory_text": "Financial entities shall identify, on a continuous basis, all processes that are dependent on ICT third-party service providers and identify interconnections with ICT third-party service providers that provide services supporting critical or important functions.",
+      "required_evidence_fields": ["event_type", "timestamp"],
+      "optional_evidence_fields": ["reference_db_ref", "actor"],
+      "event_type_mapping": [
+        "tool_call_event",
+        "gateway_decision_event",
+        "runtime_lifecycle_event"
+      ],
+      "verifier_expectation": "Tool calls and gateway decisions involving external ICT third-party services are recorded as events with sufficient identifying refs to map the dependency.",
+      "implementation_status": "designed_toward",
+      "legal_disclaimer": "Mapping target only. The substrate records dependency-triggering events when adapters emit them; producing the mapping itself, identifying critical-or-important functions, and continuous maintenance of that mapping are deployer responsibilities.",
+      "source_citation": "Regulation (EU) 2022/2554, Article 8(7).",
+      "notes": "regulatory_text is a paraphrase pending final verification against OJ L 333, 27.12.2022."
+    },
+    {
+      "framework": "DORA",
+      "article": "8",
+      "paragraph": "8",
+      "obligation_id": "dora.art8.8.records_of_third_party_arrangements",
+      "regulatory_text": "Financial entities shall maintain and update relevant records on the use of services provided by ICT third-party service providers, distinguishing between those supporting critical or important functions and other arrangements.",
+      "required_evidence_fields": ["event_type", "timestamp"],
+      "optional_evidence_fields": ["reference_db_ref", "actor", "session_id"],
+      "event_type_mapping": [
+        "gateway_decision_event",
+        "settlement_event",
+        "tool_call_event",
+        "lease_lifecycle_event"
+      ],
+      "verifier_expectation": "Events recording the use of an ICT third-party service carry a stable reference (reference_db_ref or actor) to the third-party arrangement; the append-only chain provides the maintenance-and-update audit trail.",
+      "implementation_status": "designed_toward",
+      "legal_disclaimer": "Mapping target only. The substrate's append-only hash chain provides the record-keeping integrity layer; classifying arrangements as supporting critical-or-important functions and maintaining the canonical record under DORA Article 28 register-of-information are deployer responsibilities.",
+      "source_citation": "Regulation (EU) 2022/2554, Article 8(8). See also Article 28 (register of information on contractual arrangements).",
+      "notes": "regulatory_text is a paraphrase pending final verification against OJ L 333, 27.12.2022."
+    }
+  ]
+}

@@ -34,6 +34,8 @@ from attestplane.obligations import (
     ObligationEntry,
     ObligationRegistryError,
     Registry,
+    load_all_registries,
+    load_dora_article_8,
     load_eu_ai_act_article_12,
 )
 from attestplane.hashchain import (
@@ -93,6 +95,8 @@ __all__ = [
     "genesis_head",
     "hash_event",
     "is_known_v1_event_type",
+    "load_all_registries",
+    "load_dora_article_8",
     "load_eu_ai_act_article_12",
     "verify_chain",
 ]

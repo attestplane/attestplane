@@ -15,6 +15,8 @@ from attestplane.obligations import (
     Registry,
     UnknownEventTypeError,
     UnknownEvidenceFieldError,
+    load_all_registries,
+    load_dora_article_8,
     load_eu_ai_act_article_12,
 )
 from attestplane.obligations.registry import _validate_entry, _ALLOWED_IMPLEMENTATION_STATUSES
@@ -210,3 +212,76 @@ def test_art12_3_subset_uses_field_supported() -> None:
     for entry in registry.entries:
         if entry.obligation_id in field_set_ids:
             assert entry.implementation_status == "field_supported", entry.obligation_id
+
+
+def test_dora_article_8_loads() -> None:
+    registry = load_dora_article_8()
+    assert isinstance(registry, Registry)
+    assert registry.framework == "DORA"
+    assert registry.registry_version == 1
+    assert len(registry.entries) == 5
+
+
+def test_dora_article_8_entries_have_locked_status() -> None:
+    registry = load_dora_article_8()
+    for entry in registry.entries:
+        assert entry.implementation_status in {
+            "mapping_target",
+            "designed_toward",
+            "field_supported",
+            "verified_in_test",
+        }
+
+
+def test_dora_article_8_event_type_mappings_are_v1() -> None:
+    registry = load_dora_article_8()
+    for entry in registry.entries:
+        assert len(entry.event_type_mapping) >= 1
+        for et in entry.event_type_mapping:
+            assert et in ALL_EVENT_TYPES_V1, (entry.obligation_id, et)
+
+
+def test_dora_article_8_obligation_ids_unique() -> None:
+    registry = load_dora_article_8()
+    ids = [e.obligation_id for e in registry.entries]
+    assert len(ids) == len(set(ids))
+
+
+def test_dora_article_8_source_citation_references_regulation() -> None:
+    registry = load_dora_article_8()
+    for entry in registry.entries:
+        assert "2022/2554" in entry.source_citation
+
+
+def test_dora_article_8_disclaimers_present() -> None:
+    registry = load_dora_article_8()
+    for entry in registry.entries:
+        assert "mapping target" in entry.legal_disclaimer.lower()
+
+
+def test_load_all_registries_returns_known_frameworks() -> None:
+    registries = load_all_registries()
+    assert len(registries) == 2
+    frameworks = {r.framework for r in registries}
+    assert frameworks == {"EU AI Act", "DORA"}
+
+
+def test_load_all_registries_canonical_order() -> None:
+    """EU AI Act is listed first; DORA second. Order is part of the API contract."""
+    registries = load_all_registries()
+    assert registries[0].framework == "EU AI Act"
+    assert registries[1].framework == "DORA"
+
+
+def test_all_obligation_ids_unique_across_registries() -> None:
+    registries = load_all_registries()
+    all_ids = [e.obligation_id for r in registries for e in r.entries]
+    assert len(all_ids) == len(set(all_ids))
+
+
+def test_dora_art8_5_privileged_access_is_field_supported() -> None:
+    """Art. 8(5) is the one DORA entry that's field_supported in v0.1
+    (actor + SubjectRef already enable privileged-access recording)."""
+    registry = load_dora_article_8()
+    entry = registry.by_id("dora.art8.5.privileged_access_inventory")
+    assert entry.implementation_status == "field_supported"

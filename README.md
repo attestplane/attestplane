@@ -98,7 +98,7 @@ The first public alpha is live on TestPyPI (sandbox) and npm (production with th
 
 ## v0.0.1-alpha status
 
-Implemented in v0.0.1-alpha:
+Implemented in v0.0.1-alpha (published artifacts):
 
 - Python SDK
 - TypeScript SDK
@@ -107,11 +107,20 @@ Implemented in v0.0.1-alpha:
 - cross-language conformance vectors
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
+Designed and merged on `main` since v0.0.1-alpha (ships in v0.1 / M5; not in current published artifacts):
+
+- [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
+- [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
+- [`ATTESTATION_GATES.md` — five gates A1–A5](docs/architecture/ATTESTATION_GATES.md): pre-merge / nightly / release-blocker discipline
+- `GenericRuntimeAdapter` ABC (Python + TypeScript): the only adapter surface that ships in the substrate; concrete adapters live in execution-plane repositories
+- Compliance obligation registry (EU AI Act Article 12 + DORA Article 8): machine-readable framework mappings with locked `implementation_status` enum per the claim-safety triad
+- Negative conformance vectors: five frozen broken-chain fixtures pinning gates A2 and A3
+
 Not yet implemented:
 
 - verifier CLI
 - proof bundle / auditor export schema
-- full EU AI Act / DORA / NIS2 / GDPR obligation registry
+- additional obligation registries (NIS2 Article 21, GDPR Article 30, ISO 42001, NIST AI RMF)
 - RFC3161/TSA anchoring
 - Sigstore/Rekor integration
 - durable storage backend
@@ -198,24 +207,24 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 | FastAPI / Express / NestJS / Django helpers | M5 |
 | Rust SDK (`cargo add attestplane`) | M7 |
 | Auditor JSON API + framework-mapping endpoint | M5 + M6 |
-| Event signing (Ed25519 per-substrate keypair) | M7 — anticipated ADR-0004 |
-| Sigstore / Rekor as redundant anchor | M6 — anticipated ADR-0005 |
-| Durable storage + multi-writer concurrency | M6 — anticipated ADR-0004 |
+| Event signing (Ed25519 per-substrate keypair) | M7 — anticipated ADR-0005 |
+| Sigstore / Rekor as redundant anchor | M6 — anticipated ADR-0006 |
+| Durable storage + multi-writer concurrency | M6 — anticipated storage-backend ADR |
 | Attestplane CLI | M5 |
 
 ---
 
 ## Future Compliance Framework Mapping Targets
 
-The table below lists roadmap targets for future compliance mapping. v0.0.1-alpha does not ship a full obligation registry, verifier expectation registry, or proof bundle schema.
+The table below lists roadmap targets for future compliance mapping. v0.0.1-alpha published artifacts do not ship a verifier or proof bundle schema; the obligation registry for EU AI Act Article 12 and DORA Article 8 is merged on `main` and ships in v0.1 / M5 with the verifier. All entries below carry `implementation_status` values from the locked four-value enum (`mapping_target` / `designed_toward` / `field_supported` / `verified_in_test`) per [`docs/policy/`](docs/policy/forbidden_claims.md).
 
-| Framework | Relevant controls | Current v0.0.1-alpha status |
+| Framework | Relevant controls | Current substrate status |
 |---|---|---|
-| **EU AI Act** | Articles 12 (logging), 13 (transparency), 14 (human oversight), 15 (accuracy/robustness), 16 (obligations for providers), 17 (quality management) | Designed toward EU AI Act Article 12 auditability; only selected Art. 12(2)(a) reference fields are implemented today |
-| **NIST AI RMF** | GOVERN 1.1–1.7, MAP 1.1–5.2, MEASURE 1.1–4.2, MANAGE 1.1–4.4 | Roadmap target for future compliance mapping |
-| **ISO/IEC 42001** | §6.1 risk, §8.4 data for AI, §9.1 monitoring and measurement, §10.2 nonconformity | Roadmap target for future compliance mapping |
-| **SOC 2** | CC7.2 (system monitoring), CC7.3 (security event evaluation), CC4.1 (COSO monitoring) | Roadmap target for future compliance mapping |
-| **DORA** | Article 8 (ICT risk management), Article 10 (detection), Article 17 (incident reporting) | Roadmap target for future compliance mapping |
+| **EU AI Act** | Articles 12 (logging), 13 (transparency), 14 (human oversight), 15 (accuracy/robustness), 16 (obligations for providers), 17 (quality management) | Designed toward EU AI Act Article 12 auditability; the Art. 12(3) field set (`session_id`, `reference_db_ref`, `matched_input_ref`, `human_verifier`) is `field_supported`. Obligation registry merged on `main`; ships in v0.1 / M5. |
+| **DORA** | Article 8 (ICT risk management), Article 10 (detection), Article 17 (incident reporting) | Designed toward DORA Article 8 audit-trail obligations; Art. 8(5) privileged-access inventory mechanism is `field_supported`; Art. 8(1), 8(3), 8(7), 8(8) are `designed_toward`. Obligation registry merged on `main`; ships in v0.1 / M5. |
+| **NIST AI RMF** | GOVERN 1.1–1.7, MAP 1.1–5.2, MEASURE 1.1–4.2, MANAGE 1.1–4.4 | Mapping target for future compliance mapping (M7+) |
+| **ISO/IEC 42001** | §6.1 risk, §8.4 data for AI, §9.1 monitoring and measurement, §10.2 nonconformity | Mapping target for future compliance mapping (M7+) |
+| **SOC 2** | CC7.2 (system monitoring), CC7.3 (security event evaluation), CC4.1 (COSO monitoring) | Mapping target for future compliance mapping (M7+) |
 | **CRA 2027** | Article 13 (essential cybersecurity requirements), Annex I Part I §2 (logging) | SBOM hygiene exists; CRA mapping is a roadmap target |
 
 > *This table represents technical mapping. It does not constitute legal advice. Your organization's compliance obligations depend on your specific facts and jurisdiction. Consult qualified legal counsel before relying on any regulatory interpretation.*
@@ -269,6 +278,8 @@ If you are an EU-regulated entity (DORA, BaFin, NIS2 scope) evaluating Attestpla
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | People who have contributed to this project |
 | [CHANGELOG.md](CHANGELOG.md) | Release history and supply-chain hashes |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records |
+| [docs/architecture/ATTESTATION_GATES.md](docs/architecture/ATTESTATION_GATES.md) | Five substrate-level gates A1–A5 (pre-merge / nightly / release-blocker) |
+| [docs/spec/evidence-event-taxonomy-v1.md](docs/spec/evidence-event-taxonomy-v1.md) | The v1 evidence event taxonomy (twelve types) |
 | [docs/policy/](docs/policy/forbidden_claims.md) | Public-facing claim policy (forbidden / allowed / enforcement) |
 
 **License:** Apache 2.0. Contributions are accepted under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/); sign off your commits with `git commit -s`.

@@ -1,0 +1,50 @@
+{
+  "description": "Event with seq=1 deleted; chain has seq=0 followed by seq=2. verify_chain detects via seq-index mismatch at position 1.",
+  "events": [
+    {
+      "event": {
+        "actor": "agent://test/v1",
+        "event_id": "00000000-0000-7000-8000-000000000001",
+        "event_type": "ai_decision",
+        "human_verifier": null,
+        "matched_input_ref": null,
+        "payload": {},
+        "reference_db_ref": null,
+        "schema_version": 1,
+        "session_id": null,
+        "subject_ref": null,
+        "timestamp": "2026-05-17T12:00:00.000000Z"
+      },
+      "event_hash_hex": "cbdd375231953c1da6d95bb78897947a42189699e25a2c326bdbf5e61bc42c79",
+      "prev_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0
+    },
+    {
+      "event": {
+        "actor": "agent://test/v1",
+        "event_id": "00000000-0000-7000-8000-000000000003",
+        "event_type": "ai_decision",
+        "human_verifier": null,
+        "matched_input_ref": null,
+        "payload": {
+          "final": true
+        },
+        "reference_db_ref": null,
+        "schema_version": 1,
+        "session_id": null,
+        "subject_ref": null,
+        "timestamp": "2026-05-17T12:00:00.000000Z"
+      },
+      "event_hash_hex": "dc843829eccd72b225fe8ef98ed89d37ea4d09791fa865129e178dd5a6f4775a",
+      "prev_hash_hex": "dbecc340dd0693f8de897cdf4994af183150da1e82ebd2c697c779aff9c7c06f",
+      "seq": 2
+    }
+  ],
+  "expected_failure": {
+    "first_bad_index": 1,
+    "ok": false,
+    "reason_substring": "seq"
+  },
+  "name": "missing_event",
+  "schema_version": 1
+}

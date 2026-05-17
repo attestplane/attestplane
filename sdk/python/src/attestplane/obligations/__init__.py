@@ -27,6 +27,8 @@ from attestplane.obligations.registry import (
     Registry,
     UnknownEventTypeError,
     UnknownEvidenceFieldError,
+    load_all_registries,
+    load_dora_article_8,
     load_eu_ai_act_article_12,
 )
 
@@ -39,5 +41,7 @@ __all__ = [
     "Registry",
     "UnknownEventTypeError",
     "UnknownEvidenceFieldError",
+    "load_all_registries",
+    "load_dora_article_8",
     "load_eu_ai_act_article_12",
 ]

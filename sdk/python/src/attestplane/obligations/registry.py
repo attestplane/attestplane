@@ -228,3 +228,41 @@ def load_eu_ai_act_article_12() -> Registry:
     ``designed_toward`` until M6 retention discipline ships.
     """
     return _load_from_resource("eu_ai_act_article_12.json")
+
+
+def load_dora_article_8() -> Registry:
+    """Load the DORA Article 8 obligation registry shipped with this package.
+
+    Returns a :class:`Registry` with five entries covering Art. 8(1)
+    (identification + documentation), 8(3) (classification + yearly review),
+    8(5) (privileged-access inventory), 8(7) (third-party dependency
+    mapping), and 8(8) (records of third-party arrangements). All entries
+    are ``designed_toward`` except 8(5) which is ``field_supported``
+    (the substrate's ``actor`` field and ``SubjectRef`` type already
+    enable the privileged-access recording mechanism).
+
+    The ``regulatory_text`` fields in the underlying JSON are paraphrased
+    summaries pending final verbatim verification against OJ L 333,
+    27.12.2022. Public-facing material citing any entry must include the
+    legal_disclaimer per ``docs/policy/claims_policy.md``.
+    """
+    return _load_from_resource("dora_article_8.json")
+
+
+def load_all_registries() -> tuple[Registry, ...]:
+    """Load every obligation registry shipped with this package.
+
+    Returns a tuple of all registries in canonical order:
+
+    1. EU AI Act Article 12
+    2. DORA Article 8
+
+    Additional frameworks (NIS2, GDPR Art. 30, ISO 42001, NIST AI RMF) will
+    extend this tuple at M6+ in append-only order. Verifiers and exporters
+    that want to evaluate evidence against every shipped registry use this
+    helper rather than enumerating ``load_*`` functions manually.
+    """
+    return (
+        load_eu_ai_act_article_12(),
+        load_dora_article_8(),
+    )
