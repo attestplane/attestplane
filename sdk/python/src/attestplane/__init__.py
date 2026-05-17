@@ -82,7 +82,7 @@ from attestplane.types import (
     SubjectRef,
 )
 
-__version__ = "0.0.1"
+__version__ = "0.0.2a0"
 
 __all__ = [
     "ALL_EVENT_TYPES_V1",
