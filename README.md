@@ -269,6 +269,7 @@ If you are an EU-regulated entity (DORA, BaFin, NIS2 scope) evaluating Attestpla
 | [CONTRIBUTORS.md](CONTRIBUTORS.md) | People who have contributed to this project |
 | [CHANGELOG.md](CHANGELOG.md) | Release history and supply-chain hashes |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records |
+| [docs/policy/](docs/policy/forbidden_claims.md) | Public-facing claim policy (forbidden / allowed / enforcement) |
 
 **License:** Apache 2.0. Contributions are accepted under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/); sign off your commits with `git commit -s`.
 

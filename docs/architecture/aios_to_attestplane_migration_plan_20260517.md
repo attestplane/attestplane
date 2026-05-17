@@ -253,6 +253,7 @@ Source for the structure: AIOS has no formal obligation registry (just sparse te
 ### 3.D — RFC 3161 / TSA anchoring
 
 Already locked by Attestplane ADR-0003 (`docs/adr/0003-tsa-rfc-3161-anchoring.md`). Implementation pattern from AIOS `crates/aios-cp/src/audit_anchor_job.rs` (430 LOC):
+
 - Background-job scheduler (don't block append)
 - Anchor request payload shape (chain head hash + timestamp)
 - Anchor verification on read (independent re-walk)
@@ -276,6 +277,7 @@ attestplane/adapters/
 ```
 
 **Core invariant**: An adapter ONLY transforms runtime events into Attestplane evidence events. It NEVER:
+
 - executes runtime actions
 - grants leases
 - modifies AIOS or any runtime's internal state
@@ -333,6 +335,7 @@ Attestplane adopts the AIOS gate structure (category / Phase / test method / exp
 | **A5 — segment cardinality verifiable** | AIOS Q20 ("complete audit, no missing events") | v0.1.0 / M5 (new) | nightly |
 
 Three-tier triggering, identical to AIOS structure:
+
 - **pre-merge** — CI gate, PR cannot merge (A1-A4 today; A5 from M5)
 - **nightly** — fail → P0 issue, 48 h to fix before next release
 - **release-blocker** — any failure blocks the release tag

@@ -100,6 +100,7 @@ The following threat categories are specific to Attestplane's trust substrate mo
 | AT-05 | **Supply-chain compromise** — a malicious or compromised dependency introduces a backdoor into the substrate binary or SDK. | Critical | Sigstore signing + SLSA L3 attestation + 48-hour dependency cooldown policy (see §Supply-Chain Security Posture). |
 | AT-06 | **Trademark / domain phishing** — adversarial packages, domains, or repositories impersonate `attestplane` to distribute malicious tooling. | Medium | Report to security@attestplane.com; verify releases via Sigstore bundle at the official repository. |
 | AT-07 | **Unauthorised auditor API access** — unauthenticated or under-privileged caller reads, writes, or purges audit events. | High | Authentication required on all Auditor API endpoints; append-only database grants enforced (see Hardening Guidance). |
+| AT-08 | **Public claim drift** — README, release notes, or marketing copy claim capabilities (e.g., "EU AI Act compliant", "tamper-proof", "production-ready") that the substrate cannot substantiate, exposing the project and its founder to misleading-commercial-speech liability or future enforcement leverage. | High | All public claims governed by [`docs/policy/forbidden_claims.md`](docs/policy/forbidden_claims.md) and [`docs/policy/claims_policy.md`](docs/policy/claims_policy.md); CI policy-invariant job scans diffs; PR template asserts compliance. |
 
 Full attack vectors and detection signals will be documented in `docs/architecture/THREAT_MODEL.md` (target M5 W7).
 
