@@ -1,6 +1,8 @@
 # Attestplane
 
-**Open Trust Substrate for AI Agents**
+**SLSA-for-AI-Agents** — open cryptographic evidence substrate for AI agent runtimes.
+
+*Bottom-up substrate that compliance platforms cite, not replace.*
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
@@ -20,23 +22,47 @@
 
 ## What is Attestplane?
 
-Attestplane is an Apache-2.0 open-source attestation and audit substrate for AI agents, extracted from AIOS.
+Attestplane is an Apache-2.0 cryptographic evidence substrate for AI agent runtimes. It records agent actions, decisions, policy checks, and human approvals into a tamper-evident hash chain, anchors the chain through RFC-3161 time-stamping authorities, and exports the result as a verifiable proof bundle that downstream compliance, observability, and governance tools can cite.
 
-It records agent actions, decisions, policy checks, and compliance checkpoints into tamper-evident evidence chains. v0.0.1-alpha provides foundational Python and TypeScript SDKs, deterministic serialization, SHA-256 hash-chain primitives, and cross-language conformance vectors. It is a developer alpha substrate, not a finished compliance platform.
+Attestplane is the bottom layer of the AI compliance stack. It does **not** replace your LLM observability tool (LangSmith, LangFuse, Arize Phoenix, OpenLLMetry) — it adds the cryptographic evidence layer those tools intentionally don't provide. It does **not** replace your AI governance dashboard (Credo AI, Holistic AI, Modulos, Trustible, Saidot) — it produces the verifiable evidence those dashboards ingest as their `field_supported` data source for EU AI Act Article 12 and DORA Article 8.
 
-Attestplane is designed toward independent auditability and future compliance framework mapping, including EU AI Act Article 12 and DORA Article 8. External anchoring, verifier CLI, proof bundles, durable storage, and runtime adapters are roadmap items for v0.1/M5 and later.
+The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF supply-chain attestation framework. Where SLSA proves the integrity of how a binary was built, Attestplane proves the integrity of how an AI agent behaved at runtime. Both produce signed, timestamped, verifiable evidence in formats that compliance, audit, and regulator workflows already accept.
 
-Attestplane is not a compliance-as-a-service platform. It is infrastructure your team owns, operates, and audits independently. Framework mappings are roadmap targets; the audit chain stays in your control plane.
+> **A note on the "SLSA-for-AI-Agents" framing.** This describes architectural inspiration and a positioning analogue, not affiliation with the OpenSSF or the SLSA project. Attestplane is an independent OSS project published by Attestplane Pte. Ltd. (Singapore, in formation 2026-05-17).
+
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). v0.0.2-alpha (on `main`, release candidate) adds the verifier library + CLI, JSONL storage, RFC-3161 anchoring with FreeTSA/DigiCert + real OCSP + multi-hop cert chains + eIDAS Trusted List integration, the v1 evidence event taxonomy (12 types), and obligation registries for EU AI Act Article 12 + DORA Article 8.
+
+Attestplane is infrastructure your team owns, operates, and audits independently. The substrate stays in your control plane.
 
 ---
 
-## Why Open Trust Substrate?
+## Why a cryptographic evidence substrate?
 
 **Regulation demands verifiable evidence, not best-effort logs.** EU AI Act Article 12 requires "logging capabilities" that allow reconstruction of the system's behaviour. DORA Article 8 requires operational resilience with "audit trail" that survives incident investigation. NIST AI RMF asks for "traceable" processes. None of these obligations are satisfied by application logs that can be silently truncated, retroactively modified, or that carry no cryptographic proof of integrity.
 
 **Why open-source, why substrate?** AI agents interact with financial data, health records, legal documents, and critical infrastructure. The code responsible for producing compliance evidence must itself be auditable. A closed SaaS audit platform creates the contradiction of an unverifiable verifier. Attestplane's core substrate is Apache 2.0 so that CISOs, auditors, regulators, and engineers can inspect, fork, and validate every hash function, every chain link, and future framework mapping logic — not as a marketing claim but as a technical design goal.
 
 A substrate is by design not a finished product. It is a composable layer your application or platform embeds, connects to its own event streams, and operates within its own trust boundary. Your audit data never leaves your control plane.
+
+## Integration partners (M5 roadmap)
+
+Attestplane is designed to live underneath, not replace, the AI observability and governance tools you already use. The v0.1 / M5 release ships adapters for:
+
+| Layer | Partner | Role | Status |
+|-------|---------|------|--------|
+| LLM observability (OSS) | [LangFuse](https://langfuse.com/) | Trace producer → Attestplane evidence sink | Adapter spec at M5 |
+| LLM observability (SaaS) | [LangSmith](https://docs.smith.langchain.com/) | Trace producer → Attestplane evidence sink | Adapter spec at M5 |
+| LLM observability (Arize) | [Phoenix](https://github.com/Arize-ai/phoenix) | OpenInference / OTel trace ingest | OpenLLMetry-compatible at M6 |
+| Standards (transparency log) | [Sigstore / Rekor](https://www.sigstore.dev/) | Public transparency-log anchor (alongside RFC-3161 TSAs) | Anchor at M5 ([anticipated ADR-0006](docs/adr/0003-tsa-rfc-3161-anchoring.md)) |
+| Standards (wire format) | [in-toto Statement v1](https://github.com/in-toto/attestation) / [DSSE](https://github.com/secure-systems-lab/dsse) | Native serialization of Attestplane evidence events | Native at M5 |
+| Standards (supply chain) | [SLSA](https://slsa.dev/) | Architectural framing inspiration; not membership | N/A — independent project |
+| AI governance (US) | [Credo AI](https://www.credo.ai/), [Trustible](https://www.trustible.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
+| AI governance (UK/EU) | [Holistic AI](https://www.holisticai.com/), [Modulos](https://www.modulos.ai/), [Saidot](https://www.saidot.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
+| TSA (free/OSS) | [FreeTSA](https://freetsa.org/) | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.2-alpha) |
+| TSA (commercial) | [DigiCert](https://www.digicert.com/) | RFC-3161 anchor (commercial SLA) | Shipped on `main` (v0.0.2-alpha) |
+| eIDAS qualified TSAs | EU LOTL members (e.g., [Guardtime KSI](https://guardtime.com/ksi)) | Pluggable qualified-TSA backends via `load_qualified_tsa_trust_roots()` | Shipped on `main` (v0.0.2-alpha) |
+
+Integration with each partner does **not** imply endorsement by the partner. These are technical integration paths from Attestplane's side; downstream partners may or may not formally support Attestplane in their documentation.
 
 ---
 

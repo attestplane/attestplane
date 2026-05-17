@@ -98,6 +98,50 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
   layer, not a replacement for any agent framework, logging system, or
   observability platform.
 
+## G. Competitive framing (post-2026-05-17 positioning realignment)
+
+The 20-agent competitive research captured in
+[`competitive_positioning_upgrade_plan_20260517.md`](../architecture/competitive_positioning_upgrade_plan_20260517.md)
+identified no direct competitors but five categories of adjacent
+products. Public-facing material MUST observe the following claim
+restrictions:
+
+- **"Replaces LangSmith / LangFuse / Arize / Helicone /
+  OpenLLMetry"** — false. Attestplane adds the cryptographic
+  evidence layer those tools intentionally don't provide. The
+  permitted phrasing is "complements" or "evidence layer beneath".
+- **"Replaces Credo AI / Holistic AI / Modulos / Trustible /
+  Saidot"** — false. Attestplane produces evidence those governance
+  dashboards ingest as their `field_supported` data source. The
+  permitted phrasing is "evidence source for [governance platform]"
+  or "below the governance layer".
+- **"EU AI Act compliant"** (and variants: "Art. 12 compliant",
+  "DORA Article 8 compliant") — forbidden absolutely, even though
+  LangSmith makes similar claims in its 2025+ marketing. Permitted
+  phrasings are limited to the four implementation_status values
+  below.
+- **"First / only / leading / best [in category]"** in competitive
+  context — forbidden. Lawyer-founder claim-safety discipline
+  prohibits superlatives whose negation requires market-wide
+  research the marketing copy doesn't show.
+- **"Bitcoin-anchored timestamping"** / **"PoW-anchored"** — false
+  for v0.1. The substrate uses RFC-3161 TSAs and (M5) Sigstore
+  Rekor; Bitcoin / OpenTimestamps integration is not on the M5–M7
+  roadmap.
+- **"Successor to Amazon QLDB"** — false. QLDB reached
+  end-of-support 2025-07-31 in a different category (managed ledger
+  database). The categories are adjacent, not the same.
+- **"SLSA-affiliated"** / **"SLSA member"** / **"OpenSSF project"**
+  — false. The README's "SLSA-for-AI-Agents" phrasing describes
+  architectural inspiration. Attestplane is published independently
+  by Attestplane Pte. Ltd. The README disclaimer carries this
+  language verbatim.
+- **"eIDAS qualified trust service provider"** — false absolutely
+  for the foreseeable future. Attestplane does not apply for QTSP
+  status (Guardtime KSI's patent portfolio and existing slot make
+  this defensive). Permitted phrasing: "consumes eIDAS qualified-TSA
+  trust roots via `load_qualified_tsa_trust_roots()`".
+
 ## Obligation-registry implementation_status
 
 When entries under `attestplane/obligations/` are cited in public material,
