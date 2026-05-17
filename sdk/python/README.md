@@ -55,9 +55,9 @@ assert sub.verify().ok      # True
 |---|---|
 | Durable storage | Anticipated ADR-0004 (M6) — bring your own DB |
 | Multi-process concurrency | Anticipated ADR-0004 — single-process for v0.0.1 |
-| RFC 3161 TSA anchoring | Anticipated ADR-0003 (M6) |
-| Rekor / Sigstore submission | M6 |
-| Cryptographic signatures on events | Anticipated ADR-0005 (M7) |
+| RFC 3161 TSA anchoring | Design locked by [ADR-0003](https://github.com/attestplane/attestplane/blob/main/docs/adr/0003-tsa-rfc-3161-anchoring.md); code ships v0.1 / M5 |
+| Rekor / Sigstore submission as redundant anchor | Anticipated ADR-0005 (M6) |
+| Cryptographic signatures on events | Anticipated ADR-0004 (M7) |
 | Retention / truncation policy | Out of scope — deployer responsibility |
 
 ## EU AI Act Article 12(2)(a) mapping

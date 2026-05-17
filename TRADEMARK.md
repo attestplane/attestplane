@@ -114,10 +114,13 @@ required.
 
 ### 4.3 What Substantive Modification Means
 
-Substantive modification includes but is not limited to: changes to the BLAKE3 hash
-chain algorithm, RFC-3161 anchoring logic, auditor JSON API schema, framework mapping
-files under `v1/frameworks/`, or the core `AuditChain` class. Formatting changes, CI
-fixes, and documentation additions are generally not substantive.
+Substantive modification includes but is not limited to: changes to the hash-chain
+algorithm or canonicalization rules (currently SHA-256 over restricted-JCS per
+[ADR-0002](docs/adr/0002-substrate-data-model-and-hash-chain-v0.md)), RFC-3161
+anchoring logic (per [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md)), auditor
+JSON API schema, framework mapping files, or the core `AttestSubstrate` /
+`ChainedEvent` types. Formatting changes, CI fixes, and documentation additions are
+generally not substantive.
 
 ---
 
@@ -142,7 +145,7 @@ by Attestplane Pte. Ltd. or an authorized auditor:
 
 | Requirement | Specification |
 |---|---|
-| **Chain integrity** | BLAKE3 hash chain is unbroken; no entries modified post-write |
+| **Chain integrity** | Hash chain (algorithm and canonicalization per current ADR-0002 — SHA-256 at v0.0.1) is unbroken; no entries modified post-write; `verify()` returns `ok` |
 | **RFC-3161 anchoring** | All chain segments anchored to a qualified TSA; timestamps verifiable |
 | **Framework coverage** | All applicable EU AI Act Article 12–17 obligations mapped and evidenced |
 | **API conformance** | Auditor JSON API responds per the published schema version |

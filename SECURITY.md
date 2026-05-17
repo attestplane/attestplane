@@ -68,10 +68,10 @@ We follow a **90-day embargo** by default, measured from the date of initial rep
 
 | Component | Description |
 |-----------|-------------|
-| Hash chain engine | BLAKE3 audit chain integrity |
-| RFC-3161 anchoring | Timestamp authority anchoring of audit events |
-| Audit log API | JSON Auditor API — query, append, and verify endpoints |
-| SDK helpers | `install_auto_audit` and framework integration helpers |
+| Hash chain engine | Substrate canonicalization and SHA-256 hash chain integrity (per [ADR-0002](docs/adr/0002-substrate-data-model-and-hash-chain-v0.md)); cross-language byte conformance |
+| RFC-3161 anchoring | Time-stamp authority anchoring per [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md) (ships v0.1 / M5) |
+| Audit log API | JSON Auditor API — query, append, and verify endpoints (M5 surface) |
+| SDK helpers | FastAPI / Express / NestJS / Django framework integration helpers (M5 surface) |
 | Framework mapping layer | EU AI Act / NIST AI RMF / ISO 42001 / SOC 2 assertion mappings |
 | Attestplane Cloud (M6+) | Hosted preview and production cloud service, once launched |
 | CLI and build tooling | `attestplane` CLI, build pipeline scripts |
