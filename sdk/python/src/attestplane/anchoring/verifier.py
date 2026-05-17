@@ -1,0 +1,219 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
+"""Anchor-aware chain verifier per ADR-0003 § 5.
+
+Provides :func:`verify_chain_with_anchors` — a new function distinct
+from :func:`~attestplane.hashchain.verify_chain` so that v0.0.1
+callers remain bytes-identical.
+
+The v1 implementation verifies anchor-to-chain cross-references but
+does NOT yet parse RFC-3161 TimeStampTokens to extract the TSA's
+authoritative ``genTime``. The ASN.1 parsing arrives in a follow-up
+PR alongside ``anchor_vectors.json``; until then,
+:attr:`SingleAnchorResult.cert_status` is reported as
+``"VALID_UNVERIFIED"`` for anchors with non-empty cert chains and
+``"MISSING_LTV_ARTIFACTS"`` otherwise.
+
+What this v1 implementation DOES check:
+
+1. Every :class:`AnchorRecord.anchored_event_hash` matches the
+   :class:`~attestplane.types.ChainedEvent.event_hash` at the
+   corresponding ``anchored_seq`` in the chain.
+2. Every :class:`AnchorRecord.anchored_seq` is in range.
+3. Every :class:`AnchorRecord.anchor_schema_version` equals the v1
+   constant.
+4. Anchor :class:`~datetime.datetime.tzinfo` is UTC.
+5. ``tsa_cert_chain`` and ``ocsp_responses`` are non-empty (per
+   ADR-0003 § 6 CAdES-A discipline).
+
+What this implementation does NOT yet check:
+
+- TSA signature over the TimeStampToken (M5 with ``cryptography``).
+- Cert chain validation against ``trust_roots`` (M5).
+- OCSP response signature + freshness (M5).
+- TSA-vs-local clock skew warning (M5).
+- TSA-claimed ``genTime`` monotonicity across anchors of the same
+  chain head (M5).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Literal
+
+from attestplane.anchoring.base import (
+    ANCHOR_SCHEMA_VERSION,
+    AnchorRecord,
+)
+from attestplane.hashchain import verify_chain
+from attestplane.types import ChainedEvent
+
+CertStatus = Literal[
+    "VALID",
+    "VALID_UNVERIFIED",
+    "MISSING_LTV_ARTIFACTS",
+    "EXPIRED_VALID_AT_ISSUANCE",
+    "REVOKED",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class SingleAnchorResult:
+    """Per-anchor verification outcome."""
+
+    seq: int
+    provider: str
+    valid: bool
+    cert_status: CertStatus
+    ltv_artifacts_present: bool
+    reason: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AnchorVerificationResult:
+    """Aggregate outcome of :func:`verify_chain_with_anchors`."""
+
+    chain_ok: bool
+    """True iff the underlying ``verify_chain`` returned ok."""
+
+    chain_reason: str | None
+    """Diagnostic from ``verify_chain`` when ``chain_ok=False``."""
+
+    anchored_seqs: frozenset[int]
+    """Seqs for which at least one anchor verified."""
+
+    unanchored_seqs: frozenset[int]
+    """Seqs in the chain that have no anchor."""
+
+    anchor_results: tuple[SingleAnchorResult, ...]
+    """One entry per (anchor record, chain) pair, in input order."""
+
+    @property
+    def ok(self) -> bool:
+        """True iff chain verifies AND every anchor verifies."""
+        return self.chain_ok and all(a.valid for a in self.anchor_results)
+
+
+def verify_chain_with_anchors(
+    events: list[ChainedEvent],
+    anchors: list[AnchorRecord],
+) -> AnchorVerificationResult:
+    """Re-walk the chain AND check every anchor against it.
+
+    See module docstring for the v1 scope (cross-reference checks only;
+    no ASN.1 / OCSP yet).
+    """
+    chain_result = verify_chain(events)
+    seqs_in_chain = {ev.seq for ev in events}
+    anchor_results: list[SingleAnchorResult] = []
+    anchored_seqs: set[int] = set()
+
+    for anchor in anchors:
+        provider = anchor.tsa_provider_id
+
+        if anchor.anchor_schema_version != ANCHOR_SCHEMA_VERSION:
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=False,
+                cert_status="MISSING_LTV_ARTIFACTS",
+                ltv_artifacts_present=False,
+                reason=(
+                    f"anchor_schema_version={anchor.anchor_schema_version}; "
+                    f"this verifier handles version {ANCHOR_SCHEMA_VERSION} only"
+                ),
+            ))
+            continue
+
+        if anchor.anchored_seq not in seqs_in_chain:
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=False,
+                cert_status="MISSING_LTV_ARTIFACTS",
+                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                reason=f"anchored_seq={anchor.anchored_seq} not in chain",
+            ))
+            continue
+
+        target = events[anchor.anchored_seq]
+        if target.event_hash != anchor.anchored_event_hash:
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=False,
+                cert_status="MISSING_LTV_ARTIFACTS",
+                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                reason=(
+                    f"anchored_event_hash mismatch at seq {anchor.anchored_seq}"
+                ),
+            ))
+            continue
+
+        if anchor.issued_at_claimed.tzinfo is None:
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=False,
+                cert_status="MISSING_LTV_ARTIFACTS",
+                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                reason="issued_at_claimed is naive datetime",
+            ))
+            continue
+        if anchor.issued_at_claimed.utcoffset() != UTC.utcoffset(None):
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=False,
+                cert_status="MISSING_LTV_ARTIFACTS",
+                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                reason="issued_at_claimed is not UTC",
+            ))
+            continue
+
+        ltv_present = bool(anchor.tsa_cert_chain) and bool(anchor.ocsp_responses)
+        if not ltv_present:
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=False,
+                cert_status="MISSING_LTV_ARTIFACTS",
+                ltv_artifacts_present=False,
+                reason=(
+                    "tsa_cert_chain or ocsp_responses is empty; "
+                    "CAdES-A long-term validation requires both"
+                ),
+            ))
+            continue
+
+        # v1 reaches here when cross-references all match. Mark valid
+        # but flag cert_status as VALID_UNVERIFIED until the M5 follow-up
+        # ships ASN.1 / OCSP signature checks.
+        anchor_results.append(SingleAnchorResult(
+            seq=anchor.anchored_seq,
+            provider=provider,
+            valid=True,
+            cert_status="VALID_UNVERIFIED",
+            ltv_artifacts_present=True,
+            reason=None,
+        ))
+        anchored_seqs.add(anchor.anchored_seq)
+
+    unanchored_seqs = seqs_in_chain - anchored_seqs
+
+    return AnchorVerificationResult(
+        chain_ok=chain_result.ok,
+        chain_reason=chain_result.reason,
+        anchored_seqs=frozenset(anchored_seqs),
+        unanchored_seqs=frozenset(unanchored_seqs),
+        anchor_results=tuple(anchor_results),
+    )
+
+
+__all__ = [
+    "AnchorVerificationResult",
+    "CertStatus",
+    "SingleAnchorResult",
+    "verify_chain_with_anchors",
+]
