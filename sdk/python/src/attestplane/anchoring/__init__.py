@@ -49,6 +49,23 @@ from attestplane.anchoring.worker import (
     WorkerStats,
 )
 
+# HTTP transport classes; importing requires the 'anchor' extras.
+# Guarded so substrate-only installs don't fail on missing crypto deps.
+try:
+    from attestplane.anchoring.http import (
+        DigiCertProvider,
+        FreeTSAProvider,
+        HttpTransport,
+        RecordedHttpTransport,
+        Rfc3161HttpProvider,
+        UrllibHttpTransport,
+        make_replay_transport,
+    )
+
+    _HTTP_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _HTTP_AVAILABLE = False
+
 __all__ = [
     "ANCHOR_SCHEMA_VERSION",
     "AnchorBoundaryError",
@@ -61,13 +78,20 @@ __all__ = [
     "AnchorVerificationError",
     "AnchorVerificationResult",
     "CertStatus",
+    "DigiCertProvider",
+    "FreeTSAProvider",
+    "HttpTransport",
     "MockTSAProvider",
     "MultiTSAProvider",
     "PendingAnchor",
+    "RecordedHttpTransport",
+    "Rfc3161HttpProvider",
     "SingleAnchorResult",
     "TimestampRequest",
     "TSAProvider",
     "TSAUnavailableError",
+    "UrllibHttpTransport",
     "WorkerStats",
+    "make_replay_transport",
     "verify_chain_with_anchors",
 ]
