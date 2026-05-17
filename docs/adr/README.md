@@ -54,5 +54,6 @@ A copy of the template lives at [0000-template.md](0000-template.md).
 | [0002](0002-substrate-data-model-and-hash-chain-v0.md) | Substrate core data model and hash chain (v0.0.1) | Accepted |
 | [0003](0003-tsa-rfc-3161-anchoring.md) | Time-Stamp Authority anchoring (RFC 3161) for the audit chain | Accepted |
 | [0004](0004-aios-to-attestplane-boundary.md) | AIOS-to-Attestplane scope boundary (substrate vs. execution plane) | Accepted |
+| [0008](0008-evidence-event-taxonomy-v1.md) | Evidence event taxonomy v1 — twelve event types | Accepted |
 
 New ADRs append to this table in the same PR that introduces the ADR file.

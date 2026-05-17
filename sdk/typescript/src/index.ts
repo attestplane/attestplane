@@ -15,6 +15,24 @@ export {
 } from './adapters.js';
 export { CanonicalizationError, canonicalize } from './canonical.js';
 export {
+  ALL_EVENT_TYPES_V1,
+  BUDGET_EVENT,
+  EVAL_EVENT,
+  EVIDENCE_TAXONOMY_VERSION,
+  GATEWAY_DECISION_EVENT,
+  HUMAN_APPROVAL_EVENT,
+  LEASE_LIFECYCLE_EVENT,
+  POLICY_CHECK_EVENT,
+  ROUTING_EVENT,
+  RUNTIME_LIFECYCLE_EVENT,
+  SETTLEMENT_EVENT,
+  STATE_TRANSITION_EVENT,
+  TOOL_CALL_EVENT,
+  WORKER_ASSIGNMENT_EVENT,
+  isKnownV1EventType,
+  type EventTypeV1,
+} from './event_types.js';
+export {
   GENESIS_HASH,
   SCHEMA_VERSION,
   chainExtend,
