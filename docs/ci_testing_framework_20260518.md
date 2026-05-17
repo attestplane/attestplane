@@ -36,6 +36,7 @@ Attestplane 当前 CI 覆盖 13 个 workflow / 1330 LOC，已通过 6/6 gate（c
 | `publish-python.yml` / `publish-typescript.yml` / `manage-npm.yml` | 310 | release publish | T4 |
 
 **关键现状**：
+
 - `conformance-vectors-frozen` job 已 regen + diff 17 fixtures（覆盖 G7 一半，但单机 ubuntu-latest，无矩阵）。
 - `reproducible-build` 是同 runner 上 `.venv1` vs `.venv2`（self-check），不是两台独立 runner（Big 4 / SLSA L3 看的是后者）。
 - `sign-release.yml` 已有 cosign 但**未将 attestation 上传 Rekor transparency log**（G4 缺口）。
