@@ -56,4 +56,27 @@ export {
   type SubjectScheme,
 } from './types.js';
 
-export const VERSION = '0.0.1-alpha.1';
+export {
+  DEFAULT_FORBIDDEN_FIELDS,
+  ProofBundleBuilder,
+  buildAuditorExport,
+  serializeChainedEvent,
+  type AuditorExport,
+  type AuditorExportOptions,
+  type FrameworkMapping,
+  type ImplementationStatus,
+  type ProofBundle,
+  type ProofBundleBuilderInput,
+  type SerializedAuditEvent,
+  type SerializedChainedEvent,
+  type SerializedSubjectRef,
+} from './proof_bundle.js';
+export {
+  BundleSchemaError,
+  BundleVerificationError,
+  shortSummary,
+  verifyProofBundle,
+  verifyProofBundleFile,
+  type BundleVerificationResult,
+} from './verifier.js';
+export { VERSION } from './index_version.js';
