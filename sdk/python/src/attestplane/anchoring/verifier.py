@@ -102,6 +102,7 @@ def verify_chain_with_anchors(
     *,
     trust_roots_der: list[bytes] | None = None,
     verification_time: datetime | None = None,
+    verify_ocsp: bool = True,
 ) -> AnchorVerificationResult:
     """Re-walk the chain AND check every anchor against it.
 
@@ -141,10 +142,14 @@ def verify_chain_with_anchors(
     # never call verify_chain_with_anchors(trust_roots_der=...) do not
     # need the anchor extras.
     _rfc3161: Any = None
+    _ocsp_mod: Any = None
     if trust_roots_der is not None:
         try:
             from attestplane.anchoring import rfc3161 as _rfc3161_mod
             _rfc3161 = _rfc3161_mod
+            if verify_ocsp:
+                from attestplane.anchoring import ocsp as _ocsp_module
+                _ocsp_mod = _ocsp_module
         except ImportError as exc:  # pragma: no cover
             raise AnchorVerificationError(
                 "trust_roots_der was provided but the 'anchor' extras are "
@@ -249,6 +254,85 @@ def verify_chain_with_anchors(
                     reason=str(exc),
                 ))
                 continue
+
+            # OCSP path: verify each OCSP response against the issuer.
+            # The issuer cert is taken from the cert chain; we look for
+            # one whose subject matches the leaf's issuer. If no OCSP
+            # responses are present, the cross-reference check above
+            # already required len(ocsp_responses) > 0, so we have at
+            # least one here.
+            ocsp_failure: str | None = None
+            ocsp_status: str = "good"
+            if _ocsp_mod is not None and anchor.ocsp_responses:
+                try:
+                    from asn1crypto import x509 as _asn1_x509
+                    leaf_asn1 = _asn1_x509.Certificate.load(parsed.leaf_cert_der)
+                    leaf_serial = int(leaf_asn1.serial_number)
+                    # Find an issuer cert: walk tsa_cert_chain looking for
+                    # subject matching leaf's issuer. Fall back to the
+                    # first configured trust root.
+                    issuer_der: bytes | None = None
+                    for c in anchor.tsa_cert_chain:
+                        try:
+                            cand = _asn1_x509.Certificate.load(c)
+                            if cand.subject.native == leaf_asn1.issuer.native:
+                                issuer_der = c
+                                break
+                        except Exception:  # noqa: BLE001
+                            continue
+                    if issuer_der is None and trust_roots_der:
+                        issuer_der = trust_roots_der[0]
+                    if issuer_der is None:
+                        ocsp_failure = "no issuer cert available for OCSP verification"
+                    else:
+                        for ocsp_der in anchor.ocsp_responses:
+                            ocsp_parsed = _ocsp_mod.parse_and_verify_ocsp(
+                                ocsp_der,
+                                expected_serial=leaf_serial,
+                                issuer_cert_der=issuer_der,
+                                verification_time=verification_time,
+                            )
+                            if ocsp_parsed.cert_status != "good":
+                                ocsp_status = ocsp_parsed.cert_status
+                                break
+                except AnchorVerificationError as exc:
+                    ocsp_failure = str(exc)
+
+            if ocsp_failure is not None:
+                # OCSP failed structurally — surface as MISSING_LTV
+                # rather than EXPIRED/REVOKED because the underlying
+                # signature might still be sound; we just couldn't
+                # confirm freshness.
+                anchor_results.append(SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=True,
+                    reason=f"OCSP: {ocsp_failure}",
+                ))
+                continue
+            if ocsp_status == "revoked":
+                anchor_results.append(SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="REVOKED",
+                    ltv_artifacts_present=True,
+                    reason="OCSP responder reports the TSA leaf cert is revoked",
+                ))
+                continue
+            if ocsp_status == "unknown":
+                anchor_results.append(SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=True,
+                    reason="OCSP responder reports cert status unknown",
+                ))
+                continue
+
             anchor_results.append(SingleAnchorResult(
                 seq=anchor.anchored_seq,
                 provider=provider,

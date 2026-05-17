@@ -109,7 +109,8 @@ class UrllibHttpTransport(HttpTransport):
             ) from exc
         if not body:
             raise TSAUnavailableError(f"TSA at {url} returned empty body")
-        return body
+        body_bytes: bytes = body
+        return body_bytes
 
 
 class RecordedHttpTransport(HttpTransport):
