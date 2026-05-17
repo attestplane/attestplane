@@ -35,7 +35,14 @@ export {
   type MultiTSAProviderInput,
   type SingleAnchorResult,
   type TimestampRequest,
+  type VerifyChainWithAnchorsOptions,
 } from './anchoring.js';
+export {
+  parseTimestampResponse,
+  verifyTimestampToken,
+  type ParsedTimestampTs,
+  type VerifyTimestampOptions,
+} from './rfc3161.js';
 export { CanonicalizationError, canonicalize } from './canonical.js';
 export {
   CanonicalTextError,

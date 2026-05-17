@@ -15,6 +15,7 @@
 import { createHash } from 'node:crypto';
 
 import { verifyChain, type VerificationResult } from './hashchain.js';
+import { parseTimestampResponse, verifyTimestampToken } from './rfc3161.js';
 import type { ChainedEvent } from './types.js';
 
 export const ANCHOR_SCHEMA_VERSION = 1 as const;
@@ -312,9 +313,17 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
+export interface VerifyChainWithAnchorsOptions {
+  readonly trustRootsDer?: readonly Uint8Array[];
+  readonly intermediatesDer?: readonly Uint8Array[];
+  readonly verificationTime?: Date;
+  readonly maxChainDepth?: number;
+}
+
 export function verifyChainWithAnchors(
   events: readonly ChainedEvent[],
   anchors: readonly AnchorRecord[],
+  options: VerifyChainWithAnchorsOptions = {},
 ): AnchorVerificationResult {
   const chainResult: VerificationResult = verifyChain(events);
   const seqsInChain = new Set(events.map((e) => e.seq));
@@ -386,14 +395,57 @@ export function verifyChainWithAnchors(
       continue;
     }
 
-    anchorResults.push({
-      seq: anchor.anchored_seq,
-      provider,
-      valid: true,
-      cert_status: 'VALID_UNVERIFIED',
-      ltv_artifacts_present: true,
-      reason: null,
-    });
+    // If trust roots are configured, do real signature verification.
+    if (options.trustRootsDer && options.trustRootsDer.length > 0) {
+      try {
+        const parsed = parseTimestampResponse(anchor.tsa_token);
+        const verifyOpts: import('./rfc3161.js').VerifyTimestampOptions = {
+          expectedDigest: anchor.anchored_event_hash,
+          trustRootsDer: options.trustRootsDer,
+          intermediatesDer: [
+            ...anchor.tsa_cert_chain,
+            ...(options.intermediatesDer ?? []),
+          ],
+          ...(options.verificationTime !== undefined
+            ? { verificationTime: options.verificationTime }
+            : {}),
+          ...(options.maxChainDepth !== undefined
+            ? { maxChainDepth: options.maxChainDepth }
+            : {}),
+        };
+        verifyTimestampToken(parsed, verifyOpts);
+      } catch (exc) {
+        if (exc instanceof AnchorVerificationError) {
+          anchorResults.push({
+            seq: anchor.anchored_seq,
+            provider,
+            valid: false,
+            cert_status: 'MISSING_LTV_ARTIFACTS',
+            ltv_artifacts_present: true,
+            reason: exc.message,
+          });
+          continue;
+        }
+        throw exc;
+      }
+      anchorResults.push({
+        seq: anchor.anchored_seq,
+        provider,
+        valid: true,
+        cert_status: 'VALID',
+        ltv_artifacts_present: true,
+        reason: null,
+      });
+    } else {
+      anchorResults.push({
+        seq: anchor.anchored_seq,
+        provider,
+        valid: true,
+        cert_status: 'VALID_UNVERIFIED',
+        ltv_artifacts_present: true,
+        reason: null,
+      });
+    }
     anchoredSeqs.add(anchor.anchored_seq);
   }
 
