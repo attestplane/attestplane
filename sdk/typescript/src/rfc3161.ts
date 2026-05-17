@@ -18,7 +18,7 @@
  * anchor_vectors.json fixtures verify in both languages.
  */
 
-import { createPublicKey, createVerify, type KeyObject } from 'node:crypto';
+import { type KeyObject, createPublicKey, createVerify } from 'node:crypto';
 
 import { AnchorVerificationError } from './anchoring.js';
 import {
@@ -122,7 +122,9 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   }
   const contentTypeOid = readOid(contentInfoFields[0] as DerTlv);
   if (contentTypeOid !== OID_SIGNED_DATA) {
-    throw new AnchorVerificationError(`TimeStampToken content_type is not signed_data: ${contentTypeOid}`);
+    throw new AnchorVerificationError(
+      `TimeStampToken content_type is not signed_data: ${contentTypeOid}`,
+    );
   }
   const contentExplicit = contentInfoFields[1] as DerTlv;
   if (contentExplicit.tag !== 0xa0) {
@@ -171,9 +173,7 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   }
   const messageImprintFields = readSequence(messageImprintSeq);
   // MessageImprint ::= SEQUENCE { hashAlgorithm AlgorithmIdentifier, hashedMessage OCTET STRING }
-  const hashAlgOid = readOid(
-    readSequence(messageImprintFields[0] as DerTlv)[0] as DerTlv,
-  );
+  const hashAlgOid = readOid(readSequence(messageImprintFields[0] as DerTlv)[0] as DerTlv);
   const hashAlgorithm = hashAlgOid === '2.16.840.1.101.3.4.2.1' ? 'sha256' : hashAlgOid;
   const hashedMessage = readOctetString(messageImprintFields[1] as DerTlv);
   const serialNumber = readInteger(tstFields[3] as DerTlv);
@@ -222,9 +222,7 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   }
   const signerInfos = readSequence(signerInfosField);
   if (signerInfos.length !== 1) {
-    throw new AnchorVerificationError(
-      `expected exactly one SignerInfo, got ${signerInfos.length}`,
-    );
+    throw new AnchorVerificationError(`expected exactly one SignerInfo, got ${signerInfos.length}`);
   }
   const signerInfo = signerInfos[0] as DerTlv;
   // SignerInfo ::= SEQUENCE { version, sid, digestAlgorithm, signedAttrs [0] IMPLICIT OPTIONAL,
@@ -260,7 +258,12 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
       break;
     }
   }
-  if (signedAttrs === null || signatureAlgo === null || signatureField === null || digestAlgo === null) {
+  if (
+    signedAttrs === null ||
+    signatureAlgo === null ||
+    signatureField === null ||
+    digestAlgo === null
+  ) {
     throw new AnchorVerificationError('SignerInfo missing required fields');
   }
 
@@ -308,7 +311,9 @@ function readUtcOrGeneralizedTime(tlv: DerTlv): Date {
     return readGeneralizedTime(tlv);
   }
   if (tlv.tag !== 0x17) {
-    throw new AnchorVerificationError(`expected UTCTime/GeneralizedTime, got 0x${tlv.tag.toString(16)}`);
+    throw new AnchorVerificationError(
+      `expected UTCTime/GeneralizedTime, got 0x${tlv.tag.toString(16)}`,
+    );
   }
   const text = new TextDecoder('ascii').decode(getValueBytes(tlv));
   if (!text.endsWith('Z')) {
@@ -526,7 +531,9 @@ export function verifyTimestampToken(
 
   let current = leaf;
   const visited = new Set<string>();
-  visited.add(bytesToHexString(current.subjectDer) + ':' + bytesToHexString(current.tbsBytes.slice(0, 4)));
+  visited.add(
+    `${bytesToHexString(current.subjectDer)}:${bytesToHexString(current.tbsBytes.slice(0, 4))}`,
+  );
 
   for (let hop = 0; hop < maxChainDepth; hop++) {
     const matchedRoot = findIssuer(current, roots);
@@ -580,9 +587,7 @@ function verifyLink(child: ParsedCertificate, issuer: ParsedCertificate, when: D
     );
   }
   if (!verifyRsaSha256(issuer.publicKey, child.tbsBytes, child.signature)) {
-    throw new AnchorVerificationError(
-      `cert signature does not verify against issuer`,
-    );
+    throw new AnchorVerificationError('cert signature does not verify against issuer');
   }
 }
 

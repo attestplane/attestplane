@@ -38,13 +38,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
 
-try:
-    import yaml
-except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "attestplane.signing.trust_roots requires the 'signing' extras "
-        "with PyYAML. Install with: pip install attestplane[signing]"
-    ) from exc
+# PyYAML is imported lazily inside `load_trust_roots()` so that callers who only
+# need the `TrustRoots` / `TrustRootEntry` dataclasses (e.g., constructed from an
+# in-memory list) can import this module without the `[signing]` extras
+# installed. The CI base environment does not install [signing]; previously the
+# unconditional top-level `import yaml` caused
+# `attestplane.signing.__init__` to crash on collection.
 
 from attestplane.signing.base import (
     SIGNATURE_SCHEMA_VERSION,
@@ -238,6 +237,15 @@ def load_trust_roots(path: str | os.PathLike[str]) -> TrustRoots:
     except OSError as exc:
         raise TrustRootsError(
             f"cannot read TrustRoots file {p}: {exc}"
+        ) from exc
+
+    try:
+        import yaml
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "attestplane.signing.trust_roots.load_trust_roots() requires the "
+            "'signing' extras with PyYAML. Install with: pip install "
+            "attestplane[signing]"
         ) from exc
 
     try:

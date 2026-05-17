@@ -196,7 +196,7 @@ def test_from_dict_missing_required_field() -> None:
 
 
 def test_from_dict_bad_datetime() -> None:
-    with pytest.raises(AdapterTranslationError, match="unparseable"):
+    with pytest.raises(AdapterTranslationError, match="unparsable"):
         LangSmithAdapter.from_dict({
             "id": "x", "name": "y", "run_type": "tool",
             "start_time": "not-a-date",

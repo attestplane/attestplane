@@ -234,7 +234,7 @@ function verifySingleSignature(
       event_hash: target.event_hash,
     });
     if (!bytesEqual(expected, record.signed_payload)) {
-      let payloadChainId: string | unknown = '<unparseable>';
+      let payloadChainId: string | unknown = '<unparsable>';
       try {
         const parsed = JSON.parse(Buffer.from(record.signed_payload).toString('utf-8')) as Record<
           string,
@@ -242,7 +242,7 @@ function verifySingleSignature(
         >;
         payloadChainId = parsed.chain_id;
       } catch {
-        // payloadChainId stays as '<unparseable>'
+        // payloadChainId stays as '<unparsable>'
       }
       return {
         ...base,

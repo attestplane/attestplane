@@ -14,7 +14,7 @@
 
 import { createHash } from 'node:crypto';
 
-import { verifyChain, type VerificationResult } from './hashchain.js';
+import { type VerificationResult, verifyChain } from './hashchain.js';
 import { parseTimestampResponse, verifyTimestampToken } from './rfc3161.js';
 import type { ChainedEvent } from './types.js';
 
@@ -124,9 +124,13 @@ export function makeTimestampRequest(input: TimestampRequest): TimestampRequest 
 // ----- Abstract provider -----
 
 const FORBIDDEN_PROVIDER_METHODS = new Set([
-  'mutate', 'rewrite', 'replace',
-  'revoke', 'retract',
-  'delete', 'remove',
+  'mutate',
+  'rewrite',
+  'replace',
+  'revoke',
+  'retract',
+  'delete',
+  'remove',
 ]);
 
 /**
@@ -153,8 +157,7 @@ export abstract class TSAProvider {
     if (offenders.length > 0) {
       offenders.sort();
       throw new AnchorError(
-        `${this.constructor.name} defines forbidden mutating method(s) [${offenders.join(', ')}]; ` +
-          'TSA providers do not own anchor validity. See ADR-0003 § 4.',
+        `${this.constructor.name} defines forbidden mutating method(s) [${offenders.join(', ')}]; TSA providers do not own anchor validity. See ADR-0003 § 4.`,
       );
     }
   }
@@ -390,7 +393,8 @@ export function verifyChainWithAnchors(
         valid: false,
         cert_status: 'MISSING_LTV_ARTIFACTS',
         ltv_artifacts_present: false,
-        reason: 'tsa_cert_chain or ocsp_responses is empty; CAdES-A long-term validation requires both',
+        reason:
+          'tsa_cert_chain or ocsp_responses is empty; CAdES-A long-term validation requires both',
       });
       continue;
     }
@@ -402,16 +406,11 @@ export function verifyChainWithAnchors(
         const verifyOpts: import('./rfc3161.js').VerifyTimestampOptions = {
           expectedDigest: anchor.anchored_event_hash,
           trustRootsDer: options.trustRootsDer,
-          intermediatesDer: [
-            ...anchor.tsa_cert_chain,
-            ...(options.intermediatesDer ?? []),
-          ],
+          intermediatesDer: [...anchor.tsa_cert_chain, ...(options.intermediatesDer ?? [])],
           ...(options.verificationTime !== undefined
             ? { verificationTime: options.verificationTime }
             : {}),
-          ...(options.maxChainDepth !== undefined
-            ? { maxChainDepth: options.maxChainDepth }
-            : {}),
+          ...(options.maxChainDepth !== undefined ? { maxChainDepth: options.maxChainDepth } : {}),
         };
         verifyTimestampToken(parsed, verifyOpts);
       } catch (exc) {

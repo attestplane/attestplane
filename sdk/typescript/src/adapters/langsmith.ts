@@ -33,11 +33,16 @@ import { createHash } from 'node:crypto';
 
 import { AdapterTranslationError, GenericRuntimeAdapter } from '../adapters.js';
 import { TOOL_CALL_EVENT } from '../event_types.js';
-import { makeEventDraft, makeSubjectRef, type EventDraft } from '../types.js';
+import { type EventDraft, makeEventDraft, makeSubjectRef } from '../types.js';
 
 const KNOWN_RUN_TYPES = new Set([
-  'tool', 'llm', 'chain', 'retriever',
-  'prompt', 'parser', 'embedding',
+  'tool',
+  'llm',
+  'chain',
+  'retriever',
+  'prompt',
+  'parser',
+  'embedding',
 ]);
 
 export interface LangSmithRun {
@@ -87,7 +92,7 @@ function _hashJson(value: unknown): string {
 
 function _truncate(text: string, n = 200): string {
   if (text.length <= n) return text;
-  return text.slice(0, n - 3) + '...';
+  return `${text.slice(0, n - 3)}...`;
 }
 
 export class LangSmithAdapter extends GenericRuntimeAdapter<LangSmithRun> {
@@ -96,10 +101,10 @@ export class LangSmithAdapter extends GenericRuntimeAdapter<LangSmithRun> {
 
   translate(runtime_event: LangSmithRun): EventDraft {
     if (
-      typeof runtime_event !== 'object'
-      || runtime_event === null
-      || typeof (runtime_event as LangSmithRun).id !== 'string'
-      || typeof (runtime_event as LangSmithRun).run_type !== 'string'
+      typeof runtime_event !== 'object' ||
+      runtime_event === null ||
+      typeof (runtime_event as LangSmithRun).id !== 'string' ||
+      typeof (runtime_event as LangSmithRun).run_type !== 'string'
     ) {
       throw new AdapterTranslationError(
         `expected LangSmithRun object, got ${runtime_event === null ? 'null' : typeof runtime_event}`,
@@ -126,17 +131,17 @@ export class LangSmithAdapter extends GenericRuntimeAdapter<LangSmithRun> {
       result_status: resultStatus,
     };
     if (run.outputs != null) {
-      payload['result_hash'] = _hashJson(run.outputs);
+      payload.result_hash = _hashJson(run.outputs);
     }
     if (run.end_time != null) {
       const ms = run.end_time.getTime() - run.start_time.getTime();
-      payload['latency_ms'] = Math.trunc(ms);
+      payload.latency_ms = Math.trunc(ms);
     }
     if (run.error) {
-      payload['error_code'] = _truncate(run.error);
+      payload.error_code = _truncate(run.error);
     }
     if (run.tags && run.tags.length > 0) {
-      payload['tags'] = [...run.tags];
+      payload.tags = [...run.tags];
     }
 
     const sessionId = run.trace_id ?? run.id;
@@ -163,12 +168,10 @@ export class LangSmithAdapter extends GenericRuntimeAdapter<LangSmithRun> {
     const parseDt = (value: unknown): Date => {
       if (value instanceof Date) return value;
       if (typeof value === 'string') {
-        const normalized = value.endsWith('Z')
-          ? value.replace('Z', '+00:00')
-          : value;
+        const normalized = value.endsWith('Z') ? value.replace('Z', '+00:00') : value;
         const d = new Date(normalized);
         if (Number.isNaN(d.getTime())) {
-          throw new AdapterTranslationError(`unparseable datetime ${JSON.stringify(value)}`);
+          throw new AdapterTranslationError(`unparsable datetime ${JSON.stringify(value)}`);
         }
         return d;
       }
@@ -177,34 +180,32 @@ export class LangSmithAdapter extends GenericRuntimeAdapter<LangSmithRun> {
       );
     };
 
-    const metadata = (raw['metadata'] as Record<string, unknown> | undefined) ?? {};
+    const metadata = (raw.metadata as Record<string, unknown> | undefined) ?? {};
     if (typeof metadata !== 'object' || Array.isArray(metadata)) {
       throw new AdapterTranslationError('metadata must be an object');
     }
 
-    const tagsRaw = raw['tags'];
+    const tagsRaw = raw.tags;
     if (tagsRaw !== undefined && tagsRaw !== null && !Array.isArray(tagsRaw)) {
       throw new AdapterTranslationError('tags must be an array');
     }
-    const tags = Array.isArray(tagsRaw)
-      ? tagsRaw.map((t) => String(t))
-      : [];
+    const tags = Array.isArray(tagsRaw) ? tagsRaw.map((t) => String(t)) : [];
 
     return {
-      id: String(raw['id']),
-      name: String(raw['name']),
-      run_type: String(raw['run_type']),
-      start_time: parseDt(raw['start_time']),
-      end_time: raw['end_time'] ? parseDt(raw['end_time']) : null,
-      inputs: (raw['inputs'] as Record<string, unknown>) ?? {},
-      outputs: (raw['outputs'] as Record<string, unknown> | null) ?? null,
-      error: (raw['error'] as string | null) ?? null,
-      trace_id: (raw['trace_id'] as string | null) ?? null,
-      parent_run_id: (raw['parent_run_id'] as string | null) ?? null,
-      status: (raw['status'] as string | null) ?? null,
+      id: String(raw.id),
+      name: String(raw.name),
+      run_type: String(raw.run_type),
+      start_time: parseDt(raw.start_time),
+      end_time: raw.end_time ? parseDt(raw.end_time) : null,
+      inputs: (raw.inputs as Record<string, unknown>) ?? {},
+      outputs: (raw.outputs as Record<string, unknown> | null) ?? null,
+      error: (raw.error as string | null) ?? null,
+      trace_id: (raw.trace_id as string | null) ?? null,
+      parent_run_id: (raw.parent_run_id as string | null) ?? null,
+      status: (raw.status as string | null) ?? null,
       tags,
       metadata,
-      end_user_id: typeof metadata['user_id'] === 'string' ? metadata['user_id'] : null,
+      end_user_id: typeof metadata.user_id === 'string' ? metadata.user_id : null,
     };
   }
 }

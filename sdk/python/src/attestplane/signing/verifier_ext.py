@@ -279,7 +279,7 @@ def _verify_single_signature(
                 payload_obj = json.loads(record.signed_payload)
                 payload_chain_id = payload_obj.get("chain_id")
             except Exception:  # noqa: BLE001
-                payload_chain_id = "<unparseable>"
+                payload_chain_id = "<unparsable>"
             return SingleSignatureResult(
                 record_index=index,
                 signed_seq=record.signed_seq,

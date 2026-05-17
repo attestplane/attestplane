@@ -5,11 +5,21 @@ extend-ignore-identifiers-re = [
 
 [default.extend-words]
 attestplane = "attestplane"
+# in-toto attestation standard (SLSA / Sigstore ecosystem). Appears as a
+# sub-module identifier (e.g. `intoto`, `Intoto`) in code and prose.
+intoto = "intoto"
+Intoto = "Intoto"
+# `mis` as a standalone token appears inside hyphenated compounds like
+# `mis-classifying`, `mis-translating` — valid English usage in ADRs.
+mis = "mis"
 
 [default.extend-identifiers]
 # BaFin = Bundesanstalt fur Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority).
 # Listed as identifier so typos does not split it into "Ba"+"Fin" and flag "Ba".
 BaFin = "BaFin"
+# ASN.1 BIT STRING(s) — standard term; typos tokenises `STRINGs` and
+# flags the suffix `STRIN`.
+STRINGs = "STRINGs"
 
 [files]
 extend-exclude = [
@@ -17,4 +27,6 @@ extend-exclude = [
   "DCO.txt",
   ".lycheeignore",
   "_typos.toml",
+  # Compiled artifacts — they mirror src/, no point spell-checking.
+  "sdk/typescript/dist/**",
 ]

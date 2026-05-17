@@ -215,7 +215,7 @@ class LangFuseAdapter(GenericRuntimeAdapter[LangFuseObservation]):
                     return datetime.fromisoformat(normalized)
                 except ValueError as exc:
                     raise AdapterTranslationError(
-                        f"unparseable datetime {value!r}: {exc}"
+                        f"unparsable datetime {value!r}: {exc}"
                     ) from exc
             raise AdapterTranslationError(
                 f"datetime field has type {type(value).__name__}"

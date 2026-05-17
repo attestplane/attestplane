@@ -14,11 +14,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chainExtend, genesisHead } from '../src/hashchain.js';
 import {
   DEFAULT_FORBIDDEN_FIELDS,
+  type FrameworkMapping,
   ProofBundleBuilder,
   buildAuditorExport,
-  type FrameworkMapping,
 } from '../src/proof_bundle.js';
-import { makeEventDraft, type ChainHead, type ChainedEvent } from '../src/types.js';
+import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
 import {
   BundleSchemaError,
   BundleVerificationError,
@@ -101,14 +101,18 @@ describe('ProofBundleBuilder', () => {
     });
     const bundle = builder.build();
     expect(bundle.framework_mappings.length).toBe(1);
-    expect(bundle.framework_mappings[0]!.obligation_id).toBe('eu_ai_act.art12.3c.matched_input_data');
+    expect(bundle.framework_mappings[0]?.obligation_id).toBe(
+      'eu_ai_act.art12.3c.matched_input_data',
+    );
   });
 
   it('serializes timestamps with 6-digit microsecond precision', () => {
     const builder = new ProofBundleBuilder({ chain_id: 't', producer_runtime: 'test' });
     builder.extend(buildGoodChain(1));
     const bundle = builder.build();
-    expect(bundle.events[0]!.event.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
+    expect(bundle.events[0]?.event.timestamp).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/,
+    );
   });
 });
 
@@ -127,7 +131,7 @@ describe('verifyProofBundle', () => {
   it('rejects a bad bundle_version', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'v', producer_runtime: 'test' });
     const bundle = builder.build() as unknown as Record<string, unknown>;
-    bundle['bundle_version'] = 99;
+    bundle.bundle_version = 99;
     expect(() => verifyProofBundle(bundle)).toThrow(BundleSchemaError);
   });
 
@@ -145,10 +149,10 @@ describe('verifyProofBundle', () => {
     const builder = new ProofBundleBuilder({ chain_id: 't', producer_runtime: 'test' });
     builder.extend(buildGoodChain(3));
     const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
-    const events = bundle['events'] as Array<Record<string, unknown>>;
+    const events = bundle.events as Array<Record<string, unknown>>;
     const ev1 = events[1]!;
-    const event = ev1['event'] as Record<string, unknown>;
-    event['payload'] = { index: 999 };
+    const event = ev1.event as Record<string, unknown>;
+    event.payload = { index: 999 };
     const result = verifyProofBundle(bundle);
     expect(result.ok).toBe(false);
     expect(result.chain_result.ok).toBe(false);
@@ -159,9 +163,9 @@ describe('verifyProofBundle', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'd', producer_runtime: 'test' });
     builder.extend(buildGoodChain(3));
     const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
-    const events = bundle['events'] as Array<Record<string, unknown>>;
+    const events = bundle.events as Array<Record<string, unknown>>;
     const ev1 = events[1]!;
-    (ev1['event'] as Record<string, unknown>)['payload'] = { tampered: true };
+    (ev1.event as Record<string, unknown>).payload = { tampered: true };
     // Leave verification_report.ok at true (simulating post-build tampering).
     const result = verifyProofBundle(bundle);
     expect(result.ok).toBe(false);
@@ -178,9 +182,9 @@ describe('verifyProofBundle', () => {
     expect(shortSummary(okResult)).toContain("'my-id'");
 
     const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
-    ((bundle['events'] as Array<Record<string, unknown>>)[1]!['event'] as Record<string, unknown>)[
-      'payload'
-    ] = { changed: true };
+    (
+      (bundle.events as Array<Record<string, unknown>>)[1]?.event as Record<string, unknown>
+    ).payload = { changed: true };
     const failResult = verifyProofBundle(bundle);
     expect(shortSummary(failResult)).toMatch(/^FAIL/);
   });
@@ -239,8 +243,8 @@ describe('buildAuditorExport', () => {
     builder.extend(buildGoodChain(4));
     const bundle = builder.build();
     const exp = buildAuditorExport(bundle);
-    expect(exp.chain_summary.event_type_histogram['eval_event']).toBe(2);
-    expect(exp.chain_summary.event_type_histogram['policy_check_event']).toBe(2);
+    expect(exp.chain_summary.event_type_histogram.eval_event).toBe(2);
+    expect(exp.chain_summary.event_type_histogram.policy_check_event).toBe(2);
   });
 
   it('reports anchor_status=unanchored in v1', () => {

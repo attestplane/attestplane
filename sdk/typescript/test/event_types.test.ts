@@ -53,8 +53,14 @@ describe('event taxonomy v1', () => {
   });
 
   it('isKnownV1EventType returns false for unknown / unrelated strings', () => {
-    for (const unknown of ['', 'unknown_event', 'TOOL_CALL_EVENT',
-                            'tool_call', 'future_taxonomy_event_v2', 'evid']) {
+    for (const unknown of [
+      '',
+      'unknown_event',
+      'TOOL_CALL_EVENT',
+      'tool_call',
+      'future_taxonomy_event_v2',
+      'evid',
+    ]) {
       expect(eventTypes.isKnownV1EventType(unknown)).toBe(false);
     }
   });

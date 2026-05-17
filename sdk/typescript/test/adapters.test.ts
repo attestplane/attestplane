@@ -8,12 +8,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  AdapterError,
-  AdapterTranslationError,
-  GenericRuntimeAdapter,
-} from '../src/adapters.js';
-import { makeEventDraft, makeSubjectRef, type EventDraft } from '../src/types.js';
+import { AdapterError, AdapterTranslationError, GenericRuntimeAdapter } from '../src/adapters.js';
+import { type EventDraft, makeEventDraft, makeSubjectRef } from '../src/types.js';
 
 interface MockRuntimeEvent {
   readonly kind: string;
@@ -82,11 +78,20 @@ describe('GenericRuntimeAdapter', () => {
   });
 
   const FORBIDDEN_METHODS = [
-    'execute', 'run', 'dispatch',
-    'grant', 'revoke', 'issue',
-    'decide', 'approve', 'reject',
-    'settle', 'charge', 'credit',
-    'schedule', 'allocate',
+    'execute',
+    'run',
+    'dispatch',
+    'grant',
+    'revoke',
+    'issue',
+    'decide',
+    'approve',
+    'reject',
+    'settle',
+    'charge',
+    'credit',
+    'schedule',
+    'allocate',
   ] as const;
 
   for (const forbidden of FORBIDDEN_METHODS) {
@@ -102,9 +107,7 @@ describe('GenericRuntimeAdapter', () => {
       // Inject the forbidden method on the prototype so __init_subclass__-
       // equivalent constructor check fires.
       Object.defineProperty(BadAdapter.prototype, forbidden, {
-        value: function () {
-          return undefined;
-        },
+        value: () => undefined,
         enumerable: false,
         configurable: true,
         writable: true,
@@ -130,8 +133,8 @@ describe('GenericRuntimeAdapter', () => {
     }
 
     const adapter = new AdapterWithPrivateHelper();
-    expect(
-      adapter.translate({ kind: 'x', actor_id: 'y', user_id_hashed: 'z' }).event_type,
-    ).toBe('x');
+    expect(adapter.translate({ kind: 'x', actor_id: 'y', user_id_hashed: 'z' }).event_type).toBe(
+      'x',
+    );
   });
 });

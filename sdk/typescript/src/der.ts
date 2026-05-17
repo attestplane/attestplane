@@ -72,9 +72,7 @@ export function readTlv(buffer: Uint8Array, offset: number): DerTlv {
     cursor += lenBytes;
   }
   if (cursor + length > buffer.length) {
-    throw new DerParseError(
-      `truncated: value of length ${length} extends past buffer end`,
-    );
+    throw new DerParseError(`truncated: value of length ${length} extends past buffer end`);
   }
   return { tag, length, valueStart: cursor, end: cursor + length, buffer };
 }

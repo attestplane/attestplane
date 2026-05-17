@@ -45,11 +45,20 @@ export class AdapterTranslationError extends AdapterError {
 }
 
 const FORBIDDEN_METHOD_NAMES: ReadonlySet<string> = new Set([
-  'execute', 'run', 'dispatch',
-  'grant', 'revoke', 'issue',
-  'decide', 'approve', 'reject',
-  'settle', 'charge', 'credit',
-  'schedule', 'allocate',
+  'execute',
+  'run',
+  'dispatch',
+  'grant',
+  'revoke',
+  'issue',
+  'decide',
+  'approve',
+  'reject',
+  'settle',
+  'charge',
+  'credit',
+  'schedule',
+  'allocate',
 ]);
 
 /**

@@ -30,7 +30,7 @@ import { createHash } from 'node:crypto';
 
 import { AdapterTranslationError, GenericRuntimeAdapter } from '../adapters.js';
 import { TOOL_CALL_EVENT } from '../event_types.js';
-import { makeEventDraft, makeSubjectRef, type EventDraft } from '../types.js';
+import { type EventDraft, makeEventDraft, makeSubjectRef } from '../types.js';
 
 const KNOWN_OBSERVATION_TYPES = new Set(['GENERATION', 'SPAN', 'EVENT']);
 const KNOWN_LEVELS = new Set(['DEFAULT', 'DEBUG', 'WARNING', 'ERROR']);
@@ -75,7 +75,7 @@ function _hashJson(value: unknown): string {
 
 function _truncate(text: string, n = 200): string {
   if (text.length <= n) return text;
-  return text.slice(0, n - 3) + '...';
+  return `${text.slice(0, n - 3)}...`;
 }
 
 function _levelToStatus(level: string | null | undefined): 'OK' | 'ERROR' {
@@ -88,11 +88,11 @@ export class LangFuseAdapter extends GenericRuntimeAdapter<LangFuseObservation> 
 
   translate(runtime_event: LangFuseObservation): EventDraft {
     if (
-      typeof runtime_event !== 'object'
-      || runtime_event === null
-      || typeof (runtime_event as LangFuseObservation).id !== 'string'
-      || typeof (runtime_event as LangFuseObservation).trace_id !== 'string'
-      || typeof (runtime_event as LangFuseObservation).type !== 'string'
+      typeof runtime_event !== 'object' ||
+      runtime_event === null ||
+      typeof (runtime_event as LangFuseObservation).id !== 'string' ||
+      typeof (runtime_event as LangFuseObservation).trace_id !== 'string' ||
+      typeof (runtime_event as LangFuseObservation).type !== 'string'
     ) {
       throw new AdapterTranslationError(
         `expected LangFuseObservation object, got ${
@@ -113,31 +113,31 @@ export class LangFuseAdapter extends GenericRuntimeAdapter<LangFuseObservation> 
     };
 
     if (obs.input !== undefined && obs.input !== null) {
-      payload['arguments_hash'] = _hashJson(obs.input);
+      payload.arguments_hash = _hashJson(obs.input);
     } else {
       // Schema requires arguments_hash always present; hash empty dict.
-      payload['arguments_hash'] = _hashJson({});
+      payload.arguments_hash = _hashJson({});
     }
 
     if (obs.output !== undefined && obs.output !== null) {
-      payload['result_hash'] = _hashJson(obs.output);
+      payload.result_hash = _hashJson(obs.output);
     }
 
     if (obs.start_time != null && obs.end_time != null) {
       const ms = obs.end_time.getTime() - obs.start_time.getTime();
-      payload['latency_ms'] = Math.trunc(ms);
+      payload.latency_ms = Math.trunc(ms);
     }
 
     if (obs.status_message && resultStatus === 'ERROR') {
-      payload['error_code'] = _truncate(obs.status_message);
+      payload.error_code = _truncate(obs.status_message);
     }
 
     if (obs.model) {
-      payload['tool_version'] = obs.model;
+      payload.tool_version = obs.model;
     }
 
     if (obs.level && KNOWN_LEVELS.has(obs.level) && obs.level !== 'DEFAULT') {
-      payload['level'] = obs.level;
+      payload.level = obs.level;
     }
 
     return makeEventDraft({
@@ -168,31 +168,31 @@ export class LangFuseAdapter extends GenericRuntimeAdapter<LangFuseObservation> 
         const normalized = value.endsWith('Z') ? value.replace('Z', '+00:00') : value;
         const d = new Date(normalized);
         if (Number.isNaN(d.getTime())) {
-          throw new AdapterTranslationError(`unparseable datetime ${JSON.stringify(value)}`);
+          throw new AdapterTranslationError(`unparsable datetime ${JSON.stringify(value)}`);
         }
         return d;
       }
       throw new AdapterTranslationError(`datetime field has type ${typeof value}`);
     };
 
-    const metadata = (raw['metadata'] as Record<string, unknown> | undefined) ?? {};
+    const metadata = (raw.metadata as Record<string, unknown> | undefined) ?? {};
     if (typeof metadata !== 'object' || Array.isArray(metadata)) {
       throw new AdapterTranslationError('metadata must be an object');
     }
 
     return {
-      id: String(raw['id']),
-      trace_id: String(raw['trace_id']),
-      type: String(raw['type']),
-      name: (raw['name'] as string | null) ?? null,
-      start_time: parseDt(raw['start_time']),
-      end_time: parseDt(raw['end_time']),
-      input: raw['input'],
-      output: raw['output'],
-      level: (raw['level'] as string | null) ?? null,
+      id: String(raw.id),
+      trace_id: String(raw.trace_id),
+      type: String(raw.type),
+      name: (raw.name as string | null) ?? null,
+      start_time: parseDt(raw.start_time),
+      end_time: parseDt(raw.end_time),
+      input: raw.input,
+      output: raw.output,
+      level: (raw.level as string | null) ?? null,
       metadata,
-      status_message: (raw['status_message'] as string | null) ?? null,
-      model: (raw['model'] as string | null) ?? null,
+      status_message: (raw.status_message as string | null) ?? null,
+      model: (raw.model as string | null) ?? null,
       user_id: options?.user_id ?? null,
     };
   }

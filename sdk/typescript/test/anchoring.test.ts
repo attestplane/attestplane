@@ -10,21 +10,26 @@ import { describe, expect, it } from 'vitest';
 import {
   ANCHOR_SCHEMA_VERSION,
   AnchorError,
-  AnchorRecord,
+  type AnchorRecord,
   AnchorVerificationError,
   DEFAULT_ANCHOR_POLICY,
   MockTSAProvider,
   MultiTSAProvider,
+  type SingleAnchorResult,
   TSAProvider,
   TSAUnavailableError,
   makeAnchorPolicy,
   makeTimestampRequest,
   validateAnchorRecord,
   verifyChainWithAnchors,
-  type SingleAnchorResult,
 } from '../src/anchoring.js';
 import { chainExtend, genesisHead } from '../src/hashchain.js';
-import { makeEventDraft, type ChainHead, type ChainedEvent, type EventDraft } from '../src/types.js';
+import {
+  type ChainHead,
+  type ChainedEvent,
+  type EventDraft,
+  makeEventDraft,
+} from '../src/types.js';
 
 function buildChain(n: number): ChainedEvent[] {
   const ts = new Date('2026-05-17T12:00:00.000Z');
@@ -156,9 +161,7 @@ describe('TSAProvider forbidden-verb gate', () => {
         }
       }
       Object.defineProperty(BadProvider.prototype, verb, {
-        value: function () {
-          return undefined;
-        },
+        value: () => undefined,
         enumerable: false,
         configurable: true,
         writable: true,
@@ -215,10 +218,9 @@ describe('MockTSAProvider', () => {
   it('uses explicit now', () => {
     const provider = new MockTSAProvider();
     const explicit = new Date('2030-01-01T00:00:00.000Z');
-    const a = provider.requestTimestamp(
-      makeTimestampRequest({ digest: new Uint8Array(32) }),
-      { now: explicit },
-    );
+    const a = provider.requestTimestamp(makeTimestampRequest({ digest: new Uint8Array(32) }), {
+      now: explicit,
+    });
     expect(a.issued_at_claimed.getTime()).toBe(explicit.getTime());
   });
 
@@ -227,10 +229,9 @@ describe('MockTSAProvider', () => {
       fixed_time: new Date('2026-05-17T12:00:00.000Z'),
     });
     const chain = buildChain(1);
-    const a = provider.requestTimestamp(
-      makeTimestampRequest({ digest: chain[0]!.event_hash }),
-      { anchoredSeq: 0 },
-    );
+    const a = provider.requestTimestamp(makeTimestampRequest({ digest: chain[0]?.event_hash }), {
+      anchoredSeq: 0,
+    });
     expect(a.anchor_schema_version).toBe(ANCHOR_SCHEMA_VERSION);
     expect(a.anchored_seq).toBe(0);
     expect(a.tsa_provider_id).toBe('mock.tsa.local');
@@ -246,9 +247,7 @@ describe('MultiTSAProvider', () => {
     const p1 = new MockTSAProvider({ provider_id: 'alpha', fixed_time: fixedTime });
     const p2 = new MockTSAProvider({ provider_id: 'beta', fixed_time: fixedTime });
     const multi = new MultiTSAProvider({ providers: [p1, p2] });
-    const anchors = multi.requestTimestamps(
-      makeTimestampRequest({ digest: new Uint8Array(32) }),
-    );
+    const anchors = multi.requestTimestamps(makeTimestampRequest({ digest: new Uint8Array(32) }));
     expect(anchors.length).toBe(2);
     expect(new Set(anchors.map((a) => a.tsa_provider_id))).toEqual(new Set(['alpha', 'beta']));
   });
@@ -282,11 +281,9 @@ describe('MultiTSAProvider', () => {
       fail_with: new TSAUnavailableError('dead'),
     });
     const multi = new MultiTSAProvider({ providers: [good, bad], tolerate_partial: true });
-    const anchors = multi.requestTimestamps(
-      makeTimestampRequest({ digest: new Uint8Array(32) }),
-    );
+    const anchors = multi.requestTimestamps(makeTimestampRequest({ digest: new Uint8Array(32) }));
     expect(anchors.length).toBe(1);
-    expect(anchors[0]!.tsa_provider_id).toBe('alpha');
+    expect(anchors[0]?.tsa_provider_id).toBe('alpha');
   });
 
   it('all-fail partial mode re-raises', () => {
@@ -317,10 +314,9 @@ describe('verifyChainWithAnchors', () => {
 
   function goodAnchor(chain: ChainedEvent[], seq: number): AnchorRecord {
     const provider = new MockTSAProvider({ fixed_time: fixedTime });
-    return provider.requestTimestamp(
-      makeTimestampRequest({ digest: chain[seq]!.event_hash }),
-      { anchoredSeq: seq },
-    );
+    return provider.requestTimestamp(makeTimestampRequest({ digest: chain[seq]?.event_hash }), {
+      anchoredSeq: seq,
+    });
   }
 
   it('empty inputs', () => {
@@ -343,8 +339,8 @@ describe('verifyChainWithAnchors', () => {
     const chain = buildChain(3);
     const result = verifyChainWithAnchors(chain, [goodAnchor(chain, 2)]);
     expect(result.ok).toBe(true);
-    expect(result.anchor_results[0]!.valid).toBe(true);
-    expect(result.anchor_results[0]!.cert_status).toBe('VALID_UNVERIFIED');
+    expect(result.anchor_results[0]?.valid).toBe(true);
+    expect(result.anchor_results[0]?.cert_status).toBe('VALID_UNVERIFIED');
     expect(result.anchored_seqs).toEqual(new Set([2]));
   });
 
@@ -354,7 +350,7 @@ describe('verifyChainWithAnchors', () => {
     const p2 = new MockTSAProvider({ provider_id: 'beta', fixed_time: fixedTime });
     const multi = new MultiTSAProvider({ providers: [p1, p2] });
     const anchors = multi.requestTimestamps(
-      makeTimestampRequest({ digest: chain[1]!.event_hash }),
+      makeTimestampRequest({ digest: chain[1]?.event_hash }),
       { anchoredSeq: 1 },
     );
     const result = verifyChainWithAnchors(chain, anchors);
@@ -377,8 +373,8 @@ describe('verifyChainWithAnchors', () => {
     };
     const result = verifyChainWithAnchors(chain, [bad]);
     expect(result.ok).toBe(false);
-    expect(result.anchor_results[0]!.valid).toBe(false);
-    expect(result.anchor_results[0]!.reason).toMatch(/event_hash mismatch/);
+    expect(result.anchor_results[0]?.valid).toBe(false);
+    expect(result.anchor_results[0]?.reason).toMatch(/event_hash mismatch/);
   });
 
   it('detects seq out of range', () => {
@@ -395,7 +391,7 @@ describe('verifyChainWithAnchors', () => {
     };
     const result = verifyChainWithAnchors(chain, [bad]);
     expect(result.ok).toBe(false);
-    expect(result.anchor_results[0]!.reason).toMatch(/not in chain/);
+    expect(result.anchor_results[0]?.reason).toMatch(/not in chain/);
   });
 
   it('detects missing LTV artifacts', () => {
@@ -403,7 +399,7 @@ describe('verifyChainWithAnchors', () => {
     const bad: AnchorRecord = {
       anchor_schema_version: ANCHOR_SCHEMA_VERSION,
       anchored_seq: 0,
-      anchored_event_hash: chain[0]!.event_hash,
+      anchored_event_hash: chain[0]?.event_hash,
       tsa_provider_id: 'mock.tsa.local',
       tsa_token: new Uint8Array(1),
       tsa_cert_chain: [],
@@ -412,12 +408,12 @@ describe('verifyChainWithAnchors', () => {
     };
     const result = verifyChainWithAnchors(chain, [bad]);
     expect(result.ok).toBe(false);
-    expect(result.anchor_results[0]!.cert_status).toBe('MISSING_LTV_ARTIFACTS');
+    expect(result.anchor_results[0]?.cert_status).toBe('MISSING_LTV_ARTIFACTS');
   });
 
   it('v1 cert_status is VALID_UNVERIFIED for good anchors', () => {
     const chain = buildChain(1);
     const result = verifyChainWithAnchors(chain, [goodAnchor(chain, 0)]);
-    expect(result.anchor_results[0]!.cert_status).toBe('VALID_UNVERIFIED');
+    expect(result.anchor_results[0]?.cert_status).toBe('VALID_UNVERIFIED');
   });
 });

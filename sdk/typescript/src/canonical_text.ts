@@ -79,9 +79,7 @@ function foldWhitespace(text: string): string {
  */
 export function canonicalizeText(text: string): Uint8Array {
   if (typeof text !== 'string') {
-    throw new CanonicalTextError(
-      `canonicalizeText expects string, got ${typeof text}`,
-    );
+    throw new CanonicalTextError(`canonicalizeText expects string, got ${typeof text}`);
   }
 
   rejectForbiddenCodePoints(text);

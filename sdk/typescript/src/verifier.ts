@@ -17,7 +17,7 @@
 
 import { promises as fs } from 'node:fs';
 
-import { verifyChain, type VerificationResult } from './hashchain.js';
+import { type VerificationResult, verifyChain } from './hashchain.js';
 import type {
   ProofBundle,
   SerializedAuditEvent,
@@ -97,13 +97,12 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   if (missing.length > 0) {
     throw new BundleSchemaError(`bundle missing required fields: ${JSON.stringify(missing)}`);
   }
-  if (raw['bundle_version'] !== 1) {
+  if (raw.bundle_version !== 1) {
     throw new BundleSchemaError(
-      `unsupported bundle_version=${JSON.stringify(raw['bundle_version'])}; ` +
-        'this verifier handles version 1 only',
+      `unsupported bundle_version=${JSON.stringify(raw.bundle_version)}; this verifier handles version 1 only`,
     );
   }
-  const cm = raw['chain_metadata'];
+  const cm = raw.chain_metadata;
   if (!isPlainObject(cm)) {
     throw new BundleSchemaError('chain_metadata must be a JSON object');
   }
@@ -113,13 +112,13 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
       `chain_metadata missing required fields: ${JSON.stringify(missingCm)}`,
     );
   }
-  if (!Array.isArray(raw['events'])) {
+  if (!Array.isArray(raw.events)) {
     throw new BundleSchemaError('events must be an array');
   }
-  if (!isPlainObject(raw['verification_report'])) {
+  if (!isPlainObject(raw.verification_report)) {
     throw new BundleSchemaError('verification_report must be a JSON object');
   }
-  if (!Array.isArray(raw['forbidden_fields'])) {
+  if (!Array.isArray(raw.forbidden_fields)) {
     throw new BundleSchemaError('forbidden_fields must be an array');
   }
 }
@@ -132,7 +131,9 @@ function hexToBytes(hex: string): Uint8Array {
   for (let i = 0; i < out.length; i++) {
     const byte = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
     if (Number.isNaN(byte)) {
-      throw new BundleSchemaError(`invalid hex byte at position ${i * 2}: ${hex.slice(i * 2, i * 2 + 2)}`);
+      throw new BundleSchemaError(
+        `invalid hex byte at position ${i * 2}: ${hex.slice(i * 2, i * 2 + 2)}`,
+      );
     }
     out[i] = byte;
   }
@@ -154,7 +155,7 @@ function deserializeTimestamp(s: string): Date {
   }
   const date = new Date(`${match[1]}Z`);
   if (Number.isNaN(date.getTime())) {
-    throw new BundleSchemaError(`unparseable timestamp: ${JSON.stringify(s)}`);
+    throw new BundleSchemaError(`unparsable timestamp: ${JSON.stringify(s)}`);
   }
   return date;
 }
