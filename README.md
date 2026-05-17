@@ -1,8 +1,8 @@
 # Attestplane
 
-**SLSA-for-AI-Agents** — open cryptographic evidence substrate for AI agent runtimes.
+**Provenance for AI Agents** — open cryptographic evidence substrate that AI-using organisations record into, and that compliance professionals cite.
 
-*Bottom-up substrate that compliance platforms cite, not replace.*
+*Architectural inspiration: SLSA — the OpenSSF supply-chain attestation framework — applied to AI agent runtime behaviour rather than build artefacts.*
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
@@ -22,15 +22,51 @@
 
 ## What is Attestplane?
 
-Attestplane is an Apache-2.0 cryptographic evidence substrate for AI agent runtimes. It records agent actions, decisions, policy checks, and human approvals into a tamper-evident hash chain, anchors the chain through RFC-3161 time-stamping authorities, and exports the result as a verifiable proof bundle that downstream compliance, observability, and governance tools can cite.
+Attestplane is an Apache-2.0 cryptographic evidence substrate that records AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain; signs the chain with Ed25519; anchors it through RFC-3161 time-stamp authorities and Sigstore Rekor; and exports the result as a verifiable proof bundle that survives forensic scrutiny.
 
-Attestplane is the bottom layer of the AI compliance stack. It does **not** replace your LLM observability tool (LangSmith, LangFuse, Arize Phoenix, OpenLLMetry) — it adds the cryptographic evidence layer those tools intentionally don't provide. It does **not** replace your AI governance dashboard (Credo AI, Holistic AI, Modulos, Trustible, Saidot) — it produces the verifiable evidence those dashboards ingest as their `field_supported` data source for EU AI Act Article 12 and DORA Article 8.
+### Two sides of one evidence protocol
+
+Attestplane is built around a single shared protocol — **`AP-EVD/1.0`** (Attestplane Evidence Protocol, [locked in ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md)) — that two distinct audiences interoperate through:
+
+| Side | Who | Role |
+|---|---|---|
+| **Produce** | Banks · Insurers · Hospitals · Governments · HR platforms · any AI-using organisation under EU AI Act / DORA / NIS2 / GDPR / NIST AI RMF / China algorithmic-recommendation regs | Embed the SDK; emit byte-faithful evidence events from the AI runtime |
+| **Verify** | Law firms · Big 4 AI assurance practices · Notified bodies (TÜV / BSI / DEKRA) · regulators (BaFin / CSSF / DNB / CAC) | Consume signed proof bundles; cite `AP-EVD/1.0` conformance in legal opinions, audit reports, conformity assessments |
+
+Both sides depend on the same OSS protocol; both can independently verify the same bundle bytes. Law firms and Big 4 audit practices participate on **both** sides — they use AI internally (Produce) **and** issue compliance opinions to clients (Verify).
+
+### What Attestplane is not
+
+It does **not** replace LLM observability tools (LangSmith, LangFuse, Arize Phoenix, OpenLLMetry, Helicone) — those observe traces for development and debugging; Attestplane provides the forensic evidence layer they intentionally don't offer. *They observe. Attestplane attests.*
+
+It does **not** replace AI governance SaaS (Credo AI, Holistic AI, Modulos, Saidot, Trustible) — those produce executive-facing dashboards; Attestplane is the cryptographic substrate they (and law firms / auditors) ingest as their `field_supported` evidence source.
+
+It does **not** issue legal opinions or compliance certifications. `AP-EVD/1.0` makes one positive claim — that the recorded evidence is byte-faithful — and explicitly disclaims six others ([ADR-0014 § 11](docs/adr/0014-adapter-conformance-fixture-pinning.md)): legal compliance, runtime event semantics, PII redaction, AI output factuality, LLM provider endorsement, and replacement for professional opinions.
+
+### SLSA framing note
 
 The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF supply-chain attestation framework. Where SLSA proves the integrity of how a binary was built, Attestplane proves the integrity of how an AI agent behaved at runtime. Both produce signed, timestamped, verifiable evidence in formats that compliance, audit, and regulator workflows already accept.
 
-> **A note on the "SLSA-for-AI-Agents" framing.** This describes architectural inspiration and a positioning analogue, not affiliation with the OpenSSF or the SLSA project. Attestplane is an independent OSS project published by Attestplane Pte. Ltd. (Singapore, in formation 2026-05-17).
+> **A note on the SLSA framing.** This describes architectural inspiration and a positioning analogue, not affiliation with the OpenSSF or the SLSA project. Attestplane is an independent OSS project published by Attestplane Pte. Ltd. (Singapore, in formation 2026-05-17).
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). v0.0.2-alpha (on `main`, release candidate) adds the verifier library + CLI, JSONL storage, RFC-3161 anchoring with FreeTSA/DigiCert + real OCSP + multi-hop cert chains + eIDAS Trusted List integration, the v1 evidence event taxonomy (12 types), and obligation registries for EU AI Act Article 12 + DORA Article 8.
+### Release status
+
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.2-alpha (on `main`, release candidate)** adds:
+
+- Verifier library + `attestplane` CLI
+- JSONL storage backend (fsync on every append, 9-verb forbidden gate)
+- RFC-3161 anchoring with FreeTSA / DigiCert / Sigstore Rekor + real OCSP + multi-hop cert chains + eIDAS Trusted List
+- Ed25519 sidecar signing scheme ([ADR-0005](docs/adr/0005-event-signing-scheme.md)) with KeyProvider abstraction + plurality verification
+- v1 evidence event taxonomy ([ADR-0008](docs/adr/0008-evidence-event-taxonomy-v1.md), 12 types)
+- Payload schemas + validators for `lease_lifecycle_event` ([A.7](docs/adr/0009-aios-absorption-boundary.md)), `policy_check_event` (A.8), `replay_event` (A.9)
+- Machine-readable `ReasonCodeV1` enum (25 stable codes, [ADR-0010](docs/adr/0010-verification-reason-codes.md))
+- `ProofBundle.policy_trace_refs` auto-derived index ([ADR-0012](docs/adr/0012-proof-bundle-policy-trace-refs.md))
+- `GenericRuntimeAdapter` ABC + 14-verb forbidden gate ([ADR-0013](docs/adr/0013-generic-runtime-adapter-abc.md))
+- `AP-EVD/1.0` adapter conformance fixture-pinning protocol ([ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md))
+- Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
+- Obligation registries for EU AI Act Article 12 + DORA Article 8
+
+Cross-language byte-equality enforced by 17 frozen conformance fixtures (Python ↔ TypeScript). 1,095 tests green in CI (680 Python + 415 TypeScript) across 11 Accepted ADRs.
 
 Attestplane is infrastructure your team owns, operates, and audits independently. The substrate stays in your control plane.
 
@@ -50,12 +86,13 @@ Attestplane is designed to live underneath, not replace, the AI observability an
 
 | Layer | Partner | Role | Status |
 |-------|---------|------|--------|
-| LLM observability (OSS) | [LangFuse](https://langfuse.com/) | Trace producer → Attestplane evidence sink | Adapter spec at M5 |
-| LLM observability (SaaS) | [LangSmith](https://docs.smith.langchain.com/) | Trace producer → Attestplane evidence sink | Adapter spec at M5 |
+| LLM observability (OSS) | [LangFuse](https://langfuse.com/) | Trace producer → Attestplane evidence sink | **Shipped** `LangFuseAdapter` + AP-EVD/1.0 fixture `langfuse_v1.json` |
+| LLM observability (SaaS) | [LangSmith](https://docs.smith.langchain.com/) | Trace producer → Attestplane evidence sink | **Shipped** `LangSmithAdapter` + AP-EVD/1.0 fixture `langsmith_v1.json` |
 | LLM observability (Arize) | [Phoenix](https://github.com/Arize-ai/phoenix) | OpenInference / OTel trace ingest | OpenLLMetry-compatible at M6 |
-| Standards (transparency log) | [Sigstore / Rekor](https://www.sigstore.dev/) | Public transparency-log anchor (alongside RFC-3161 TSAs) | Anchor at M5 ([anticipated ADR-0006](docs/adr/0003-tsa-rfc-3161-anchoring.md)) |
-| Standards (wire format) | [in-toto Statement v1](https://github.com/in-toto/attestation) / [DSSE](https://github.com/secure-systems-lab/dsse) | Native serialization of Attestplane evidence events | Native at M5 |
+| Standards (transparency log) | [Sigstore / Rekor](https://www.sigstore.dev/) | Public transparency-log anchor (alongside RFC-3161 TSAs) | **Shipped** on `main` ([ADR-0006](docs/adr/0006-sigstore-rekor-redundant-anchor.md)) |
+| Standards (wire format) | [in-toto Statement v1](https://github.com/in-toto/attestation) / [DSSE](https://github.com/secure-systems-lab/dsse) | Native serialization of Attestplane evidence events | **Shipped** on `main` |
 | Standards (supply chain) | [SLSA](https://slsa.dev/) | Architectural framing inspiration; not membership | N/A — independent project |
+| Standards (this project's protocol) | **`AP-EVD/1.0`** Attestplane Evidence Protocol ([ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md)) | Two-sided conformance protocol — Side B adapters target it; Side A verifiers cite it | **Shipped** v1.0 (founder + 14-day RFC governance; OpenSSF/CNCF donation path reserved) |
 | AI governance (US) | [Credo AI](https://www.credo.ai/), [Trustible](https://www.trustible.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
 | AI governance (UK/EU) | [Holistic AI](https://www.holisticai.com/), [Modulos](https://www.modulos.ai/), [Saidot](https://www.saidot.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
 | TSA (free/OSS) | [FreeTSA](https://freetsa.org/) | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.2-alpha) |
