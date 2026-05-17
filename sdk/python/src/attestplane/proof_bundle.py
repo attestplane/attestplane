@@ -257,9 +257,41 @@ def build_auditor_export(
     }
 
 
+def bundle_to_in_toto_statement(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Convenience: convert a built bundle dict to an in-toto Statement v1.
+
+    Thin re-export of
+    :func:`attestplane.intoto.proof_bundle_to_in_toto_statement` placed
+    here so callers who already import ``attestplane.proof_bundle``
+    don't need a second import for the common case.
+    """
+    from attestplane.intoto import proof_bundle_to_in_toto_statement
+    return proof_bundle_to_in_toto_statement(bundle)
+
+
+def bundle_to_dsse_envelope(
+    bundle: dict[str, Any],
+    *,
+    signatures: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Convenience: convert a built bundle dict to a DSSE envelope.
+
+    Equivalent to ``statement_to_dsse_envelope(bundle_to_in_toto_statement(b))``;
+    bundled here as the single-call path most adapters will use.
+    """
+    from attestplane.intoto import (
+        proof_bundle_to_in_toto_statement,
+        statement_to_dsse_envelope,
+    )
+    statement = proof_bundle_to_in_toto_statement(bundle)
+    return statement_to_dsse_envelope(statement, signatures=signatures)
+
+
 __all__ = [
     "DEFAULT_FORBIDDEN_FIELDS",
     "FrameworkMapping",
     "ProofBundleBuilder",
     "build_auditor_export",
+    "bundle_to_dsse_envelope",
+    "bundle_to_in_toto_statement",
 ]
