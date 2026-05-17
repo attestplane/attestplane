@@ -1,0 +1,137 @@
+name: sign-release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to sign (e.g. v0.0.1-alpha)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sign-release-${{ github.workflow }}-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  sign:
+    name: Cosign keyless sign release assets
+    runs-on: ubuntu-latest
+    environment:
+      name: release-signing
+      url: ${{ github.server_url }}/${{ github.repository }}/releases
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Resolve release tag
+        id: resolve
+        run: |
+          set -e
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Verify cosign installation
+        run: cosign version
+
+      - name: Download release assets to /tmp/release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -e
+          mkdir -p /tmp/release
+          cd /tmp/release
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern '*' \
+            --skip-existing
+          echo ""
+          echo "Downloaded:"
+          ls -la
+          echo ""
+          echo "Skipping any pre-existing .cosign.bundle files when signing:"
+
+      - name: Sign each asset with cosign keyless (OIDC)
+        env:
+          COSIGN_YES: "true"
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -e
+          cd /tmp/release
+          shopt -s nullglob
+          signed=0
+          for f in *; do
+            case "$f" in
+              *.cosign.bundle) echo "skip: $f (already a signature bundle)"; continue ;;
+            esac
+            echo ""
+            echo "=== signing $f ==="
+            cosign sign-blob \
+              --bundle "${f}.cosign.bundle" \
+              --output-signature "${f}.sig" \
+              --output-certificate "${f}.pem" \
+              "$f"
+            signed=$((signed + 1))
+            echo "  bundle: ${f}.cosign.bundle ($(wc -c < "${f}.cosign.bundle") bytes)"
+          done
+          echo ""
+          echo "Signed $signed assets for $TAG."
+
+      - name: Upload signature artifacts to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -e
+          cd /tmp/release
+          shopt -s nullglob
+          uploads=( ./*.cosign.bundle ./*.sig ./*.pem )
+          if [ ${#uploads[@]} -eq 0 ]; then
+            echo "::error::no signature artifacts produced"
+            exit 1
+          fi
+          gh release upload "$TAG" \
+            "${uploads[@]}" \
+            --repo "${{ github.repository }}" \
+            --clobber
+          echo ""
+          echo "Uploaded ${#uploads[@]} signature artifacts to $TAG."
+
+      - name: Print verification instructions
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          cat <<EOF
+          Verify any release asset locally with:
+
+            cosign verify-blob \\
+              --bundle <asset>.cosign.bundle \\
+              --certificate-identity-regexp 'https://github.com/${{ github.repository }}/' \\
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \\
+              <asset>
+
+          Or download the .pem certificate + .sig signature and verify with the
+          equivalent flag pair (--certificate / --signature) if you prefer the
+          legacy two-file form.
+
+          All signatures are also publicly viewable in the Sigstore
+          transparency log at https://search.sigstore.dev/ — search by the
+          short tag '${TAG}' or by sha256 of the signed file.
+          EOF
