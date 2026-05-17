@@ -14,6 +14,14 @@ export {
   GenericRuntimeAdapter,
 } from './adapters.js';
 export {
+  LangSmithAdapter,
+  type LangSmithRun,
+} from './adapters/langsmith.js';
+export {
+  LangFuseAdapter,
+  type LangFuseObservation,
+} from './adapters/langfuse.js';
+export {
   ANCHOR_SCHEMA_VERSION,
   AnchorError,
   AnchorVerificationError,
