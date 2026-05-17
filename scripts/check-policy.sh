@@ -109,6 +109,81 @@ if [ -f CONTRIBUTING.md ]; then
 fi
 
 echo ""
+echo "=== check: INV-NEW-1 (ADR-0009) — schemas/v1 \$id discipline ==="
+# Every JSON Schema under schemas/v1/ MUST have $id starting with
+# https://attestplane.io/schemas/v1/ — never https://aios.dev/.
+if [ -d schemas/v1 ]; then
+  while IFS= read -r -d '' f; do
+    id_line=$(grep -E '"\$id"\s*:' "$f" | head -1 || true)
+    if [ -z "$id_line" ]; then
+      echo "::error file=${f}::INV-NEW-1: schema missing \"\$id\" field"
+      fail=1
+      continue
+    fi
+    if ! echo "$id_line" | grep -q '"https://attestplane.io/schemas/v1/'; then
+      echo "::error file=${f}::INV-NEW-1: \$id must start with https://attestplane.io/schemas/v1/ (ADR-0009 § 3 invariant 13)"
+      echo "    got: ${id_line}"
+      fail=1
+    fi
+    if echo "$id_line" | grep -q 'aios\.dev'; then
+      echo "::error file=${f}::INV-NEW-1: \$id MUST NOT reference aios.dev (ADR-0009 § 3 invariant 13)"
+      fail=1
+    fi
+  done < <(find schemas/v1 -type f -name '*.schema.json' -print0)
+fi
+
+echo ""
+echo "=== check: INV-NEW-3 (ADR-0009) — no AIOS Rust crate names in sdk/ ==="
+# Attestplane sdk/ must not reference AIOS crate names. The docstring-only stub
+# at sdk/python/src/attestplane/adapters/aios_spec.py is the single permitted
+# exception per ADR-0004 § 4.
+if [ -d sdk ]; then
+  pattern='\b(aios_sdk_evidence|aios_sdk_protocol|aios_canonical|aios_audit|aios_cp|aios_runtime|aios_protocol)\b'
+  hits=$(grep -rnE "$pattern" sdk/ \
+    --include='*.py' --include='*.ts' --include='*.toml' \
+    2>/dev/null \
+    | grep -v 'sdk/python/src/attestplane/adapters/aios_spec.py' \
+    || true)
+  if [ -n "$hits" ]; then
+    echo "::error::INV-NEW-3: AIOS Rust crate names found in sdk/ (ADR-0009 § 3 invariant 15)"
+    echo "$hits" | sed 's/^/    /'
+    fail=1
+  fi
+fi
+
+echo ""
+echo "=== check: INV-NEW-3b (ADR-0009 C.18/C.19) — no AIOS-named example or adapter impl ==="
+# Migration-plan #5 (AIOSAdapter concrete impl) and #24 (aios_run_to_proof_bundle example)
+# are permanently out of scope per memory/feedback_attestplane_aios_boundary.md.
+# Detect: any file under examples/ or sdk/ named *aios* (other than the docstring-only stub).
+hits=$(find examples sdk -type f \( -name '*aios*' -o -name '*AIOS*' \) 2>/dev/null \
+  | grep -vE '__pycache__|\.pyc$|node_modules|dist/' \
+  | grep -v 'sdk/python/src/attestplane/adapters/aios_spec.py' \
+  | grep -v 'aios_to_attestplane_migration_plan' \
+  || true)
+if [ -n "$hits" ]; then
+  echo "::error::INV-NEW-3b: AIOS-named files found in examples/ or sdk/ (ADR-0009 C.18/C.19; migration tickets #5 + #24 are out of scope)"
+  echo "$hits" | sed 's/^/    /'
+  fail=1
+fi
+
+echo ""
+echo "=== check: INV-NEW-4 (ADR-0009) — proof-type allowlist on adapter ingress ==="
+# Adapters that reference AIOS-side ProofType values MUST drop authority-flavoured
+# variants (LiveRuntimeInvariant / ProductionLive). This check looks for these
+# variant names appearing anywhere in sdk/, which would indicate a leak.
+if [ -d sdk ]; then
+  hits=$(grep -rnE '\b(LiveRuntimeInvariant|ProductionLive)\b' sdk/ \
+    --include='*.py' --include='*.ts' \
+    2>/dev/null || true)
+  if [ -n "$hits" ]; then
+    echo "::error::INV-NEW-4: authority-flavoured ProofType variants found in sdk/ (ADR-0009 § 3 invariant 16)"
+    echo "$hits" | sed 's/^/    /'
+    fail=1
+  fi
+fi
+
+echo ""
 if [ $fail -eq 1 ]; then
   echo "Policy invariant checks FAILED."
   exit 1

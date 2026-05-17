@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/forbidden_fields_v1.schema.json",
+  "title": "Attestplane forbidden-fields v1 (advisory list)",
+  "description": "DRAFT — proposed under ADR-0009 (Phase 1 P1.1). Authoritative list of payload field names whose presence in an `AuditEvent.payload` constitutes a redaction-policy violation per ADR-0004 § 2 column-3 and the claim-safety triad in docs/policy/. The list is **advisory at the SDK boundary**: Attestplane substrate does NOT scan payload bytes for these terms at append() time. Enforcement is the caller's responsibility, typically inside `GenericRuntimeAdapter.translate()` per ADR-0004 § 4. Verifiers and auditor-export builders may consult this file to flag bundles that contain any of these field names at the payload root.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "forbidden_field_names", "rationale_url"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Frozen at 1 for v1. Independent of chain.schema_version / anchor_schema_version / signature_schema_version. Bump requires an ADR amendment."
+    },
+    "forbidden_field_names": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z_][a-z0-9_]*$",
+        "description": "Lowercase snake_case payload field name. Substring matching is NOT specified — verifiers MUST match exact root-level keys, not nested or substring."
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "rationale_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Stable URL pointing to ADR-0004 § 2 column-3 + ADR-0009 § 1 (the redaction-policy rationale)."
+    },
+    "applies_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "audit_event_payload",
+          "proof_bundle",
+          "auditor_export",
+          "lease_lifecycle_event_payload",
+          "policy_check_event_payload",
+          "replay_event_payload",
+          "worker_observation_event_payload",
+          "gateway_decision_event_payload",
+          "settlement_event_payload"
+        ]
+      },
+      "description": "Which artefact kinds this advisory list applies to. Omit for substrate-wide application."
+    }
+  },
+  "examples": [
+    {
+      "version": 1,
+      "rationale_url": "https://attestplane.io/adr/0004#section-2-column-3",
+      "forbidden_field_names": [
+        "customer_names",
+        "person_names",
+        "pii",
+        "raw_documents",
+        "contracts",
+        "scripts",
+        "tickets",
+        "emails",
+        "secrets",
+        "tokens",
+        "jwts",
+        "private_keys",
+        "raw_audit_payloads",
+        "signature",
+        "capability_required",
+        "budget_cap",
+        "expression",
+        "expression_body",
+        "headers",
+        "auth_header",
+        "session_token"
+      ]
+    }
+  ]
+}

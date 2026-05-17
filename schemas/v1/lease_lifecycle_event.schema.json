@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/lease_lifecycle_event.schema.json",
+  "title": "Attestplane lease_lifecycle_event payload (v1)",
+  "description": "ACTIVE — accepted under ADR-0009 (Phase 2 P0.1 + A.7). Payload-only schema for the `lease_lifecycle_event` audit event_type. This schema describes ONLY the `payload` slot of an `AuditEvent` (per ADR-0002 / types.py). The `ChainedEvent` shape is unchanged and frozen — INV 2. This is a **schema-shape re-issue** (Mode A.6) of fields originally observed at `~/aios/crates/aios-sdk-evidence/src/artifact.rs#L28-L43` (ArtifactDescriptor) + `~/aios/schemas/lease/lease.schema.json#L1-L84`. Authority-bearing fields (signature / capability_required / budget_cap / HMAC payload construction / lease-issuance verb) are explicitly NOT absorbed — see ADR-0009 § 1 Mode A.6 and the absorption-map MD row A.7. Attestplane substrate does NOT issue leases; this event records that a lease lifecycle change was OBSERVED by an external runtime.",
+  "$comment": "Status: ACTIVE (ADR-0009 Accepted 2026-05-17).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lease_event_schema_version",
+    "lease_id_hash",
+    "lifecycle",
+    "observed_at"
+  ],
+  "properties": {
+    "lease_event_schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Independent of chain.schema_version / anchor_schema_version / signature_schema_version / reason_code_schema_version. Bump requires ADR amendment."
+    },
+    "lease_id_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex of the opaque lease identifier emitted by the external authority that granted the lease. Attestplane NEVER stores the raw lease_id (it could enable replay or correlation against an external authority's secrets)."
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["granted", "consumed", "expired", "revoked"],
+      "description": "Lifecycle transition observed at observed_at. Substrate does not interpret transition validity — the authority that granted the lease is the source of truth."
+    },
+    "grantor_runtime_id": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Optional caller-asserted identifier of the runtime that granted the lease. NOT validated by substrate; recorded as-is. Useful for `attestplane verify` to confirm the recorded grantor matches the trust-roots entry, but the check is downstream-verifier responsibility, not substrate."
+    },
+    "tenant_id_ref": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Optional opaque reference to a tenant; the substrate has no multi-tenant authority (REDLINE C.6). This field exists only to round-trip caller-provided tenant identifiers for downstream correlation."
+    },
+    "step_id_ref": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Optional opaque reference to a step in the caller's execution graph. Substrate does not interpret."
+    },
+    "run_id_ref": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Optional opaque reference to a run in the caller's execution graph. Substrate does not interpret."
+    },
+    "artifact_hash_ref": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Optional SHA-256 hex of an artifact this lease lifecycle event relates to. Hash-only; substrate never stores the artifact body."
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Caller-asserted RFC 3339 timestamp of the observation. Substrate records as-is; for authoritative time, see AnchorRecord (ADR-0003 / ADR-0006)."
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+      "description": "Optional machine-readable reason code drawn from the ReasonCodeV1 enum (ADR-0010, future). Free-text reason MAY be carried separately in `reason_text` for backward compatibility."
+    },
+    "reason_text": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Optional human-readable explanation. Backward-compat field paralleling reason_code. Verifiers SHOULD prefer reason_code for programmatic logic."
+    }
+  },
+  "$defs": {
+    "redaction_policy": {
+      "$comment": "Documentation block: per ADR-0009 § 1 Mode A.6 + ADR-0004 § 2 column-3, the following AIOS-originated field names MUST NOT appear in this payload. Validators SHOULD reject any unknown field (`additionalProperties: false` enforces this).",
+      "explicitly_dropped_at_absorption_boundary": [
+        "signature",
+        "capability_required",
+        "capability",
+        "scope",
+        "scope_expression",
+        "budget_cap",
+        "budget",
+        "quota",
+        "hmac",
+        "hmac_canonical_payload",
+        "signing_key",
+        "private_key",
+        "token",
+        "secret"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "lease_event_schema_version": 1,
+      "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "lifecycle": "granted",
+      "grantor_runtime_id": "example-runtime-1.0.0",
+      "observed_at": "2026-05-17T12:00:00.000000Z",
+      "reason_code": "GRANTED_BY_EXTERNAL_AUTHORITY",
+      "reason_text": "Lease granted by external policy engine; substrate records observation only."
+    },
+    {
+      "lease_event_schema_version": 1,
+      "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "lifecycle": "consumed",
+      "observed_at": "2026-05-17T12:01:00.000000Z",
+      "step_id_ref": "step-1",
+      "run_id_ref": "run-1",
+      "artifact_hash_ref": "0000000000000000000000000000000000000000000000000000000000000001"
+    }
+  ]
+}
