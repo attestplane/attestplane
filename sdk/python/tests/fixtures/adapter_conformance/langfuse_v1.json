@@ -1,0 +1,77 @@
+{
+  "$schema_version": 1,
+  "fixture_kind": "adapter_conformance",
+  "runtime_kind": "langfuse",
+  "fixture_version": 1,
+  "description": "ADR-0014 P2.2 — reference fixture for the substrate-shipped LangFuseAdapter. Each case pairs a raw LangFuse Observation dict (as accepted by LangFuseAdapter.from_dict) with the byte-equal EventDraft the adapter MUST produce. user_id is intentionally omitted because LangFuse stores it on the parent Trace; a real-world integration passes it via from_dict's user_id kwarg.",
+  "cases": [
+    {
+      "name": "generation_success",
+      "runtime_event_input": {
+        "id": "obs-1",
+        "trace_id": "trace-1",
+        "type": "GENERATION",
+        "name": "gpt4o-summarise",
+        "start_time": "2026-05-17T12:00:00.000000+00:00",
+        "end_time":   "2026-05-17T12:00:01.500000+00:00",
+        "input":  {"prompt": "Hi"},
+        "output": {"completion": "Hello back"},
+        "level": "DEFAULT",
+        "model": "gpt-4o-mini"
+      },
+      "expected_event_draft": {
+        "actor": "langfuse://generation/gpt4o-summarise",
+        "event_type": "tool_call_event",
+        "human_verifier": null,
+        "matched_input_ref": null,
+        "payload": {
+          "arguments_hash": "cb3dd0d02e882f60501eefdc5f1fc584ae8e5eaf21721b9926264330370f7696",
+          "kind": "generation",
+          "latency_ms": 1500,
+          "result_hash": "6ca12278ae7042b2d81b0d1ea6f036c243ba0bf69e349d48ca98a081b81e8c47",
+          "result_status": "OK",
+          "tool_call_id": "obs-1",
+          "tool_name": "langfuse.generation.gpt4o-summarise",
+          "tool_version": "gpt-4o-mini"
+        },
+        "reference_db_ref": null,
+        "session_id": "trace-1",
+        "subject_ref": null
+      }
+    },
+    {
+      "name": "span_with_error",
+      "runtime_event_input": {
+        "id": "obs-2",
+        "trace_id": "trace-2",
+        "type": "SPAN",
+        "name": "rag_pipeline",
+        "start_time": "2026-05-17T12:02:00.000000+00:00",
+        "end_time":   "2026-05-17T12:02:03.000000+00:00",
+        "input":  {"q": "What time is it?"},
+        "output": null,
+        "level": "ERROR",
+        "status_message": "vector store unreachable"
+      },
+      "expected_event_draft": {
+        "actor": "langfuse://span/rag_pipeline",
+        "event_type": "tool_call_event",
+        "human_verifier": null,
+        "matched_input_ref": null,
+        "payload": {
+          "arguments_hash": "56c2f397521afe92c47f4261e7973a4cabf2c7612ea761302be2bdd33eb9f99a",
+          "error_code": "vector store unreachable",
+          "kind": "span",
+          "latency_ms": 3000,
+          "level": "ERROR",
+          "result_status": "ERROR",
+          "tool_call_id": "obs-2",
+          "tool_name": "langfuse.span.rag_pipeline"
+        },
+        "reference_db_ref": null,
+        "session_id": "trace-2",
+        "subject_ref": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "$schema_version": 1,
+  "fixture_kind": "adapter_conformance",
+  "runtime_kind": "langsmith",
+  "fixture_version": 1,
+  "description": "ADR-0014 P2.2 — reference fixture for the substrate-shipped LangSmithAdapter. Each case pairs a raw LangSmith Run dict (as accepted by LangSmithAdapter.from_dict) with the byte-equal EventDraft the adapter MUST produce. External adapter authors may copy this fixture's schema for their own runtime's adapter conformance pinning.",
+  "cases": [
+    {
+      "name": "tool_run_with_outputs",
+      "runtime_event_input": {
+        "id": "11111111-1111-7000-8000-000000000001",
+        "name": "search_database",
+        "run_type": "tool",
+        "start_time": "2026-05-17T12:00:00.000000+00:00",
+        "end_time":   "2026-05-17T12:00:01.000000+00:00",
+        "inputs":  {"query": "demo"},
+        "outputs": {"results": []},
+        "trace_id": "99999999-9999-7000-8000-000000000099"
+      },
+      "expected_event_draft": {
+        "actor": "langsmith://tool/search_database",
+        "event_type": "tool_call_event",
+        "human_verifier": null,
+        "matched_input_ref": null,
+        "payload": {
+          "arguments_hash": "7f9e2f50480a1cfb8e7cd56379de8c8b03acbb37f41a130155e02fc2ddcb4548",
+          "kind": "tool",
+          "latency_ms": 1000,
+          "result_hash": "5021e624e752b001ce3e3846e8f158ed4aeb93a4c9a72fdb35a0c5b14a0eea84",
+          "result_status": "OK",
+          "tool_call_id": "11111111-1111-7000-8000-000000000001",
+          "tool_name": "langsmith.tool.search_database"
+        },
+        "reference_db_ref": null,
+        "session_id": "99999999-9999-7000-8000-000000000099",
+        "subject_ref": null
+      }
+    },
+    {
+      "name": "llm_run_with_error_and_tags",
+      "runtime_event_input": {
+        "id": "22222222-2222-7000-8000-000000000002",
+        "name": "gpt-4o-mini",
+        "run_type": "llm",
+        "start_time": "2026-05-17T12:01:00.000000+00:00",
+        "end_time":   "2026-05-17T12:01:02.500000+00:00",
+        "inputs":  {"prompt": "hello"},
+        "outputs": null,
+        "error": "rate limit exceeded",
+        "tags": ["production", "team-a"],
+        "metadata": {"user_id": "opaque-user-1"},
+        "parent_run_id": "00000000-0000-7000-8000-000000000000"
+      },
+      "expected_event_draft": {
+        "actor": "langsmith://llm/gpt-4o-mini",
+        "event_type": "tool_call_event",
+        "human_verifier": null,
+        "matched_input_ref": null,
+        "payload": {
+          "arguments_hash": "8a44725210b9dcd4fefd9f0eca07b70ae45e69274a3105fb25eb426a2cf8bbf4",
+          "error_code": "rate limit exceeded",
+          "kind": "llm",
+          "latency_ms": 2500,
+          "result_status": "ERROR",
+          "tags": ["production", "team-a"],
+          "tool_call_id": "22222222-2222-7000-8000-000000000002",
+          "tool_name": "langsmith.llm.gpt-4o-mini"
+        },
+        "reference_db_ref": "00000000-0000-7000-8000-000000000000",
+        "session_id": "22222222-2222-7000-8000-000000000002",
+        "subject_ref": {
+          "scheme": "opaque",
+          "value": "opaque-user-1"
+        }
+      }
+    }
+  ]
+}

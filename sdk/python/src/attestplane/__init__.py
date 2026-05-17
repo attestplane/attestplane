@@ -7,6 +7,12 @@ Designed toward EU AI Act Article 12 auditability. Apache-2.0 licensed. See:
 - docs/adr/0002-substrate-data-model-and-hash-chain-v0.md
 """
 
+from attestplane.adapter_conformance import (
+    AdapterCaseResult,
+    AdapterConformanceError,
+    AdapterConformanceReport,
+    replay_fixture,
+)
 from attestplane.adapters import (
     AdapterError,
     AdapterTranslationError,
@@ -178,6 +184,9 @@ __all__ = [
     "STATE_TRANSITION_EVENT",
     "TOOL_CALL_EVENT",
     "WORKER_ASSIGNMENT_EVENT",
+    "AdapterCaseResult",
+    "AdapterConformanceError",
+    "AdapterConformanceReport",
     "AdapterError",
     "AdapterTranslationError",
     "AttestSubstrate",
@@ -258,6 +267,7 @@ __all__ = [
     "validate_policy_check_event_payload",
     "validate_replay_event_payload",
     "verify_replay_manifest",
+    "replay_fixture",
     "verify_chain",
     "verify_chain_with_anchors",
     "verify_proof_bundle",

@@ -14,6 +14,14 @@ export {
   GenericRuntimeAdapter,
 } from './adapters.js';
 export {
+  AdapterConformanceError,
+  replayFixture,
+  type AdapterCaseResult,
+  type AdapterConformanceReport,
+  type ReplayOptions,
+  type TranslateAdapter,
+} from './adapter_conformance.js';
+export {
   LangSmithAdapter,
   type LangSmithRun,
 } from './adapters/langsmith.js';
