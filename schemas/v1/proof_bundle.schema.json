@@ -232,6 +232,16 @@
         "covers_canonical_sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
       }
     },
+    "policy_trace_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "uniqueItems": true,
+      "maxItems": 65536,
+      "description": "Optional flat list of event_hash_hex values for every ChainedEvent in this bundle whose event_type == 'policy_check_event'. Ordered by chain seq ascending; deduplicated (an event_hash uniquely identifies its event). Builder auto-populates per ADR-0012 § 2; callers do not manage this list. Absent (not empty) when the chain contains no policy_check_event rows — preserves byte identity with v0.0.1-alpha bundles."
+    },
     "signatures": {
       "type": "array",
       "description": "Optional per-event or per-segment-head Ed25519 signatures produced by an ADR-0005 Signer. Strictly additive in v1 — bundles produced before ADR-0005 ship omit this field entirely. Verifier semantics (signature_status, plurality, coverage transitivity) locked in docs/architecture/adr_0005_t3_t4_review_20260517.md § 1 D10–D12.",

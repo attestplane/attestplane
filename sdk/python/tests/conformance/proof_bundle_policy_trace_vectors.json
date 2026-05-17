@@ -1,0 +1,45 @@
+{
+  "$schema_version": 1,
+  "frozen_at": "2026-05-17T12:00:00Z",
+  "comment": "ADR-0012 P1.2 policy_trace_refs conformance vectors. Pins builder behaviour across Py + TS for: (i) no policy events → field absent; (ii) 1 policy event → 1-element list; (iii) multiple policy events → ordered list. Vectors describe builder INPUT (event sequence) + expected OUTPUT (presence/absence + ordering of policy_trace_refs).",
+  "builder_vectors": [
+    {
+      "name": "no_policy_events",
+      "description": "Chain with only tool_call_event rows; field absent.",
+      "input": {
+        "chain_event_types": ["tool_call_event", "tool_call_event"]
+      },
+      "expected_policy_trace_refs": null,
+      "expected_field_absent": true
+    },
+    {
+      "name": "one_policy_event_at_seq0",
+      "description": "Chain starts with one policy_check_event; refs list has 1 entry.",
+      "input": {
+        "chain_event_types": ["policy_check_event"]
+      },
+      "expected_policy_trace_refs_count": 1,
+      "expected_field_absent": false
+    },
+    {
+      "name": "mixed_chain_policy_at_seqs_1_and_3",
+      "description": "Chain with policy_check_event at seq 1 and 3; refs list ordered by chain seq.",
+      "input": {
+        "chain_event_types": ["tool_call_event", "policy_check_event", "tool_call_event", "policy_check_event"]
+      },
+      "expected_policy_trace_refs_count": 2,
+      "expected_field_absent": false,
+      "expected_seqs": [1, 3]
+    },
+    {
+      "name": "all_policy_events",
+      "description": "Three consecutive policy_check_events; full coverage.",
+      "input": {
+        "chain_event_types": ["policy_check_event", "policy_check_event", "policy_check_event"]
+      },
+      "expected_policy_trace_refs_count": 3,
+      "expected_field_absent": false,
+      "expected_seqs": [0, 1, 2]
+    }
+  ]
+}

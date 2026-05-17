@@ -220,11 +220,25 @@ class ProofBundleBuilder:
         events and embeds the result as ``verification_report``. The
         bundle is buildable for a broken chain (the report will reflect
         ``ok=False``); downstream verifiers see the same report.
+
+        Auto-populates ADR-0012 ``policy_trace_refs`` by walking
+        ``self.events`` once and collecting ``event_hash_hex`` of any
+        ``policy_check_event``. Absent (not empty list) when no
+        policy_check_event rows are present.
         """
         actual_now = now if now is not None else datetime.now(UTC)
         result = verify_chain(self.events)
         head = head_of(self.events)
         ts = actual_now.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+
+        # ADR-0012 P1.2: auto-derive policy_trace_refs (chain-seq-ordered hex hashes
+        # for every policy_check_event). Absent when empty per ADR-0012 § 1.
+        from attestplane.event_types import POLICY_CHECK_EVENT
+        policy_trace_refs = [
+            ev.event_hash.hex()
+            for ev in self.events
+            if ev.event.event_type == POLICY_CHECK_EVENT
+        ]
 
         return {
             "bundle_version": 1,
@@ -257,6 +271,12 @@ class ProofBundleBuilder:
                 for m in self.framework_mappings
             ],
             "forbidden_fields": list(self.forbidden_fields),
+            # ADR-0012 P1.2: additive policy_trace_refs (absent when empty).
+            **(
+                {"policy_trace_refs": policy_trace_refs}
+                if policy_trace_refs
+                else {}
+            ),
             # T5 of ADR-0005 plan: additive `signatures` field. Only
             # emitted when ≥ 1 SignatureRecord has been added; absent
             # otherwise to keep existing tests + consumers untouched.

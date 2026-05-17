@@ -79,6 +79,14 @@ export interface ProofBundle {
   readonly framework_mappings: readonly FrameworkMapping[];
   readonly forbidden_fields: readonly string[];
   /**
+   * Additive `policy_trace_refs` field per ADR-0012 P1.2. Flat list of
+   * `event_hash_hex` for every ChainedEvent whose `event_type ==
+   * 'policy_check_event'`. Chain-seq-ascending order; deduplicated;
+   * absent when empty (preserves byte identity with bundles that have
+   * no policy_check_event rows).
+   */
+  readonly policy_trace_refs?: readonly string[];
+  /**
    * Additive `signatures` field per ADR-0005 T5. Absent when no
    * SignatureRecord has been added (preserves byte equality with
    * v0.0.1-alpha bundles).
@@ -356,6 +364,13 @@ export class ProofBundleBuilder {
       },
       framework_mappings: [...this._framework_mappings],
       forbidden_fields: [...this._forbidden_fields],
+      // ADR-0012 P1.2: auto-derive policy_trace_refs (absent when empty).
+      ...((): { policy_trace_refs?: readonly string[] } => {
+        const refs = this._events
+          .filter((ev) => ev.event.event_type === 'policy_check_event')
+          .map((ev) => bytesToHex(ev.event_hash));
+        return refs.length > 0 ? { policy_trace_refs: refs } : {};
+      })(),
       ...(this._signatures.length > 0
         ? { signatures: this._signatures.map(serializeSignatureRecord) }
         : {}),
