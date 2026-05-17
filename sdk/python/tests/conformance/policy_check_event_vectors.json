@@ -1,0 +1,163 @@
+{
+  "$schema_version": 1,
+  "frozen_at": "2026-05-17T12:00:00Z",
+  "comment": "ADR-0009 A.8 policy_check_event payload conformance vectors. Frozen alongside ADR-0009 Accept. Both Py and TS SDKs replay these byte-for-byte.",
+  "positive_vectors": [
+    {
+      "name": "minimal_allow",
+      "description": "Minimal valid payload — required fields only.",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "pii-redaction",
+        "rule_id": "no-raw-email",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "deny_with_full_context",
+      "description": "Deny decision with policy_version, kind, effect, expression_hash, reason.",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "pii-redaction",
+        "policy_version": 3,
+        "rule_id": "no-raw-email",
+        "kind": "SCHEMA_CONSTRAINT",
+        "decision": "deny",
+        "effect": "BLOCK",
+        "expression_hash": "ab8e0a8c10b73e2a5f5e3aa2fae6b3a1a2f3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+        "observed_at": "2026-05-17T12:01:00.000000Z",
+        "reason_code": "POLICY_VIOLATION_PII",
+        "reason_text": "Outbound payload contained a raw email address."
+      }
+    },
+    {
+      "name": "abstain_no_applicable_rule",
+      "description": "Policy engine evaluated rule but neither allow nor deny applies.",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "budget-control",
+        "rule_id": "weekly-cap",
+        "decision": "abstain",
+        "effect": "INFO",
+        "observed_at": "2026-05-17T12:02:00.000000Z",
+        "reason_code": "RULE_NOT_APPLICABLE"
+      }
+    },
+    {
+      "name": "require_approval_with_evidence_refs",
+      "description": "Decision defers to human; evidence_refs list shows the chain events that informed the decision.",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "high-risk-tool-call",
+        "rule_id": "external-transfer-over-threshold",
+        "kind": "APPROVAL",
+        "decision": "require_approval",
+        "effect": "WARN",
+        "observed_at": "2026-05-17T12:03:00.000000Z",
+        "evidence_refs": [
+          "1111111111111111111111111111111111111111111111111111111111111111",
+          "2222222222222222222222222222222222222222222222222222222222222222"
+        ],
+        "reason_code": "AMOUNT_OVER_THRESHOLD"
+      }
+    }
+  ],
+  "negative_vectors": [
+    {
+      "name": "missing_rule_id",
+      "expected_error_contains": "missing required fields",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "invalid_decision_enum",
+      "expected_error_contains": "decision must be one of",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "DENY",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "expression_body_forbidden",
+      "expected_error_contains": "forbidden field",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "deny",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "expression": "amount > 10000"
+      }
+    },
+    {
+      "name": "short_expression_hash",
+      "expected_error_contains": "expression_hash",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "expression_hash": "abc"
+      }
+    },
+    {
+      "name": "duplicate_evidence_ref",
+      "expected_error_contains": "duplicate entry",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "evidence_refs": [
+          "1111111111111111111111111111111111111111111111111111111111111111",
+          "1111111111111111111111111111111111111111111111111111111111111111"
+        ]
+      }
+    },
+    {
+      "name": "invalid_effect_enum",
+      "expected_error_contains": "effect: must be one of",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "effect": "FATAL",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "policy_version_zero",
+      "expected_error_contains": "policy_version: must be integer >= 1",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "policy_version": 0,
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "empty_policy_id",
+      "expected_error_contains": "policy_id: must be non-empty",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/policy_check_event.schema.json",
+  "title": "Attestplane policy_check_event payload (v1)",
+  "description": "Payload-only schema for the `policy_check_event` audit event_type (ADR-0008 v1 taxonomy + ADR-0009 A.8). Schema-shape re-issue (Mode A.6) of fields originally observed at `~/aios/schemas/policy/policy.schema.json` (Policy + PolicyRule). Authority lifecycle fields (`expression` body / `PolicyUpdateCandidate` mechanics / `activated_at` / `deprecated_at`) are explicitly NOT absorbed — see ADR-0004 § 2 case #10 (policy expression bodies kept as hash only) and absorption-map row A.8. Attestplane substrate records that a policy decision was OBSERVED; it does not author, mutate, or enforce policies.",
+  "$comment": "Status: ACTIVE (ADR-0009 Accepted 2026-05-17).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policy_event_schema_version",
+    "policy_id",
+    "rule_id",
+    "decision",
+    "observed_at"
+  ],
+  "properties": {
+    "policy_event_schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Independent of chain.schema_version / anchor_schema_version / signature_schema_version / reason_code_schema_version / lease_event_schema_version. Bump requires ADR amendment."
+    },
+    "policy_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque identifier of the policy that produced the decision. Substrate does not interpret; downstream verifiers may correlate against an external policy registry."
+    },
+    "policy_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optional version of the policy at the time the decision was made. Caller-asserted."
+    },
+    "rule_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque identifier of the specific rule within `policy_id` that fired. Substrate does not interpret."
+    },
+    "kind": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "Caller-asserted classifier (e.g. AUTHORIZE / BUDGET / APPROVAL / SCHEMA_CONSTRAINT). Enum left OPEN intentionally so future policy engines can introduce new kinds without an Attestplane schema bump. ADR-0009 Mode A.3 redaction: AIOS-side `EVAL_REQUIRED` value SHOULD NOT be recorded here because Attestplane has no eval-gate concept; if a caller does emit it, verifiers MUST tolerate but flag for review."
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny", "abstain", "require_approval"],
+      "description": "The observed outcome of the policy evaluation. Lowercased per Attestplane convention (AIOS source uses uppercase enum)."
+    },
+    "effect": {
+      "type": "string",
+      "enum": ["INFO", "WARN", "BLOCK"],
+      "description": "Caller-asserted severity classification. AIOS source calls this `severity`; Attestplane keeps the same value set."
+    },
+    "expression_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex of the canonical-text-v1 form of the rule expression. **Body MUST NOT appear here** (ADR-0004 § 2 case #10 + ADR-0009 INV-NEW-2). Verifiers may correlate the hash against an external policy registry to confirm `(policy_id, rule_id)` resolved to this exact expression."
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "uniqueItems": true,
+      "maxItems": 256,
+      "description": "Optional list of SHA-256 event_hash references pointing to other ChainedEvents that constitute the supporting evidence for this decision. Verifiers may walk these references to reconstruct the rationale."
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Caller-asserted RFC-3339 UTC timestamp of the decision observation."
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+      "description": "Optional machine-readable reason code drawn from ReasonCodeV1 (ADR-0010, future) or a caller-domain enum."
+    },
+    "reason_text": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Optional human-readable explanation."
+    }
+  },
+  "$defs": {
+    "redaction_policy": {
+      "$comment": "Documentation block: per ADR-0009 § 1 Mode A.6 + ADR-0004 § 2 case #10, the following AIOS-originated field names MUST NOT appear in this payload. Validators reject any unknown field (additionalProperties: false).",
+      "explicitly_dropped_at_absorption_boundary": [
+        "expression",
+        "policy_expression_body",
+        "PolicyUpdateCandidate",
+        "diff",
+        "eval_proof_ref",
+        "activated_at",
+        "deprecated_at",
+        "signature",
+        "secret",
+        "token"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "policy_event_schema_version": 1,
+      "policy_id": "pii-redaction-policy",
+      "policy_version": 3,
+      "rule_id": "rule-no-raw-email",
+      "kind": "SCHEMA_CONSTRAINT",
+      "decision": "deny",
+      "effect": "BLOCK",
+      "expression_hash": "ab8e0a8c10b73e2a5f5e3aa2fae6b3a1a2f3c4d5e6f7a8b9c0d1e2f3a4b5c6d7",
+      "observed_at": "2026-05-17T12:00:00.000000Z",
+      "reason_code": "POLICY_VIOLATION_PII",
+      "reason_text": "Outbound payload contained a raw email address."
+    }
+  ]
+}

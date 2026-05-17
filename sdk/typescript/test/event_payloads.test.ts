@@ -16,7 +16,9 @@ import {
   FORBIDDEN_PAYLOAD_FIELDS,
   PayloadValidationError,
   type LeaseLifecycleEventPayload,
+  type PolicyCheckEventPayload,
   validateLeaseLifecycleEventPayload,
+  validatePolicyCheckEventPayload,
 } from '../src/event_payloads.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +30,15 @@ const VECTORS_PATH = resolve(
   'tests',
   'conformance',
   'lease_lifecycle_event_vectors.json',
+);
+const POLICY_VECTORS_PATH = resolve(
+  __dirname,
+  '..',
+  '..',
+  'python',
+  'tests',
+  'conformance',
+  'policy_check_event_vectors.json',
 );
 
 interface PositiveVector {
@@ -50,6 +61,9 @@ interface VectorsFile {
 
 const VECTORS: VectorsFile = JSON.parse(
   readFileSync(VECTORS_PATH, 'utf-8'),
+) as VectorsFile;
+const POLICY_VECTORS: VectorsFile = JSON.parse(
+  readFileSync(POLICY_VECTORS_PATH, 'utf-8'),
 ) as VectorsFile;
 
 describe('lease_lifecycle_event payload conformance', () => {
@@ -129,5 +143,71 @@ describe('validateLeaseLifecycleEventPayload — Py/TS parity edge cases', () =>
       observed_at: '2026-05-17T12:00:00.000000Z',
     };
     expect(() => validateLeaseLifecycleEventPayload(p)).not.toThrow();
+  });
+});
+
+describe('policy_check_event payload conformance', () => {
+  it('vectors file loads', () => {
+    expect(POLICY_VECTORS.$schema_version).toBe(1);
+    expect(POLICY_VECTORS.positive_vectors.length).toBe(4);
+    expect(POLICY_VECTORS.negative_vectors.length).toBe(8);
+  });
+
+  for (const vec of POLICY_VECTORS.positive_vectors) {
+    it(`positive: ${vec.name}`, () => {
+      expect(() => validatePolicyCheckEventPayload(vec.payload)).not.toThrow();
+    });
+  }
+
+  for (const vec of POLICY_VECTORS.negative_vectors) {
+    it(`negative: ${vec.name}`, () => {
+      try {
+        validatePolicyCheckEventPayload(vec.payload);
+        throw new Error(`expected ${vec.name} to throw, but it did not`);
+      } catch (exc) {
+        expect(exc).toBeInstanceOf(PayloadValidationError);
+        expect((exc as Error).message).toContain(vec.expected_error_contains);
+      }
+    });
+  }
+
+  it('typed interface accepts minimal payload', () => {
+    const p: PolicyCheckEventPayload = {
+      policy_event_schema_version: 1,
+      policy_id: 'p',
+      rule_id: 'r',
+      decision: 'allow',
+      observed_at: '2026-05-17T12:00:00.000000Z',
+    };
+    expect(() => validatePolicyCheckEventPayload(p)).not.toThrow();
+  });
+
+  it('expression body forbidden explicitly (ADR-0004 § 2 case #10)', () => {
+    expect(() =>
+      validatePolicyCheckEventPayload({
+        policy_event_schema_version: 1,
+        policy_id: 'p',
+        rule_id: 'r',
+        decision: 'deny',
+        observed_at: '2026-05-17T12:00:00.000000Z',
+        expression: 'amount > 10000',
+      }),
+    ).toThrow(/forbidden field/);
+  });
+
+  it('evidence_refs max 256', () => {
+    const refs = Array.from({ length: 257 }, (_, i) =>
+      i.toString(16).padStart(64, '0'),
+    );
+    expect(() =>
+      validatePolicyCheckEventPayload({
+        policy_event_schema_version: 1,
+        policy_id: 'p',
+        rule_id: 'r',
+        decision: 'allow',
+        observed_at: '2026-05-17T12:00:00.000000Z',
+        evidence_refs: refs,
+      }),
+    ).toThrow(/max 256 entries/);
   });
 });

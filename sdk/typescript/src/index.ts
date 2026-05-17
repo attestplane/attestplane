@@ -62,8 +62,12 @@ export {
   FORBIDDEN_PAYLOAD_FIELDS,
   PayloadValidationError,
   validateLeaseLifecycleEventPayload,
+  validatePolicyCheckEventPayload,
   type LeaseLifecycle,
   type LeaseLifecycleEventPayload,
+  type PolicyCheckEventPayload,
+  type PolicyDecision,
+  type PolicyEffect,
 } from './event_payloads.js';
 export {
   ALL_EVENT_TYPES_V1,

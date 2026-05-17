@@ -12,16 +12,25 @@ import pytest
 from attestplane.event_payloads import (
     FORBIDDEN_PAYLOAD_FIELDS,
     LeaseLifecycleEventPayload,
+    PolicyCheckEventPayload,
     validate_lease_lifecycle_event_payload,
+    validate_policy_check_event_payload,
 )
 
 _VECTORS_PATH = (
     Path(__file__).resolve().parent / "conformance" / "lease_lifecycle_event_vectors.json"
 )
+_POLICY_VECTORS_PATH = (
+    Path(__file__).resolve().parent / "conformance" / "policy_check_event_vectors.json"
+)
 
 
 def _load_vectors() -> dict:
     return json.loads(_VECTORS_PATH.read_text(encoding="utf-8"))
+
+
+def _load_policy_vectors() -> dict:
+    return json.loads(_POLICY_VECTORS_PATH.read_text(encoding="utf-8"))
 
 
 def test_vectors_file_loads() -> None:
@@ -101,4 +110,74 @@ def test_optional_string_field_must_be_string() -> None:
             "lifecycle": "granted",
             "observed_at": "2026-05-17T12:00:00.000000Z",
             "grantor_runtime_id": 12345,
+        })
+
+
+# --- policy_check_event vectors -------------------------------------------
+
+
+def test_policy_vectors_file_loads() -> None:
+    vectors = _load_policy_vectors()
+    assert vectors["$schema_version"] == 1
+    assert len(vectors["positive_vectors"]) == 4
+    assert len(vectors["negative_vectors"]) == 8
+
+
+@pytest.mark.parametrize(
+    "vec",
+    _load_policy_vectors()["positive_vectors"],
+    ids=lambda v: v["name"],
+)
+def test_policy_positive_vectors_validate(vec: dict) -> None:
+    validate_policy_check_event_payload(vec["payload"])
+
+
+@pytest.mark.parametrize(
+    "vec",
+    _load_policy_vectors()["negative_vectors"],
+    ids=lambda v: v["name"],
+)
+def test_policy_negative_vectors_rejected(vec: dict) -> None:
+    with pytest.raises(ValueError) as excinfo:
+        validate_policy_check_event_payload(vec["payload"])
+    assert vec["expected_error_contains"] in str(excinfo.value), (
+        f"vector {vec['name']!r}: expected reason containing "
+        f"{vec['expected_error_contains']!r}, got {excinfo.value!s}"
+    )
+
+
+def test_policy_typed_dict_minimal() -> None:
+    p: PolicyCheckEventPayload = {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+    }
+    validate_policy_check_event_payload(p)
+
+
+def test_policy_expression_body_forbidden_explicitly() -> None:
+    """ADR-0004 § 2 case #10 — expression body must be redacted to hash."""
+    with pytest.raises(ValueError, match="forbidden field"):
+        validate_policy_check_event_payload({
+            "policy_event_schema_version": 1,
+            "policy_id": "p",
+            "rule_id": "r",
+            "decision": "deny",
+            "observed_at": "2026-05-17T12:00:00.000000Z",
+            "expression": "amount > 10000",
+        })
+
+
+def test_policy_evidence_refs_max_256() -> None:
+    refs = [f"{i:064d}" for i in range(257)]
+    with pytest.raises(ValueError, match="max 256 entries"):
+        validate_policy_check_event_payload({
+            "policy_event_schema_version": 1,
+            "policy_id": "p",
+            "rule_id": "r",
+            "decision": "allow",
+            "observed_at": "2026-05-17T12:00:00.000000Z",
+            "evidence_refs": refs,
         })

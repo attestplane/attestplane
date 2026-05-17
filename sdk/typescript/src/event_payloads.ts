@@ -189,3 +189,152 @@ export function validateLeaseLifecycleEventPayload(payload: unknown): void {
     }
   }
 }
+
+// ----- policy_check_event payload -----
+
+export type PolicyDecision = 'allow' | 'deny' | 'abstain' | 'require_approval';
+
+export type PolicyEffect = 'INFO' | 'WARN' | 'BLOCK';
+
+/**
+ * Payload shape for the `policy_check_event` event_type.
+ *
+ * Schema-shape re-issue (Mode A.6 per ADR-0009 § 1) of fields
+ * originally observed at `~/aios/schemas/policy/policy.schema.json`.
+ * Authority lifecycle fields (`expression` body / `PolicyUpdateCandidate`
+ * / `activated_at` / `deprecated_at`) are explicitly NOT absorbed —
+ * ADR-0004 § 2 case #10 keeps expression as hash only.
+ */
+export interface PolicyCheckEventPayload {
+  readonly policy_event_schema_version: 1;
+  readonly policy_id: string;
+  readonly rule_id: string;
+  readonly decision: PolicyDecision;
+  readonly observed_at: string;
+  readonly policy_version?: number;
+  readonly kind?: string;
+  readonly effect?: PolicyEffect;
+  readonly expression_hash?: string;
+  readonly evidence_refs?: readonly string[];
+  readonly reason_code?: string;
+  readonly reason_text?: string;
+}
+
+const REQUIRED_POLICY_KEYS: readonly string[] = [
+  'policy_event_schema_version',
+  'policy_id',
+  'rule_id',
+  'decision',
+  'observed_at',
+];
+
+const DECISION_VALUES: ReadonlySet<string> = new Set([
+  'allow',
+  'deny',
+  'abstain',
+  'require_approval',
+]);
+
+const EFFECT_VALUES: ReadonlySet<string> = new Set(['INFO', 'WARN', 'BLOCK']);
+
+/**
+ * Throw `PayloadValidationError` if `payload` violates A.8 invariants.
+ *
+ * Mirrors `validate_policy_check_event_payload` in Python.
+ */
+export function validatePolicyCheckEventPayload(payload: unknown): void {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new PayloadValidationError(
+      `policy_check_event payload must be object, got ${Array.isArray(payload) ? 'array' : payload === null ? 'null' : typeof payload}`,
+    );
+  }
+  const obj = payload as Record<string, unknown>;
+  rejectForbiddenFields(obj, 'policy_check_event');
+
+  const missing = REQUIRED_POLICY_KEYS.filter((k) => !(k in obj));
+  if (missing.length > 0) {
+    missing.sort();
+    throw new PayloadValidationError(
+      `policy_check_event: missing required fields [${missing.join(', ')}]`,
+    );
+  }
+  if (obj.policy_event_schema_version !== 1) {
+    throw new PayloadValidationError(
+      `policy_check_event: policy_event_schema_version must be 1, got ${JSON.stringify(obj.policy_event_schema_version)}`,
+    );
+  }
+  for (const strField of ['policy_id', 'rule_id'] as const) {
+    const v = obj[strField];
+    if (typeof v !== 'string' || v.length === 0) {
+      throw new PayloadValidationError(
+        `policy_check_event.${strField}: must be non-empty string, got ${JSON.stringify(v)}`,
+      );
+    }
+  }
+  const decision = obj.decision;
+  if (typeof decision !== 'string' || !DECISION_VALUES.has(decision)) {
+    throw new PayloadValidationError(
+      `policy_check_event: decision must be one of [abstain, allow, deny, require_approval], got ${JSON.stringify(decision)}`,
+    );
+  }
+  requireIsoUtc(obj.observed_at, 'policy_check_event.observed_at');
+
+  if ('policy_version' in obj) {
+    const pv = obj.policy_version;
+    if (typeof pv !== 'number' || !Number.isInteger(pv) || pv < 1) {
+      throw new PayloadValidationError(
+        `policy_check_event.policy_version: must be integer >= 1, got ${JSON.stringify(pv)}`,
+      );
+    }
+  }
+  if (obj.effect !== undefined) {
+    if (typeof obj.effect !== 'string' || !EFFECT_VALUES.has(obj.effect)) {
+      throw new PayloadValidationError(
+        `policy_check_event.effect: must be one of [BLOCK, INFO, WARN] or absent, got ${JSON.stringify(obj.effect)}`,
+      );
+    }
+  }
+  if (obj.expression_hash !== undefined) {
+    if (typeof obj.expression_hash !== 'string' || !HEX64.test(obj.expression_hash)) {
+      throw new PayloadValidationError(
+        `policy_check_event.expression_hash: must be 64-hex string, got ${JSON.stringify(obj.expression_hash)}`,
+      );
+    }
+  }
+  if (obj.evidence_refs !== undefined) {
+    if (!Array.isArray(obj.evidence_refs)) {
+      throw new PayloadValidationError(
+        `policy_check_event.evidence_refs: must be array, got ${typeof obj.evidence_refs}`,
+      );
+    }
+    if (obj.evidence_refs.length > 256) {
+      throw new PayloadValidationError(
+        `policy_check_event.evidence_refs: max 256 entries, got ${obj.evidence_refs.length}`,
+      );
+    }
+    const seen = new Set<string>();
+    for (let i = 0; i < obj.evidence_refs.length; i++) {
+      const ref = obj.evidence_refs[i];
+      if (typeof ref !== 'string' || !HEX64.test(ref)) {
+        throw new PayloadValidationError(
+          `policy_check_event.evidence_refs[${i}]: must be 64-hex string, got ${JSON.stringify(ref)}`,
+        );
+      }
+      if (seen.has(ref)) {
+        throw new PayloadValidationError(
+          `policy_check_event.evidence_refs: duplicate entry ${JSON.stringify(ref)}`,
+        );
+      }
+      seen.add(ref);
+    }
+  }
+
+  for (const optField of ['kind', 'reason_code', 'reason_text']) {
+    const v = obj[optField];
+    if (v !== undefined && typeof v !== 'string') {
+      throw new PayloadValidationError(
+        `policy_check_event.${optField}: must be string or absent, got ${typeof v}`,
+      );
+    }
+  }
+}
