@@ -13,6 +13,29 @@ export {
   AdapterTranslationError,
   GenericRuntimeAdapter,
 } from './adapters.js';
+export {
+  ANCHOR_SCHEMA_VERSION,
+  AnchorError,
+  AnchorVerificationError,
+  DEFAULT_ANCHOR_POLICY,
+  MockTSAProvider,
+  MultiTSAProvider,
+  TSAProvider,
+  TSAUnavailableError,
+  makeAnchorPolicy,
+  makeTimestampRequest,
+  validateAnchorRecord,
+  verifyChainWithAnchors,
+  type AnchorPolicy,
+  type AnchorRecord,
+  type AnchorStatus,
+  type AnchorVerificationResult,
+  type CertStatus,
+  type MockTSAProviderInput,
+  type MultiTSAProviderInput,
+  type SingleAnchorResult,
+  type TimestampRequest,
+} from './anchoring.js';
 export { CanonicalizationError, canonicalize } from './canonical.js';
 export {
   CanonicalTextError,
