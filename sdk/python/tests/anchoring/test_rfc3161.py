@@ -116,7 +116,10 @@ def test_verify_rejects_unknown_trust_root() -> None:
     der = authority_a.sign_timestamp_response(digest, gen_time=_NOW)
     parsed = parse_timestamp_response(der)
     other_materials = authority_b.materials()  # wrong root
-    with pytest.raises(AnchorVerificationError, match="trust root"):
+    # The wrong root has the same CN as the real one ("Attestplane Test
+    # Root CA"), so the chain walker finds it as a candidate by DN match
+    # then fails the signature verification.
+    with pytest.raises(AnchorVerificationError, match="signature does not verify"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -277,7 +280,10 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
         verification_time=_NOW,
     )
     assert result.ok is False
-    assert "trust root" in (result.anchor_results[0].reason or "")
+    # Both roots have the same CN, so the chain walker finds B's root
+    # by DN match then fails the signature step.
+    reason = result.anchor_results[0].reason or ""
+    assert "signature does not verify" in reason or "trust root" in reason
 
 
 def test_verify_chain_without_trust_roots_remains_unverified() -> None:

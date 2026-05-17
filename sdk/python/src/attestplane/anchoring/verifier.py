@@ -238,11 +238,16 @@ def verify_chain_with_anchors(
         if _rfc3161 is not None and trust_roots_der is not None:
             try:
                 parsed = _rfc3161.parse_timestamp_response(anchor.tsa_token)
+                # Use tsa_cert_chain as the intermediate pool. The leaf
+                # is already embedded in the token; entries other than
+                # the leaf in tsa_cert_chain are intermediates that may
+                # need to be walked to reach a trust root.
                 _rfc3161.verify_timestamp_token(
                     parsed,
                     expected_digest=anchor.anchored_event_hash,
                     trust_roots_der=trust_roots_der,
                     verification_time=verification_time,
+                    intermediates_der=list(anchor.tsa_cert_chain),
                 )
             except AnchorVerificationError as exc:
                 anchor_results.append(SingleAnchorResult(

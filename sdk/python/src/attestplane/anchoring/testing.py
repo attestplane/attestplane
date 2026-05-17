@@ -58,13 +58,20 @@ from attestplane.anchoring.base import (
 
 @dataclass(frozen=True)
 class TestTSAMaterials:
-    """Bundled CA + leaf material exposed by :class:`TestTSAAuthority`."""
+    """Bundled CA + leaf material exposed by :class:`TestTSAAuthority`.
+
+    For multi-tier authorities, ``intermediate_certs_der`` contains the
+    chain from leaf-issuer back to the cert just below the root, in
+    that order (leaf's direct issuer first, root's direct child last).
+    For the default 2-tier authority this tuple is empty.
+    """
 
     root_cert_der: bytes
     leaf_cert_der: bytes
     leaf_key_der: bytes
     not_valid_before: datetime
     not_valid_after: datetime
+    intermediate_certs_der: tuple[bytes, ...] = ()
 
 
 class TestTSAAuthority:
@@ -88,6 +95,7 @@ class TestTSAAuthority:
         now: datetime | None = None,
         cert_validity_days: int = 365,
         common_name: str = "Attestplane Test TSA",
+        intermediate_count: int = 0,
     ) -> None:
         actual_now = now or datetime.now(UTC)
         self._issued_at_authority = actual_now
@@ -98,8 +106,30 @@ class TestTSAAuthority:
         self._root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self._root_cert = self._build_root_cert(self._root_key, actual_now)
 
+        # Optional intermediate CA chain. Each intermediate is signed by
+        # the previous tier (root → I1 → I2 → ...). The leaf cert is then
+        # signed by the deepest intermediate. The two-tier default
+        # (intermediate_count == 0) signs the leaf directly with the root.
+        self._intermediate_keys: list[RSAPrivateKey] = []
+        self._intermediate_certs: list[x509.Certificate] = []
+        prev_key = self._root_key
+        prev_cert = self._root_cert
+        for tier in range(intermediate_count):
+            inter_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            inter_cert = self._build_intermediate_cert(
+                inter_key, prev_key, prev_cert,
+                tier=tier, now=actual_now,
+                path_length=intermediate_count - tier - 1,
+            )
+            self._intermediate_keys.append(inter_key)
+            self._intermediate_certs.append(inter_cert)
+            prev_key = inter_key
+            prev_cert = inter_cert
+
         self._leaf_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        self._leaf_cert = self._build_leaf_cert(self._leaf_key, actual_now)
+        self._leaf_cert = self._build_leaf_cert(
+            self._leaf_key, prev_key, prev_cert, actual_now,
+        )
 
     @property
     def common_name(self) -> str:
@@ -116,6 +146,10 @@ class TestTSAAuthority:
             ),
             not_valid_before=self._leaf_cert.not_valid_before_utc,
             not_valid_after=self._leaf_cert.not_valid_after_utc,
+            intermediate_certs_der=tuple(
+                c.public_bytes(serialization.Encoding.DER)
+                for c in self._intermediate_certs
+            ),
         )
 
     def sign_timestamp_response(
@@ -277,15 +311,26 @@ class TestTSAAuthority:
 
         leaf_der = self._leaf_cert.public_bytes(serialization.Encoding.DER)
         leaf_asn1 = asn1_x509.Certificate.load(leaf_der)
-        root_der = self._root_cert.public_bytes(serialization.Encoding.DER)
-        root_asn1 = asn1_x509.Certificate.load(root_der)
+
+        # The OCSP responder is the leaf's direct issuer per RFC-6960
+        # § 2.6 (authorized-by-being-the-issuer mode). For the two-tier
+        # default chain (root → leaf) this is the root; for a multi-tier
+        # chain with intermediates the deepest intermediate signs.
+        if self._intermediate_certs:
+            issuer_cert = self._intermediate_certs[-1]
+            issuer_key = self._intermediate_keys[-1]
+        else:
+            issuer_cert = self._root_cert
+            issuer_key = self._root_key
+        issuer_der = issuer_cert.public_bytes(serialization.Encoding.DER)
+        issuer_asn1 = asn1_x509.Certificate.load(issuer_der)
 
         # Build the issuer-name-hash and issuer-key-hash that
         # OCSP CertID requires. Per RFC-6960, issuerKeyHash is the SHA-1
         # of the BIT STRING value of subjectPublicKey (the raw bits,
         # excluding tag + length + unused-bits prefix).
-        issuer_name_hash = _sha1(root_asn1["tbs_certificate"]["subject"].dump())
-        spki = root_asn1["tbs_certificate"]["subject_public_key_info"]
+        issuer_name_hash = _sha1(issuer_asn1["tbs_certificate"]["subject"].dump())
+        spki = issuer_asn1["tbs_certificate"]["subject_public_key_info"]
         # asn1crypto exposes the raw key bytes via .contents on the BIT STRING.
         # Strip the leading "unused bits" byte (always 0x00 for full octets).
         bit_string_bytes = spki["public_key"].contents
@@ -319,13 +364,13 @@ class TestTSAAuthority:
 
         tbs = asn1_ocsp.ResponseData({
             "responder_id": asn1_ocsp.ResponderId(
-                name="by_name", value=root_asn1["tbs_certificate"]["subject"],
+                name="by_name", value=issuer_asn1["tbs_certificate"]["subject"],
             ),
             "produced_at": gen_time,
             "responses": [single_response],
         })
         tbs_der = tbs.dump()
-        signature = self._root_key.sign(
+        signature = issuer_key.sign(
             tbs_der, padding.PKCS1v15(), hashes.SHA256(),
         )
 
@@ -379,15 +424,64 @@ class TestTSAAuthority:
         )
         return builder.sign(key, hashes.SHA256())
 
-    def _build_leaf_cert(self, leaf_key: RSAPrivateKey, now: datetime) -> x509.Certificate:
+    def _build_intermediate_cert(
+        self,
+        inter_key: RSAPrivateKey,
+        signer_key: RSAPrivateKey,
+        signer_cert: x509.Certificate,
+        *,
+        tier: int,
+        now: datetime,
+        path_length: int,
+    ) -> x509.Certificate:
+        name = x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, f"Attestplane Test Intermediate CA T{tier}"),
+        ])
+        builder = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(signer_cert.subject)
+            .public_key(inter_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now)
+            # Intermediate validity is between leaf and root: longer than
+            # leaf, shorter than root.
+            .not_valid_after(now + self._cert_validity * 5)
+            .add_extension(
+                x509.BasicConstraints(ca=True, path_length=path_length),
+                critical=True,
+            )
+            .add_extension(
+                x509.KeyUsage(
+                    digital_signature=True,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=True,
+                    crl_sign=True,
+                    encipher_only=False,
+                    decipher_only=False,
+                ),
+                critical=True,
+            )
+        )
+        return builder.sign(signer_key, hashes.SHA256())
+
+    def _build_leaf_cert(
+        self,
+        leaf_key: RSAPrivateKey,
+        signer_key: RSAPrivateKey,
+        signer_cert: x509.Certificate,
+        now: datetime,
+    ) -> x509.Certificate:
         leaf_name = x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, self._common_name),
         ])
-        root_subject = self._root_cert.subject
         builder = (
             x509.CertificateBuilder()
             .subject_name(leaf_name)
-            .issuer_name(root_subject)
+            .issuer_name(signer_cert.subject)
             .public_key(leaf_key.public_key())
             .serial_number(x509.random_serial_number())
             .not_valid_before(now)
@@ -412,7 +506,7 @@ class TestTSAAuthority:
                 critical=True,
             )
         )
-        return builder.sign(self._root_key, hashes.SHA256())
+        return builder.sign(signer_key, hashes.SHA256())
 
 
 def _sha256(data: bytes) -> bytes:

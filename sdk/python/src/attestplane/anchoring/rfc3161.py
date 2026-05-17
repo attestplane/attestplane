@@ -180,6 +180,8 @@ def verify_timestamp_token(
     expected_digest: bytes,
     trust_roots_der: list[bytes],
     verification_time: datetime | None = None,
+    intermediates_der: list[bytes] | None = None,
+    max_chain_depth: int = 8,
 ) -> None:
     """Validate the parsed token against the expected message and trust roots.
 
@@ -192,19 +194,22 @@ def verify_timestamp_token(
     2. ``hash_algorithm`` is SHA-256.
     3. ``signature`` over ``signed_attrs_der`` verifies against the
        leaf cert's public key (RSA PKCS1v15 + SHA-256).
-    4. The leaf cert chains to one of ``trust_roots_der`` (single hop;
-       intermediate chains land in a future PR).
-    5. ``verification_time`` (or now) is within the leaf cert's
-       ``not_valid_before`` / ``not_valid_after`` window.
+    4. The leaf cert chains to one of ``trust_roots_der`` via a
+       multi-hop walk through ``intermediates_der`` (depth bounded
+       by ``max_chain_depth``). Each link's signature is verified
+       against the issuer's public key; BasicConstraints.cA=True is
+       required on every non-leaf cert; cycles are detected.
+    5. ``verification_time`` (or now) is within EVERY cert's
+       ``not_valid_before`` / ``not_valid_after`` window (leaf +
+       intermediates + root).
 
     What this function does NOT yet check:
 
-    - OCSP / CRL freshness of the leaf cert.
-    - Validity of the trust root itself (assumed by configuration).
-    - Multi-hop intermediate chains (single-hop only in v1; suffices
-      for our :class:`~attestplane.anchoring.testing.TestTSAAuthority`
-      and most real TSAs).
-    - eIDAS qualified-TSA list integration (eIDAS specific, deferred).
+    - CRL revocation (OCSP is handled separately by the
+      :func:`~attestplane.anchoring.ocsp.parse_and_verify_ocsp` path).
+    - eIDAS qualified-TSA list integration (caller supplies trust
+      roots via :func:`attestplane.anchoring.eidas.load_qualified_tsa_trust_roots`
+      or equivalent).
     """
     if len(expected_digest) != 32:
         raise AnchorVerificationError(
@@ -243,7 +248,7 @@ def verify_timestamp_token(
             "TSA signature does not verify against leaf cert"
         ) from exc
 
-    # Check time validity.
+    # Check time validity for the leaf.
     actual_when = verification_time or datetime.now(UTC)
     not_before = leaf.not_valid_before_utc
     not_after = leaf.not_valid_after_utc
@@ -256,37 +261,128 @@ def verify_timestamp_token(
             f"verification_time {actual_when} exceeds leaf cert not_after {not_after}"
         )
 
-    # Check chain to trust root by issuer DN matching + signature.
-    issuer_dn = leaf.issuer
-    issuer_match = None
+    # Build the candidate pool: intermediates + roots. Roots are kept
+    # separate so we can detect when the walk has reached a configured
+    # trust anchor.
+    intermediates: list[x509.Certificate] = []
+    if intermediates_der:
+        for der in intermediates_der:
+            try:
+                intermediates.append(x509.load_der_x509_certificate(der))
+            except Exception:
+                # Skip malformed intermediates; trust-root walk will
+                # fail later if needed.
+                continue
+    roots: list[x509.Certificate] = []
     for root_der in trust_roots_der:
         try:
-            root = x509.load_der_x509_certificate(root_der)
+            roots.append(x509.load_der_x509_certificate(root_der))
         except Exception:
             continue
-        if root.subject == issuer_dn:
-            issuer_match = root
-            break
-    if issuer_match is None:
-        raise AnchorVerificationError(
-            "leaf cert issuer DN does not match any configured trust root"
-        )
+    if not roots:
+        raise AnchorVerificationError("no parseable trust roots provided")
 
-    root_key = issuer_match.public_key()
-    if not isinstance(root_key, RSAPublicKey):
+    # Walk leaf → ... → root via issuer-DN matching. Each hop's signature
+    # must verify against the parent's public key. Cycles are detected
+    # via a visited set of (subject, serial) pairs.
+    current = leaf
+    visited: set[tuple[bytes, int]] = set()
+    visited.add((current.subject.public_bytes(), current.serial_number))
+
+    for hop in range(max_chain_depth):
+        # Check if `current` is signed by any configured root (success).
+        matched_root = _find_issuer(current, roots)
+        if matched_root is not None:
+            _verify_link(current, matched_root, actual_when)
+            return
+
+        # Otherwise, look in the intermediates pool for an issuer.
+        matched_intermediate = _find_issuer(current, intermediates)
+        if matched_intermediate is None:
+            raise AnchorVerificationError(
+                f"at hop {hop}: cert with subject "
+                f"{current.subject.rfc4514_string()!r} has issuer "
+                f"{current.issuer.rfc4514_string()!r} which is not in trust "
+                f"roots or intermediates"
+            )
+
+        # Sanity: the intermediate must be a CA (BasicConstraints).
+        if not _is_ca(matched_intermediate):
+            raise AnchorVerificationError(
+                f"at hop {hop}: candidate issuer "
+                f"{matched_intermediate.subject.rfc4514_string()!r} is not a CA "
+                "(missing BasicConstraints.cA=True)"
+            )
+
+        _verify_link(current, matched_intermediate, actual_when)
+
+        key = (matched_intermediate.subject.public_bytes(),
+               matched_intermediate.serial_number)
+        if key in visited:
+            raise AnchorVerificationError(
+                f"chain cycle detected at hop {hop}: revisiting "
+                f"{matched_intermediate.subject.rfc4514_string()!r}"
+            )
+        visited.add(key)
+        current = matched_intermediate
+
+    raise AnchorVerificationError(
+        f"chain depth exceeded max_chain_depth={max_chain_depth} without "
+        "reaching a configured trust root"
+    )
+
+
+def _find_issuer(
+    subject_cert: x509.Certificate,
+    candidate_pool: list[x509.Certificate],
+) -> x509.Certificate | None:
+    """Return the first candidate whose subject DN matches the subject_cert's issuer DN."""
+    issuer_dn = subject_cert.issuer
+    for cand in candidate_pool:
+        if cand.subject == issuer_dn:
+            return cand
+    return None
+
+
+def _is_ca(cert: x509.Certificate) -> bool:
+    """Return True iff `cert` has BasicConstraints.cA=True."""
+    try:
+        bc = cert.extensions.get_extension_for_class(x509.BasicConstraints)
+    except x509.ExtensionNotFound:
+        return False
+    return bool(bc.value.ca)
+
+
+def _verify_link(child: x509.Certificate, issuer: x509.Certificate, when: datetime) -> None:
+    """Verify a single parent-child link: time validity + signature."""
+    if when < issuer.not_valid_before_utc:
         raise AnchorVerificationError(
-            f"v1 supports RSA root keys only; got {type(root_key).__name__}"
+            f"verification_time precedes issuer cert "
+            f"{issuer.subject.rfc4514_string()!r} not_before "
+            f"{issuer.not_valid_before_utc}"
+        )
+    if when > issuer.not_valid_after_utc:
+        raise AnchorVerificationError(
+            f"verification_time exceeds issuer cert "
+            f"{issuer.subject.rfc4514_string()!r} not_after "
+            f"{issuer.not_valid_after_utc}"
+        )
+    issuer_key = issuer.public_key()
+    if not isinstance(issuer_key, RSAPublicKey):
+        raise AnchorVerificationError(
+            f"v1 supports RSA issuer keys only; got {type(issuer_key).__name__}"
         )
     try:
-        root_key.verify(
-            leaf.signature,
-            leaf.tbs_certificate_bytes,
+        issuer_key.verify(
+            child.signature,
+            child.tbs_certificate_bytes,
             padding.PKCS1v15(),
-            leaf.signature_hash_algorithm or hashes.SHA256(),
+            child.signature_hash_algorithm or hashes.SHA256(),
         )
     except InvalidSignature as exc:
         raise AnchorVerificationError(
-            "leaf cert signature does not verify against the matched trust root"
+            f"cert {child.subject.rfc4514_string()!r} signature does not "
+            f"verify against issuer {issuer.subject.rfc4514_string()!r}"
         ) from exc
 
 
