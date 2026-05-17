@@ -3,7 +3,7 @@
 /**
  * Attestplane — verifiable audit substrate for AI agents.
  *
- * EU AI Act Article 12 ready. Apache-2.0 licensed.
+ * Designed toward EU AI Act Article 12 auditability. Apache-2.0 licensed.
  * See https://github.com/attestplane/attestplane and
  * docs/adr/0002-substrate-data-model-and-hash-chain-v0.md for the design.
  */

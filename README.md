@@ -20,11 +20,13 @@
 
 ## What is Attestplane?
 
-Attestplane is a cryptographic audit substrate for AI agent systems. It provides a tamper-evident chain of evidence that makes every consequential action your AI agents take — tool calls, model invocations, data accesses, decisions — verifiable, attributable, and regulatorily mappable.
+Attestplane is an Apache-2.0 open-source attestation and audit substrate for AI agents, extracted from AIOS.
 
-The substrate captures events into a SHA-256 hash chain (per [ADR-0002](docs/adr/0002-substrate-data-model-and-hash-chain-v0.md)) and is built for adding RFC-3161 anchoring and signature attestation (per [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md), shipping with v0.1 / M5). The longer-term roadmap layers Sigstore integration, SLSA-L3 build provenance, framework-aware evidence-bundle export, and an auditor-targeted JSON API on top of this substrate; what is in your hands today is the substrate's core data model, restricted-JCS canonicalization, and chain integrity primitives, shipped as cross-language SDKs.
+It records agent actions, decisions, policy checks, and compliance checkpoints into tamper-evident evidence chains. v0.0.1-alpha provides foundational Python and TypeScript SDKs, deterministic serialization, SHA-256 hash-chain primitives, and cross-language conformance vectors. It is a developer alpha substrate, not a finished compliance platform.
 
-Attestplane is not a compliance-as-a-service platform. It is infrastructure your team owns, operates, and audits independently. The framework mappings ship with the substrate; the audit chain stays in your control plane.
+Attestplane is designed toward independent auditability and future compliance framework mapping, including EU AI Act Article 12 and DORA Article 8. External anchoring, verifier CLI, proof bundles, durable storage, and runtime adapters are roadmap items for v0.1/M5 and later.
+
+Attestplane is not a compliance-as-a-service platform. It is infrastructure your team owns, operates, and audits independently. Framework mappings are roadmap targets; the audit chain stays in your control plane.
 
 ---
 
@@ -32,7 +34,7 @@ Attestplane is not a compliance-as-a-service platform. It is infrastructure your
 
 **Regulation demands verifiable evidence, not best-effort logs.** EU AI Act Article 12 requires "logging capabilities" that allow reconstruction of the system's behaviour. DORA Article 8 requires operational resilience with "audit trail" that survives incident investigation. NIST AI RMF asks for "traceable" processes. None of these obligations are satisfied by application logs that can be silently truncated, retroactively modified, or that carry no cryptographic proof of integrity.
 
-**Why open-source, why substrate?** AI agents interact with financial data, health records, legal documents, and critical infrastructure. The code responsible for producing compliance evidence must itself be auditable. A closed SaaS audit platform creates the contradiction of an unverifiable verifier. Attestplane's core substrate is Apache 2.0 so that CISOs, auditors, regulators, and engineers can inspect, fork, and validate every hash function, every chain link, and every framework mapping — not as a marketing claim but as a technical guarantee.
+**Why open-source, why substrate?** AI agents interact with financial data, health records, legal documents, and critical infrastructure. The code responsible for producing compliance evidence must itself be auditable. A closed SaaS audit platform creates the contradiction of an unverifiable verifier. Attestplane's core substrate is Apache 2.0 so that CISOs, auditors, regulators, and engineers can inspect, fork, and validate every hash function, every chain link, and future framework mapping logic — not as a marketing claim but as a technical design goal.
 
 A substrate is by design not a finished product. It is a composable layer your application or platform embeds, connects to its own event streams, and operates within its own trust boundary. Your audit data never leaves your control plane.
 
@@ -86,13 +88,35 @@ A substrate is by design not a finished product. It is a composable layer your a
 - **GDPR pseudonymization at the type level** — the `SubjectRef` strong type forces callers to declare a pseudonymization scheme (`sha256_salted`, `opaque`, `none`); raw PII cannot be silently written into the subject field.
 - **Self-hosted first** — the substrate runs inside your own infrastructure; your attestation data stays in your control plane. EU financial entities subject to DORA Recital 56 can deploy without adding Attestplane as a Critical Third-Party Provider.
 - **Supply-chain attestation** — npm provenance is published to the Sigstore transparency log on every TypeScript SDK release; Python SDK ships with reproducible-wheel verification and CycloneDX SBOM on every push. Full Sigstore release signing and SLSA L3 build provenance are planned for M5–M6.
-- **RFC-3161 TSA anchoring** — [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md) locks the v0.1 design: pluggable TSA providers, batch-tail anchoring off the `append()` critical path, CAdES-A long-term validation evidence frozen at issuance, sidecar `AnchorRecord` that preserves the v0.0.1 chain contract. Code ships with M5.
+- **RFC-3161 TSA anchoring design** — [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md) locks the v0.1 design: pluggable TSA providers, batch-tail anchoring off the `append()` critical path, CAdES-A long-term validation evidence frozen at issuance, sidecar `AnchorRecord` that preserves the v0.0.1 chain contract. Code ships with M5.
 
 ---
 
 ## Current release: v0.0.1-alpha (2026-05-17)
 
 The first public alpha is live on TestPyPI (sandbox) and npm (production with the `alpha` dist-tag). The shipped surface is the substrate core (types, restricted-JCS canonicalization, SHA-256 hash chain, in-memory append-only container). RFC-3161 anchoring, signing, framework-mapping endpoint, FastAPI/Express/NestJS helpers, and a Rust SDK are **not** in v0.0.1 — see the [roadmap](#roadmap) below.
+
+## v0.0.1-alpha status
+
+Implemented in v0.0.1-alpha:
+
+- Python SDK
+- TypeScript SDK
+- deterministic serialization
+- SHA-256 hash-chain primitives
+- cross-language conformance vectors
+- CI / CodeQL / OSV / SBOM / reproducible-build hygiene
+
+Not yet implemented:
+
+- verifier CLI
+- proof bundle / auditor export schema
+- full EU AI Act / DORA / NIS2 / GDPR obligation registry
+- RFC3161/TSA anchoring
+- Sigstore/Rekor integration
+- durable storage backend
+- AIOS / LangGraph / OpenAI / Claude / Codex / MCP adapters
+- production / enterprise / cloud features
 
 | Artifact | Channel | Verify |
 |---|---|---|
@@ -181,18 +205,18 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 
 ---
 
-## Compliance Framework Coverage
+## Future Compliance Framework Mapping Targets
 
-The table below shows which regulatory controls Attestplane's evidence bundles directly address. The mapping is maintained by the founder's compliance practice and updated with each regulatory enforcement update.
+The table below lists roadmap targets for future compliance mapping. v0.0.1-alpha does not ship a full obligation registry, verifier expectation registry, or proof bundle schema.
 
-| Framework | Relevant controls | Coverage in substrate |
+| Framework | Relevant controls | Current v0.0.1-alpha status |
 |---|---|---|
-| **EU AI Act** | Articles 12 (logging), 13 (transparency), 14 (human oversight), 15 (accuracy/robustness), 16 (obligations for providers), 17 (quality management) | Chain integrity + event taxonomy + evidence bundle schema |
-| **NIST AI RMF** | GOVERN 1.1–1.7, MAP 1.1–5.2, MEASURE 1.1–4.2, MANAGE 1.1–4.4 | Framework mapping endpoint + risk tagging |
-| **ISO/IEC 42001** | §6.1 risk, §8.4 data for AI, §9.1 monitoring and measurement, §10.2 nonconformity | Audit chain + anomaly rate metrics |
-| **SOC 2** | CC7.2 (system monitoring), CC7.3 (security event evaluation), CC4.1 (COSO monitoring) | Structured event records + replay audit |
-| **DORA** | Article 8 (ICT risk management), Article 10 (detection), Article 17 (incident reporting) | TSA-anchored chain + incident evidence bundle |
-| **CRA 2027** | Article 13 (essential cybersecurity requirements), Annex I Part I §2 (logging) | SBOM (CycloneDX) + secure-by-default audit configuration |
+| **EU AI Act** | Articles 12 (logging), 13 (transparency), 14 (human oversight), 15 (accuracy/robustness), 16 (obligations for providers), 17 (quality management) | Designed toward EU AI Act Article 12 auditability; only selected Art. 12(2)(a) reference fields are implemented today |
+| **NIST AI RMF** | GOVERN 1.1–1.7, MAP 1.1–5.2, MEASURE 1.1–4.2, MANAGE 1.1–4.4 | Roadmap target for future compliance mapping |
+| **ISO/IEC 42001** | §6.1 risk, §8.4 data for AI, §9.1 monitoring and measurement, §10.2 nonconformity | Roadmap target for future compliance mapping |
+| **SOC 2** | CC7.2 (system monitoring), CC7.3 (security event evaluation), CC4.1 (COSO monitoring) | Roadmap target for future compliance mapping |
+| **DORA** | Article 8 (ICT risk management), Article 10 (detection), Article 17 (incident reporting) | Roadmap target for future compliance mapping |
+| **CRA 2027** | Article 13 (essential cybersecurity requirements), Annex I Part I §2 (logging) | SBOM hygiene exists; CRA mapping is a roadmap target |
 
 > *This table represents technical mapping. It does not constitute legal advice. Your organization's compliance obligations depend on your specific facts and jurisdiction. Consult qualified legal counsel before relying on any regulatory interpretation.*
 
@@ -202,7 +226,7 @@ The table below shows which regulatory controls Attestplane's evidence bundles d
 
 | Milestone | Target | Scope |
 |---|---|---|
-| **M5 — GA v1.0.0** | 2026-08-15 | Self-hosted OSS substrate · SHA-256 chain (v0.0.1 ✓) · RFC-3161 anchoring (ADR-0003) · FastAPI/Express helpers · full framework mapping · CycloneDX SBOM (v0.0.1 ✓) · CLI |
+| **M5 — v0.1.0 alpha hardening** | 2026-08-15 | Self-hosted OSS substrate · SHA-256 chain (v0.0.1 ✓) · RFC-3161 anchoring implementation · FastAPI/Express helpers · initial framework mapping · CycloneDX SBOM (v0.0.1 ✓) · CLI |
 | **M6 — Cloud preview** | 2026-09 | Attestplane Cloud hosted TSA + Sigstore Rekor mirror + framework auto-update · free for EU deployments · Design Partner Program launch |
 | **M7 — Client-side DP aggregation** | 2026-Q4 | Client-side differential privacy SDK (Rust + TypeScript + Python) · ε-configurable Laplace noise · regulator dashboard preview · customer attestation data never leaves customer control plane |
 | **M8 — Paid tier** | 2027-Q1+ | Pro / Team / Enterprise paid tiers · SSO/SCIM/RBAC · SLA · first FTE hire |

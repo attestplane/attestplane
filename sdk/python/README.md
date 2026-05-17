@@ -1,6 +1,6 @@
 # attestplane — Python SDK
 
-Verifiable audit substrate for AI agents. EU AI Act Article 12 ready.
+Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 
 > **Status: alpha (v0.0.1).** APIs may change before v0.1.0. The canonical
 > hash format and conformance vectors, however, are frozen — see [ADR-0002][adr2].
@@ -43,7 +43,7 @@ assert sub.verify().ok      # True
 ## What this SDK gives you
 
 - An **append-only** audit log with cryptographic integrity (SHA-256 hash chain).
-- Built-in **EU AI Act Art. 12(2)(a)** field coverage from day one.
+- Built-in fields designed toward **EU AI Act Art. 12(2)(a)** auditability from day one.
 - A **deterministic canonical format** that future TypeScript and Rust SDKs
   will produce byte-identical hashes for, anchored by the conformance vector
   file shipped in this package.

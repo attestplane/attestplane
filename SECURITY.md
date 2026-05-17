@@ -94,7 +94,7 @@ The following threat categories are specific to Attestplane's trust substrate mo
 | ID | Threat | Severity | Status |
 |----|--------|----------|--------|
 | AT-01 | **Audit chain tampering** — an attacker modifies or deletes historical audit records to erase evidence of agent misbehaviour. | Critical | Hash-chain integrity check in 0.x; RFC-3161 anchoring adds external timestamp proof. |
-| AT-02 | **Replay attack** — a valid signed audit event or attestation is replayed out of sequence to fabricate a compliant audit trail. | High | Sequence numbers and timestamps enforced in chain; nonce policy planned M5. |
+| AT-02 | **Replay attack** — a valid signed audit event or attestation is replayed out of sequence to fabricate a misleading audit trail. | High | Sequence numbers and timestamps enforced in chain; nonce policy planned M5. |
 | AT-03 | **Lease / attestation forgery** — an agent or third party fabricates a framework-mapping attestation (e.g., falsely claiming EU AI Act Article 13 compliance). | Critical | Attestation signatures validated at ingestion; SLSA L3 provenance planned M5. |
 | AT-04 | **Aggregation poisoning** (M7 differential privacy) — manipulated client-side inputs corrupt the aggregated privacy-preserving report submitted to regulators. | High | Planned mitigation in M7 C1 client-side DP architecture; input validation bounds. |
 | AT-05 | **Supply-chain compromise** — a malicious or compromised dependency introduces a backdoor into the substrate binary or SDK. | Critical | Sigstore signing + SLSA L3 attestation + 48-hour dependency cooldown policy (see §Supply-Chain Security Posture). |

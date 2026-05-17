@@ -1,6 +1,6 @@
 # @attestplane/attestplane — TypeScript SDK
 
-Verifiable audit substrate for AI agents. EU AI Act Article 12 ready.
+Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 
 > **Status: alpha (v0.0.1).** Wire format is byte-locked against the Python
 > SDK's [`vectors.json`](../python/tests/conformance/vectors.json) — see
@@ -62,7 +62,7 @@ will reproduce the exact byte value from the same input.
 ## What this SDK gives you
 
 - An **append-only** audit log with cryptographic integrity (SHA-256 hash chain).
-- Built-in **EU AI Act Art. 12(2)(a)** field coverage from day one.
+- Built-in fields designed toward **EU AI Act Art. 12(2)(a)** auditability from day one.
 - Byte-identical canonical format compatible with the Python SDK.
 - Strong **GDPR pseudonymization typing** via `SubjectRef`.
 
