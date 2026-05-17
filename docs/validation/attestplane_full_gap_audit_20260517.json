@@ -1,0 +1,656 @@
+{
+  "generated_at": "2026-05-17T13:55:00+08:00",
+  "repository": "/Users/macworkers/Documents/attestplane/repo",
+  "remote": "https://github.com/attestplane/attestplane.git",
+  "branch": "main",
+  "head_sha": "7e6e5e414fe71ed3ee02de919d18799be8bdcc6a",
+  "origin_sync": "0 ahead / 0 behind after git fetch origin main",
+  "open_prs": [],
+  "open_issues": [],
+  "latest_head_workflows": [
+    "sign-release success",
+    "reproducible-build success",
+    "sbom success",
+    "osv-scanner success",
+    "ossf-scorecard success",
+    "ci success",
+    "codeql success"
+  ],
+  "local_verification": [
+    "Python pytest: 66 passed in 4.03s",
+    "TypeScript vitest: 51 passed",
+    "Python mypy: success",
+    "Python ruff: success",
+    "TypeScript tsc: success",
+    "TypeScript biome: success",
+    "scripts/check-policy.sh: pass"
+  ],
+  "execution_limits": [
+    "ask_opus.sh reviewer failed under escalation with API Error: 403 Request not allowed"
+  ],
+  "module_inventory": [
+    [
+      "Repository governance",
+      "README.md; GOVERNANCE.md; CONTRIBUTING.md; DCO.txt; CODE_OF_CONDUCT.md; SECURITY.md; TRADEMARK.md; NOTICE; LICENSE; REUSE.toml; .github/CODEOWNERS",
+      "Markdown/policy",
+      "implemented",
+      "CI policy, REUSE, DCO, markdown/yaml/spell gates",
+      "yes",
+      "ci.yml"
+    ],
+    [
+      "Python SDK types/canonical/hashchain/substrate",
+      "sdk/python/src/attestplane/types.py; canonical.py; hashchain.py; substrate.py",
+      "Python",
+      "implemented",
+      "66 local tests passed; mypy and ruff passed",
+      "sdk/python/README.md; ADR-0002",
+      "sdk-python.yml"
+    ],
+    [
+      "TypeScript SDK types/canonical/hashchain/substrate",
+      "sdk/typescript/src/types.ts; canonical.ts; hashchain.ts; substrate.ts",
+      "TypeScript",
+      "implemented",
+      "51 local tests passed; typecheck and biome passed",
+      "sdk/typescript/README.md",
+      "sdk-typescript.yml"
+    ],
+    [
+      "Conformance vectors",
+      "sdk/python/tests/conformance/vectors.json; sdk/python/tests/test_conformance.py; sdk/typescript/test/conformance.test.ts",
+      "JSON/Python/TypeScript",
+      "implemented",
+      "Python and TS replay same vectors",
+      "ADR-0002; SDK READMEs",
+      "sdk-python.yml; sdk-typescript.yml"
+    ],
+    [
+      "Negative vectors",
+      "sdk/python/tests/test_canonical.py; test_hashchain.py; sdk/typescript/test/hashchain.test.ts",
+      "Python/TypeScript",
+      "partial",
+      "negative unit tests only; no versioned registry",
+      "scattered test intent only",
+      "SDK CI"
+    ],
+    [
+      "Verifier CLI",
+      "none",
+      "n/a",
+      "missing",
+      "no",
+      "roadmap only",
+      "no"
+    ],
+    [
+      "Proof bundle / auditor export",
+      "none",
+      "n/a",
+      "missing",
+      "no",
+      "README/ADR mentions only",
+      "no"
+    ],
+    [
+      "Compliance mapping registry",
+      "README.md; sdk/python/README.md; docs/adr/0002-substrate-data-model-and-hash-chain-v0.md",
+      "Markdown",
+      "partial / claim-risk",
+      "no mapping tests",
+      "Art.12 field mapping only",
+      "markdown checks only"
+    ],
+    [
+      "TSA / RFC 3161 anchoring",
+      "docs/adr/0003-tsa-rfc-3161-anchoring.md",
+      "Markdown",
+      "docs-only",
+      "no anchor tests",
+      "ADR accepted",
+      "no implementation gate"
+    ],
+    [
+      "Sigstore / Rekor",
+      "README.md; .github/workflows/publish-typescript.yml; sign-release.yml",
+      "Actions/docs",
+      "partial",
+      "release provenance/signing workflow evidence only",
+      "README/CHANGELOG/SECURITY",
+      "publish/sign-release workflows"
+    ],
+    [
+      "Storage / persistence",
+      "sdk/python/src/attestplane/substrate.py; sdk/typescript/src/substrate.ts",
+      "Python/TypeScript",
+      "partial",
+      "in-memory tests only",
+      "explicitly out of scope in SDK READMEs",
+      "SDK CI"
+    ],
+    [
+      "Agent runtime adapters",
+      "none",
+      "n/a",
+      "missing",
+      "no",
+      "roadmap/product language only",
+      "no"
+    ],
+    [
+      "Package publishing",
+      "publish-python.yml; publish-typescript.yml; pyproject.toml; package.json; CHANGELOG.md",
+      "Actions/TOML/JSON",
+      "implemented for alpha channels",
+      "workflow gates; local tests passed",
+      "README/CHANGELOG",
+      "publish workflows"
+    ],
+    [
+      "Supply-chain hygiene",
+      "codeql.yml; osv-scanner.yml; sbom.yml; reproducible-build.yml; scorecard.yml; REUSE.toml",
+      "Actions/TOML",
+      "implemented / partial",
+      "HEAD workflows success",
+      "README/CHANGELOG/SECURITY",
+      "yes"
+    ]
+  ],
+  "capability_matrix": [
+    [
+      "A Core Attestation Substrate",
+      "partial",
+      "types.py; types.ts; ADR-0002",
+      "Generic EventDraft, Art.12 reference fields, schema_version, timestamp, actor, subject_ref exist. Missing dedicated decision/policy/checkpoint schemas, tenant/project/run/session taxonomy beyond session_id, correlation/causation/idempotency fields, replay spec, and schema-evolution registry."
+    ],
+    [
+      "B Tamper-evident Chain",
+      "partial / alpha-implemented",
+      "hashchain.py; hashchain.ts; test_hashchain.py; hashchain.test.ts",
+      "SHA-256 hash chain, canonical hash equality, prev_hash/event_hash/seq tamper detection exist. Missing duplicate detection, explicit reorder/missing taxonomy, root/checkpoint, proof bundle, and durable append-only backend."
+    ],
+    [
+      "C Independent Verification",
+      "partial",
+      "verify_chain APIs; vectors.json",
+      "Library verification and golden vectors exist. Missing verifier CLI, auditor JSON API, external verifier spec, proof bundle, negative/malformed vector registry."
+    ],
+    [
+      "D Compliance Mapping",
+      "partial with claim-risk",
+      "sdk/python/README.md; README.md; ADR-0002",
+      "Only narrow EU AI Act Art.12(2)(a) field mapping exists. EU AI Act Art.13-15, DORA Art.8, NIS2, GDPR accountability, ISO 42001, NIST AI RMF are missing structured obligation registry and tests."
+    ],
+    [
+      "E Anchoring / External Trust",
+      "docs-only",
+      "ADR-0003; README.md; CHANGELOG.md",
+      "ADR-0003 exists. No TSAProvider, AnchorRecord, TSA verification, trust roots, key lifecycle, revocation story, offline verification, Rekor substrate anchor, or anchor vectors. Implementation remains M5 blocker for temporal trust claims."
+    ],
+    [
+      "F Storage / Persistence",
+      "partial",
+      "substrate.py; substrate.ts; SDK READMEs",
+      "In-memory append-only container and fromEvents rehydration exist. File/SQLite/Postgres/S3, append-only durable log, retention, tenant isolation, encryption, migration, backup/recovery missing."
+    ],
+    [
+      "G Agent Runtime Integration",
+      "missing",
+      "no adapter files",
+      "No AIOS/generic/LangGraph/AgentScope/OpenAI/Claude/Codex/MCP adapters; no typed tool-call/policy-check/human-approval/lease/budget/supervisor event schemas."
+    ],
+    [
+      "H CLI / DX",
+      "missing / partial docs",
+      "README snippets; SDK READMEs",
+      "Quickstarts exist. No attestplane init/record/verify/export/inspect/map-framework/anchor/doctor, no JSONL IO, no examples directory."
+    ],
+    [
+      "I SDK Quality",
+      "implemented for alpha core; partial product surface",
+      "pyproject.toml; package.json; tests",
+      "Typed APIs, deterministic serialization, package metadata and tests exist. TS is ESM-only Node >=22; no CJS/browser claim. Python local audit verified 3.12; matrix is CI-dependent. Generated docs and richer error taxonomy missing."
+    ],
+    [
+      "J CI / Supply Chain",
+      "implemented / partial",
+      ".github/workflows; REUSE.toml; scripts/check-policy.sh",
+      "Strong baseline: pinned actions, CodeQL, OSV, SBOM, Scorecard, REUSE, DCO, publish workflows, npm provenance. Branch protection not provable from files; SLSA L3 incomplete; sdist reproducibility known gap."
+    ],
+    [
+      "K Legal / Claim Safety",
+      "partial with downgrade needed",
+      "README.md; pyproject.toml; package.json; GOVERNANCE.md; SECURITY.md; TRADEMARK.md",
+      "Alpha and legal-advice disclaimers exist. Risk remains around EU AI Act ready, broad framework coverage, technical guarantee, cryptographically anchored wording, certification language."
+    ]
+  ],
+  "claim_safety": [
+    [
+      "EU AI Act Article 12 ready",
+      "claim-risk",
+      "Only four Art.12(2)(a) reference fields exist; no obligation registry/verifier expectation.",
+      "designed toward EU AI Act Article 12 auditability; includes selected Art.12(2)(a) reference fields"
+    ],
+    [
+      "Framework coverage table directly addresses EU AI Act Art.12-17, DORA, NIST, ISO, SOC2, CRA",
+      "unsupported",
+      "No evidence bundle schema or mapping registry; README says endpoint planned.",
+      "planned framework-mapping targets; current alpha only includes chain + selected Art.12 fields"
+    ],
+    [
+      "Cryptographically anchored audit trails / framework-satisfying trails",
+      "claim-risk",
+      "Hash chain exists; RFC3161 anchoring is ADR-only.",
+      "tamper-evident hash-chain audit records today; external anchoring planned"
+    ],
+    [
+      "Every tool call/model invocation/data access/decision is verifiable and mappable",
+      "partial",
+      "Generic EventDraft can encode; no typed taxonomy/adapters.",
+      "can encode generic audit records; typed runtime adapters planned"
+    ],
+    [
+      "technical guarantee for framework mappings",
+      "unsupported",
+      "No framework mapping implementation.",
+      "technical design goal"
+    ],
+    [
+      "tamper-evident SHA-256 hash chain",
+      "safe alpha claim",
+      "hashchain.py/hashchain.ts + tests.",
+      "Keep tamper-evident; avoid tamper-proof"
+    ],
+    [
+      "Self-hosted first / data stays in control plane",
+      "safe for current SDK",
+      "No SaaS calls; in-memory SDK only.",
+      "Keep, but state durability is caller responsibility"
+    ]
+  ],
+  "missing_modules_matrix": [
+    {
+      "module": "Verifier CLI",
+      "current_status": "missing",
+      "evidence_path": "README.md roadmap; no CLI files",
+      "missing_content": "No command surface for independent verification",
+      "risk": "P0",
+      "recommended_stage": "Now / v0.0.1-alpha cleanup",
+      "why_important": "Verification is the product core",
+      "minimum_deliverable": "attestplane verify JSONL/bundle with exit codes"
+    },
+    {
+      "module": "Proof bundle format",
+      "current_status": "missing",
+      "evidence_path": "README mentions evidence_bundle; no schema",
+      "missing_content": "No portable evidence package",
+      "risk": "P0",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Auditors need SDK-independent package",
+      "minimum_deliverable": "JSON schema + import/export + golden bundle"
+    },
+    {
+      "module": "Docs claim-safety cleanup",
+      "current_status": "partial",
+      "evidence_path": "README.md; SDK metadata; GOVERNANCE.md",
+      "missing_content": "Claims exceed implementation",
+      "risk": "P0",
+      "recommended_stage": "Now / v0.0.1-alpha cleanup",
+      "why_important": "Prevents compliance overclaim",
+      "minimum_deliverable": "Downgraded wording and rg gate"
+    },
+    {
+      "module": "Negative conformance vectors",
+      "current_status": "partial",
+      "evidence_path": "negative unit tests only",
+      "missing_content": "No shared malformed vector registry",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Third-party implementations need rejection contract",
+      "minimum_deliverable": "negative_vectors.json + Python/TS tests"
+    },
+    {
+      "module": "Canonical JSON spec document",
+      "current_status": "partial",
+      "evidence_path": "ADR-0002; SDK READMEs",
+      "missing_content": "No standalone implementer spec",
+      "risk": "P1",
+      "recommended_stage": "Now / v0.0.1-alpha cleanup",
+      "why_important": "External verifiers need stable spec",
+      "minimum_deliverable": "docs/specs/canonical-json-v1.md"
+    },
+    {
+      "module": "EU AI Act Art.12 obligation mapping",
+      "current_status": "partial",
+      "evidence_path": "sdk/python/README.md",
+      "missing_content": "No obligation ids/verifier expectations/status registry",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Supports any Art.12 claim",
+      "minimum_deliverable": "obligations.json + docs + tests"
+    },
+    {
+      "module": "DORA Art.8 mapping",
+      "current_status": "claim-only",
+      "evidence_path": "README.md table",
+      "missing_content": "No actual DORA mapping artifacts",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "DORA claims are high-risk",
+      "minimum_deliverable": "DORA rows with disclaimers and unsupported marks"
+    },
+    {
+      "module": "Auditor export JSON schema",
+      "current_status": "missing",
+      "evidence_path": "README mentions Auditor JSON API",
+      "missing_content": "No schema/contract",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Compliance review needs non-SDK contract",
+      "minimum_deliverable": "auditor-export-v1.schema.json"
+    },
+    {
+      "module": "Generic agent runtime adapter interface",
+      "current_status": "missing",
+      "evidence_path": "no adapter files",
+      "missing_content": "No runtime embedding protocol",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Core to agent substrate adoption",
+      "minimum_deliverable": "adapter protocol + no-op reference adapter"
+    },
+    {
+      "module": "AIOS adapter spec",
+      "current_status": "missing",
+      "evidence_path": "no AIOS docs/integration files",
+      "missing_content": "Extraction boundary undocumented",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Proves AIOS-derived evidence layer boundary",
+      "minimum_deliverable": "docs/integrations/aios.md"
+    },
+    {
+      "module": "Tool-call/policy-check/human-approval events",
+      "current_status": "partial / missing",
+      "evidence_path": "EventDraft.event_type free string only",
+      "missing_content": "No typed schemas/constants",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "README names these event classes",
+      "minimum_deliverable": "typed helpers + conformance entries"
+    },
+    {
+      "module": "ADR-0003 TSA implementation",
+      "current_status": "docs-only",
+      "evidence_path": "docs/adr/0003-tsa-rfc-3161-anchoring.md",
+      "missing_content": "No TSA client/verification/trust roots/anchor vectors",
+      "risk": "P1",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "External temporal trust",
+      "minimum_deliverable": "TSAProvider + mock provider + AnchorRecord + tests"
+    },
+    {
+      "module": "Examples / quickstart project",
+      "current_status": "partial",
+      "evidence_path": "README snippets only",
+      "missing_content": "No examples directory",
+      "risk": "P2",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Adoption and verification demo",
+      "minimum_deliverable": "examples/basic-jsonl + CI smoke"
+    },
+    {
+      "module": "Package publishing verification report",
+      "current_status": "partial",
+      "evidence_path": "CHANGELOG hashes; workflows",
+      "missing_content": "No docs/validation release report",
+      "risk": "P2",
+      "recommended_stage": "M5 / v0.1.0",
+      "why_important": "Auditable release evidence",
+      "minimum_deliverable": "release_verification md/json"
+    },
+    {
+      "module": "Storage backend decision ADR",
+      "current_status": "missing",
+      "evidence_path": "README/SDK docs anticipate ADR-0004",
+      "missing_content": "No storage path",
+      "risk": "P2",
+      "recommended_stage": "M6 / hosted alpha",
+      "why_important": "Durability and concurrency",
+      "minimum_deliverable": "ADR-0004 storage decision"
+    },
+    {
+      "module": "Sigstore/Rekor substrate anchoring",
+      "current_status": "missing",
+      "evidence_path": "roadmap only",
+      "missing_content": "No event-chain transparency proof",
+      "risk": "P2",
+      "recommended_stage": "M6 / hosted alpha",
+      "why_important": "Public transparency beyond TSA",
+      "minimum_deliverable": "ADR-0005 + proof format"
+    },
+    {
+      "module": "Retention/erasure policy",
+      "current_status": "missing",
+      "evidence_path": "ADR-0002 says out of scope",
+      "missing_content": "No AI Act retention vs GDPR erasure guidance",
+      "risk": "P3",
+      "recommended_stage": "M7 / design partner",
+      "why_important": "Enterprise legal deployment",
+      "minimum_deliverable": "docs/deployment/retention.md"
+    },
+    {
+      "module": "Tenant isolation model",
+      "current_status": "missing",
+      "evidence_path": "no tenant identifiers",
+      "missing_content": "No multi-tenant boundary",
+      "risk": "P3",
+      "recommended_stage": "M8 / enterprise",
+      "why_important": "Enterprise/cloud readiness",
+      "minimum_deliverable": "ADR + schema strategy"
+    }
+  ],
+  "tickets": [
+    {
+      "ticket_id": "AP-M5-001",
+      "title": "Add verifier CLI",
+      "priority": "P0",
+      "rationale": "Library-only verification is insufficient for independent auditors.",
+      "files_likely_touched": "sdk/python/src/attestplane; sdk/python/pyproject.toml; docs/cli.md",
+      "acceptance_criteria": "CLI verifies JSONL/bundle and returns stable exit codes.",
+      "tests_required": "Valid/tampered/malformed CLI tests.",
+      "docs_required": "CLI reference and README quickstart.",
+      "security_legal_considerations": "Technical verification only, no legal compliance claim.",
+      "cli_command_to_verify": "cd sdk/python && attestplane verify tests/fixtures/valid.jsonl"
+    },
+    {
+      "ticket_id": "AP-M5-002",
+      "title": "Add proof bundle format",
+      "priority": "P0",
+      "rationale": "Evidence must be portable beyond process memory.",
+      "files_likely_touched": "docs/schemas/proof-bundle-v1.schema.json; sdk/python/src/attestplane/bundle.py; sdk/typescript/src/bundle.ts",
+      "acceptance_criteria": "Bundle includes events, chain head, metadata, optional anchors, deterministic hash.",
+      "tests_required": "Python/TS round trip and malformed tests.",
+      "docs_required": "Proof bundle spec.",
+      "security_legal_considerations": "Avoid raw PII by default.",
+      "cli_command_to_verify": "pytest tests/test_bundle.py && npm test"
+    },
+    {
+      "ticket_id": "AP-M5-003",
+      "title": "Add negative conformance vectors",
+      "priority": "P1",
+      "rationale": "Implementers need shared rejection behavior.",
+      "files_likely_touched": "sdk/python/tests/conformance/negative_vectors.json; Python/TS tests",
+      "acceptance_criteria": "Shared malformed vectors replay in both SDKs.",
+      "tests_required": "Python/TS replay tests.",
+      "docs_required": "Vector versioning docs.",
+      "security_legal_considerations": "Fail closed on malformed input.",
+      "cli_command_to_verify": "pytest tests/test_conformance_negative.py"
+    },
+    {
+      "ticket_id": "AP-M5-004",
+      "title": "Add canonical JSON spec document",
+      "priority": "P1",
+      "rationale": "ADR prose is not an implementer spec.",
+      "files_likely_touched": "docs/specs/canonical-json-v1.md",
+      "acceptance_criteria": "Standalone spec with examples and rejection cases.",
+      "tests_required": "Docs lint; optional generated examples.",
+      "docs_required": "Spec linked from README/SDKs.",
+      "security_legal_considerations": "Versioned, stable wording.",
+      "cli_command_to_verify": "bash scripts/check-policy.sh"
+    },
+    {
+      "ticket_id": "AP-M5-005",
+      "title": "Add EU AI Act Article 12 obligation mapping",
+      "priority": "P1",
+      "rationale": "Current Art.12 wording needs structured support.",
+      "files_likely_touched": "docs/compliance/eu-ai-act-art12.md; docs/compliance/obligations.json",
+      "acceptance_criteria": "Rows include article, obligation_id, fields, event mapping, verifier expectation, status.",
+      "tests_required": "Schema validation test.",
+      "docs_required": "Mapping doc with disclaimer.",
+      "security_legal_considerations": "No legal advice.",
+      "cli_command_to_verify": "python scripts/validate_obligations.py"
+    },
+    {
+      "ticket_id": "AP-M5-006",
+      "title": "Add DORA Article 8 obligation mapping",
+      "priority": "P1",
+      "rationale": "DORA table is claim-only.",
+      "files_likely_touched": "docs/compliance/dora-art8.md; obligations.json",
+      "acceptance_criteria": "DORA rows use same registry; unsupported controls explicit.",
+      "tests_required": "Registry validation.",
+      "docs_required": "Mapping doc.",
+      "security_legal_considerations": "Use designed-toward wording.",
+      "cli_command_to_verify": "python scripts/validate_obligations.py"
+    },
+    {
+      "ticket_id": "AP-M5-007",
+      "title": "Add generic agent runtime adapter interface",
+      "priority": "P1",
+      "rationale": "Substrate needs a stable runtime embedding point.",
+      "files_likely_touched": "docs/integrations/agent-runtime-adapter.md; sdk/python/src/attestplane/adapters.py; sdk/typescript/src/adapters.ts",
+      "acceptance_criteria": "RuntimeEventAdapter maps runtime events to EventDraft.",
+      "tests_required": "Dummy adapter tests.",
+      "docs_required": "Adapter spec and example.",
+      "security_legal_considerations": "Do not capture secrets/PII by default.",
+      "cli_command_to_verify": "pytest tests/test_adapters.py && npm test"
+    },
+    {
+      "ticket_id": "AP-M5-008",
+      "title": "Add AIOS adapter spec",
+      "priority": "P1",
+      "rationale": "Extraction story needs concrete boundary evidence.",
+      "files_likely_touched": "docs/integrations/aios.md",
+      "acceptance_criteria": "Document AIOS sources, field mapping, out-of-scope fields, ownership boundary.",
+      "tests_required": "Docs lint.",
+      "docs_required": "AIOS integration guide.",
+      "security_legal_considerations": "No AIOS production certification implication.",
+      "cli_command_to_verify": "bash scripts/check-policy.sh"
+    },
+    {
+      "ticket_id": "AP-M5-009",
+      "title": "Add tool-call / policy-check / human-approval event types",
+      "priority": "P1",
+      "rationale": "README names these classes but code uses free-form strings.",
+      "files_likely_touched": "types.py; types.ts; vectors.json",
+      "acceptance_criteria": "Typed helpers/constants and vectors for each event class.",
+      "tests_required": "Python/TS unit + conformance tests.",
+      "docs_required": "Event taxonomy doc.",
+      "security_legal_considerations": "Avoid secret payloads.",
+      "cli_command_to_verify": "pytest && npm test"
+    },
+    {
+      "ticket_id": "AP-M5-010",
+      "title": "Add ADR-0003 TSA/RFC3161 anchoring implementation checkpoint",
+      "priority": "P1",
+      "rationale": "ADR exists but executable scope is missing.",
+      "files_likely_touched": "docs/adr/0003-tsa-rfc-3161-anchoring.md; docs/validation/tsa_m5_readiness.md",
+      "acceptance_criteria": "Clarify M5 deliverable: mock provider, AnchorRecord, anchor vectors, trust roots.",
+      "tests_required": "Docs lint; future mock TSA tests.",
+      "docs_required": "Readiness note.",
+      "security_legal_considerations": "No anchored-chain claim until code.",
+      "cli_command_to_verify": "bash scripts/check-policy.sh"
+    },
+    {
+      "ticket_id": "AP-M5-011",
+      "title": "Add docs claim-safety cleanup",
+      "priority": "P0",
+      "rationale": "Several claims exceed implementation.",
+      "files_likely_touched": "README.md; SDK metadata; SDK READMEs; GOVERNANCE.md",
+      "acceptance_criteria": "Risk phrases downgraded and roadmap-only claims labeled.",
+      "tests_required": "rg phrase check.",
+      "docs_required": "Claim-safety note.",
+      "security_legal_considerations": "Avoid ready/compliant/certified/regulator-ready.",
+      "cli_command_to_verify": "rg -n \"ready|compliant|certified|technical guarantee\" README.md sdk docs GOVERNANCE.md"
+    },
+    {
+      "ticket_id": "AP-M5-012",
+      "title": "Add examples/quickstart project",
+      "priority": "P2",
+      "rationale": "Snippets are not runnable project evidence.",
+      "files_likely_touched": "examples/basic-jsonl; examples/python-basic; examples/typescript-basic",
+      "acceptance_criteria": "Examples append/export/verify events.",
+      "tests_required": "CI smoke.",
+      "docs_required": "Examples README.",
+      "security_legal_considerations": "Use pseudonymous data.",
+      "cli_command_to_verify": "cd examples/python-basic && python main.py"
+    },
+    {
+      "ticket_id": "AP-M5-013",
+      "title": "Add package publishing verification report",
+      "priority": "P2",
+      "rationale": "Release evidence should be reproducible.",
+      "files_likely_touched": "docs/validation/release_verification_*.md/json",
+      "acceptance_criteria": "Report includes artifacts, hashes, workflow IDs, TestPyPI/npm/provenance.",
+      "tests_required": "JSON shape validation.",
+      "docs_required": "Release runbook.",
+      "security_legal_considerations": "Only observed facts.",
+      "cli_command_to_verify": "python scripts/validate_release_report.py docs/validation/*.json"
+    },
+    {
+      "ticket_id": "AP-M5-014",
+      "title": "Add storage backend decision ADR",
+      "priority": "P2",
+      "rationale": "M6 durability needs an agreed path.",
+      "files_likely_touched": "docs/adr/0004-storage-backend.md",
+      "acceptance_criteria": "Compare file/SQLite/Postgres/S3 and define append-only/replay invariants.",
+      "tests_required": "ADR lint.",
+      "docs_required": "Storage threat model.",
+      "security_legal_considerations": "Cover tenant isolation and backups.",
+      "cli_command_to_verify": "bash scripts/check-policy.sh"
+    },
+    {
+      "ticket_id": "AP-M5-015",
+      "title": "Add auditor export JSON schema",
+      "priority": "P1",
+      "rationale": "Auditors need a stable non-SDK contract.",
+      "files_likely_touched": "docs/schemas/auditor-export-v1.schema.json; docs/specs/auditor-export-v1.md",
+      "acceptance_criteria": "Schema covers events, verification result, mapping, optional anchors, disclaimers.",
+      "tests_required": "Schema validation fixtures.",
+      "docs_required": "Auditor export spec.",
+      "security_legal_considerations": "No legal opinion language.",
+      "cli_command_to_verify": "python scripts/validate_schema.py docs/schemas/auditor-export-v1.schema.json"
+    }
+  ],
+  "recommendation": {
+    "v0_0_1_alpha": "conditional Go with claim cleanup",
+    "testpypi_npm_alpha": "continue allowed with narrow alpha wording",
+    "external_marketing": "No-Go for broad compliance/regulator/enterprise marketing",
+    "beta_ga": "No-Go until verifier CLI, proof bundle, mappings, adapter story, and anchoring implementation exist"
+  },
+  "required_sections": [
+    "Executive Summary",
+    "Current Implemented Capabilities",
+    "Missing Modules Matrix",
+    "Claim Safety Audit",
+    "Compliance Mapping Gap",
+    "Verification / Anchoring Gap",
+    "Agent Runtime Integration Gap",
+    "SDK / CLI Gap",
+    "OSS Governance / Supply Chain Gap",
+    "Release Readiness",
+    "Recommended M5/v0.1 Roadmap",
+    "Tickets",
+    "Final Go / No-Go recommendation"
+  ]
+}
