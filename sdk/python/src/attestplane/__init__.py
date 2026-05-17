@@ -38,6 +38,13 @@ from attestplane.obligations import (
     load_dora_article_8,
     load_eu_ai_act_article_12,
 )
+from attestplane.storage import (
+    AbstractStorageBackend,
+    JsonlStorageBackend,
+    StorageError,
+    StorageReadError,
+    StorageWriteError,
+)
 from attestplane.hashchain import (
     GENESIS_HASH,
     SCHEMA_VERSION,
@@ -83,10 +90,15 @@ __all__ = [
     "ChainHead",
     "ChainedEvent",
     "EventDraft",
+    "AbstractStorageBackend",
     "GenericRuntimeAdapter",
+    "JsonlStorageBackend",
     "ObligationEntry",
     "ObligationRegistryError",
     "Registry",
+    "StorageError",
+    "StorageReadError",
+    "StorageWriteError",
     "SubjectRef",
     "VerificationResult",
     "__version__",
