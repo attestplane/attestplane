@@ -28,7 +28,11 @@ def test_schemas_dir_exists() -> None:
     assert _SCHEMAS_DIR.is_dir()
 
 
-@pytest.mark.parametrize("schema_file", ["proof_bundle.schema.json", "auditor_export.schema.json"])
+@pytest.mark.parametrize("schema_file", [
+    "proof_bundle.schema.json",
+    "auditor_export.schema.json",
+    "governance_ingestion.schema.json",
+])
 def test_schema_is_valid_draft_2020_12(schema_file: str) -> None:
     schema = _load(schema_file)
     # jsonschema's check_schema raises on malformed schemas.
@@ -259,3 +263,157 @@ def test_implementation_status_enum_matches_registry() -> None:
         "mapping_target", "designed_toward",
         "field_supported", "verified_in_test",
     }
+
+
+def test_governance_ingestion_minimum_valid_instance() -> None:
+    schema = _load("governance_ingestion.schema.json")
+    instance = {
+        "ingestion_version": 1,
+        "chain_summary": {
+            "chain_id": "demo",
+            "head_hash_hex": "a" * 64,
+            "event_count": 0,
+            "time_range": {
+                "earliest": "2026-05-17T12:00:00.000000Z",
+                "latest": "2026-05-17T12:00:00.000000Z",
+            },
+        },
+        "verification_status": {
+            "ok": True,
+            "verified_at": "2026-05-17T12:00:00.000000Z",
+            "verifier_version": "0.0.2a0",
+            "verification_method": "canonical-bytes-walk",
+        },
+        "framework_coverage": [],
+        "redaction_policy": {
+            "forbidden_fields": ["secrets"],
+            "redaction_status": "enforced_by_adapter",
+        },
+    }
+    jsonschema.validate(instance, schema)
+
+
+def test_governance_ingestion_rejects_wrong_version() -> None:
+    schema = _load("governance_ingestion.schema.json")
+    instance = {
+        "ingestion_version": 99,
+        "chain_summary": {
+            "chain_id": "demo",
+            "head_hash_hex": "a" * 64,
+            "event_count": 0,
+            "time_range": {
+                "earliest": "2026-05-17T12:00:00.000000Z",
+                "latest": "2026-05-17T12:00:00.000000Z",
+            },
+        },
+        "verification_status": {
+            "ok": True,
+            "verified_at": "2026-05-17T12:00:00.000000Z",
+            "verifier_version": "0.0.2a0",
+            "verification_method": "canonical-bytes-walk",
+        },
+        "framework_coverage": [],
+        "redaction_policy": {
+            "forbidden_fields": ["secrets"],
+            "redaction_status": "enforced_by_adapter",
+        },
+    }
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance, schema)
+
+
+def test_governance_ingestion_implementation_status_enum_locked() -> None:
+    schema = _load("governance_ingestion.schema.json")
+    enum_values = set(
+        schema["properties"]["framework_coverage"]["items"]["properties"]
+        ["obligation_ids_with_evidence"]["items"]["properties"]
+        ["implementation_status"]["enum"]
+    )
+    assert enum_values == {
+        "mapping_target", "designed_toward",
+        "field_supported", "verified_in_test",
+    }
+
+
+def test_governance_ingestion_with_framework_coverage() -> None:
+    schema = _load("governance_ingestion.schema.json")
+    instance = {
+        "ingestion_version": 1,
+        "chain_summary": {
+            "chain_id": "demo",
+            "head_hash_hex": "a" * 64,
+            "event_count": 3,
+            "time_range": {
+                "earliest": "2026-05-17T12:00:00.000000Z",
+                "latest": "2026-05-17T13:00:00.000000Z",
+            },
+        },
+        "verification_status": {
+            "ok": True,
+            "verified_at": "2026-05-17T13:00:00.000000Z",
+            "verifier_version": "0.0.2a0",
+            "verification_method": "canonical-bytes-walk",
+        },
+        "framework_coverage": [
+            {
+                "framework": "EU AI Act",
+                "article": "12",
+                "obligation_ids_with_evidence": [
+                    {
+                        "obligation_id": "eu_ai_act.art12.3c.matched_input_data",
+                        "implementation_status": "field_supported",
+                        "evidence_event_indexes": [0, 2],
+                    },
+                ],
+                "obligation_ids_without_evidence": [
+                    "eu_ai_act.art12.1.automatic_recording",
+                ],
+            },
+        ],
+        "redaction_policy": {
+            "forbidden_fields": ["secrets"],
+            "redaction_status": "enforced_by_adapter",
+        },
+    }
+    jsonschema.validate(instance, schema)
+
+
+def test_governance_ingestion_rejects_bad_implementation_status() -> None:
+    schema = _load("governance_ingestion.schema.json")
+    instance = {
+        "ingestion_version": 1,
+        "chain_summary": {
+            "chain_id": "demo",
+            "head_hash_hex": "a" * 64,
+            "event_count": 0,
+            "time_range": {
+                "earliest": "2026-05-17T12:00:00.000000Z",
+                "latest": "2026-05-17T12:00:00.000000Z",
+            },
+        },
+        "verification_status": {
+            "ok": True,
+            "verified_at": "2026-05-17T12:00:00.000000Z",
+            "verifier_version": "0.0.2a0",
+            "verification_method": "canonical-bytes-walk",
+        },
+        "framework_coverage": [
+            {
+                "framework": "EU AI Act",
+                "article": "12",
+                "obligation_ids_with_evidence": [
+                    {
+                        "obligation_id": "eu_ai_act.art12.3c.matched_input_data",
+                        "implementation_status": "compliant",  # forbidden
+                    },
+                ],
+                "obligation_ids_without_evidence": [],
+            },
+        ],
+        "redaction_policy": {
+            "forbidden_fields": ["secrets"],
+            "redaction_status": "enforced_by_adapter",
+        },
+    }
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance, schema)

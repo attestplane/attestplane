@@ -12,6 +12,7 @@ out of an Attestplane substrate to verifiers, auditors, and regulators.
 |------|---------|
 | [`proof_bundle.schema.json`](proof_bundle.schema.json) | Full export — chain segment + verification report + framework mappings + redaction echo. Consumed by `attestplane verify <bundle.json>` (M5). |
 | [`auditor_export.schema.json`](auditor_export.schema.json) | Auditor-friendly summary — chain integrity + framework coverage + redaction policy, **without** event payloads. Optimised for human review. |
+| [`governance_ingestion.schema.json`](governance_ingestion.schema.json) | Governance-platform ingestion document — strict subset of `auditor_export.schema.json` plus producer metadata. Designed for AI governance dashboards (Credo AI / Holistic AI / Modulos / Trustible / Saidot) to ingest as `field_supported` evidence; see [`docs/integrations/governance_platforms.md`](../../docs/integrations/governance_platforms.md). |
 
 ## Versioning
 

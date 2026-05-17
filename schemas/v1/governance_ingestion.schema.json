@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/governance_ingestion.schema.json",
+  "title": "Attestplane Governance Ingestion Document (v1)",
+  "description": "Opinionated subset of proof_bundle.schema.json optimised for AI governance platform consumption (Credo AI / Holistic AI / Modulos / Trustible / Saidot). Drops event payloads — keeps chain integrity proof, framework mappings, redaction policy, and optional Sigstore bundle. Goal: a governance dashboard can ingest one self-contained JSON document per audit window and surface 'evidence available' indicators against its existing obligation rows. Locked by the competitive_positioning_upgrade_plan_20260517 Track 4. Designed to be a strict subset of auditor_export.schema.json so any tool that consumes one can consume the other with field-level mapping.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ingestion_version",
+    "chain_summary",
+    "verification_status",
+    "framework_coverage",
+    "redaction_policy"
+  ],
+  "properties": {
+    "ingestion_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Frozen at 1 for the v1 ingestion shape."
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Identifies the Attestplane substrate instance that produced this document.",
+      "required": ["substrate_version", "runtime_name"],
+      "properties": {
+        "substrate_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Attestplane SDK version, e.g. '0.0.2a0'."
+        },
+        "runtime_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Free-form identifier of the runtime that emitted events (e.g., 'langsmith', 'langfuse', or a custom runtime name)."
+        },
+        "instance_id": {
+          "type": "string",
+          "description": "Optional opaque identifier for the substrate instance; lets governance dashboards distinguish multiple Attestplane deployments."
+        }
+      }
+    },
+    "chain_summary": {
+      "$comment": "Strict subset of auditor_export.chain_summary; same field names so the governance dashboard can use one mapping for both.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chain_id", "head_hash_hex", "event_count", "time_range"],
+      "properties": {
+        "chain_id": { "type": "string", "minLength": 1 },
+        "head_hash_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "event_count": { "type": "integer", "minimum": 0 },
+        "time_range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["earliest", "latest"],
+          "properties": {
+            "earliest": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+            },
+            "latest": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+            }
+          }
+        },
+        "event_type_histogram": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "anchor_status": {
+          "enum": ["unanchored", "anchored_partial", "anchored_full"]
+        }
+      }
+    },
+    "verification_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "verified_at", "verifier_version", "verification_method"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "first_bad_index": {
+          "anyOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }]
+        },
+        "reason": {
+          "anyOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }]
+        },
+        "verified_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+        },
+        "verifier_version": { "type": "string", "minLength": 1 },
+        "verification_method": {
+          "enum": ["canonical-bytes-walk", "canonical-bytes-walk+anchor"]
+        }
+      }
+    },
+    "framework_coverage": {
+      "type": "array",
+      "description": "Per-framework summary of obligation coverage. THIS is what governance dashboards read most: 'For framework X, obligations [a, b, c] have evidence; obligations [d, e] don't.' Surfacing absence is critical — a regulator audit needs to see what's missing, not just what's present.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "framework", "article",
+          "obligation_ids_with_evidence",
+          "obligation_ids_without_evidence"
+        ],
+        "properties": {
+          "framework": { "type": "string", "minLength": 1 },
+          "article": { "type": "string", "minLength": 1 },
+          "obligation_ids_with_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["obligation_id", "implementation_status"],
+              "properties": {
+                "obligation_id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$"
+                },
+                "implementation_status": {
+                  "enum": [
+                    "mapping_target",
+                    "designed_toward",
+                    "field_supported",
+                    "verified_in_test"
+                  ],
+                  "description": "The locked four-value enum per docs/policy/forbidden_claims.md § Obligation-registry implementation_status. Governance dashboards MUST surface this verbatim — translation to 'compliant' / 'certified' is prohibited by the claim-safety triad."
+                },
+                "evidence_event_indexes": {
+                  "type": "array",
+                  "items": { "type": "integer", "minimum": 0 },
+                  "uniqueItems": true,
+                  "description": "Indexes into the source proof bundle's events array. Provided for traceability; the governance ingestion document itself does NOT include the events."
+                }
+              }
+            },
+            "uniqueItems": true
+          },
+          "obligation_ids_without_evidence": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "redaction_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["forbidden_fields", "redaction_status"],
+      "properties": {
+        "forbidden_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "redaction_status": {
+          "enum": ["enforced_by_adapter", "enforced_by_producer", "unenforced"]
+        },
+        "consent_status": {
+          "enum": ["consent_present", "consent_absent", "consent_not_applicable"]
+        }
+      }
+    },
+    "anchor_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional: lightweight summary of any cryptographic anchors attached to the underlying chain. Governance dashboards typically surface 'anchored: yes/no' indicators; the full Rekor LogEntry / RFC-3161 TimeStampToken lives in the proof bundle, not here.",
+      "properties": {
+        "rfc3161_anchored": { "type": "boolean" },
+        "sigstore_rekor_anchored": { "type": "boolean" },
+        "anchor_count": { "type": "integer", "minimum": 0 },
+        "anchored_seq_range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["earliest", "latest"],
+          "properties": {
+            "earliest": { "type": "integer", "minimum": 0 },
+            "latest": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "anchor_providers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Distinct tsa_provider_id values, e.g. ['freetsa.org', 'sigstore.rekor:c0d23d...']."
+        }
+      }
+    },
+    "proof_bundle_uri": {
+      "type": "string",
+      "description": "Optional pointer to where the governance dashboard can fetch the full proof bundle for deeper inspection. The substrate does NOT host this; deployers populate it with their own storage location (e.g., S3 / Azure Blob / on-prem)."
+    },
+    "legal_disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plain-language statement that this document is a technical evidence summary, not a compliance opinion.",
+      "default": "This document is a technical evidence summary produced by an Attestplane substrate. It is not a compliance opinion. Consult qualified counsel for any regulatory determination. The implementation_status values follow the four-value enum defined in https://attestplane.io/docs/policy/forbidden_claims.md."
+    }
+  }
+}
