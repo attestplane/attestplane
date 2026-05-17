@@ -44,9 +44,7 @@ interface VectorsFile {
   };
 }
 
-const VECTORS: VectorsFile = JSON.parse(
-  readFileSync(VECTORS_PATH, 'utf-8'),
-) as VectorsFile;
+const VECTORS: VectorsFile = JSON.parse(readFileSync(VECTORS_PATH, 'utf-8')) as VectorsFile;
 
 describe('ReasonCodeV1 — ADR-0010 enum conformance', () => {
   it('schema version locked at 1', () => {
@@ -103,9 +101,7 @@ describe('ReasonCodeV1 — ADR-0010 enum conformance', () => {
     const flat = new Set<string>();
     for (const [groupName, group] of Object.entries(VECTORS.code_groups)) {
       for (const code of group) {
-        expect(flat.has(code)).toBe(
-          false,
-        );
+        expect(flat.has(code)).toBe(false);
         flat.add(code);
         // groupName referenced for assertion message context only
         expect(groupName.length).toBeGreaterThan(0);
@@ -122,10 +118,42 @@ describe('ReasonCodeV1 — ADR-0010 enum conformance', () => {
   });
 
   it.each([
-    ['CHAIN_', ['CHAIN_OK', 'CHAIN_SEQ_MISMATCH', 'CHAIN_PREV_HASH_MISMATCH', 'CHAIN_EVENT_HASH_MISMATCH']],
-    ['SIGNATURE_', ['SIGNATURE_OK', 'SIGNATURE_INVALID', 'SIGNATURE_UNKNOWN_KEY', 'SIGNATURE_EXPIRED_KEY', 'SIGNATURE_SCHEMA_MISMATCH', 'SIGNATURE_PAYLOAD_MISMATCH']],
-    ['ANCHOR_', ['ANCHOR_OK', 'ANCHOR_INVALID', 'ANCHOR_CERT_EXPIRED', 'ANCHOR_OCSP_FAILED', 'ANCHOR_MISSING_LTV_ARTIFACTS']],
-    ['PAYLOAD_', ['PAYLOAD_OK', 'PAYLOAD_MISSING_REQUIRED_FIELD', 'PAYLOAD_FIELD_TYPE_MISMATCH', 'PAYLOAD_FIELD_VALUE_OUT_OF_RANGE', 'PAYLOAD_FORBIDDEN_FIELD_PRESENT', 'PAYLOAD_SCHEMA_VERSION_MISMATCH']],
+    [
+      'CHAIN_',
+      ['CHAIN_OK', 'CHAIN_SEQ_MISMATCH', 'CHAIN_PREV_HASH_MISMATCH', 'CHAIN_EVENT_HASH_MISMATCH'],
+    ],
+    [
+      'SIGNATURE_',
+      [
+        'SIGNATURE_OK',
+        'SIGNATURE_INVALID',
+        'SIGNATURE_UNKNOWN_KEY',
+        'SIGNATURE_EXPIRED_KEY',
+        'SIGNATURE_SCHEMA_MISMATCH',
+        'SIGNATURE_PAYLOAD_MISMATCH',
+      ],
+    ],
+    [
+      'ANCHOR_',
+      [
+        'ANCHOR_OK',
+        'ANCHOR_INVALID',
+        'ANCHOR_CERT_EXPIRED',
+        'ANCHOR_OCSP_FAILED',
+        'ANCHOR_MISSING_LTV_ARTIFACTS',
+      ],
+    ],
+    [
+      'PAYLOAD_',
+      [
+        'PAYLOAD_OK',
+        'PAYLOAD_MISSING_REQUIRED_FIELD',
+        'PAYLOAD_FIELD_TYPE_MISMATCH',
+        'PAYLOAD_FIELD_VALUE_OUT_OF_RANGE',
+        'PAYLOAD_FORBIDDEN_FIELD_PRESENT',
+        'PAYLOAD_SCHEMA_VERSION_MISMATCH',
+      ],
+    ],
   ] as const)('prefix %s namespaces its group correctly', (prefix, expected) => {
     const actual = [...ALL_REASON_CODES_V1].filter((c) => (c as string).startsWith(prefix)).sort();
     expect(actual).toEqual([...expected].sort());

@@ -96,8 +96,7 @@ export const REASON_CODE_DESCRIPTIONS: Readonly<Record<ReasonCodeV1, string>> = 
   SIGNATURE_OK: 'Ed25519 signature verified.',
   SIGNATURE_INVALID: 'Ed25519 verification failed (cryptographic mismatch).',
   SIGNATURE_UNKNOWN_KEY: 'key_id is not present in the configured trust roots.',
-  SIGNATURE_EXPIRED_KEY:
-    "verification_time falls outside the trust-root entry's validity window.",
+  SIGNATURE_EXPIRED_KEY: "verification_time falls outside the trust-root entry's validity window.",
   SIGNATURE_SCHEMA_MISMATCH: 'signature_schema_version is unsupported by this verifier.',
   SIGNATURE_PAYLOAD_MISMATCH:
     'signed_payload bytes do not match the re-canonicalised expected payload.',
@@ -118,8 +117,7 @@ export const REASON_CODE_DESCRIPTIONS: Readonly<Record<ReasonCodeV1, string>> = 
   UNSIGNED_SEGMENT: 'Bundle contains no signature records covering this chain segment.',
   UNANCHORED_SEGMENT: 'Bundle contains no anchor records covering this chain segment.',
   BUNDLE_MISSING_REQUIRED_FIELD: 'A top-level proof-bundle field is absent.',
-  INTERNAL_ERROR:
-    'Verifier hit an unexpected condition; should not occur in conformant input.',
+  INTERNAL_ERROR: 'Verifier hit an unexpected condition; should not occur in conformant input.',
 };
 
 /**

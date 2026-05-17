@@ -14,8 +14,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   FORBIDDEN_PAYLOAD_FIELDS,
-  PayloadValidationError,
   type LeaseLifecycleEventPayload,
+  PayloadValidationError,
   type PolicyCheckEventPayload,
   validateLeaseLifecycleEventPayload,
   validatePolicyCheckEventPayload,
@@ -59,9 +59,7 @@ interface VectorsFile {
   negative_vectors: NegativeVector[];
 }
 
-const VECTORS: VectorsFile = JSON.parse(
-  readFileSync(VECTORS_PATH, 'utf-8'),
-) as VectorsFile;
+const VECTORS: VectorsFile = JSON.parse(readFileSync(VECTORS_PATH, 'utf-8')) as VectorsFile;
 const POLICY_VECTORS: VectorsFile = JSON.parse(
   readFileSync(POLICY_VECTORS_PATH, 'utf-8'),
 ) as VectorsFile;
@@ -114,9 +112,7 @@ describe('FORBIDDEN_PAYLOAD_FIELDS', () => {
 
 describe('validateLeaseLifecycleEventPayload — Py/TS parity edge cases', () => {
   it('rejects non-object input', () => {
-    expect(() => validateLeaseLifecycleEventPayload('not an object')).toThrow(
-      /must be object/,
-    );
+    expect(() => validateLeaseLifecycleEventPayload('not an object')).toThrow(/must be object/);
   });
 
   it('rejects array input', () => {
@@ -196,9 +192,7 @@ describe('policy_check_event payload conformance', () => {
   });
 
   it('evidence_refs max 256', () => {
-    const refs = Array.from({ length: 257 }, (_, i) =>
-      i.toString(16).padStart(64, '0'),
-    );
+    const refs = Array.from({ length: 257 }, (_, i) => i.toString(16).padStart(64, '0'));
     expect(() =>
       validatePolicyCheckEventPayload({
         policy_event_schema_version: 1,

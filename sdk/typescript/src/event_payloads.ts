@@ -51,9 +51,7 @@ export class PayloadValidationError extends Error {
 
 function requireIsoUtc(value: unknown, field: string): void {
   if (typeof value !== 'string') {
-    throw new PayloadValidationError(
-      `${field}: must be ISO-8601 string, got ${typeof value}`,
-    );
+    throw new PayloadValidationError(`${field}: must be ISO-8601 string, got ${typeof value}`);
   }
   if (!(value.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(value))) {
     throw new PayloadValidationError(
@@ -62,16 +60,11 @@ function requireIsoUtc(value: unknown, field: string): void {
   }
   const ts = Date.parse(value);
   if (Number.isNaN(ts)) {
-    throw new PayloadValidationError(
-      `${field}: not valid ISO-8601: ${JSON.stringify(value)}`,
-    );
+    throw new PayloadValidationError(`${field}: not valid ISO-8601: ${JSON.stringify(value)}`);
   }
 }
 
-function rejectForbiddenFields(
-  payload: Record<string, unknown>,
-  eventType: string,
-): void {
+function rejectForbiddenFields(payload: Record<string, unknown>, eventType: string): void {
   const hits: string[] = [];
   for (const key of Object.keys(payload)) {
     if (FORBIDDEN_PAYLOAD_FIELDS.has(key)) hits.push(key);
