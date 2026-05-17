@@ -68,6 +68,7 @@ ADR-0013-conforming adapter MUST produce from the
 `runtime_event_input`.
 
 ### 2. Substrate ships at least one canonical fixture per supported
+
    runtime
 
 The substrate's adapters (`LangSmithAdapter` / `LangFuseAdapter`)

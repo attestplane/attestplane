@@ -144,6 +144,7 @@ of an AIOS-side declarative artefact (a `.rs` `serde` DTO or a
 4. **Documents provenance** in the absorption map MD with source path + dropped-field list.
 
 **Governing invariants** (encoded into ADR-0009 F.2):
+
 - The Attestplane schema MUST NOT `$ref` an AIOS `$id`.
 - Every field whose source counterpart carries authority semantics MUST be replaced by a hash field or dropped entirely.
 - The provenance MUST appear in `docs/architecture/aios_absorption_map.md` with three rows per absorbed shape (source path / shape absorbed / fields dropped).
@@ -162,7 +163,7 @@ of an AIOS-side declarative artefact (a `.rs` `serde` DTO or a
 | Py/TS impact | both — Python `TypedDict` in `event_types.py` payload; TS interface in `event_types.ts`; **no change to `ChainedEvent`** |
 | Conformance vector | new file `sdk/python/tests/conformance/lease_lifecycle_event_vectors.json` — NEVER modifies `vectors.json` |
 | Migration risk | low (schema-only; ADR-0004 § 2 case #1 already authorises the event_type) |
-| Anti-scope-creep gate | Forbid any field name matching `^(signature|token|key|budget|capability|grant|revoke|allocate)$` at schema-validation time. |
+| Anti-scope-creep gate | Forbid any field name matching `^(signature\|token\|key\|budget\|capability\|grant\|revoke\|allocate)$` at schema-validation time. |
 
 ### A.8 — `policy_check_event` field set (promoted from B.4)
 
@@ -214,6 +215,7 @@ The architect's original B.1/B.4/B.6/B.8 promoted to A.7/A.8/A.9/A.10
 above. Remaining B-class items keep their original posture:
 
 ### B.2 — no-lease-no-execute → `requires_lease_proof()` verifier predicate
+
 - **AIOS semantics**: runtime refuses tool calls without lease (enforcement).
 - **Why not portable**: enforcement = authority.
 - **Substrate primitive**: read-only verifier predicate `requires_lease_proof(events, claim) -> VerificationResult`. Walks chain segment; never appends; never mutates. Returns `ok / first_bad_index / reason_code`.
@@ -222,6 +224,7 @@ above. Remaining B-class items keep their original posture:
 - **Tests**: unit (positive: matching `lease_lifecycle_event {lifecycle: granted}` precedes target `tool_call_event`); unit (negative: `first_bad_index` points at unprotected call); cross-language reason_code byte stability.
 
 ### B.3 — verify-before-settle → `SettlementPrecondition` claim type
+
 - **AIOS semantics**: settlement engine demands "verify pass + lease consumed" before settling.
 - **Why not portable**: settle = authority over money/state.
 - **Substrate primitive**: a claim schema "this chain segment satisfies settlement preconditions"; verifier emits yes/no/reason_code; **does not execute settlement**.
@@ -229,6 +232,7 @@ above. Remaining B-class items keep their original posture:
 - **Tests**: unit + fixture (segment with `settlement_event {requested}` but no preceding `lease_lifecycle_event {consumed}` → `first_bad_index` points at the settlement request).
 
 ### B.5 — Governance timeline → deterministic projection
+
 - **AIOS semantics**: governance system produces a chronology.
 - **Why not portable**: governance system = decision-making body.
 - **Substrate primitive**: a pure `filter` over chain by `event_type ∈ {policy_check_event, admin_action_event, lease_lifecycle_event}`. No interpretation, no scoring.
@@ -236,6 +240,7 @@ above. Remaining B-class items keep their original posture:
 - **Tests**: unit + Py/TS byte-equal output.
 
 ### B.7 — Worker heartbeat → `WorkerObservationRecord`
+
 - **AIOS semantics**: worker manager consumes heartbeats, schedules.
 - **Why not portable**: manager = scheduler authority.
 - **Substrate primitive**: event-only record of "I am alive at T"; substrate does not interpret.
@@ -243,10 +248,12 @@ above. Remaining B-class items keep their original posture:
 - **Tests**: unit + forbidden_fields gate.
 
 ### B.9 — Idempotency / correlation / causation IDs → `ProofBundle` metadata
+
 - **Substrate primitive**: three optional `ProofBundle`-level fields (`bundle_correlation_id`, `bundle_causation_refs: list[str]`, `bundle_idempotency_key`). **NOT on `ChainedEvent`** (frozen).
 - **Tests**: schema validation + DAG-causation fixture.
 
 ### B.10 — Read model projection → deterministic projection spec
+
 - **Substrate primitive**: a projection-spec language (filter / sort / group / select), implemented as pure function `project(chain, spec) -> JSON`. **Not a query engine, no indices, no cache, no push.**
 - **Attestplane name**: `attestplane.projections.project` + `docs/spec/projection-spec-v1.md`
 - **Tests**: unit + Py/TS byte-equal output for same `(chain, spec)`.
@@ -311,6 +318,7 @@ above. Remaining B-class items keep their original posture:
 ### Phase 1 — Low-risk absorption (doc-only + schema drafts; **zero core changes**)
 
 **Forbidden in Phase 1**:
+
 - Modify `canonicalize()` bytes.
 - Modify `ChainedEvent` fields.
 - Modify `substrate.append()` body.
@@ -329,12 +337,14 @@ above. Remaining B-class items keep their original posture:
 | P1.6 | `docs/policy/four_quadrant_claim_evidence_verification_decision.md` (D.7) | concept doc | ADR-0004 |
 
 **Anti-scope-creep CI gates**:
+
 - `rg -n 'lease\.grant|policy\.enforce|scheduler|dispatcher' sdk/` must be empty.
 - ADR-0009 review must cite ADR-0004 § 1.
 
 ### Phase 2 — Proof capability enhancement
 
 **New ADRs**:
+
 - ADR-0008 evidence event taxonomy v1
 - ADR-0010 verification `reason_code` enum (with independent `reason_code_schema_version = 1`)
 - ADR-0011 canonical-text v1 (sibling of canonical-JSON, strict separation)
@@ -354,6 +364,7 @@ above. Remaining B-class items keep their original posture:
 | P2.8 | `docs/spec/adapter_event_mapping_standard.md` | doc | yes | n/a |
 
 **Anti-scope-creep CI gates**:
+
 - Any P2.* PR diff must NOT touch: `canonicalize()` body, `ChainedEvent` fields, `substrate.append()`, frozen vectors files. Path-protected CI gate.
 - `reason_code` enum values must cite ADR-0010 enum table; free-text rejected.
 - Each new `event_type` ships with anti-scope-creep invariant text.
@@ -361,6 +372,7 @@ above. Remaining B-class items keep their original posture:
 ### Phase 3 — AIOS adapter deepening (Attestplane as external proof layer)
 
 **Hard boundary** for Phase 3:
+
 - Attestplane repo ships only (a) `GenericRuntimeAdapter` ABC; (b) fixture schemas; (c) conformance harness.
 - AIOS repo implements its own `translate()` and emits fixture-conforming bytes.
 - **Zero AIOS source enters Attestplane.**
@@ -380,10 +392,12 @@ above. Remaining B-class items keep their original posture:
 | ~~P3.9~~ | ~~`examples/python/aios_run_to_proof_bundle.py`~~ | **OUT OF SCOPE — REDLINE**. Migration-plan ticket #24 (AIOS-run-to-proof-bundle example) is permanently out of scope for the Attestplane OSS repo per `memory/feedback_attestplane_aios_boundary.md`. Even an AIOS-named example carrying *synthetic* events crosses into ticket #5 / #24 territory and erodes the boundary. If a demo is needed, it lives in the AIOS commercial repo (which already has access to real AIOS data). A *generic* "any-runtime → proof_bundle" example may exist in Attestplane, but it must not carry "aios" in name, content, or framing. |
 
 **New ADRs**:
+
 - ADR-0013 `GenericRuntimeAdapter` interface (migration plan ticket #3)
 - ADR-0014 AIOS-to-Attestplane fixture-pinning protocol (fixture lives in Attestplane repo; AIOS CI reproduces fixture bytes)
 
 **Anti-scope-creep CI gates**:
+
 - Adapter base class must NOT add any method named `execute / grant / decide / dispatch / schedule / cancel / notify` (15-verb gate already covers this — keep enforcing).
 - All fixture payloads must pass `forbidden_fields` gate.
 - Any PR introducing `import aios_*` / `from aios_*` is rejected by CI grep (INV-NEW-3).

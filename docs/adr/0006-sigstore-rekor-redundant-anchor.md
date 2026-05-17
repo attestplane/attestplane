@@ -163,7 +163,7 @@ binding (existing ADR-0003 + ADR-0006 § 5 semantics).
 TSAs. ADR-0006 generalises this to ≥ 2 independent anchor providers
 where "independent" can mean (a) two RFC-3161 TSAs, (b) one RFC-3161
 TSA + Rekor, or (c) two Sigstore Rekor instances (e.g. public Sigstore
-+ a private organisational Rekor). `MultiTSAProvider` already accepts
+plus a private organisational Rekor). `MultiTSAProvider` already accepts
 heterogeneous providers; no API change needed.
 
 The recommended v0.1 default deployment becomes:

@@ -179,6 +179,7 @@ This ADR is **fully additive**:
 - `reason_codes_vectors.json` (P0.3) — unchanged.
 
 New fixture introduced under this ADR:
+
 - `proof_bundle_policy_trace_vectors.json` — 3 positive vectors
   (no policy events → field absent; one policy event → 1-element
   list; multiple policy events → ordered N-element list) + 1
@@ -202,6 +203,7 @@ Accepted 2026-05-17. Companion artefacts in this commit:
 - Unit tests in both languages.
 
 This ADR does NOT touch:
+
 - `canonicalize()` / `hashchain` / `ChainedEvent` (frozen).
 - `vectors.json` / `text_vectors.json` / `signature_vectors.json` /
   `lease_lifecycle_event_vectors.json` / `policy_check_event_vectors.json`

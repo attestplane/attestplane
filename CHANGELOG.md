@@ -78,7 +78,7 @@ verify against the new code.
   five gates A1–A5 with three-tier pre-merge / nightly /
   release-blocker enforcement.
 - [`schemas/v1/proof_bundle.schema.json`](schemas/v1/proof_bundle.schema.json)
-  + [`schemas/v1/auditor_export.schema.json`](schemas/v1/auditor_export.schema.json):
+  - [`schemas/v1/auditor_export.schema.json`](schemas/v1/auditor_export.schema.json):
   JSON Schemas for the v1 wire-format artifacts. Default
   `forbidden_fields` list (13 critical terms) is the redaction floor.
 
@@ -133,7 +133,7 @@ verify against the new code.
 - `adapters.ts` — `GenericRuntimeAdapter` abstract class with
   constructor-time forbidden-verb check.
 - `event_types.ts` — twelve constants + literal types + ReadonlySet
-  + `EventTypeV1` discriminated union.
+  - `EventTypeV1` discriminated union.
 - `proof_bundle.ts` — TypeScript port. Builds bundle bytes that are
   byte-identical to the Python builder's output.
 - `verifier.ts` — TypeScript port (async; uses `node:fs/promises`).

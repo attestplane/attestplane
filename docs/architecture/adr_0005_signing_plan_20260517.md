@@ -180,7 +180,7 @@ ADR-0006 API surface.
 
 - **Python (+~25 cases)**: `tests/signing/test_key_provider.py`
   (forbidden-verb gate / subclassing); `test_signer.py` (segment-head
-  + per-event modes / empty chain / single-event chain);
+  - per-event modes / empty chain / single-event chain);
   `test_signature_record.py` (schema / `key_id` stability);
   `test_verifier_signatures.py` (valid / invalid / unknown_key /
   expired_key / unsigned chain pass-through);

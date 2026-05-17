@@ -293,6 +293,7 @@ changes its canonical bytes, which changes the event hash, which
 invalidates `vectors.json`.
 
 ### C. Detached signatures in a parallel `*.sig` file with no
+
    `SignatureRecord` type
 
 Rejected. Loses the metadata that makes the signatures auditor-grade:
@@ -332,7 +333,7 @@ For an external auditor verifying a v0.0.2-alpha bundle that includes
    mode) or the covered `AuditEvent` (per_event mode) and confirms
    `signed_payload` matches byte-for-byte before checking Ed25519.
 5. The combination of `chain.verify_chain` + `verify_chain_with_signatures`
-   + `verify_chain_with_anchors` is what an auditor presents to a
+   - `verify_chain_with_anchors` is what an auditor presents to a
    notified body. Each step is independent and forensic-grade.
 
 The library does **not** make legal claims on behalf of the deployer —

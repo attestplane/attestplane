@@ -180,7 +180,7 @@ input vs. semantic stability for *free-form* input).
 
 Rejected. Adds a heavy native dependency (ICU is large; binding to
 Python / Node both is significant maintenance). Python `unicodedata`
-+ Node ICU defaults are sufficient for v1; if a customer requires
+plus Node ICU defaults are sufficient for v1; if a customer requires
 non-default Unicode behaviour, ADR-0011 v2 can re-evaluate.
 
 ### Alt-C. NFKC instead of NFC
