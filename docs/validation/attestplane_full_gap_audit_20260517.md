@@ -158,15 +158,19 @@ The repository has strong OSS hygiene: Apache-2.0, NOTICE, DCO, REUSE, CodeQL, O
 ## 9. Four Product Routes
 
 ### Route 1 — Open-source Core Credibility
+
 Must add verifier CLI, proof bundle, negative conformance vectors, standalone canonical JSON spec, better runnable examples, and docs claim downgrade.
 
 ### Route 2 — Compliance Product Credibility
+
 Must add EU AI Act Article 12 mapping registry, DORA Article 8 mapping, legal disclaimer per obligation, auditor export format, framework mapping docs, and source citation placeholders.
 
 ### Route 3 — AIOS / Agent Runtime Integration
+
 Must add AIOS adapter spec, generic runtime adapter, tool-call event, policy-check event, human-approval event, lease/budget/supervisor event mapping, and one integration example.
 
 ### Route 4 — External Trust Anchoring
+
 ADR-0003 exists; M5 needs TSA client abstraction, timestamp token model and verification, anchoring proof format, trust-root lifecycle, key lifecycle, and a Sigstore/Rekor decision. Until code ships, say "designed for RFC-3161 anchoring" rather than "cryptographically anchored evidence chains".
 
 ## 10. Recommended M5 / v0.1 Roadmap
