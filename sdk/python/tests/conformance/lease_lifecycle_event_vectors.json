@@ -1,0 +1,128 @@
+{
+  "$schema_version": 1,
+  "frozen_at": "2026-05-17T12:00:00Z",
+  "comment": "ADR-0009 A.7 lease_lifecycle_event payload conformance vectors. Frozen alongside ADR-0009 Accept. Both Py and TS SDKs replay these byte-for-byte via canonicalize().",
+  "positive_vectors": [
+    {
+      "name": "minimal_granted",
+      "description": "Minimal valid payload — all required fields, no optional.",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "consumed_with_artifact_ref",
+      "description": "Lifecycle transition to consumed; includes step_id_ref + artifact_hash_ref.",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000001",
+        "lifecycle": "consumed",
+        "observed_at": "2026-05-17T12:01:00.000000Z",
+        "step_id_ref": "step-1",
+        "run_id_ref": "run-1",
+        "artifact_hash_ref": "1111111111111111111111111111111111111111111111111111111111111111"
+      }
+    },
+    {
+      "name": "expired_with_reason",
+      "description": "Natural expiry with machine-readable reason_code + human reason_text.",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000002",
+        "lifecycle": "expired",
+        "observed_at": "2026-05-17T12:05:00.000000Z",
+        "reason_code": "LEASE_TTL_EXCEEDED",
+        "reason_text": "Lease TTL (5 min) elapsed without consumption."
+      }
+    },
+    {
+      "name": "revoked_by_authority",
+      "description": "Authority-initiated revocation; grantor identified.",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000003",
+        "lifecycle": "revoked",
+        "observed_at": "2026-05-17T12:03:00.000000Z",
+        "grantor_runtime_id": "external-policy-engine-v1.0.0",
+        "tenant_id_ref": "tenant-A",
+        "reason_code": "POLICY_VIOLATION"
+      }
+    }
+  ],
+  "negative_vectors": [
+    {
+      "name": "missing_lifecycle",
+      "expected_error_contains": "missing required fields",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "invalid_lifecycle_enum",
+      "expected_error_contains": "lifecycle must be one of",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "bogus",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "short_lease_id_hash",
+      "expected_error_contains": "lease_id_hash must be 64-hex",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "abc",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "naive_timestamp",
+      "expected_error_contains": "UTC-aware",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000"
+      }
+    },
+    {
+      "name": "wrong_schema_version",
+      "expected_error_contains": "lease_event_schema_version must be 1",
+      "payload": {
+        "lease_event_schema_version": 2,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "forbidden_signature_field",
+      "expected_error_contains": "forbidden field",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "signature": "deadbeef"
+      }
+    },
+    {
+      "name": "forbidden_budget_field",
+      "expected_error_contains": "forbidden field",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "consumed",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "budget_cap": 1000
+      }
+    }
+  ]
+}

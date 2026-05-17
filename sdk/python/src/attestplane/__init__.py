@@ -34,6 +34,12 @@ from attestplane.canonical_text import (
     text_hash,
     text_hash_hex,
 )
+from attestplane.event_payloads import (
+    FORBIDDEN_PAYLOAD_FIELDS,
+    LeaseLifecycle,
+    LeaseLifecycleEventPayload,
+    validate_lease_lifecycle_event_payload,
+)
 from attestplane.event_types import (
     ALL_EVENT_TYPES_V1,
     BUDGET_EVENT,
@@ -176,8 +182,11 @@ __all__ = [
     "BundleVerificationError",
     "BundleVerificationResult",
     "DEFAULT_FORBIDDEN_FIELDS",
+    "FORBIDDEN_PAYLOAD_FIELDS",
     "FrameworkMapping",
     "GenericRuntimeAdapter",
+    "LeaseLifecycle",
+    "LeaseLifecycleEventPayload",
     "MockTSAProvider",
     "MultiTSAProvider",
     "JsonlStorageBackend",
@@ -212,6 +221,7 @@ __all__ = [
     "statement_to_dsse_envelope",
     "text_hash",
     "text_hash_hex",
+    "validate_lease_lifecycle_event_payload",
     "verify_chain",
     "verify_chain_with_anchors",
     "verify_proof_bundle",

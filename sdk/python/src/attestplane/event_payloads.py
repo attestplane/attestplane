@@ -1,0 +1,204 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
+"""Event-payload TypedDicts + validators per ADR-0009 Mode A.6.
+
+Each TypedDict here describes the **payload slot** of an `AuditEvent`
+for one v1 ``event_type`` (per :mod:`attestplane.event_types` /
+ADR-0008). The substrate's `ChainedEvent` shape stays frozen — INV 2.
+Payload schemas are versioned independently of `chain.schema_version`
+/ `anchor_schema_version` / `signature_schema_version` /
+`reason_code_schema_version`.
+
+Each payload schema also defines a small ``validate_*()`` function
+that rejects malformed payloads (wrong types, missing required fields,
+forbidden field names per ADR-0004 § 2 column 3). Validators are
+intentionally cheap (~ regex + dict-key checks) so adapters can call
+them on every translation step without measurable overhead.
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import datetime
+from typing import Any, Final, Literal, NotRequired, TypedDict
+
+# --- Shared validation primitives ------------------------------------------
+
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+# Per ADR-0004 § 2 column 3 + ADR-0009 § 1 Mode A.6 redaction policy.
+# Payload field names that MUST NEVER appear at the root of any event
+# payload. Substrate is advisory at the SDK boundary — adapters and
+# verifiers call these checks; the hash-chain core stays
+# taxonomy-agnostic per ADR-0008.
+FORBIDDEN_PAYLOAD_FIELDS: Final[frozenset[str]] = frozenset({
+    "signature",
+    "private_key",
+    "secret",
+    "token",
+    "auth_header",
+    "session_token",
+    "capability",
+    "capability_required",
+    "budget",
+    "budget_cap",
+    "quota",
+    "scope_expression",
+    "scope_body",
+    "hmac",
+    "hmac_canonical_payload",
+    "policy_expression_body",
+    "expression",
+})
+
+
+class _PayloadValidationError(ValueError):
+    """Raised when a payload fails a validator's invariant check."""
+
+
+def _require_iso_utc(value: Any, field: str) -> None:
+    """Reject anything not parseable as an RFC-3339 UTC datetime."""
+    if not isinstance(value, str):
+        raise _PayloadValidationError(
+            f"{field}: must be ISO-8601 string, got {type(value).__name__}"
+        )
+    normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise _PayloadValidationError(
+            f"{field}: not valid ISO-8601: {value!r} ({exc})"
+        ) from exc
+    if dt.tzinfo is None:
+        raise _PayloadValidationError(
+            f"{field}: must be UTC-aware (use 'Z' or '+00:00' suffix)"
+        )
+
+
+def _reject_forbidden_fields(payload: dict[str, Any], event_type: str) -> None:
+    """Reject any root-level forbidden field per ADR-0004 § 2 redaction."""
+    hits = sorted(set(payload.keys()) & FORBIDDEN_PAYLOAD_FIELDS)
+    if hits:
+        raise _PayloadValidationError(
+            f"{event_type}: payload contains forbidden field(s) "
+            f"{hits} per ADR-0004 § 2 redaction policy"
+        )
+
+
+# --- lease_lifecycle_event payload ----------------------------------------
+
+LeaseLifecycle = Literal["granted", "consumed", "expired", "revoked"]
+"""The four observed lifecycle transitions per ADR-0009 A.7 schema."""
+
+
+class LeaseLifecycleEventPayload(TypedDict, total=False):
+    """Payload-shape for the ``lease_lifecycle_event`` event_type.
+
+    Schema-shape re-issue (Mode A.6 per ADR-0009 § 1) of fields
+    originally observed at
+    ``~/aios/crates/aios-sdk-evidence/src/artifact.rs`` and
+    ``~/aios/schemas/lease/lease.schema.json``. Authority-bearing
+    fields (``signature``, ``capability_required``, ``budget_cap``,
+    ``hmac``) are explicitly NOT absorbed.
+
+    Required fields: ``lease_event_schema_version`` (must equal 1),
+    ``lease_id_hash`` (64-hex SHA-256 of opaque lease id),
+    ``lifecycle`` (one of the four enum values), ``observed_at``
+    (RFC-3339 UTC).
+    """
+
+    # Required
+    lease_event_schema_version: Literal[1]
+    lease_id_hash: str
+    lifecycle: LeaseLifecycle
+    observed_at: str
+    # Optional caller-asserted correlation refs
+    grantor_runtime_id: NotRequired[str]
+    tenant_id_ref: NotRequired[str]
+    step_id_ref: NotRequired[str]
+    run_id_ref: NotRequired[str]
+    artifact_hash_ref: NotRequired[str]
+    reason_code: NotRequired[str]
+    reason_text: NotRequired[str]
+
+
+_REQUIRED_LEASE_KEYS: Final[frozenset[str]] = frozenset({
+    "lease_event_schema_version",
+    "lease_id_hash",
+    "lifecycle",
+    "observed_at",
+})
+_LIFECYCLE_VALUES: Final[frozenset[str]] = frozenset({
+    "granted", "consumed", "expired", "revoked",
+})
+
+
+def validate_lease_lifecycle_event_payload(payload: dict[str, Any]) -> None:
+    """Raise :class:`ValueError` if ``payload`` violates A.7 invariants.
+
+    Checked invariants (mirror schemas/v1/lease_lifecycle_event.schema.json):
+
+    - ``lease_event_schema_version == 1``
+    - all required fields present
+    - ``lease_id_hash`` matches ``^[0-9a-f]{64}$``
+    - ``lifecycle`` ∈ {granted, consumed, expired, revoked}
+    - ``observed_at`` parses as RFC-3339 UTC
+    - ``artifact_hash_ref`` (if present) matches the 64-hex pattern
+    - no forbidden field per ADR-0004 § 2 redaction
+    """
+    if not isinstance(payload, dict):
+        raise _PayloadValidationError(
+            f"lease_lifecycle_event payload must be dict, got {type(payload).__name__}"
+        )
+    _reject_forbidden_fields(payload, "lease_lifecycle_event")
+    missing = _REQUIRED_LEASE_KEYS - set(payload.keys())
+    if missing:
+        raise _PayloadValidationError(
+            f"lease_lifecycle_event: missing required fields {sorted(missing)}"
+        )
+    if payload["lease_event_schema_version"] != 1:
+        raise _PayloadValidationError(
+            "lease_lifecycle_event: lease_event_schema_version must be 1, "
+            f"got {payload['lease_event_schema_version']!r}"
+        )
+    lease_id_hash = payload["lease_id_hash"]
+    if not isinstance(lease_id_hash, str) or not _HEX64.match(lease_id_hash):
+        raise _PayloadValidationError(
+            f"lease_lifecycle_event: lease_id_hash must be 64-hex string, "
+            f"got {lease_id_hash!r}"
+        )
+    lifecycle = payload["lifecycle"]
+    if lifecycle not in _LIFECYCLE_VALUES:
+        raise _PayloadValidationError(
+            f"lease_lifecycle_event: lifecycle must be one of "
+            f"{sorted(_LIFECYCLE_VALUES)}, got {lifecycle!r}"
+        )
+    _require_iso_utc(payload["observed_at"], "lease_lifecycle_event.observed_at")
+
+    artifact_ref = payload.get("artifact_hash_ref")
+    if artifact_ref is not None and (
+        not isinstance(artifact_ref, str) or not _HEX64.match(artifact_ref)
+    ):
+        raise _PayloadValidationError(
+            f"lease_lifecycle_event: artifact_hash_ref (if present) must be "
+            f"64-hex string, got {artifact_ref!r}"
+        )
+
+    for opt_field in (
+        "grantor_runtime_id", "tenant_id_ref", "step_id_ref",
+        "run_id_ref", "reason_code", "reason_text",
+    ):
+        v = payload.get(opt_field)
+        if v is not None and not isinstance(v, str):
+            raise _PayloadValidationError(
+                f"lease_lifecycle_event.{opt_field}: must be string or absent, "
+                f"got {type(v).__name__}"
+            )
+
+
+__all__ = [
+    "FORBIDDEN_PAYLOAD_FIELDS",
+    "LeaseLifecycle",
+    "LeaseLifecycleEventPayload",
+    "validate_lease_lifecycle_event_payload",
+]

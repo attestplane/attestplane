@@ -59,6 +59,13 @@ export {
   textHashHex,
 } from './canonical_text.js';
 export {
+  FORBIDDEN_PAYLOAD_FIELDS,
+  PayloadValidationError,
+  validateLeaseLifecycleEventPayload,
+  type LeaseLifecycle,
+  type LeaseLifecycleEventPayload,
+} from './event_payloads.js';
+export {
   ALL_EVENT_TYPES_V1,
   BUDGET_EVENT,
   EVAL_EVENT,
