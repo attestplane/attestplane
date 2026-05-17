@@ -10,4 +10,10 @@ https://app\.attestplane\.app.*
 
 # In-tree placeholders referenced by CONTRIBUTING.md but not yet created
 docs/runbooks/.*
-docs/adr/.*
+
+# npm package + org pages return HTTP 403 to unauthenticated automated GETs
+# (npm anti-bot). The links are real — verified by the publish-typescript
+# workflow's smoke install and by the registry JSON endpoint (registry.
+# npmjs.org). Whitelisting because lychee otherwise treats anti-bot rejection
+# as a broken link.
+https://www\.npmjs\.com/.*
