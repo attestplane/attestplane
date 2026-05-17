@@ -1,0 +1,121 @@
+name: publish-python
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Publication target'
+        required: true
+        default: 'testpypi'
+        type: choice
+        options:
+          - testpypi
+          - pypi
+  push:
+    tags:
+      - 'sdk-python-v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-python-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    name: Build wheel + sdist (sdk/python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+
+      - name: Compute SOURCE_DATE_EPOCH from HEAD
+        id: sde
+        run: |
+          echo "value=$(git log -1 --pretty=%ct HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build wheel + sdist
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python build hatchling
+          .venv/bin/python -m build --wheel --sdist -o dist
+          ls -la dist/
+          .venv/bin/python -c "
+          import hashlib, glob, os
+          for path in sorted(glob.glob('dist/*')):
+              with open(path, 'rb') as f:
+                  h = hashlib.sha256(f.read()).hexdigest()
+              print(f'{h}  {os.path.basename(path)}')
+          "
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: python-dist-${{ github.sha }}
+          path: sdk/python/dist/
+          retention-days: 30
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/attestplane
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: python-dist-${{ github.sha }}
+          path: dist/
+
+      - name: Confirm dist contents
+        run: ls -la dist/
+
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          skip-existing: true
+          verbose: true
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: |
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-python-v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/attestplane
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: python-dist-${{ github.sha }}
+          path: dist/
+
+      - name: Confirm dist contents
+        run: ls -la dist/
+
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          packages-dir: dist/
+          verbose: true
