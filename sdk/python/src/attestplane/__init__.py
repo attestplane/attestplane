@@ -38,12 +38,25 @@ from attestplane.obligations import (
     load_dora_article_8,
     load_eu_ai_act_article_12,
 )
+from attestplane.proof_bundle import (
+    DEFAULT_FORBIDDEN_FIELDS,
+    FrameworkMapping,
+    ProofBundleBuilder,
+    build_auditor_export,
+)
 from attestplane.storage import (
     AbstractStorageBackend,
     JsonlStorageBackend,
     StorageError,
     StorageReadError,
     StorageWriteError,
+)
+from attestplane.verifier import (
+    BundleSchemaError,
+    BundleVerificationError,
+    BundleVerificationResult,
+    verify_proof_bundle,
+    verify_proof_bundle_file,
 )
 from attestplane.hashchain import (
     GENESIS_HASH,
@@ -91,10 +104,16 @@ __all__ = [
     "ChainedEvent",
     "EventDraft",
     "AbstractStorageBackend",
+    "BundleSchemaError",
+    "BundleVerificationError",
+    "BundleVerificationResult",
+    "DEFAULT_FORBIDDEN_FIELDS",
+    "FrameworkMapping",
     "GenericRuntimeAdapter",
     "JsonlStorageBackend",
     "ObligationEntry",
     "ObligationRegistryError",
+    "ProofBundleBuilder",
     "Registry",
     "StorageError",
     "StorageReadError",
@@ -106,9 +125,12 @@ __all__ = [
     "chain_extend",
     "genesis_head",
     "hash_event",
+    "build_auditor_export",
     "is_known_v1_event_type",
     "load_all_registries",
     "load_dora_article_8",
     "load_eu_ai_act_article_12",
     "verify_chain",
+    "verify_proof_bundle",
+    "verify_proof_bundle_file",
 ]

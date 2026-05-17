@@ -1,0 +1,291 @@
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
+"""Tests for :mod:`attestplane.proof_bundle` and :mod:`attestplane.verifier`."""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+
+import jsonschema
+import pytest
+
+from attestplane.hashchain import chain_extend, genesis_head
+from attestplane.obligations import load_eu_ai_act_article_12
+from attestplane.proof_bundle import (
+    DEFAULT_FORBIDDEN_FIELDS,
+    FrameworkMapping,
+    ProofBundleBuilder,
+    build_auditor_export,
+)
+from attestplane.types import ChainedEvent, ChainHead, EventDraft
+from attestplane.verifier import (
+    BundleSchemaError,
+    BundleVerificationError,
+    verify_proof_bundle,
+    verify_proof_bundle_file,
+)
+
+_SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "schemas" / "v1"
+
+
+def _proof_bundle_schema() -> dict[str, object]:
+    return json.loads((_SCHEMAS_DIR / "proof_bundle.schema.json").read_text(encoding="utf-8"))
+
+
+def _auditor_export_schema() -> dict[str, object]:
+    return json.loads((_SCHEMAS_DIR / "auditor_export.schema.json").read_text(encoding="utf-8"))
+
+
+def _build_good_chain(n: int) -> list[ChainedEvent]:
+    ts = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
+    chain: list[ChainedEvent] = []
+    head = genesis_head()
+    for i in range(n):
+        draft = EventDraft(
+            event_type=("eval_event" if i % 2 == 0 else "policy_check_event"),
+            actor=f"agent://test/{i}",
+            payload={"index": i},
+            session_id=f"sess-{i}",
+        )
+        event = chain_extend(
+            head, draft, now=ts,
+            event_id=f"00000000-0000-7000-8000-{i:012d}",
+        )
+        chain.append(event)
+        head = ChainHead(seq=event.seq, event_hash=event.event_hash)
+    return chain
+
+
+def test_build_empty_bundle() -> None:
+    builder = ProofBundleBuilder(chain_id="empty", producer_runtime="test")
+    bundle = builder.build()
+
+    assert bundle["bundle_version"] == 1
+    assert bundle["events"] == []
+    assert bundle["verification_report"]["ok"] is True
+    assert bundle["chain_metadata"]["head_seq"] == -1
+    assert bundle["chain_metadata"]["head_hash_hex"] == "0" * 64
+
+
+def test_build_bundle_with_chain() -> None:
+    builder = ProofBundleBuilder(chain_id="my-chain", producer_runtime="test-runtime v1.0")
+    builder.extend(_build_good_chain(3))
+    bundle = builder.build()
+
+    assert len(bundle["events"]) == 3
+    assert bundle["verification_report"]["ok"] is True
+    assert bundle["chain_metadata"]["head_seq"] == 2
+
+
+def test_bundle_validates_against_proof_bundle_schema() -> None:
+    builder = ProofBundleBuilder(chain_id="schema-check", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    jsonschema.validate(bundle, _proof_bundle_schema())
+
+
+def test_bundle_with_framework_mapping_validates() -> None:
+    builder = ProofBundleBuilder(chain_id="fm", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    builder.add_framework_mapping(FrameworkMapping(
+        obligation_id="eu_ai_act.art12.3c.matched_input_data",
+        evidence_event_indexes=(0,),
+        implementation_status_at_bundle_time="field_supported",
+    ))
+    bundle = builder.build()
+    jsonschema.validate(bundle, _proof_bundle_schema())
+    assert bundle["framework_mappings"][0]["obligation_id"].startswith("eu_ai_act.")
+
+
+def test_framework_mapping_with_bad_index_rejected() -> None:
+    builder = ProofBundleBuilder(chain_id="fm", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    with pytest.raises(ValueError, match="references event index"):
+        builder.add_framework_mapping(FrameworkMapping(
+            obligation_id="eu_ai_act.art12.1.automatic_recording",
+            evidence_event_indexes=(99,),
+            implementation_status_at_bundle_time="designed_toward",
+        ))
+
+
+def test_default_forbidden_fields_present() -> None:
+    builder = ProofBundleBuilder(chain_id="x", producer_runtime="test")
+    bundle = builder.build()
+    assert set(bundle["forbidden_fields"]) == set(DEFAULT_FORBIDDEN_FIELDS)
+    for term in ["secrets", "tokens", "jwts", "private_keys", "pii"]:
+        assert term in bundle["forbidden_fields"]
+
+
+def test_verify_proof_bundle_accepts_good_bundle() -> None:
+    builder = ProofBundleBuilder(chain_id="v", producer_runtime="test")
+    builder.extend(_build_good_chain(3))
+    bundle = builder.build()
+
+    result = verify_proof_bundle(bundle)
+    assert result.ok is True
+    assert result.event_count == 3
+    assert result.agreement is True
+    assert result.chain_result.ok is True
+
+
+def test_verify_proof_bundle_rejects_bad_bundle_version() -> None:
+    builder = ProofBundleBuilder(chain_id="v", producer_runtime="test")
+    bundle = builder.build()
+    bundle["bundle_version"] = 99
+    with pytest.raises(BundleSchemaError, match="bundle_version"):
+        verify_proof_bundle(bundle)
+
+
+def test_verify_proof_bundle_rejects_missing_field() -> None:
+    bundle: dict[str, object] = {"bundle_version": 1}
+    with pytest.raises(BundleSchemaError, match="missing required fields"):
+        verify_proof_bundle(bundle)
+
+
+def test_verify_proof_bundle_detects_tampered_chain() -> None:
+    builder = ProofBundleBuilder(chain_id="t", producer_runtime="test")
+    builder.extend(_build_good_chain(3))
+    bundle = builder.build()
+    # Tamper: mutate the second event's payload but leave hashes.
+    bundle["events"][1]["event"]["payload"] = {"index": 999}
+
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert result.chain_result.ok is False
+    assert result.chain_result.first_bad_index == 1
+
+
+def test_verify_proof_bundle_disagreement_flag() -> None:
+    """Bundle says ok=True but chain actually broken -> agreement=False."""
+    builder = ProofBundleBuilder(chain_id="d", producer_runtime="test")
+    builder.extend(_build_good_chain(3))
+    bundle = builder.build()
+    bundle["events"][1]["event"]["payload"] = {"index": 999}
+    # Keep the embedded report at ok=True (the producer was honest at build
+    # time but the bundle was mutated after build) — simulating tampering
+    # between generation and reading.
+
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert result.bundle_reported_ok is True
+    assert result.chain_result.ok is False
+    assert result.agreement is False
+
+
+def test_verify_proof_bundle_file_round_trips(tmp_path: Path) -> None:
+    builder = ProofBundleBuilder(chain_id="f", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    out = tmp_path / "bundle.json"
+    out.write_text(json.dumps(bundle), encoding="utf-8")
+
+    result = verify_proof_bundle_file(out)
+    assert result.ok is True
+    assert result.event_count == 2
+
+
+def test_verify_proof_bundle_file_missing_path(tmp_path: Path) -> None:
+    with pytest.raises(BundleVerificationError, match="not found"):
+        verify_proof_bundle_file(tmp_path / "nope.json")
+
+
+def test_verify_proof_bundle_file_malformed_json(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text("this is not json", encoding="utf-8")
+    with pytest.raises(BundleSchemaError, match="not valid JSON"):
+        verify_proof_bundle_file(bad)
+
+
+def test_short_summary_format_ok() -> None:
+    builder = ProofBundleBuilder(chain_id="my-id", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    summary = verify_proof_bundle(bundle).short_summary()
+    assert summary.startswith("OK")
+    assert "'my-id'" in summary
+
+
+def test_short_summary_format_fail() -> None:
+    builder = ProofBundleBuilder(chain_id="bad-id", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    bundle["events"][1]["event"]["payload"] = {"changed": True}
+    summary = verify_proof_bundle(bundle).short_summary()
+    assert summary.startswith("FAIL")
+
+
+def test_build_auditor_export_minimal() -> None:
+    builder = ProofBundleBuilder(chain_id="ax", producer_runtime="test")
+    builder.extend(_build_good_chain(3))
+    bundle = builder.build()
+
+    export = build_auditor_export(bundle)
+
+    assert export["export_version"] == 1
+    assert export["chain_summary"]["event_count"] == 3
+    assert export["verification_status"]["ok"] is True
+    assert export["redaction_policy"]["redaction_status"] == "enforced_by_producer"
+
+
+def test_auditor_export_validates_against_schema() -> None:
+    builder = ProofBundleBuilder(chain_id="ax-schema", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    export = build_auditor_export(bundle)
+    jsonschema.validate(export, _auditor_export_schema())
+
+
+def test_auditor_export_with_framework_coverage() -> None:
+    builder = ProofBundleBuilder(chain_id="ax-fm", producer_runtime="test")
+    builder.extend(_build_good_chain(3))
+    builder.add_framework_mapping(FrameworkMapping(
+        obligation_id="eu_ai_act.art12.3c.matched_input_data",
+        evidence_event_indexes=(0,),
+        implementation_status_at_bundle_time="field_supported",
+    ))
+    bundle = builder.build()
+
+    export = build_auditor_export(
+        bundle, framework_coverage_registries=[load_eu_ai_act_article_12()],
+    )
+    jsonschema.validate(export, _auditor_export_schema())
+
+    rows = export["framework_coverage"]
+    assert len(rows) >= 1
+    # The covered obligation appears in exactly one row's with_evidence list.
+    with_set: set[str] = set()
+    without_set: set[str] = set()
+    for row in rows:
+        with_set.update(row["obligation_ids_with_evidence"])
+        without_set.update(row["obligation_ids_without_evidence"])
+    assert "eu_ai_act.art12.3c.matched_input_data" in with_set
+    assert "eu_ai_act.art12.3c.matched_input_data" not in without_set
+    # Other registry entries surface as without_evidence.
+    assert len(without_set) >= 1
+
+
+def test_auditor_export_event_type_histogram() -> None:
+    builder = ProofBundleBuilder(chain_id="hist", producer_runtime="test")
+    builder.extend(_build_good_chain(4))
+    bundle = builder.build()
+
+    export = build_auditor_export(bundle)
+    histogram = export["chain_summary"]["event_type_histogram"]
+    assert histogram.get("eval_event", 0) == 2
+    assert histogram.get("policy_check_event", 0) == 2
+
+
+def test_auditor_export_anchor_status_unanchored_in_v1() -> None:
+    builder = ProofBundleBuilder(chain_id="a", producer_runtime="test")
+    bundle = builder.build()
+    export = build_auditor_export(bundle)
+    assert export["chain_summary"]["anchor_status"] == "unanchored"
+
+
+def test_auditor_export_disclaimer_present() -> None:
+    builder = ProofBundleBuilder(chain_id="d", producer_runtime="test")
+    bundle = builder.build()
+    export = build_auditor_export(bundle)
+    assert "compliance opinion" in export["legal_disclaimer"]

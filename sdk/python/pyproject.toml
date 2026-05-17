@@ -52,6 +52,9 @@ dev = [
     "build>=1.2",
 ]
 
+[project.scripts]
+attestplane = "attestplane.cli:main"
+
 [project.urls]
 Homepage = "https://attestplane.io"
 Repository = "https://github.com/attestplane/attestplane"
