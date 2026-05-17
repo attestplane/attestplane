@@ -11,6 +11,7 @@ on:
           - dist-tag-list
           - dist-tag-remove-latest
           - dist-tag-set-alpha-to-latest-version
+          - dist-tag-set-latest-to-version
       version:
         description: 'Version (when action requires it)'
         required: false
@@ -78,6 +79,22 @@ jobs:
         run: |
           set -e
           npm dist-tag add "@attestplane/attestplane@${{ inputs.version }}" alpha
+          echo ""
+          echo "After:"
+          npm dist-tag ls @attestplane/attestplane
+
+      - name: Re-point 'latest' tag to specified version
+        # Use this to make `npm install @attestplane/attestplane` (no tag)
+        # resolve to a version other than whatever 'latest' currently points
+        # to. npm forbids deleting 'latest' outright, so re-pointing is the
+        # only way to move it. Prefer pointing at a workflow-published,
+        # provenance-signed version over any manually-published version.
+        if: inputs.action == 'dist-tag-set-latest-to-version'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -e
+          npm dist-tag add "@attestplane/attestplane@${{ inputs.version }}" latest
           echo ""
           echo "After:"
           npm dist-tag ls @attestplane/attestplane
