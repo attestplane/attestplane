@@ -28,10 +28,12 @@ echo ""
 echo "=== check: Cyrillic homoglyphs in latin-script content ==="
 python3 <<'PYEOF'
 import os, sys
+_SKIP_DIRS = {'.git', 'node_modules', 'dist', '.venv', 'venv',
+              '.mypy_cache', '.ruff_cache', '.pytest_cache',
+              '__pycache__', 'htmlcov', '.coverage'}
 issues = []
 for root, dirs, files in os.walk('.'):
-    if '.git' in dirs:
-        dirs.remove('.git')
+    dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
     for fn in files:
         if not (fn.endswith(('.md', '.txt', '.yml', '.yaml', '.jsonc', '.json', '.toml', '.sh'))
                 or fn in ('LICENSE', 'NOTICE')):
