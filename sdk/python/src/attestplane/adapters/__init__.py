@@ -19,10 +19,22 @@ from attestplane.adapters.base import (
     GenericRuntimeAdapter,
     RuntimeEvent,
 )
+from attestplane.adapters.langfuse import (
+    LangFuseAdapter,
+    LangFuseObservation,
+)
+from attestplane.adapters.langsmith import (
+    LangSmithAdapter,
+    LangSmithRun,
+)
 
 __all__ = [
     "AdapterError",
     "AdapterTranslationError",
     "GenericRuntimeAdapter",
+    "LangFuseAdapter",
+    "LangFuseObservation",
+    "LangSmithAdapter",
+    "LangSmithRun",
     "RuntimeEvent",
 ]
