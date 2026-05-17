@@ -1,11 +1,15 @@
-# 0014. Adapter conformance fixture-pinning — Attestplane owns the fixtures, external adapters reproduce the bytes
+# 0014. AP Evidence Protocol (`AP-EVD/1.0`) — Conformance specification for two-sided AI evidence interchange
 
-- **Date**: 2026-05-17
-- **Status**: Accepted
+- **Date**: 2026-05-17 (v1 Accepted) / 2026-05-18 (v2 reframed as public protocol spec, Accepted)
+- **Status**: Accepted (v2)
 - **Deciders**: @merchloubna70-dot (founder, sole maintainer; self-signed acceptance per GOVERNANCE.md § 6.2)
-- **Related**: [ADR-0004](0004-aios-to-attestplane-boundary.md) (§ 4 dependency direction), [ADR-0008](0008-evidence-event-taxonomy-v1.md), [ADR-0009](0009-aios-absorption-boundary.md) (§ 4 REDLINE C.18 + C.19, P3 deliverables), [ADR-0013](0013-generic-runtime-adapter-abc.md)
+- **Related**: [ADR-0002](0002-substrate-data-model-and-hash-chain-v0.md) (canonicalize), [ADR-0004](0004-aios-to-attestplane-boundary.md) (§ 4 dependency direction), [ADR-0005](0005-event-signing-scheme.md) (signing), [ADR-0008](0008-evidence-event-taxonomy-v1.md), [ADR-0009](0009-aios-absorption-boundary.md) (§ 4 REDLINE C.18 + C.19), [ADR-0013](0013-generic-runtime-adapter-abc.md)
+- **Protocol artefact ID**: `AP-EVD/1.0`
+- **Protocol version**: `1.0.0` (semver, independent of `chain.schema_version` / `anchor_schema_version` / `signature_schema_version` / fixture `$schema_version`)
 
 ## Context
+
+### v1 — Original framing (Accepted 2026-05-17)
 
 ADR-0013 ships the `GenericRuntimeAdapter` ABC. Concrete adapters
 (AIOS, LangGraph, …) live outside the substrate repo per ADR-0009
@@ -28,6 +32,52 @@ The protocol locked in this ADR makes one side authoritative: the
 **substrate owns the fixtures**. External adapters demonstrate
 conformance by reproducing the substrate-defined byte outputs from
 their own runtime-shaped input.
+
+### v2 — Reframing as public protocol specification (Accepted 2026-05-18)
+
+The v1 framing focused on a single defensive use case (preventing AIOS
+scope creep). Subsequent product-positioning work (see
+`~/Documents/attestplane-business/COMMERCIAL_STRATEGY_2026-05-17_v2.0.md`
+and `memory/project_attestplane_strategic_narrative_v2.md`) clarified
+that Attestplane targets a **two-sided market** in which v1's
+fixture-pinning mechanism plays a much larger role:
+
+| | Side A (CONSUMES evidence) | Side B (PRODUCES evidence) |
+|---|---|---|
+| Who | Law firms / Big 4 AI assurance / Notified Bodies / regulators | Banks / insurers / hospitals / governments / HR platforms |
+| Need | Verify supplier-supplied evidence is byte-faithful | Emit byte-faithful evidence from their runtime |
+| Without a shared protocol | Cannot audit; cannot issue legal opinion | Cannot prove compliance to auditor |
+
+**The mechanism v1 designed is, in fact, the missing shared protocol**:
+each adapter author (Side B) ships a `<runtime>_v<N>.json`
+fixture declaring runtime-event-input → expected-`EventDraft` pairs;
+each verifier (Side A) runs the Attestplane replayer against that
+fixture to confirm byte-faithfulness.
+
+This ADR's v2 reframing:
+
+1. Promotes the v1 fixture format from "internal scope-creep prevention
+   discipline" to **public protocol specification** that any external
+   implementer (Side B adapter authors in any language; Side A audit
+   tool authors; third-party SDK ports in Rust/Go/Java) can target.
+2. Assigns a stable **protocol artefact ID**: `AP-EVD/1.0`
+   (Attestplane Evidence Protocol, version 1.0). Independent of all
+   substrate internal schema versions.
+3. Locks an explicit **non-goals** list (§ 4 below) so the protocol
+   does NOT over-claim. This is load-bearing for AP's lawyer-founder
+   positioning: making claims the substrate cannot prove would expose
+   the founder to cross-border misrepresentation risk.
+4. Defines minimal **governance** (founder + 14-day RFC) suitable for
+   P1 phase (2026-2028 international-credibility-building stage),
+   with explicit upgrade path to advisory board in P2 (≥3 independent
+   production deployments OR ≥1 notified body adoption).
+5. Reserves an extension slot (`conformance_level`) for future tiered
+   conformance (L1/L2/L3 analogous to SLSA) without breaking v1.0.
+
+The v2 reframing changes **no shipped code or fixture**. It is a
+documentation-and-governance promotion of the existing mechanism
+into a public protocol contract suitable for the two-sided market the
+project now targets.
 
 ## Decision
 
@@ -158,7 +208,7 @@ event shape evolves in a backward-incompatible way. Adding a new
 version path (e.g., `langsmith_v1.json` stays; `langsmith_v2.json`
 is new).
 
-### 8. Out of scope
+### 8. Out of scope (v1 — operational scope)
 
 - Substrate does NOT ship `aios_v1.json`. AIOS authors author it in
   their own commercial repo.
@@ -167,6 +217,152 @@ is new).
   `AIOSAdapter`.
 - Substrate does NOT host external adapters' source or binary
   artifacts.
+
+### 9. Protocol artefact ID and version scheme (v2)
+
+The protocol is identified as **`AP-EVD/1.0`** (Attestplane Evidence
+Protocol). The version follows independent semver `MAJOR.MINOR.PATCH`,
+**decoupled** from:
+
+- `chain.schema_version` (ADR-0002)
+- `anchor_schema_version` (ADR-0003)
+- `signature_schema_version` (ADR-0005)
+- `reason_code_schema_version` (ADR-0010)
+- `lease_event_schema_version` / `policy_event_schema_version` /
+  `replay_event_schema_version` / `claim_schema_version`
+- Fixture `$schema_version` (which is itself a byte-layout version
+  of one protocol artefact, not the protocol).
+
+External implementers (Side B adapter authors / Side A audit tool
+authors / third-party SDK ports) target a stated protocol version
+(e.g. "this adapter implements `AP-EVD/1.0` conformance"); they MUST
+NOT need to track substrate internal schema iteration.
+
+**Reversibility: LOW** — once `AP-EVD/1.0` is publicly declared, the
+name and version triple is bound by external SDK references and
+cannot be renamed without breaking external integrations.
+
+**Rename path reserved**: a future OpenSSF / CNCF donation may
+re-brand the protocol to a vendor-neutral name (e.g. `OAEP — Open
+Attestation Evidence Protocol`). The `protocol_id` field is therefore
+enum-typed for future alias entry. v1.0 implementations may alias
+both `AP-EVD/1.0` and a future neutral name when that ADR amendment
+lands.
+
+### 10. Conformance levels (v2 — extension slot)
+
+`AP-EVD/1.0` defines a **single binary conformance level (L0 — Pass
+or Fail)** for v1.0. The fixture replayer returns `report.ok =
+true/false`; no graded levels.
+
+A reserved `conformance_level` field (currently always `"L0"`) is
+declared in the fixture schema as an enum extension point. A future
+ADR-0014.v3 (or successor) may introduce tiered L1/L2/L3 (analogous
+to SLSA Build Levels) without breaking `AP-EVD/1.0` implementations:
+any subsequent level is additive, and L0 implementations remain
+conformant to their stated level.
+
+**Rationale for L0-only at v1.0**: only 2 reference fixtures exist
+today (langsmith + langfuse). SLSA itself took ~3 years to stabilise
+L1–L4 conformance criteria; pre-locking levels with insufficient
+field experience risks freezing the wrong axis. The extension slot
+preserves the ability to grade later without breaking v1.0.
+
+**Reversibility: HIGH** — adding levels is additive; removing the
+slot would require a major version bump.
+
+### 11. Explicit NON-GOALS (v2 — protocol scope honesty)
+
+`AP-EVD/1.0` makes ONLY the following positive claim:
+
+> **The conforming adapter implementation produces the byte-equal
+> `EventDraft` declared in the corresponding fixture's
+> `expected_event_draft` for every input in the fixture's `cases`,
+> as measured by canonical-JSON serialisation per ADR-0002
+> `canonicalize()`.**
+
+The protocol explicitly **does NOT** make any of the following
+claims. Implementers and verifiers MUST NOT advertise the following
+on the basis of AP-EVD/1.0 conformance alone:
+
+1. **Legal compliance** — `AP-EVD/1.0` does not guarantee, suggest,
+   or certify that an AI system's output is lawful, compliant with
+   any specific jurisdiction's regulation (including EU AI Act, DORA,
+   NIS2, GDPR, US state laws, China CAC / 算法备案 / 生成式 AI
+   暂行办法, ISO/IEC 42001, NIST AI RMF, SOC 2, or any other
+   framework). Conformance attestation is a **technical statement
+   about evidence byte-faithfulness**, not a legal opinion.
+2. **Runtime event semantics** — the protocol does NOT verify that
+   the adapter's choice of `event_type`, `actor`, or payload field
+   values correctly describes the runtime's actual behaviour. It
+   only verifies that the adapter's transformation is byte-faithful
+   for declared cases.
+3. **PII / secret redaction** — `AP-EVD/1.0` provides the byte-
+   faithfulness substrate; it does NOT enforce that adapter output
+   omits PII, secrets, or other forbidden payload content. Adapter
+   authors and verifiers are independently responsible (per ADR-0004
+   § 2 redaction policy + INV-NEW-3 enforcement in caller's CI).
+4. **AI output factuality** — the protocol records evidence that
+   an event happened; it does NOT claim the event's content is
+   factually correct (e.g., that an LLM's answer was right, that a
+   recommendation was unbiased, that a decision was fair).
+5. **LLM provider endorsement** — `AP-EVD/1.0` is provider-neutral.
+   No claim is made about any specific runtime, LLM, or commercial
+   platform's safety, accuracy, or compliance.
+6. **Legal-opinion or audit-opinion replacement** — `AP-EVD/1.0`
+   conformance does NOT replace legal advice, conformity assessment
+   under EU AI Act Annex VII, ISAE 3000 AI assurance, SOC 2 audit
+   findings, or any other professional opinion. It is **input
+   evidence** for such opinions, not a substitute.
+
+These six non-goals are **load-bearing** for:
+
+- (a) Attestplane's lawyer-founder positioning (over-claim would
+  create cross-border misrepresentation risk).
+- (b) Side A trust (auditors and notified bodies must be able to
+  cite `AP-EVD/1.0` without inheriting unbounded liability).
+- (c) Side B trust (adopters must understand they are not
+  outsourcing legal compliance to a protocol).
+
+**Reversibility: MEDIUM** — tightening the NON-GOALS (adding new
+exclusions) is safe and additive. Loosening (removing exclusions to
+make positive claims) breaks Side A trust and is unsupported.
+
+### 12. Protocol governance (v2)
+
+**Phase 1 (current, 2026-2028 — OSS international-credibility-building)**:
+Founder is the sole maintainer. Protocol version changes follow a
+**14-day public RFC** process:
+
+1. Maintainer (or external contributor) opens a GitHub Discussion in
+   `attestplane/attestplane` titled `[AP-EVD RFC] <change summary>`.
+2. Discussion remains open for ≥14 calendar days.
+3. Comments are public; any objection by a known implementer
+   (Side A or Side B with a public conformance fixture or public
+   verification deployment) requires explicit resolution.
+4. After 14 days + objection resolution, the maintainer merges the
+   ADR amendment.
+
+**Phase 2 trigger (advisory board upgrade)**: when EITHER
+
+- ≥3 independent production deployments emit `AP-EVD` conformance
+  attestations publicly, OR
+- ≥1 EU notified body, US audit firm (Big 4), or equivalent
+  professional body adopts `AP-EVD/1.0` as input evidence for its
+  attestation workflow,
+
+the maintainer convenes a 5-member advisory board (founder +
+1 EU compliance/notified-body representative + 1 Big 4 AI assurance
+representative + 1 EU/US enterprise Side B representative + 1
+academic/standards body representative). Subsequent protocol
+versions require advisory-board supermajority approval.
+
+**Phase 3 (OpenSSF/CNCF donation, anticipated P2 end ~ 2029)**:
+governance transfers to OpenSSF AI/ML WG or CNCF, protocol may be
+renamed (see § 9). Founder retains maintainer seat by donor agreement.
+
+**Reversibility: HIGH** — governance escalation is additive; each
+phase adds participants without removing rights.
 
 ## Consequences
 
@@ -259,7 +455,8 @@ New artefacts under this ADR:
 
 ## Implementation status
 
-Accepted 2026-05-17. The accompanying P2.2 commit ships:
+**v1 Accepted 2026-05-17** (Mechanism only — internal scope-creep
+prevention framing). The accompanying P2.2 commit shipped:
 
 - The fixture-format spec (this ADR § 1).
 - The replayer (`adapter_conformance.py` + `.ts`) — pure functional,
@@ -268,20 +465,41 @@ Accepted 2026-05-17. The accompanying P2.2 commit ships:
 - Two substrate-side fixtures (LangSmith v1 + LangFuse v1).
 - Tests that exercise the replayer against the two reference
   adapters.
-- A documentation note in `docs/architecture/aios_absorption_map.md`
-  pointing AIOS authors at the protocol.
+- A documentation note in `docs/architecture/aios_absorption_map.md`.
 
-The protocol is the foundational contract for any future runtime
-adapter (AIOS, LangGraph, OpenAI Agents, Claude Code SDK, etc.) to
-prove conformance without their code entering the substrate repo.
+**v2 Accepted 2026-05-18** (Reframing as public `AP-EVD/1.0`
+protocol specification). The v2 reframing is **doc-only**; no shipped
+code or fixture changes. v2 adds:
+
+- Protocol artefact ID `AP-EVD/1.0` (§ 9)
+- Protocol-version semver decoupled from substrate internal schemas (§ 9)
+- L0-binary conformance with reserved `conformance_level` extension slot (§ 10)
+- 6 explicit NON-GOALS protecting Side A trust + lawyer-founder positioning (§ 11)
+- Founder + 14-day public RFC governance with Phase 2 advisory-board trigger (§ 12)
+
+The mechanism v1 shipped is now publicly **the foundational contract
+for any external runtime adapter (Side B) AND any external verifier
+(Side A) to interoperate** without their code entering the substrate
+repo. Side B adapter authors target `AP-EVD/1.0` conformance; Side A
+auditors / law firms / notified bodies cite `AP-EVD/1.0` conformance
+in their attestation outputs.
 
 ## Follow-up
 
-- **A future ADR** may add `negative-case fixtures` that assert
+- **ADR-0014.1** may add **negative-case fixtures** that assert
   certain runtime inputs MUST cause `AdapterTranslationError`.
-- **A future ADR** may add a `fixture_version_compatibility` matrix
+- **ADR-0014.2** may add a **`fixture_version_compatibility` matrix**
   spec so external CIs can pin to a specific fixture version
   without breaking on substrate updates.
-- **AIOS authors** SHOULD author an `aios_v1.json` in the AIOS repo
-  following this ADR's format. The substrate does NOT track that
-  fixture; it's AIOS's responsibility.
+- **ADR-0014.3** may introduce **L1/L2/L3 tiered conformance levels**
+  (analogous to SLSA) once ≥10 independent reference fixtures and
+  ≥3 production verifier deployments exist (§ 10 rationale).
+- **External fixture authoring** (per § 8 v1): AIOS, LangGraph,
+  Claude Code SDK, OpenAI Agents authors SHOULD ship
+  `<runtime>_v1.json` in their own repos targeting `AP-EVD/1.0`.
+  The substrate does NOT track external fixtures; it tracks the
+  *protocol contract* they must satisfy.
+- **OpenSSF / CNCF donation path** (§ 9 rename path + § 12 Phase 3):
+  anticipated 2029+ once Phase 2 trigger conditions met. Protocol may
+  be renamed to vendor-neutral form (e.g. `OAEP — Open Attestation
+  Evidence Protocol`) at that time.
