@@ -1,0 +1,87 @@
+{
+  "$schema_version": 1,
+  "reason_code_schema_version": 1,
+  "frozen_at": "2026-05-17T12:00:00Z",
+  "comment": "ADR-0010 ReasonCodeV1 enum conformance vector. Pins the byte-equal set across Python and TypeScript SDKs. Drift fails CI on either side. Adding new values requires reason_code_schema_version = 2 + new ADR amending ADR-0010.",
+  "code_pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+  "all_reason_codes_v1": [
+    "ANCHOR_CERT_EXPIRED",
+    "ANCHOR_INVALID",
+    "ANCHOR_MISSING_LTV_ARTIFACTS",
+    "ANCHOR_OCSP_FAILED",
+    "ANCHOR_OK",
+    "BUNDLE_MISSING_REQUIRED_FIELD",
+    "CHAIN_EVENT_HASH_MISMATCH",
+    "CHAIN_OK",
+    "CHAIN_PREV_HASH_MISMATCH",
+    "CHAIN_SEQ_MISMATCH",
+    "INTERNAL_ERROR",
+    "PAYLOAD_FIELD_TYPE_MISMATCH",
+    "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
+    "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
+    "PAYLOAD_MISSING_REQUIRED_FIELD",
+    "PAYLOAD_OK",
+    "PAYLOAD_SCHEMA_VERSION_MISMATCH",
+    "SIGNATURE_EXPIRED_KEY",
+    "SIGNATURE_INVALID",
+    "SIGNATURE_OK",
+    "SIGNATURE_PAYLOAD_MISMATCH",
+    "SIGNATURE_SCHEMA_MISMATCH",
+    "SIGNATURE_UNKNOWN_KEY",
+    "UNANCHORED_SEGMENT",
+    "UNSIGNED_SEGMENT"
+  ],
+  "code_groups": {
+    "chain": [
+      "CHAIN_OK",
+      "CHAIN_SEQ_MISMATCH",
+      "CHAIN_PREV_HASH_MISMATCH",
+      "CHAIN_EVENT_HASH_MISMATCH"
+    ],
+    "signature": [
+      "SIGNATURE_OK",
+      "SIGNATURE_INVALID",
+      "SIGNATURE_UNKNOWN_KEY",
+      "SIGNATURE_EXPIRED_KEY",
+      "SIGNATURE_SCHEMA_MISMATCH",
+      "SIGNATURE_PAYLOAD_MISMATCH"
+    ],
+    "anchor": [
+      "ANCHOR_OK",
+      "ANCHOR_INVALID",
+      "ANCHOR_CERT_EXPIRED",
+      "ANCHOR_OCSP_FAILED",
+      "ANCHOR_MISSING_LTV_ARTIFACTS"
+    ],
+    "payload": [
+      "PAYLOAD_OK",
+      "PAYLOAD_MISSING_REQUIRED_FIELD",
+      "PAYLOAD_FIELD_TYPE_MISMATCH",
+      "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
+      "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
+      "PAYLOAD_SCHEMA_VERSION_MISMATCH"
+    ],
+    "cross_cutting": [
+      "UNSIGNED_SEGMENT",
+      "UNANCHORED_SEGMENT",
+      "BUNDLE_MISSING_REQUIRED_FIELD",
+      "INTERNAL_ERROR"
+    ]
+  },
+  "expected_count": 25,
+  "format_check_examples": {
+    "valid": [
+      "CHAIN_OK",
+      "POLICY_VIOLATION_PII",
+      "X1_Y2_Z3"
+    ],
+    "invalid": [
+      "lowercase_code",
+      "TooLong_______________________________________________________________",
+      "1STARTS_WITH_DIGIT",
+      "HAS-DASH",
+      "HAS SPACE",
+      "X"
+    ]
+  }
+}

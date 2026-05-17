@@ -70,6 +70,14 @@ export {
   type PolicyEffect,
 } from './event_payloads.js';
 export {
+  ALL_REASON_CODES_V1,
+  REASON_CODE_DESCRIPTIONS,
+  REASON_CODE_SCHEMA_VERSION,
+  isKnownReasonCode,
+  reasonCodeMatchesFormat,
+  type ReasonCodeV1,
+} from './reason_codes.js';
+export {
   ALL_EVENT_TYPES_V1,
   BUDGET_EVENT,
   EVAL_EVENT,

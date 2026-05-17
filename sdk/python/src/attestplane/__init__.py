@@ -44,6 +44,14 @@ from attestplane.event_payloads import (
     validate_lease_lifecycle_event_payload,
     validate_policy_check_event_payload,
 )
+from attestplane.reason_codes import (
+    ALL_REASON_CODES_V1,
+    REASON_CODE_DESCRIPTIONS,
+    REASON_CODE_SCHEMA_VERSION,
+    ReasonCodeV1,
+    is_known_reason_code,
+    reason_code_matches_format,
+)
 from attestplane.event_types import (
     ALL_EVENT_TYPES_V1,
     BUDGET_EVENT,
@@ -194,6 +202,12 @@ __all__ = [
     "PolicyCheckEventPayload",
     "PolicyDecision",
     "PolicyEffect",
+    "ALL_REASON_CODES_V1",
+    "REASON_CODE_DESCRIPTIONS",
+    "REASON_CODE_SCHEMA_VERSION",
+    "ReasonCodeV1",
+    "is_known_reason_code",
+    "reason_code_matches_format",
     "MockTSAProvider",
     "MultiTSAProvider",
     "JsonlStorageBackend",
