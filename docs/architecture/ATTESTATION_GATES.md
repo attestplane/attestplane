@@ -184,12 +184,15 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 
 **v0.0.2-alpha 已实施的部分**：
 
-- `attestplane.anchoring.{base,mock,composite,verifier,worker,rfc3161,testing}` Python 模块全部 ship
-- `attestplane/anchoring.ts` TypeScript 端骨架 ship
-- `TestTSAAuthority` 自签 CA + leaf 证书 + 真 RSA-PKCS1v15-SHA256 签名 + asn1crypto RFC-3161 编解码
-- `parse_timestamp_response` + `verify_timestamp_token` 真签名校验：messageImprint、leaf 签名、信任根链路、validity window
-- `sdk/python/tests/conformance/anchor_vectors.json` 3 个 frozen vector，每次 CI 重放
-- 79 个 anchoring 测试（base 41 + worker 15 + rfc3161 14 + anchor_vectors 9）pre-merge 全绿
+- **Python 模块全部 ship**：`attestplane.anchoring.{base, mock, composite, verifier, worker, rfc3161, testing, http, ocsp, eidas}` —— 10 个独立模块
+- **TypeScript 模块全部 ship**：`sdk/typescript/src/{anchoring.ts, der.ts, rfc3161.ts}` —— 真 DER 解析 + 真 RSA-SHA256 签名校验（用 `node:crypto`，零额外 npm 依赖）
+- **TestTSAAuthority** 自签 CA + 任意深度 intermediate 链 + leaf cert + 真 RSA-PKCS1v15-SHA256 签名 + asn1crypto RFC-3161 编解码 + 真 RFC-6960 OCSP 响应（issuer-signed 模式）
+- **真 RFC-3161 解析器（Python `rfc3161.py` + TypeScript `rfc3161.ts`）**：parse_timestamp_response + verify_timestamp_token 真签名校验：messageImprint、leaf 签名、**多级 intermediate 链路（含 BasicConstraints.cA 强制 + 循环检测 + max_chain_depth 限制）**、每个 cert 的 validity window
+- **真 RFC-6960 OCSP（Python `ocsp.py`）**：parse_and_verify_ocsp 校验响应方 RSA 签名、按 serial 匹配 SingleResponse、good/revoked/unknown 状态解码、thisUpdate/nextUpdate 时效检查；verifier 自动按 leaf issuer-DN 查找匹配的 OCSP issuer cert
+- **真 HTTP transport（Python `http.py`）**：`Rfc3161HttpProvider` + `FreeTSAProvider` + `DigiCertProvider` + `UrllibHttpTransport`（stdlib，无 requests）+ `RecordedHttpTransport`（测试 replay）+ nonce 校验
+- **eIDAS Trusted List 加载器（Python `eidas.py`）**：parse_trusted_list 解析 ETSI TS 119 612 XML，按 ServiceTypeIdentifier `http://uri.etsi.org/TrstSvc/Svctype/TSA/QTST` 过滤 qualified TSA，提取 X.509 证书；纯 stdlib，无 anchor extras 依赖
+- **`sdk/python/tests/conformance/anchor_vectors.json`** —— 3 个 frozen vector，每个含真 RFC-3161 TimeStampResp DER + 真 OCSP 响应 + 真 cert chain；Python 和 TypeScript 共享同一份 vector 文件
+- **170 个 anchoring 测试**：Python 120（base 41 + worker 15 + rfc3161 14 + anchor_vectors 9 + ocsp 9 + multihop 9 + eidas 9 + http 14）+ TypeScript 50（anchoring 38 + rfc3161 12），全部 pre-merge 通过
 
 **测试方法**：
 
@@ -207,12 +210,23 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 
 **测试位置**：
 
-- `sdk/python/tests/anchoring/test_anchoring.py` —— 设计骨架 41 个用例（pre-merge）
-- `sdk/python/tests/anchoring/test_worker.py` —— Anchorer 后台 worker 15 个用例（pre-merge）
-- `sdk/python/tests/anchoring/test_rfc3161.py` —— TestTSAAuthority 端到端 14 个用例（pre-merge）
-- `sdk/python/tests/anchoring/test_anchor_vectors.py` —— frozen `anchor_vectors.json` 重放 9 个用例（pre-merge）
-- `sdk/typescript/test/anchoring.test.ts` —— TypeScript 端 38 个用例（pre-merge）
-- nightly 工作流（M5 创建）：对真 FreeTSA / DigiCert endpoint 发起 1 次锚定请求，验证完整 trust chain
+Python 端（120 个用例，pre-merge）：
+
+- `sdk/python/tests/anchoring/test_anchoring.py` —— 设计骨架 41 个用例（types、abstract base、mock provider、composite、verifier 接口）
+- `sdk/python/tests/anchoring/test_worker.py` —— Anchorer 后台 worker 15 个用例（retry / backoff / quarantine / clock-skew / 线程安全）
+- `sdk/python/tests/anchoring/test_rfc3161.py` —— TestTSAAuthority 端到端 14 个用例（真 RSA 签名、cert 过期、未知 trust root、tampered token）
+- `sdk/python/tests/anchoring/test_anchor_vectors.py` —— frozen `anchor_vectors.json` 重放 9 个用例（含真 OCSP 全路径）
+- `sdk/python/tests/anchoring/test_ocsp.py` —— OCSP 解析 + 签名校验 9 个用例（good / revoked / synthetic 拒绝 / 时效 / 错误 issuer / serial mismatch）
+- `sdk/python/tests/anchoring/test_multihop.py` —— Multi-hop intermediate cert chains 9 个用例（2-tier / 3-tier / 4-tier / max_depth / 中间 cert 过期 / 非 CA cert 拒绝）
+- `sdk/python/tests/anchoring/test_eidas.py` —— eIDAS Trusted List 解析 9 个用例（QTST 抽取 / 跳过非 TSA / 拒绝 withdrawn / 多语言 ServiceName）
+- `sdk/python/tests/anchoring/test_http.py` —— HTTP transport + FreeTSA + DigiCert provider 14 个用例（RecordedTransport replay / nonce 校验 / 不可达 host 拒绝）
+
+TypeScript 端（50 个用例，pre-merge）：
+
+- `sdk/typescript/test/anchoring.test.ts` —— 设计骨架 38 个用例（与 Python 对等）
+- `sdk/typescript/test/rfc3161.test.ts` —— 跨语言一致性 12 个用例：加载 Python 生成的 `anchor_vectors.json`，通过手写 DER parser + `node:crypto.verify('RSA-SHA256')` 重新校验所有 3 个 vector
+
+nightly 工作流（`.github/workflows/nightly-anchor.yml`）：对真 FreeTSA endpoint 发起 1 次锚定请求，端到端验证 trust chain；失败开 P0 issue per ADR-0003 § 4 failure-mode
 
 **反例**（绕过则视为违规）：
 
@@ -222,8 +236,23 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 - 段头尾 hash 不写入 anchor（仅写入 segment_id），导致段内任意篡改可绕过。
 - 不传 `trust_roots_der` 时 verifier 把 `cert_status` 标 `VALID` 而非 `VALID_UNVERIFIED`（绕过真签名校验）。
 - TSA 返回 `granted_with_mods` 之外的状态时仍构造 `AnchorRecord`（必须 `AnchorVerificationError`）。
+- OCSP 响应包含 v0.0.1-alpha 占位 synthetic bytes（`ATTESTPLANE-TEST-OCSP-V1|...`）而 verifier 接受为 valid（必须由 `_is_synthetic_legacy` 检查显式拒绝）。
+- Multi-hop chain walk 接受 BasicConstraints.cA=false 的 cert 作为 intermediate（必须 `AnchorVerificationError`，错误信息含"not a CA"）。
+- Multi-hop chain walk 超过 `max_chain_depth` 仍继续（必须 fail with "depth exceeded"）。
+- eIDAS Trusted List 接受 `ServiceStatus == withdrawn` 或 `revoked` 的服务为 trust root（必须只接受 `granted` / `undersupervision`）。
+- TypeScript 端使用与 Python 不同的 DER 解析行为（任何 anchor_vectors.json 必须双语言都通过）。
 
-**Public-claim 升级**：v0.0.2-alpha 起，凡引用 `docs/spec/anchor_vectors.json` 或 `verify_chain_with_anchors(..., trust_roots_der=[...])` 走 `cert_status="VALID"` 路径的对外材料，可使用 `field_supported` / `verified_in_test` 措辞引用 ADR-0003。直接使用 `MockTSAProvider` 或 v0.0.1-alpha 时期 `cert_status="VALID_UNVERIFIED"` 路径的，仍只能用 `designed_toward` 措辞。
+**Public-claim 升级**（v0.0.2-alpha 起）：
+
+| 走的路径 | 允许的 `implementation_status` 措辞 |
+|---|---|
+| `verify_chain_with_anchors(..., trust_roots_der=[...])` 返回 `cert_status="VALID"`（含真 RFC-3161 签名 + 真 OCSP good 状态 + 完整 cert chain） | `field_supported` / `verified_in_test` |
+| 仅 `verify_chain_with_anchors(events, anchors)`（无 trust_roots_der），`cert_status="VALID_UNVERIFIED"` | `designed_toward` |
+| 仅 `MockTSAProvider`（无真签名） | `designed_toward` |
+| `FreeTSAProvider` / `DigiCertProvider` 对真 endpoint 成功验证 | `verified_in_test`（基于 nightly 工作流证据） |
+| `load_qualified_tsa_trust_roots()` + 上述真验证路径 | `field_supported` for eIDAS qualified-TSA； `designed_toward` for full LOTL chain validation（XML 签名校验未 ship） |
+
+任何对外材料引用 `cert_status="VALID"` 时 MUST 同时说明：trust_roots_der 的来源（自建 / DigiCert / eIDAS LOTL 快照 / 等）。trust root 来源是合规论证的核心，verifier 输出本身只证明"信任根签了链"，不证明"信任根可信"。
 
 ---
 
