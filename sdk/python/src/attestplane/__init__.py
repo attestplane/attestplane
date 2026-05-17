@@ -76,6 +76,31 @@ from attestplane.proof_bundle import (
     bundle_to_dsse_envelope,
     bundle_to_in_toto_statement,
 )
+
+# Event signing primitives (T1+T2 of ADR-0005 plan).
+# Guarded so substrate-only installs without [signing] extras don't fail.
+try:
+    from attestplane.signing import (
+        SIGNATURE_SCHEMA_VERSION,
+        EnvKeyProvider,
+        FileKeyProvider,
+        InMemoryKeyProvider,
+        KeyBoundaryError,
+        KeyProvider,
+        KeyProviderError,
+        MultiSignerProvider,
+        SignatureMode,
+        SignatureRecord,
+        SignatureVerificationError,
+        SignaturePolicy,
+        SigningError,
+        SigningMaterial,
+        derive_key_id,
+    )
+
+    _SIGNING_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _SIGNING_AVAILABLE = False
 from attestplane.storage import (
     AbstractStorageBackend,
     JsonlStorageBackend,
