@@ -46,7 +46,7 @@ jobs:
           SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
         run: |
           uv venv --python 3.12 .venv1
-          .venv1/bin/pip install --quiet build hatchling
+          uv pip install --python .venv1/bin/python build hatchling
           .venv1/bin/python -m build --wheel --sdist -o /tmp/build1
           ls -la /tmp/build1
 
@@ -55,7 +55,7 @@ jobs:
           SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
         run: |
           uv venv --python 3.12 .venv2
-          .venv2/bin/pip install --quiet build hatchling
+          uv pip install --python .venv2/bin/python build hatchling
           .venv2/bin/python -m build --wheel --sdist -o /tmp/build2
           ls -la /tmp/build2
 
