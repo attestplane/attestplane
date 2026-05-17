@@ -42,6 +42,12 @@ from attestplane.anchoring.verifier import (
     SingleAnchorResult,
     verify_chain_with_anchors,
 )
+from attestplane.anchoring.worker import (
+    Anchorer,
+    AnchorerResult,
+    PendingAnchor,
+    WorkerStats,
+)
 
 __all__ = [
     "ANCHOR_SCHEMA_VERSION",
@@ -49,15 +55,19 @@ __all__ = [
     "AnchorError",
     "AnchorPolicy",
     "AnchorRecord",
+    "Anchorer",
+    "AnchorerResult",
     "AnchorStatus",
     "AnchorVerificationError",
     "AnchorVerificationResult",
     "CertStatus",
     "MockTSAProvider",
     "MultiTSAProvider",
+    "PendingAnchor",
     "SingleAnchorResult",
     "TimestampRequest",
     "TSAProvider",
     "TSAUnavailableError",
+    "WorkerStats",
     "verify_chain_with_anchors",
 ]
