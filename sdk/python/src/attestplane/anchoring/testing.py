@@ -587,7 +587,100 @@ class TestTSAProvider(TSAProvider):
         )
 
 
+class TestRekorAuthority:
+    """In-process synthetic Rekor log for tests.
+
+    Generates a fresh Ed25519 keypair to represent the Rekor log's
+    signing key, then issues real signed LogEntry responses matching
+    the public Sigstore Rekor v1 shape (subset). Used by the
+    Sigstore anchor's tests and as a building block for the
+    nightly-Rekor CI workflow.
+
+    Pure in-process; no network. Submitted entry bodies are signed
+    by the authority's log key over the canonical SET payload defined
+    in :mod:`attestplane.anchoring.sigstore`.
+    """
+
+    __test__ = False
+
+    def __init__(
+        self,
+        *,
+        log_id: str = "attestplane.test.rekor",
+        now: datetime | None = None,
+    ) -> None:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+            Ed25519PrivateKey,
+        )
+
+        self._log_id = log_id
+        self._log_key = Ed25519PrivateKey.generate()
+        self._index = 0
+        self._fixed_time = now
+
+    @property
+    def log_id(self) -> str:
+        return self._log_id
+
+    @property
+    def public_key(self) -> Any:
+        return self._log_key.public_key()
+
+    @property
+    def public_key_der(self) -> bytes:
+        return self._log_key.public_key().public_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+
+    def issue_log_entry(
+        self,
+        body_bytes: bytes,
+        *,
+        now: datetime | None = None,
+    ) -> bytes:
+        """Issue a synthetic Rekor LogEntry JSON for the given body.
+
+        :param body_bytes: the entry body bytes (canonical JSON of the
+            spec); same bytes the substrate's SigstoreRekorAnchor
+            produces.
+        :param now: integratedTime; defaults to constructor fixed_time
+            or wall-clock UTC.
+        :returns: JSON-encoded LogEntry bytes, ready to be embedded in
+            an :class:`AnchorRecord.tsa_token`.
+        """
+        import base64, json
+
+        actual_now = now or self._fixed_time or datetime.now(UTC)
+        integrated_time = int(actual_now.timestamp())
+        self._index += 1
+
+        # Build the SET payload and sign it.
+        set_payload = {
+            "body": base64.standard_b64encode(body_bytes).decode("ascii"),
+            "integratedTime": integrated_time,
+            "logID": self._log_id,
+            "logIndex": self._index,
+        }
+        set_payload_bytes = json.dumps(
+            set_payload, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        set_signature = self._log_key.sign(set_payload_bytes)
+
+        log_entry = {
+            "logIndex": self._index,
+            "logID": self._log_id,
+            "integratedTime": integrated_time,
+            "body": base64.standard_b64encode(body_bytes).decode("ascii"),
+            "verification": {
+                "signedEntryTimestamp": base64.standard_b64encode(set_signature).decode("ascii"),
+            },
+        }
+        return json.dumps(log_entry, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
 __all__ = [
+    "TestRekorAuthority",
     "TestTSAAuthority",
     "TestTSAMaterials",
     "TestTSAProvider",

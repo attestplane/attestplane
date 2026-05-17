@@ -235,6 +235,46 @@ def verify_chain_with_anchors(
             continue
 
         # Cross-reference checks have all passed. Decide cert_status:
+        # Dispatch: Sigstore Rekor anchors take a different path per
+        # ADR-0006 § 3 (provider_id prefix dispatch).
+        if (
+            trust_roots_der is not None
+            and provider.startswith("sigstore.rekor:")
+        ):
+            try:
+                from attestplane.anchoring import sigstore as _sigstore_mod
+                parsed_entry = _sigstore_mod.parse_rekor_log_entry(anchor.tsa_token)
+                # The Rekor public key was captured in tsa_cert_chain[0]
+                # at anchor issuance time per ADR-0006 § 3 mapping.
+                rekor_pubkey_der = (
+                    anchor.tsa_cert_chain[0] if anchor.tsa_cert_chain else b""
+                )
+                _sigstore_mod.verify_rekor_signed_entry_timestamp(
+                    parsed_entry,
+                    expected_digest=anchor.anchored_event_hash,
+                    rekor_public_key_der=rekor_pubkey_der,
+                )
+            except AnchorVerificationError as exc:
+                anchor_results.append(SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=True,
+                    reason=str(exc),
+                ))
+                continue
+            anchor_results.append(SingleAnchorResult(
+                seq=anchor.anchored_seq,
+                provider=provider,
+                valid=True,
+                cert_status="VALID",
+                ltv_artifacts_present=True,
+                reason=None,
+            ))
+            anchored_seqs.add(anchor.anchored_seq)
+            continue
+
         if _rfc3161 is not None and trust_roots_der is not None:
             try:
                 parsed = _rfc3161.parse_timestamp_response(anchor.tsa_token)

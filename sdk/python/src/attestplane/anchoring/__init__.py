@@ -66,6 +66,23 @@ try:
 except ImportError:  # pragma: no cover
     _HTTP_AVAILABLE = False
 
+# Sigstore Rekor anchor; requires the 'anchor' extras.
+try:
+    from attestplane.anchoring.sigstore import (
+        PUBLIC_REKOR_URL,
+        SIGSTORE_REKOR_OCSP_MARKER,
+        SIGSTORE_REKOR_PROVIDER_PREFIX,
+        ParsedRekorEntry,
+        SigstoreRekorAnchor,
+        is_sigstore_rekor_anchor,
+        parse_rekor_log_entry,
+        verify_rekor_signed_entry_timestamp,
+    )
+
+    _SIGSTORE_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _SIGSTORE_AVAILABLE = False
+
 # eIDAS Trusted List loader; pure-stdlib XML parsing, no extras required.
 from attestplane.anchoring.eidas import (
     ETSI_QTST_URI,
@@ -97,10 +114,15 @@ __all__ = [
     "HttpTransport",
     "MockTSAProvider",
     "MultiTSAProvider",
+    "PUBLIC_REKOR_URL",
+    "ParsedRekorEntry",
     "PendingAnchor",
     "QualifiedTsaEntry",
     "RecordedHttpTransport",
     "Rfc3161HttpProvider",
+    "SIGSTORE_REKOR_OCSP_MARKER",
+    "SIGSTORE_REKOR_PROVIDER_PREFIX",
+    "SigstoreRekorAnchor",
     "SingleAnchorResult",
     "TimestampRequest",
     "TrustedListParseError",
@@ -108,8 +130,11 @@ __all__ = [
     "TSAUnavailableError",
     "UrllibHttpTransport",
     "WorkerStats",
+    "is_sigstore_rekor_anchor",
     "load_qualified_tsa_trust_roots",
     "make_replay_transport",
+    "parse_rekor_log_entry",
     "parse_trusted_list",
     "verify_chain_with_anchors",
+    "verify_rekor_signed_entry_timestamp",
 ]
