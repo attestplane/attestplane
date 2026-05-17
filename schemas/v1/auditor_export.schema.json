@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/auditor_export.schema.json",
+  "title": "Attestplane Auditor Export (v1)",
+  "description": "Auditor-friendly summary of a proof bundle. Optimised for human review by a regulator, an external auditor, or counsel. Strictly a subset of proof_bundle.schema.json — anything an auditor needs to assess chain integrity and framework coverage without reading every event. Locked by the claim-safety triad and ADR-0008. Concrete events are NOT included here; this shape only carries summary metadata + chain integrity + framework coverage. Reviewers who need event-level access read the full proof bundle separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "export_version",
+    "chain_summary",
+    "verification_status",
+    "framework_coverage",
+    "redaction_policy"
+  ],
+  "properties": {
+    "export_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Frozen at 1. Bump requires a new schema_version + ADR."
+    },
+    "chain_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chain_id", "head_hash_hex", "event_count", "time_range", "producer_runtime"],
+      "properties": {
+        "chain_id": { "type": "string", "minLength": 1 },
+        "head_hash_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "event_count": { "type": "integer", "minimum": 0 },
+        "time_range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["earliest", "latest"],
+          "properties": {
+            "earliest": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+            },
+            "latest": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+            }
+          }
+        },
+        "producer_runtime": { "type": "string", "minLength": 1 },
+        "event_type_histogram": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 },
+          "description": "Map from event_type string to occurrence count. Keys SHOULD be members of ALL_EVENT_TYPES_V1; unknown keys are tolerated (future-taxonomy compat)."
+        },
+        "anchor_status": {
+          "enum": ["unanchored", "anchored_partial", "anchored_full"],
+          "description": "v1 only emits 'unanchored'; M5 expands once RFC-3161 anchoring ships per ADR-0003."
+        }
+      }
+    },
+    "verification_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "verified_at", "verifier_version", "verification_method"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "first_bad_index": {
+          "anyOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }]
+        },
+        "reason": {
+          "anyOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }]
+        },
+        "verified_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+        },
+        "verifier_version": { "type": "string", "minLength": 1 },
+        "verification_method": {
+          "enum": ["canonical-bytes-walk", "canonical-bytes-walk+anchor"]
+        }
+      }
+    },
+    "framework_coverage": {
+      "type": "array",
+      "description": "Per-framework rollup of obligation coverage. Each entry summarises which obligations of a given framework + article have evidence in the underlying chain. The summary deliberately omits event-level detail so the auditor can see breadth without reading payloads.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["framework", "article", "obligation_ids_with_evidence", "obligation_ids_without_evidence"],
+        "properties": {
+          "framework": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Framework name as listed in the registry, e.g., 'EU AI Act', 'DORA'."
+          },
+          "article": { "type": "string", "minLength": 1 },
+          "obligation_ids_with_evidence": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$" },
+            "uniqueItems": true
+          },
+          "obligation_ids_without_evidence": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$" },
+            "uniqueItems": true,
+            "description": "Obligations from the registry for which no evidence event was found in the underlying chain. Surfacing the absence is a feature: a regulator needs to see what is missing, not only what is present."
+          }
+        }
+      }
+    },
+    "redaction_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["forbidden_fields", "redaction_status"],
+      "properties": {
+        "forbidden_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Echo of the producing bundle's forbidden_fields list. MUST equal the corresponding proof_bundle.forbidden_fields."
+        },
+        "redaction_status": {
+          "enum": ["enforced_by_adapter", "enforced_by_producer", "unenforced"],
+          "description": "Mechanism that produced the redaction. 'enforced_by_adapter' = the runtime adapter dropped forbidden fields at translation time; 'enforced_by_producer' = a downstream filter removed them; 'unenforced' = no redaction mechanism was active (verifier MUST flag this as a warning)."
+        },
+        "consent_status": {
+          "enum": ["consent_present", "consent_absent", "consent_not_applicable"],
+          "description": "GDPR Art. 6 consent posture for any subject-linked events in the underlying chain, when applicable. 'consent_not_applicable' is the right value when the chain has no SubjectRef-bearing events or when consent is not the lawful basis (e.g., legal obligation under Art. 6(1)(c))."
+        }
+      }
+    },
+    "legal_disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plain-language statement that this export is a technical summary and not a compliance opinion. Recommended default text: 'This export is a technical chain-integrity and framework-coverage summary. It is not a compliance opinion. Consult qualified counsel for any regulatory determination.'",
+      "default": "This export is a technical chain-integrity and framework-coverage summary. It is not a compliance opinion. Consult qualified counsel for any regulatory determination."
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional Sigstore signature over the canonical-JSON of the export. Ships at M6.",
+      "properties": {
+        "scheme": { "enum": ["sigstore-bundle"] },
+        "bundle": { "type": "string" },
+        "covers_canonical_sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

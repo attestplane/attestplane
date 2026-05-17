@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/proof_bundle.schema.json",
+  "title": "Attestplane Proof Bundle (v1)",
+  "description": "Top-level export artifact bundling a chain segment with verification metadata, framework mappings, and an explicit redaction policy. Locked by ADR-0008 (event taxonomy) and the claim-safety triad in docs/policy/. Verifiers consume this shape via `attestplane verify <bundle.json>` (M5). The schema is additive: optional fields may be added in minor releases; existing required-field semantics are frozen.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_version",
+    "chain_metadata",
+    "events",
+    "verification_report",
+    "forbidden_fields"
+  ],
+  "properties": {
+    "bundle_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Frozen at 1 for the v1 bundle. Bump requires an ADR + deprecation window per ADR-0008 versioning rules."
+    },
+    "chain_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chain_id",
+        "schema_version",
+        "genesis_hash_hex",
+        "head_hash_hex",
+        "head_seq",
+        "producer_runtime"
+      ],
+      "properties": {
+        "chain_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable opaque identifier for the chain (e.g., UUIDv7, or a runtime-assigned name)."
+        },
+        "schema_version": {
+          "type": "integer",
+          "const": 1,
+          "description": "Substrate canonicalization schema version per ADR-0002."
+        },
+        "genesis_hash_hex": {
+          "type": "string",
+          "pattern": "^0{64}$",
+          "description": "Lowercase hex of the substrate's all-zero genesis hash."
+        },
+        "head_hash_hex": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "Lowercase hex of the chain head's event_hash at bundle creation time."
+        },
+        "head_seq": {
+          "type": "integer",
+          "minimum": -1,
+          "description": "Seq of the last event in this bundle. -1 indicates an empty chain (genesis only)."
+        },
+        "producer_runtime": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Free-form identifier of the runtime that produced these events, e.g., 'AIOS v3.4.1' or 'Claude Code v2.1.129'."
+        },
+        "anchor_ref": {
+          "type": "string",
+          "description": "Optional reference to an AnchorRecord (M5, ADR-0003). Free-form when ADR-0003 ships; reserved field today."
+        },
+        "evidence_taxonomy_version": {
+          "type": "integer",
+          "const": 1,
+          "description": "v1 taxonomy version per ADR-0008. Independent of schema_version."
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Chain segment in seq order. Each item is a ChainedEvent serialised in the JSONL row shape (see sdk/python/src/attestplane/storage/jsonl.py). Verifiers reconstruct ChainedEvent objects and call verify_chain.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seq", "prev_hash_hex", "event_hash_hex", "event"],
+        "properties": {
+          "seq": { "type": "integer", "minimum": 0 },
+          "prev_hash_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "event_hash_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "event": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "event_id",
+              "timestamp",
+              "event_type",
+              "actor",
+              "payload",
+              "subject_ref",
+              "session_id",
+              "reference_db_ref",
+              "matched_input_ref",
+              "human_verifier"
+            ],
+            "properties": {
+              "schema_version": { "type": "integer", "const": 1 },
+              "event_id": { "type": "string", "minLength": 1 },
+              "timestamp": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+                "description": "RFC 3339 UTC with 6-digit microsecond precision and literal Z. See docs/spec/canonical-json-v1.md § Datetimes."
+              },
+              "event_type": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*_event$",
+                "description": "v1 taxonomy member or future-taxonomy event_type. Verifiers tolerate unknown strings per ADR-0008 § Substrate stays neutral."
+              },
+              "actor": { "type": "string", "minLength": 1 },
+              "payload": { "type": "object" },
+              "subject_ref": {
+                "anyOf": [
+                  { "type": "null" },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["scheme", "value"],
+                    "properties": {
+                      "scheme": { "enum": ["sha256_salted", "opaque", "none"] },
+                      "value": { "type": "string" }
+                    }
+                  }
+                ]
+              },
+              "session_id": { "anyOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }] },
+              "reference_db_ref": { "anyOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }] },
+              "matched_input_ref": { "anyOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }] },
+              "human_verifier": {
+                "anyOf": [
+                  { "type": "null" },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["scheme", "value"],
+                    "properties": {
+                      "scheme": { "enum": ["sha256_salted", "opaque", "none"] },
+                      "value": { "type": "string" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "verification_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "first_bad_index", "reason", "verified_at", "verifier_version", "verification_method"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "first_bad_index": {
+          "anyOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }],
+          "description": "Null when ok=true."
+        },
+        "reason": {
+          "anyOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }]
+        },
+        "verified_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+        },
+        "verifier_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Semver of the verifier that produced this report, e.g., '0.1.0'."
+        },
+        "verification_method": {
+          "enum": ["canonical-bytes-walk", "canonical-bytes-walk+anchor"],
+          "description": "v1 supports two values; 'canonical-bytes-walk+anchor' is reserved for the M5 RFC-3161 anchor verifier."
+        }
+      }
+    },
+    "framework_mappings": {
+      "type": "array",
+      "description": "Optional list of obligation_ids satisfied (or designed-toward) by this bundle. Each id MUST resolve to an entry in one of the registries shipped under attestplane/obligations/.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["obligation_id", "evidence_event_indexes"],
+        "properties": {
+          "obligation_id": { "type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$" },
+          "evidence_event_indexes": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0 },
+            "uniqueItems": true,
+            "description": "Indexes into the bundle's events array whose presence supports the mapped obligation."
+          },
+          "implementation_status_at_bundle_time": {
+            "enum": ["mapping_target", "designed_toward", "field_supported", "verified_in_test"],
+            "description": "Snapshot of the obligation's implementation_status at bundle-creation time. Echoed into the bundle so a verifier can detect if the registry has shifted since."
+          }
+        }
+      }
+    },
+    "forbidden_fields": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "Echo of the redaction policy applied by the bundle producer. The list MUST include the canonical forbidden-fields set (customer names, person names, PII, raw documents, contracts, scripts, tickets, emails, secrets, tokens, JWTs, private keys, raw audit payloads). The bundle is a self-describing redaction contract: a verifier can refuse to consume a bundle whose forbidden_fields list does not include a required term.",
+      "default": [
+        "customer_names",
+        "person_names",
+        "pii",
+        "raw_documents",
+        "contracts",
+        "scripts",
+        "tickets",
+        "emails",
+        "secrets",
+        "tokens",
+        "jwts",
+        "private_keys",
+        "raw_audit_payloads"
+      ]
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional Sigstore signature over the canonical-JSON encoding of (bundle_version, chain_metadata, events, verification_report, framework_mappings, forbidden_fields). Ships at M6; reserved field in v1.",
+      "properties": {
+        "scheme": { "enum": ["sigstore-bundle"] },
+        "bundle": { "type": "string", "description": "Base64-encoded Sigstore bundle bytes." },
+        "covers_canonical_sha256_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}
