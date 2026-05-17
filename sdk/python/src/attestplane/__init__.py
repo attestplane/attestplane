@@ -41,8 +41,16 @@ from attestplane.event_payloads import (
     PolicyCheckEventPayload,
     PolicyDecision,
     PolicyEffect,
+    ReplayEventPayload,
     validate_lease_lifecycle_event_payload,
     validate_policy_check_event_payload,
+    validate_replay_event_payload,
+)
+from attestplane.replay_verifier import (
+    ReplayCoverage,
+    ReplayManifest,
+    ReplayVerificationResult,
+    verify_replay_manifest,
 )
 from attestplane.reason_codes import (
     ALL_REASON_CODES_V1,
@@ -202,6 +210,10 @@ __all__ = [
     "PolicyCheckEventPayload",
     "PolicyDecision",
     "PolicyEffect",
+    "ReplayCoverage",
+    "ReplayEventPayload",
+    "ReplayManifest",
+    "ReplayVerificationResult",
     "ALL_REASON_CODES_V1",
     "REASON_CODE_DESCRIPTIONS",
     "REASON_CODE_SCHEMA_VERSION",
@@ -244,6 +256,8 @@ __all__ = [
     "text_hash_hex",
     "validate_lease_lifecycle_event_payload",
     "validate_policy_check_event_payload",
+    "validate_replay_event_payload",
+    "verify_replay_manifest",
     "verify_chain",
     "verify_chain_with_anchors",
     "verify_proof_bundle",

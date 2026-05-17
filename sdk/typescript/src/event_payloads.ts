@@ -331,3 +331,130 @@ export function validatePolicyCheckEventPayload(payload: unknown): void {
     }
   }
 }
+
+// ----- replay_event payload -----
+
+/**
+ * Payload shape for the `replay_event` event_type.
+ *
+ * Schema-shape re-issue (Mode A.6 per ADR-0009 § 1 + A.9) of fields
+ * observed at `~/aios/crates/aios-sdk-evidence/src/replay.rs` +
+ * `~/aios/schemas/replay/replay_proof.schema.json`. Records that an
+ * external runner observed the four boolean outcomes of a replay.
+ * Attestplane substrate does NOT re-execute — replay execution lives
+ * in REDLINE C.13 `aios-replay-runner`.
+ *
+ * The `deterministic_result` field MUST equal the logical AND of
+ * `input_hash_match`, `artifact_hash_match`, `audit_chain_match`.
+ * Validators enforce this cross-check.
+ */
+export interface ReplayEventPayload {
+  readonly replay_event_schema_version: 1;
+  readonly replay_run_id: string;
+  readonly original_run_id: string;
+  readonly input_hash_match: boolean;
+  readonly artifact_hash_match: boolean;
+  readonly audit_chain_match: boolean;
+  readonly deterministic_result: boolean;
+  readonly observed_at: string;
+  readonly snapshot_id_ref?: string;
+  readonly diff_summary_hash?: string;
+  readonly reason_code?: string;
+  readonly reason_text?: string;
+}
+
+const REQUIRED_REPLAY_KEYS: readonly string[] = [
+  'replay_event_schema_version',
+  'replay_run_id',
+  'original_run_id',
+  'input_hash_match',
+  'artifact_hash_match',
+  'audit_chain_match',
+  'deterministic_result',
+  'observed_at',
+];
+
+/**
+ * Throw `PayloadValidationError` if `payload` violates A.9 invariants.
+ *
+ * Mirrors `validate_replay_event_payload` in Python.
+ */
+export function validateReplayEventPayload(payload: unknown): void {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new PayloadValidationError(
+      `replay_event payload must be object, got ${
+        Array.isArray(payload) ? 'array' : payload === null ? 'null' : typeof payload
+      }`,
+    );
+  }
+  const obj = payload as Record<string, unknown>;
+  rejectForbiddenFields(obj, 'replay_event');
+
+  const missing = REQUIRED_REPLAY_KEYS.filter((k) => !(k in obj));
+  if (missing.length > 0) {
+    missing.sort();
+    throw new PayloadValidationError(
+      `replay_event: missing required fields [${missing.join(', ')}]`,
+    );
+  }
+  if (obj.replay_event_schema_version !== 1) {
+    throw new PayloadValidationError(
+      `replay_event: replay_event_schema_version must be 1, got ${JSON.stringify(obj.replay_event_schema_version)}`,
+    );
+  }
+  for (const strField of ['replay_run_id', 'original_run_id'] as const) {
+    const v = obj[strField];
+    if (typeof v !== 'string' || v.length === 0) {
+      throw new PayloadValidationError(
+        `replay_event.${strField}: must be non-empty string, got ${JSON.stringify(v)}`,
+      );
+    }
+  }
+  for (const boolField of [
+    'input_hash_match',
+    'artifact_hash_match',
+    'audit_chain_match',
+    'deterministic_result',
+  ] as const) {
+    const v = obj[boolField];
+    if (typeof v !== 'boolean') {
+      throw new PayloadValidationError(
+        `replay_event.${boolField}: must be boolean, got ${typeof v}`,
+      );
+    }
+  }
+  const expectedDet =
+    (obj.input_hash_match as boolean) &&
+    (obj.artifact_hash_match as boolean) &&
+    (obj.audit_chain_match as boolean);
+  if (obj.deterministic_result !== expectedDet) {
+    throw new PayloadValidationError(
+      `replay_event.deterministic_result: must equal logical AND of input_hash_match, artifact_hash_match, audit_chain_match (got ${JSON.stringify(obj.deterministic_result)}, expected ${expectedDet})`,
+    );
+  }
+  requireIsoUtc(obj.observed_at, 'replay_event.observed_at');
+
+  if ('snapshot_id_ref' in obj) {
+    if (typeof obj.snapshot_id_ref !== 'string' || obj.snapshot_id_ref.length === 0) {
+      throw new PayloadValidationError(
+        `replay_event.snapshot_id_ref: must be non-empty string, got ${JSON.stringify(obj.snapshot_id_ref)}`,
+      );
+    }
+  }
+  if (obj.diff_summary_hash !== undefined) {
+    if (typeof obj.diff_summary_hash !== 'string' || !HEX64.test(obj.diff_summary_hash)) {
+      throw new PayloadValidationError(
+        `replay_event.diff_summary_hash: must be 64-hex string, got ${JSON.stringify(obj.diff_summary_hash)}`,
+      );
+    }
+  }
+
+  for (const optField of ['reason_code', 'reason_text']) {
+    const v = obj[optField];
+    if (v !== undefined && typeof v !== 'string') {
+      throw new PayloadValidationError(
+        `replay_event.${optField}: must be string or absent, got ${typeof v}`,
+      );
+    }
+  }
+}

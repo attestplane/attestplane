@@ -1,0 +1,272 @@
+{
+  "$schema_version": 1,
+  "frozen_at": "2026-05-17T12:00:00Z",
+  "comment": "ADR-0009 A.9 replay_event payload conformance vectors. Frozen alongside ADR-0009 Accept + P1.1. Cross-language byte-stable: Py + TS validators replay identically.",
+  "positive_vectors": [
+    {
+      "name": "deterministic_replay_full_match",
+      "description": "All three booleans match; deterministic_result is the AND (true).",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "replay-1",
+        "original_run_id": "run-original-1",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "deterministic_with_optional_fields",
+      "description": "Deterministic with snapshot_id_ref + reason_code.",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "replay-2",
+        "original_run_id": "run-original-2",
+        "snapshot_id_ref": "snapshot-A",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:01:00.000000Z",
+        "reason_code": "DETERMINISTIC_REPLAY_OK",
+        "reason_text": "Full byte-equal replay reproduction."
+      }
+    },
+    {
+      "name": "non_deterministic_audit_chain_drift",
+      "description": "audit_chain_match=false; deterministic_result correctly false; diff_summary_hash recorded.",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "replay-3",
+        "original_run_id": "run-original-3",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": false,
+        "deterministic_result": false,
+        "diff_summary_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+        "observed_at": "2026-05-17T12:02:00.000000Z",
+        "reason_code": "REPLAY_AUDIT_CHAIN_DRIFT"
+      }
+    },
+    {
+      "name": "non_deterministic_artifact_mismatch",
+      "description": "artifact_hash_match=false; deterministic_result correctly false.",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "replay-4",
+        "original_run_id": "run-original-4",
+        "input_hash_match": true,
+        "artifact_hash_match": false,
+        "audit_chain_match": true,
+        "deterministic_result": false,
+        "diff_summary_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+        "observed_at": "2026-05-17T12:03:00.000000Z"
+      }
+    }
+  ],
+  "negative_vectors": [
+    {
+      "name": "missing_replay_run_id",
+      "expected_error_contains": "missing required fields",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "original_run_id": "r",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "deterministic_AND_violation_should_be_true",
+      "description": "All three matches true, but deterministic_result asserted false — invalid AND cross-check.",
+      "expected_error_contains": "must equal logical AND",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": false,
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "deterministic_AND_violation_should_be_false",
+      "description": "One match false, but deterministic_result asserted true — invalid AND cross-check.",
+      "expected_error_contains": "must equal logical AND",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": false,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "boolean_field_is_string",
+      "expected_error_contains": "input_hash_match: must be boolean",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": "true",
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "short_diff_summary_hash",
+      "expected_error_contains": "diff_summary_hash",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": false,
+        "deterministic_result": false,
+        "diff_summary_hash": "abc",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "forbidden_signature_field",
+      "expected_error_contains": "forbidden field",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "signature": "deadbeef"
+      }
+    }
+  ],
+  "verifier_vectors": [
+    {
+      "name": "manifest_match_deterministic",
+      "description": "Chain contains a deterministic replay_event; manifest agrees.",
+      "chain": [
+        {
+          "seq": 0,
+          "event_type": "replay_event",
+          "payload": {
+            "replay_event_schema_version": 1,
+            "replay_run_id": "replay-99",
+            "original_run_id": "run-orig-99",
+            "input_hash_match": true,
+            "artifact_hash_match": true,
+            "audit_chain_match": true,
+            "deterministic_result": true,
+            "observed_at": "2026-05-17T12:00:00.000000Z"
+          }
+        }
+      ],
+      "manifest": {
+        "replay_run_id": "replay-99",
+        "original_run_id": "run-orig-99",
+        "expected_deterministic": true
+      },
+      "expected_result": {
+        "ok": true,
+        "coverage": "deterministic",
+        "matching_seq": 0
+      }
+    },
+    {
+      "name": "manifest_match_non_deterministic",
+      "description": "Chain contains a non-deterministic replay_event; manifest agrees.",
+      "chain": [
+        {
+          "seq": 5,
+          "event_type": "replay_event",
+          "payload": {
+            "replay_event_schema_version": 1,
+            "replay_run_id": "replay-50",
+            "original_run_id": "run-orig-50",
+            "input_hash_match": true,
+            "artifact_hash_match": false,
+            "audit_chain_match": true,
+            "deterministic_result": false,
+            "diff_summary_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+            "observed_at": "2026-05-17T12:00:00.000000Z"
+          }
+        }
+      ],
+      "manifest": {
+        "replay_run_id": "replay-50",
+        "original_run_id": "run-orig-50",
+        "expected_deterministic": false
+      },
+      "expected_result": {
+        "ok": true,
+        "coverage": "non_deterministic",
+        "matching_seq": 5
+      }
+    },
+    {
+      "name": "manifest_no_matching_event",
+      "description": "Chain has no replay_event for the manifest's run_id.",
+      "chain": [
+        {
+          "seq": 0,
+          "event_type": "tool_call_event",
+          "payload": {}
+        }
+      ],
+      "manifest": {
+        "replay_run_id": "replay-missing",
+        "original_run_id": "run-orig-missing",
+        "expected_deterministic": true
+      },
+      "expected_result": {
+        "ok": false,
+        "coverage": "no_replay_event",
+        "matching_seq": null
+      }
+    },
+    {
+      "name": "manifest_mismatch_expected_vs_observed",
+      "description": "Chain has a deterministic event but manifest claimed non-deterministic.",
+      "chain": [
+        {
+          "seq": 0,
+          "event_type": "replay_event",
+          "payload": {
+            "replay_event_schema_version": 1,
+            "replay_run_id": "replay-7",
+            "original_run_id": "run-orig-7",
+            "input_hash_match": true,
+            "artifact_hash_match": true,
+            "audit_chain_match": true,
+            "deterministic_result": true,
+            "observed_at": "2026-05-17T12:00:00.000000Z"
+          }
+        }
+      ],
+      "manifest": {
+        "replay_run_id": "replay-7",
+        "original_run_id": "run-orig-7",
+        "expected_deterministic": false
+      },
+      "expected_result": {
+        "ok": false,
+        "coverage": "deterministic",
+        "matching_seq": 0
+      }
+    }
+  ]
+}

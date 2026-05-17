@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/replay_event.schema.json",
+  "title": "Attestplane replay_event payload (v1)",
+  "description": "Payload-only schema for the `replay_event` audit event_type — records that a deterministic re-execution of a prior chain segment was OBSERVED, with three independent match booleans (input / artifact / audit_chain) and their AND deterministic_result. ADR-0009 A.9 schema-shape re-issue (Mode A.6) of fields originally observed at `~/aios/crates/aios-sdk-evidence/src/replay.rs#L7-L21` (ReplayEvidenceDescriptor) + `~/aios/schemas/replay/replay_proof.schema.json#L1-L40` (ReplayProof). Authority-bearing fields (the execution of replay itself — lives in REDLINE C.13 `aios-replay-runner`; authority-flavoured `ProofType::LiveRuntimeInvariant` / `ProductionLive`) are explicitly NOT absorbed. Attestplane substrate NEVER re-executes the workload; it records that the boolean outcomes WERE observed by an external replay runner.",
+  "$comment": "Status: ACTIVE (ADR-0009 Accepted 2026-05-17). Targets EU AI Act Art. 15 (accuracy & robustness — deterministic re-verification) + Art. 12(1) record-keeping.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "replay_event_schema_version",
+    "replay_run_id",
+    "original_run_id",
+    "input_hash_match",
+    "artifact_hash_match",
+    "audit_chain_match",
+    "deterministic_result",
+    "observed_at"
+  ],
+  "properties": {
+    "replay_event_schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Independent of chain.schema_version / anchor_schema_version / signature_schema_version / reason_code_schema_version / lease_event_schema_version / policy_event_schema_version. Bump requires ADR amendment."
+    },
+    "replay_run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Caller-asserted identifier of the run that executed the replay (runs.mode=replay in AIOS terms). Substrate does not interpret format — opaque string. Verifiers may correlate against an external run registry."
+    },
+    "original_run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Caller-asserted identifier of the original run being replayed. Substrate does not interpret."
+    },
+    "snapshot_id_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Optional opaque reference to the snapshot at which the replay started. Substrate does not interpret."
+    },
+    "input_hash_match": {
+      "type": "boolean",
+      "description": "True if canonical-JSON of inputs to the replay was byte-identical to the original run's input set. Caller-asserted boolean observation; substrate does not re-canonicalize."
+    },
+    "artifact_hash_match": {
+      "type": "boolean",
+      "description": "True if all output artifact hashes from the replay matched the original run's artifact hashes. Caller-asserted boolean."
+    },
+    "audit_chain_match": {
+      "type": "boolean",
+      "description": "True if the immutable audit-event chain produced by the replay matched the original chain segment byte-for-byte. Caller-asserted boolean."
+    },
+    "deterministic_result": {
+      "type": "boolean",
+      "description": "Logical AND of (input_hash_match, artifact_hash_match, audit_chain_match). MUST equal the AND or the validator rejects (cross-check invariant)."
+    },
+    "diff_summary_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Optional SHA-256 hex of a structured divergence summary (when deterministic_result=false). Hash-only; the divergence body is NOT stored in this payload to keep size bounded and to avoid leaking raw inputs (forbidden_fields). Verifiers may correlate against an off-chain divergence-summary store."
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Caller-asserted RFC-3339 UTC timestamp of when the replay outcome was observed (i.e., when the comparison completed)."
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+      "description": "Optional machine-readable reason code drawn from ReasonCodeV1 (ADR-0010) or caller-domain enum."
+    },
+    "reason_text": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Optional human-readable explanation."
+    }
+  },
+  "$defs": {
+    "redaction_policy": {
+      "$comment": "Documentation block: per ADR-0009 § 1 Mode A.6 + ADR-0004 § 2 redaction, the following AIOS-originated fields MUST NOT appear here. Authority-flavoured ProofType variants (LiveRuntimeInvariant / ProductionLive) are dropped per ADR-0009 A.3 redaction.",
+      "explicitly_dropped_at_absorption_boundary": [
+        "proof_type_LiveRuntimeInvariant",
+        "proof_type_ProductionLive",
+        "diff_summary",
+        "replay_workload_body",
+        "input_body",
+        "artifact_body",
+        "signature",
+        "secret",
+        "token"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "replay_event_schema_version": 1,
+      "replay_run_id": "replay-1",
+      "original_run_id": "run-original-1",
+      "snapshot_id_ref": "snapshot-A",
+      "input_hash_match": true,
+      "artifact_hash_match": true,
+      "audit_chain_match": true,
+      "deterministic_result": true,
+      "observed_at": "2026-05-17T12:00:00.000000Z",
+      "reason_code": "DETERMINISTIC_REPLAY_OK"
+    },
+    {
+      "replay_event_schema_version": 1,
+      "replay_run_id": "replay-2",
+      "original_run_id": "run-original-2",
+      "input_hash_match": true,
+      "artifact_hash_match": true,
+      "audit_chain_match": false,
+      "deterministic_result": false,
+      "diff_summary_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "observed_at": "2026-05-17T12:01:00.000000Z",
+      "reason_code": "REPLAY_AUDIT_CHAIN_DRIFT"
+    }
+  ]
+}

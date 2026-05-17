@@ -347,6 +347,147 @@ def validate_policy_check_event_payload(payload: dict[str, Any]) -> None:
             )
 
 
+# --- replay_event payload --------------------------------------------------
+
+
+class ReplayEventPayload(TypedDict, total=False):
+    """Payload-shape for the ``replay_event`` event_type.
+
+    Schema-shape re-issue (Mode A.6) of ADR-0009 A.9 — fields
+    originally observed at ``~/aios/crates/aios-sdk-evidence/src/replay.rs``
+    + ``~/aios/schemas/replay/replay_proof.schema.json``.
+
+    Records that an external runner performed a deterministic replay
+    and observed the four boolean outcomes. Attestplane substrate
+    does NOT re-execute the workload — the booleans are caller-asserted.
+
+    The ``deterministic_result`` field MUST equal the logical AND of
+    ``input_hash_match``, ``artifact_hash_match``, ``audit_chain_match``.
+    Validators enforce this cross-check.
+    """
+
+    # Required
+    replay_event_schema_version: Literal[1]
+    replay_run_id: str
+    original_run_id: str
+    input_hash_match: bool
+    artifact_hash_match: bool
+    audit_chain_match: bool
+    deterministic_result: bool
+    observed_at: str
+    # Optional
+    snapshot_id_ref: NotRequired[str]
+    diff_summary_hash: NotRequired[str]
+    reason_code: NotRequired[str]
+    reason_text: NotRequired[str]
+
+
+_REQUIRED_REPLAY_KEYS: Final[frozenset[str]] = frozenset({
+    "replay_event_schema_version",
+    "replay_run_id",
+    "original_run_id",
+    "input_hash_match",
+    "artifact_hash_match",
+    "audit_chain_match",
+    "deterministic_result",
+    "observed_at",
+})
+
+
+def validate_replay_event_payload(payload: dict[str, Any]) -> None:
+    """Raise :class:`ValueError` if ``payload`` violates A.9 invariants.
+
+    Invariants:
+
+    - ``replay_event_schema_version == 1``
+    - all required fields present
+    - the four booleans are actually booleans (not 0/1, not strings)
+    - ``deterministic_result == (input_hash_match and artifact_hash_match
+      and audit_chain_match)`` — the AND cross-check
+    - ``replay_run_id`` / ``original_run_id`` non-empty strings
+    - ``snapshot_id_ref`` (if present) non-empty string
+    - ``diff_summary_hash`` (if present) matches 64-hex
+    - ``observed_at`` parses as RFC-3339 UTC
+    - no forbidden field per ADR-0004 § 2 redaction
+    """
+    if not isinstance(payload, dict):
+        raise _PayloadValidationError(
+            f"replay_event payload must be dict, got {type(payload).__name__}"
+        )
+    _reject_forbidden_fields(payload, "replay_event")
+    missing = _REQUIRED_REPLAY_KEYS - set(payload.keys())
+    if missing:
+        raise _PayloadValidationError(
+            f"replay_event: missing required fields {sorted(missing)}"
+        )
+    if payload["replay_event_schema_version"] != 1:
+        raise _PayloadValidationError(
+            "replay_event: replay_event_schema_version must be 1, "
+            f"got {payload['replay_event_schema_version']!r}"
+        )
+    for str_field in ("replay_run_id", "original_run_id"):
+        v = payload[str_field]
+        if not isinstance(v, str) or not v:
+            raise _PayloadValidationError(
+                f"replay_event.{str_field}: must be non-empty string, got {v!r}"
+            )
+
+    # Booleans must be strict bool (not int/str). bool is subclass of int in
+    # Python so we must check `type(v) is bool` not `isinstance(v, bool)`
+    # — actually isinstance is fine; we want to reject int/str specifically.
+    bool_fields = (
+        "input_hash_match",
+        "artifact_hash_match",
+        "audit_chain_match",
+        "deterministic_result",
+    )
+    for bf in bool_fields:
+        v = payload[bf]
+        # bool is a subclass of int; we need strict bool only.
+        if not isinstance(v, bool):
+            raise _PayloadValidationError(
+                f"replay_event.{bf}: must be boolean, got {type(v).__name__}"
+            )
+
+    # AND cross-check (the load-bearing invariant per AIOS ReplayProof spec).
+    expected_det = (
+        payload["input_hash_match"]
+        and payload["artifact_hash_match"]
+        and payload["audit_chain_match"]
+    )
+    if payload["deterministic_result"] != expected_det:
+        raise _PayloadValidationError(
+            "replay_event.deterministic_result: must equal logical AND of "
+            "input_hash_match, artifact_hash_match, audit_chain_match "
+            f"(got {payload['deterministic_result']!r}, expected {expected_det!r})"
+        )
+
+    _require_iso_utc(payload["observed_at"], "replay_event.observed_at")
+
+    if "snapshot_id_ref" in payload:
+        sid = payload["snapshot_id_ref"]
+        if not isinstance(sid, str) or not sid:
+            raise _PayloadValidationError(
+                f"replay_event.snapshot_id_ref: must be non-empty string, got {sid!r}"
+            )
+
+    diff_hash = payload.get("diff_summary_hash")
+    if diff_hash is not None and (
+        not isinstance(diff_hash, str) or not _HEX64.match(diff_hash)
+    ):
+        raise _PayloadValidationError(
+            f"replay_event.diff_summary_hash: must be 64-hex string, got {diff_hash!r}"
+        )
+
+    for opt_field in ("reason_code", "reason_text"):
+        v = payload.get(opt_field)
+        if v is not None and not isinstance(v, str):
+            raise _PayloadValidationError(
+                f"replay_event.{opt_field}: must be string or absent, "
+                f"got {type(v).__name__}"
+            )
+
+
 __all__ = [
     "FORBIDDEN_PAYLOAD_FIELDS",
     "LeaseLifecycle",
@@ -354,6 +495,8 @@ __all__ = [
     "PolicyCheckEventPayload",
     "PolicyDecision",
     "PolicyEffect",
+    "ReplayEventPayload",
     "validate_lease_lifecycle_event_payload",
     "validate_policy_check_event_payload",
+    "validate_replay_event_payload",
 ]

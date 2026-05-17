@@ -63,12 +63,21 @@ export {
   PayloadValidationError,
   validateLeaseLifecycleEventPayload,
   validatePolicyCheckEventPayload,
+  validateReplayEventPayload,
   type LeaseLifecycle,
   type LeaseLifecycleEventPayload,
   type PolicyCheckEventPayload,
   type PolicyDecision,
   type PolicyEffect,
+  type ReplayEventPayload,
 } from './event_payloads.js';
+export {
+  verifyReplayManifest,
+  type ChainEventForReplay,
+  type ReplayCoverage,
+  type ReplayManifest,
+  type ReplayVerificationResult,
+} from './replay_verifier.js';
 export {
   ALL_REASON_CODES_V1,
   REASON_CODE_DESCRIPTIONS,
