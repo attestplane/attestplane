@@ -52,5 +52,6 @@ A copy of the template lives at [0000-template.md](0000-template.md).
 |---|---|---|
 | [0001](0001-use-apache-2-0-license.md) | Use Apache License 2.0 as the project license | Accepted |
 | [0002](0002-substrate-data-model-and-hash-chain-v0.md) | Substrate core data model and hash chain (v0.0.1) | Accepted |
+| [0003](0003-tsa-rfc-3161-anchoring.md) | Time-Stamp Authority anchoring (RFC 3161) for the audit chain | Accepted |
 
 New ADRs append to this table in the same PR that introduces the ADR file.

@@ -15,8 +15,15 @@ trademark policy.
 ## Install
 
 ```bash
-npm install @attestplane/attestplane
+# Pin the alpha explicitly; v0.0.1 is on the 'alpha' dist-tag.
+npm install @attestplane/attestplane@alpha
+# or, equivalent:
+npm install @attestplane/attestplane@0.0.1
 ```
+
+`npm install @attestplane/attestplane` without a tag also resolves to
+0.0.1 today (because it is the only published version) but treat the
+alpha tag as the authoritative pre-release channel until v0.1.0 ships.
 
 Requires Node.js ≥ 22.
 
