@@ -46,8 +46,27 @@ from attestplane.signing.providers import (
     InMemoryKeyProvider,
     MultiSignerProvider,
 )
+from attestplane.signing.signer import (
+    Signer,
+    SignerResult,
+    SignerStats,
+)
+from attestplane.signing.trust_roots import (
+    TrustRootEntry,
+    TrustRoots,
+    TrustRootsError,
+    load_trust_roots,
+)
+from attestplane.signing.verifier_ext import (
+    BundleVerificationResult,
+    SignatureStatus,
+    SingleSignatureResult,
+    verify_chain_full,
+    verify_chain_with_signatures,
+)
 
 __all__ = [
+    "BundleVerificationResult",
     "EnvKeyProvider",
     "FileKeyProvider",
     "InMemoryKeyProvider",
@@ -58,9 +77,20 @@ __all__ = [
     "SIGNATURE_SCHEMA_VERSION",
     "SignatureMode",
     "SignatureRecord",
+    "SignatureStatus",
     "SignatureVerificationError",
+    "Signer",
+    "SignerResult",
+    "SignerStats",
     "SigningError",
     "SigningMaterial",
     "SignaturePolicy",
+    "SingleSignatureResult",
+    "TrustRootEntry",
+    "TrustRoots",
+    "TrustRootsError",
     "derive_key_id",
+    "load_trust_roots",
+    "verify_chain_full",
+    "verify_chain_with_signatures",
 ]

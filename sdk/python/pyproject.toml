@@ -48,6 +48,7 @@ anchor = [
 ]
 signing = [
     "cryptography>=43",
+    "pyyaml>=6.0",
 ]
 dev = [
     "pytest>=8",
@@ -109,6 +110,10 @@ files = ["src/attestplane"]
 
 [[tool.mypy.overrides]]
 module = ["asn1crypto", "asn1crypto.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
