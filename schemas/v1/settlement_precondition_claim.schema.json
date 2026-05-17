@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/settlement_precondition_claim.schema.json",
+  "title": "Attestplane settlement_precondition_claim (v1)",
+  "description": "Claim schema asserting that a chain segment satisfies the 'verify-before-settle' precondition: a lease_lifecycle_event {lifecycle: consumed} OBSERVATION precedes a settlement_event {lifecycle: requested} OBSERVATION for the same lease_id_hash, within the same chain. ADR-0009 § B.3 concept-only absorption — Attestplane substrate emits no settlements. The claim describes a CLAIM about the chain; verifier returns yes/no/reason_code based on observed events. Substrate NEVER executes settlement (REDLINE C.3 budget allocator + C.8 gateway command execution).",
+  "$comment": "Status: ACTIVE (ADR-0009 Accepted 2026-05-17 + P2.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "claim_schema_version",
+    "claim_kind",
+    "lease_id_hash",
+    "settlement_run_id"
+  ],
+  "properties": {
+    "claim_schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Independent of chain.schema_version / anchor_schema_version / signature_schema_version / reason_code_schema_version / lease_event_schema_version / policy_event_schema_version / replay_event_schema_version. Bump requires ADR amendment."
+    },
+    "claim_kind": {
+      "type": "string",
+      "const": "settlement_precondition",
+      "description": "Future ADR may add sibling claim_kinds (e.g., approval_precondition). v1 ships only this one."
+    },
+    "lease_id_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex of the lease whose 'consumed' event MUST precede the settlement_event in the chain. Same format/semantics as lease_lifecycle_event.lease_id_hash."
+    },
+    "settlement_run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque identifier of the settlement run. Verifier looks for a settlement_event in the chain whose payload has matching settlement_run_id. Substrate does NOT issue this identifier."
+    },
+    "expected_settlement_amount_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Optional SHA-256 hex of the canonical-text representation of the expected settlement amount. Hash-only — actual amount body NEVER stored. Verifier may cross-check against an off-chain amount registry if available."
+    },
+    "claim_observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Caller-asserted RFC-3339 UTC timestamp when this claim was constructed. Substrate records as-is; for authoritative time use AnchorRecord (ADR-0003)."
+    }
+  },
+  "examples": [
+    {
+      "claim_schema_version": 1,
+      "claim_kind": "settlement_precondition",
+      "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000001",
+      "settlement_run_id": "stmt-42",
+      "expected_settlement_amount_hash": "deadbeef00000000000000000000000000000000000000000000000000000000",
+      "claim_observed_at": "2026-05-17T12:00:00.000000Z"
+    }
+  ]
+}

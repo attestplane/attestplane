@@ -87,6 +87,12 @@ export {
   type ReplayVerificationResult,
 } from './replay_verifier.js';
 export {
+  checkSettlementPrecondition,
+  type ChainEventForSettlement,
+  type SettlementPreconditionClaim,
+  type SettlementVerificationResult,
+} from './settlement_verifier.js';
+export {
   ALL_REASON_CODES_V1,
   REASON_CODE_DESCRIPTIONS,
   REASON_CODE_SCHEMA_VERSION,

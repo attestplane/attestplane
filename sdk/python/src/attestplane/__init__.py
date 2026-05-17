@@ -58,6 +58,11 @@ from attestplane.replay_verifier import (
     ReplayVerificationResult,
     verify_replay_manifest,
 )
+from attestplane.settlement_verifier import (
+    SettlementPreconditionClaim,
+    SettlementVerificationResult,
+    check_settlement_precondition,
+)
 from attestplane.reason_codes import (
     ALL_REASON_CODES_V1,
     REASON_CODE_DESCRIPTIONS,
@@ -223,6 +228,8 @@ __all__ = [
     "ReplayEventPayload",
     "ReplayManifest",
     "ReplayVerificationResult",
+    "SettlementPreconditionClaim",
+    "SettlementVerificationResult",
     "ALL_REASON_CODES_V1",
     "REASON_CODE_DESCRIPTIONS",
     "REASON_CODE_SCHEMA_VERSION",
@@ -267,6 +274,7 @@ __all__ = [
     "validate_policy_check_event_payload",
     "validate_replay_event_payload",
     "verify_replay_manifest",
+    "check_settlement_precondition",
     "replay_fixture",
     "verify_chain",
     "verify_chain_with_anchors",

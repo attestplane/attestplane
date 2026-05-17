@@ -1,0 +1,129 @@
+{
+  "$schema_version": 1,
+  "frozen_at": "2026-05-17T12:00:00Z",
+  "comment": "ADR-0009 § B.3 + P2.3 settlement_precondition verifier conformance vectors. Py + TS replay identical.",
+  "verifier_vectors": [
+    {
+      "name": "happy_path_lease_consumed_then_settlement",
+      "description": "Lease consumed at seq 1, settlement requested at seq 3 — claim verified.",
+      "chain": [
+        {"seq": 0, "event_type": "tool_call_event", "payload": {}},
+        {"seq": 1, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "1111111111111111111111111111111111111111111111111111111111111111"}},
+        {"seq": 2, "event_type": "tool_call_event", "payload": {}},
+        {"seq": 3, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-A", "amount_hash": "deadbeef00000000000000000000000000000000000000000000000000000000"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settlement_run_id": "stmt-A"
+      },
+      "expected": {"ok": true, "reason": null, "lease_consumed_seq": 1, "settlement_event_seq": 3}
+    },
+    {
+      "name": "happy_path_with_amount_hash_match",
+      "description": "Same as happy_path but claim specifies expected_settlement_amount_hash that matches the settlement_event.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "2222222222222222222222222222222222222222222222222222222222222222"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-B", "amount_hash": "cafebabe00000000000000000000000000000000000000000000000000000000"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+        "settlement_run_id": "stmt-B",
+        "expected_settlement_amount_hash": "cafebabe00000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": {"ok": true, "reason": null, "lease_consumed_seq": 0, "settlement_event_seq": 1}
+    },
+    {
+      "name": "lease_consumed_not_observed",
+      "description": "Settlement requested but no lease_consumed in chain — verify fails.",
+      "chain": [
+        {"seq": 0, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-C"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "3333333333333333333333333333333333333333333333333333333333333333",
+        "settlement_run_id": "stmt-C"
+      },
+      "expected": {"ok": false, "reason_contains": "lease_consumed_not_observed", "lease_consumed_seq": null, "settlement_event_seq": 0}
+    },
+    {
+      "name": "settlement_event_not_observed",
+      "description": "Lease consumed but no matching settlement_event — verify fails.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "4444444444444444444444444444444444444444444444444444444444444444"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+        "settlement_run_id": "stmt-missing"
+      },
+      "expected": {"ok": false, "reason_contains": "settlement_event_not_observed", "lease_consumed_seq": 0, "settlement_event_seq": null}
+    },
+    {
+      "name": "settlement_precedes_lease_consumed",
+      "description": "Settlement requested BEFORE lease consumed in chain — ordering violation.",
+      "chain": [
+        {"seq": 0, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-D"}},
+        {"seq": 1, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "5555555555555555555555555555555555555555555555555555555555555555"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "5555555555555555555555555555555555555555555555555555555555555555",
+        "settlement_run_id": "stmt-D"
+      },
+      "expected": {"ok": false, "reason_contains": "settlement_precedes_lease_consumed", "lease_consumed_seq": 1, "settlement_event_seq": 0}
+    },
+    {
+      "name": "amount_hash_mismatch",
+      "description": "Lease and settlement ordering is fine but settlement amount_hash differs from claim's expected.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "6666666666666666666666666666666666666666666666666666666666666666"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-E", "amount_hash": "abc1230000000000000000000000000000000000000000000000000000000000"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "6666666666666666666666666666666666666666666666666666666666666666",
+        "settlement_run_id": "stmt-E",
+        "expected_settlement_amount_hash": "abc4560000000000000000000000000000000000000000000000000000000000"
+      },
+      "expected": {"ok": false, "reason_contains": "amount_hash_mismatch", "lease_consumed_seq": 0, "settlement_event_seq": 1}
+    },
+    {
+      "name": "unsupported_claim_kind",
+      "chain": [],
+      "claim": {
+        "claim_kind": "future_claim_kind",
+        "lease_id_hash": "7777777777777777777777777777777777777777777777777777777777777777",
+        "settlement_run_id": "stmt-F"
+      },
+      "expected": {"ok": false, "reason_contains": "claim_kind_unsupported", "lease_consumed_seq": null, "settlement_event_seq": null}
+    },
+    {
+      "name": "lease_consumed_for_different_lease_id",
+      "description": "A consumed event exists but for a different lease_id_hash — should not match claim.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "9999999999999999999999999999999999999999999999999999999999999999"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-G"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "8888888888888888888888888888888888888888888888888888888888888888",
+        "settlement_run_id": "stmt-G"
+      },
+      "expected": {"ok": false, "reason_contains": "lease_consumed_not_observed", "lease_consumed_seq": null, "settlement_event_seq": 1}
+    }
+  ]
+}
