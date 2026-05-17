@@ -41,7 +41,7 @@ def test_python_enum_matches_conformance_vector() -> None:
     """Python ALL_REASON_CODES_V1 must equal the frozen vector set."""
     v = _load_vectors()
     expected = set(v["all_reason_codes_v1"])
-    assert ALL_REASON_CODES_V1 == frozenset(expected)
+    assert frozenset(expected) == ALL_REASON_CODES_V1
     assert len(ALL_REASON_CODES_V1) == v["expected_count"]
 
 

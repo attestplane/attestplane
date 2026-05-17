@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Final, Literal
 
@@ -302,15 +302,15 @@ class KeyProvider(ABC):
 
 
 __all__ = [
+    "SIGNATURE_SCHEMA_VERSION",
     "KeyBoundaryError",
     "KeyProvider",
     "KeyProviderError",
-    "SIGNATURE_SCHEMA_VERSION",
     "SignatureMode",
+    "SignaturePolicy",
     "SignatureRecord",
     "SignatureVerificationError",
     "SigningError",
     "SigningMaterial",
-    "SignaturePolicy",
     "derive_key_id",
 ]

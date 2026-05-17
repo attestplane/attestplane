@@ -34,7 +34,8 @@ from datetime import UTC, datetime
 from typing import Literal
 
 try:
-    from asn1crypto import ocsp, x509 as asn1_x509
+    from asn1crypto import ocsp
+    from asn1crypto import x509 as asn1_x509
     from cryptography import x509
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes
@@ -47,7 +48,6 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 from attestplane.anchoring.base import AnchorVerificationError
-
 
 OcspCertStatus = Literal["good", "revoked", "unknown"]
 

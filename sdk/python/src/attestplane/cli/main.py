@@ -126,8 +126,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 def cmd_inspect(args: argparse.Namespace) -> int:
     from attestplane.hashchain import verify_chain
-    from attestplane.storage.jsonl import JsonlStorageBackend
     from attestplane.storage.base import StorageReadError
+    from attestplane.storage.jsonl import JsonlStorageBackend
 
     backend = JsonlStorageBackend(args.chain)
     try:
@@ -232,12 +232,12 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     # Lightweight import smoke-test — surfaces install corruption.
     try:
         import attestplane
-        import attestplane.adapters  # noqa: F401
-        import attestplane.event_types  # noqa: F401
-        import attestplane.obligations  # noqa: F401
-        import attestplane.storage  # noqa: F401
-        import attestplane.proof_bundle  # noqa: F401
-        import attestplane.verifier  # noqa: F401
+        import attestplane.adapters
+        import attestplane.event_types
+        import attestplane.obligations
+        import attestplane.proof_bundle
+        import attestplane.storage
+        import attestplane.verifier
         payload["imports"] = "ok"
         payload["package_root"] = attestplane.__file__
     except ImportError as exc:
@@ -250,7 +250,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         from attestplane.obligations import load_eu_ai_act_article_12
         reg = load_eu_ai_act_article_12()
         payload["eu_ai_act_art12_entries"] = len(reg.entries)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         payload["ok"] = False
         payload["eu_ai_act_art12_entries"] = "failed"
         payload["registry_error"] = str(exc)

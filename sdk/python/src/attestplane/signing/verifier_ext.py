@@ -50,12 +50,9 @@ from attestplane.anchoring.verifier import (
     SingleAnchorResult,
     verify_chain_with_anchors,
 )
-from attestplane.canonical import canonicalize
-from attestplane.hashchain import verify_chain
 from attestplane.signing.base import (
     SIGNATURE_SCHEMA_VERSION,
     SignatureRecord,
-    SignatureVerificationError,
     SigningError,
     derive_key_id,
 )
@@ -64,8 +61,7 @@ from attestplane.signing.signer import (
     _build_segment_head_payload,
 )
 from attestplane.signing.trust_roots import TrustRootEntry, TrustRoots
-from attestplane.types import ChainHead, ChainedEvent
-
+from attestplane.types import ChainedEvent, ChainHead
 
 SignatureStatus = Literal[
     "unsigned", "valid", "invalid", "unknown_key", "expired_key",
@@ -278,7 +274,7 @@ def _verify_single_signature(
                 import json
                 payload_obj = json.loads(record.signed_payload)
                 payload_chain_id = payload_obj.get("chain_id")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 payload_chain_id = "<unparsable>"
             return SingleSignatureResult(
                 record_index=index,

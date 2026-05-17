@@ -66,7 +66,6 @@ from attestplane.adapters.base import AdapterTranslationError, GenericRuntimeAda
 from attestplane.event_types import TOOL_CALL_EVENT
 from attestplane.types import EventDraft, SubjectRef
 
-
 _KNOWN_RUN_TYPES: frozenset[str] = frozenset({
     "tool", "llm", "chain", "retriever",
     "prompt", "parser", "embedding",

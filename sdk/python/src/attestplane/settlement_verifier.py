@@ -93,7 +93,7 @@ def check_settlement_precondition(
             settlement_event_seq=None,
         )
     if not isinstance(chain_events, list):
-        return SettlementVerificationResult(
+        return SettlementVerificationResult(  # type: ignore[unreachable]
             ok=False,
             reason=f"chain_events must be list, got {type(chain_events).__name__}",
             lease_consumed_seq=None,
@@ -106,7 +106,7 @@ def check_settlement_precondition(
 
     for ev in chain_events:
         if not isinstance(ev, dict):
-            continue
+            continue  # type: ignore[unreachable]
         seq = ev.get("seq")
         if not isinstance(seq, int):
             continue

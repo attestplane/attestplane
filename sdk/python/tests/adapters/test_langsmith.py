@@ -18,7 +18,6 @@ from attestplane.adapters.langsmith import (
 from attestplane.event_types import TOOL_CALL_EVENT
 from attestplane.types import SubjectRef
 
-
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 

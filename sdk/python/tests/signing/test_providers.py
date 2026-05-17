@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -20,9 +19,7 @@ from attestplane.signing import (
     InMemoryKeyProvider,
     KeyProviderError,
     MultiSignerProvider,
-    SIGNATURE_SCHEMA_VERSION,
 )
-
 
 # --- InMemoryKeyProvider --------------------------------------------------
 

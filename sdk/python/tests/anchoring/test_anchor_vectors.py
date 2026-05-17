@@ -37,7 +37,6 @@ from attestplane.anchoring.rfc3161 import (
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.types import ChainHead, EventDraft
 
-
 _VECTORS_PATH = Path(__file__).parent.parent / "conformance" / "anchor_vectors.json"
 
 

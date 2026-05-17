@@ -33,11 +33,11 @@ from attestplane.signing.base import (
     KeyProvider,
     KeyProviderError,
     SignatureMode,
+    SignaturePolicy,
     SignatureRecord,
     SignatureVerificationError,
     SigningError,
     SigningMaterial,
-    SignaturePolicy,
     derive_key_id,
 )
 from attestplane.signing.providers import (
@@ -66,6 +66,7 @@ from attestplane.signing.verifier_ext import (
 )
 
 __all__ = [
+    "SIGNATURE_SCHEMA_VERSION",
     "BundleVerificationResult",
     "EnvKeyProvider",
     "FileKeyProvider",
@@ -74,8 +75,8 @@ __all__ = [
     "KeyProvider",
     "KeyProviderError",
     "MultiSignerProvider",
-    "SIGNATURE_SCHEMA_VERSION",
     "SignatureMode",
+    "SignaturePolicy",
     "SignatureRecord",
     "SignatureStatus",
     "SignatureVerificationError",
@@ -84,7 +85,6 @@ __all__ = [
     "SignerStats",
     "SigningError",
     "SigningMaterial",
-    "SignaturePolicy",
     "SingleSignatureResult",
     "TrustRootEntry",
     "TrustRoots",

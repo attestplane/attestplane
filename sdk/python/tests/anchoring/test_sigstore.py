@@ -18,7 +18,6 @@ import pytest
 pytest.importorskip("cryptography")
 
 from attestplane.anchoring import (
-    AnchorRecord,
     AnchorVerificationError,
     TimestampRequest,
     verify_chain_with_anchors,
@@ -36,7 +35,6 @@ from attestplane.anchoring.sigstore import (
 from attestplane.anchoring.testing import TestRekorAuthority
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.types import ChainHead, EventDraft
-
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
@@ -59,6 +57,7 @@ def _make_authority_response(authority: TestRekorAuthority, digest: bytes,
                               signing_key, now=None) -> bytes:
     """Replicate what SigstoreRekorAnchor builds, then have authority sign it."""
     import base64
+
     from cryptography.hazmat.primitives import serialization
 
     signature = signing_key.sign(digest)
@@ -246,8 +245,9 @@ def test_verify_rejects_wrong_digest_length() -> None:
 
 def test_verify_rejects_tampered_body() -> None:
     """If someone alters the body but keeps the SET, verification fails."""
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     import base64
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
     authority = TestRekorAuthority(now=_NOW)
     signing_key = Ed25519PrivateKey.generate()
@@ -315,8 +315,9 @@ def test_e2e_verify_chain_with_rekor_anchor() -> None:
 
 
 def test_e2e_detects_tampered_token() -> None:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from dataclasses import replace
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
     chain = _build_chain(1)
     authority = TestRekorAuthority(now=_NOW)

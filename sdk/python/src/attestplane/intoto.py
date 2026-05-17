@@ -166,9 +166,9 @@ def dsse_envelope_to_statement(envelope: dict[str, Any]) -> dict[str, Any]:
 
 __all__ = [
     "DSSE_PAYLOAD_TYPE",
-    "IntotoError",
     "PREDICATE_TYPE_V1",
     "STATEMENT_TYPE",
+    "IntotoError",
     "canonical_json_bytes",
     "dsse_envelope_to_statement",
     "proof_bundle_to_in_toto_statement",

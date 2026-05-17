@@ -52,25 +52,6 @@ from attestplane.event_payloads import (
     validate_policy_check_event_payload,
     validate_replay_event_payload,
 )
-from attestplane.replay_verifier import (
-    ReplayCoverage,
-    ReplayManifest,
-    ReplayVerificationResult,
-    verify_replay_manifest,
-)
-from attestplane.settlement_verifier import (
-    SettlementPreconditionClaim,
-    SettlementVerificationResult,
-    check_settlement_precondition,
-)
-from attestplane.reason_codes import (
-    ALL_REASON_CODES_V1,
-    REASON_CODE_DESCRIPTIONS,
-    REASON_CODE_SCHEMA_VERSION,
-    ReasonCodeV1,
-    is_known_reason_code,
-    reason_code_matches_format,
-)
 from attestplane.event_types import (
     ALL_EVENT_TYPES_V1,
     BUDGET_EVENT,
@@ -88,6 +69,15 @@ from attestplane.event_types import (
     WORKER_ASSIGNMENT_EVENT,
     is_known_v1_event_type,
 )
+from attestplane.intoto import (
+    DSSE_PAYLOAD_TYPE,
+    PREDICATE_TYPE_V1,
+    STATEMENT_TYPE,
+    IntotoError,
+    dsse_envelope_to_statement,
+    proof_bundle_to_in_toto_statement,
+    statement_to_dsse_envelope,
+)
 from attestplane.obligations import (
     ObligationEntry,
     ObligationRegistryError,
@@ -96,15 +86,6 @@ from attestplane.obligations import (
     load_dora_article_8,
     load_eu_ai_act_article_12,
 )
-from attestplane.intoto import (
-    DSSE_PAYLOAD_TYPE,
-    IntotoError,
-    PREDICATE_TYPE_V1,
-    STATEMENT_TYPE,
-    dsse_envelope_to_statement,
-    proof_bundle_to_in_toto_statement,
-    statement_to_dsse_envelope,
-)
 from attestplane.proof_bundle import (
     DEFAULT_FORBIDDEN_FIELDS,
     FrameworkMapping,
@@ -112,6 +93,25 @@ from attestplane.proof_bundle import (
     build_auditor_export,
     bundle_to_dsse_envelope,
     bundle_to_in_toto_statement,
+)
+from attestplane.reason_codes import (
+    ALL_REASON_CODES_V1,
+    REASON_CODE_DESCRIPTIONS,
+    REASON_CODE_SCHEMA_VERSION,
+    ReasonCodeV1,
+    is_known_reason_code,
+    reason_code_matches_format,
+)
+from attestplane.replay_verifier import (
+    ReplayCoverage,
+    ReplayManifest,
+    ReplayVerificationResult,
+    verify_replay_manifest,
+)
+from attestplane.settlement_verifier import (
+    SettlementPreconditionClaim,
+    SettlementVerificationResult,
+    check_settlement_precondition,
 )
 
 # Event signing primitives (T1+T2 of ADR-0005 plan).
@@ -127,9 +127,9 @@ try:
         KeyProviderError,
         MultiSignerProvider,
         SignatureMode,
+        SignaturePolicy,
         SignatureRecord,
         SignatureVerificationError,
-        SignaturePolicy,
         SigningError,
         SigningMaterial,
         derive_key_id,
@@ -138,20 +138,6 @@ try:
     _SIGNING_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _SIGNING_AVAILABLE = False
-from attestplane.storage import (
-    AbstractStorageBackend,
-    JsonlStorageBackend,
-    StorageError,
-    StorageReadError,
-    StorageWriteError,
-)
-from attestplane.verifier import (
-    BundleSchemaError,
-    BundleVerificationError,
-    BundleVerificationResult,
-    verify_proof_bundle,
-    verify_proof_bundle_file,
-)
 from attestplane.hashchain import (
     GENESIS_HASH,
     SCHEMA_VERSION,
@@ -161,6 +147,13 @@ from attestplane.hashchain import (
     hash_event,
     verify_chain,
 )
+from attestplane.storage import (
+    AbstractStorageBackend,
+    JsonlStorageBackend,
+    StorageError,
+    StorageReadError,
+    StorageWriteError,
+)
 from attestplane.substrate import AttestSubstrate
 from attestplane.types import (
     AuditEvent,
@@ -168,6 +161,13 @@ from attestplane.types import (
     ChainHead,
     EventDraft,
     SubjectRef,
+)
+from attestplane.verifier import (
+    BundleSchemaError,
+    BundleVerificationError,
+    BundleVerificationResult,
+    verify_proof_bundle,
+    verify_proof_bundle_file,
 )
 
 __version__ = "0.0.2a0"
@@ -236,6 +236,22 @@ __all__ = [
     "ReasonCodeV1",
     "is_known_reason_code",
     "reason_code_matches_format",
+    # Event signing (ADR-0005) — guarded re-exports; available iff [signing] extras installed.
+    "SIGNATURE_SCHEMA_VERSION",
+    "EnvKeyProvider",
+    "FileKeyProvider",
+    "InMemoryKeyProvider",
+    "KeyBoundaryError",
+    "KeyProvider",
+    "KeyProviderError",
+    "MultiSignerProvider",
+    "SignatureMode",
+    "SignatureRecord",
+    "SignatureVerificationError",
+    "SignaturePolicy",
+    "SigningError",
+    "SigningMaterial",
+    "derive_key_id",
     "MockTSAProvider",
     "MultiTSAProvider",
     "JsonlStorageBackend",

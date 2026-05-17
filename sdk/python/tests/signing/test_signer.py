@@ -6,23 +6,20 @@ from __future__ import annotations
 
 import threading
 from datetime import UTC, datetime
-from typing import Callable
 
 import pytest
 
 pytest.importorskip("cryptography")
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from attestplane.canonical import canonicalize
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.signing import (
     InMemoryKeyProvider,
     MultiSignerProvider,
-    Signer,
     SignaturePolicy,
     SignatureRecord,
+    Signer,
     SigningError,
 )
 from attestplane.signing.signer import (
@@ -100,7 +97,7 @@ def test_signer_default_policy() -> None:
         key_provider=InMemoryKeyProvider(seed=_SEED_00),
     )
     # Internal state — sanity check.
-    assert s._policy.batch_size == 64  # noqa: SLF001
+    assert s._policy.batch_size == 64
 
 
 # --- sign_segment_head (single provider) -----------------------------------
@@ -310,7 +307,7 @@ def test_pull_segment_heads_from_snapshot_via_callback() -> None:
 def test_substrate_module_does_not_import_signer() -> None:
     """Architect review § 1 decision 4 — Signer is NOT in substrate's import path."""
     import attestplane.substrate as substrate_mod
-    src = open(substrate_mod.__file__).read()  # noqa: PTH123
+    src = open(substrate_mod.__file__).read()
     assert "from attestplane.signing" not in src
     assert "import attestplane.signing" not in src
     assert "Signer" not in src  # method name "sign" elsewhere irrelevant

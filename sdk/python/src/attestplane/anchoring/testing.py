@@ -21,25 +21,27 @@ Importing this module without those installed raises a clear
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 # core is needed for OCSP construction; pulled below alongside other
 # asn1crypto imports.
 
 try:
-    from asn1crypto import algos, cms, core, ocsp as asn1_ocsp, tsp, x509 as asn1_x509
+    from typing import Literal
+
+    from asn1crypto import algos, cms, core, tsp
+    from asn1crypto import ocsp as asn1_ocsp  # noqa: F401  (conditional import — try/except guard)
+    from asn1crypto import x509 as asn1_x509
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
     from cryptography.hazmat.primitives.asymmetric.rsa import (
         RSAPrivateKey,
-        RSAPublicKey,
+        RSAPublicKey,  # noqa: F401  (conditional import — try/except guard)
     )
     from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
-    from typing import Literal
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
         "attestplane.anchoring.testing requires the 'anchor' extras. "
@@ -649,7 +651,8 @@ class TestRekorAuthority:
         :returns: JSON-encoded LogEntry bytes, ready to be embedded in
             an :class:`AnchorRecord.tsa_token`.
         """
-        import base64, json
+        import base64
+        import json
 
         actual_now = now or self._fixed_time or datetime.now(UTC)
         integrated_time = int(actual_now.timestamp())

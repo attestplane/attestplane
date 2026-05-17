@@ -27,7 +27,6 @@ from attestplane.anchoring.eidas import (
 )
 from attestplane.anchoring.testing import TestTSAAuthority
 
-
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 
@@ -222,7 +221,7 @@ def test_picks_english_service_name_when_multilingual() -> None:
         '</TrustServiceProvider>\n'
         '</TrustServiceProviderList>\n'
         '</TrustServiceStatusList>\n'
-    ).encode("utf-8")
+    ).encode()
     entries = parse_trusted_list(xml)
     assert len(entries) == 1
     assert entries[0].service_name == "Example Timestamp"

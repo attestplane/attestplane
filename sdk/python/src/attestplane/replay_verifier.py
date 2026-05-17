@@ -101,7 +101,7 @@ def verify_replay_manifest(
         future window-validity checks. Currently unused.
     """
     if not isinstance(chain_events, list):
-        return ReplayVerificationResult(
+        return ReplayVerificationResult(  # type: ignore[unreachable]
             ok=False,
             coverage="no_replay_event",
             matching_seq=None,
@@ -118,7 +118,7 @@ def verify_replay_manifest(
     candidates: list[tuple[int, dict[str, Any]]] = []
     for ev in chain_events:
         if not isinstance(ev, dict):
-            continue
+            continue  # type: ignore[unreachable]
         if ev.get("event_type") != "replay_event":
             continue
         payload = ev.get("payload")

@@ -44,13 +44,10 @@ from typing import Final
 # installed. The CI base environment does not install [signing]; previously the
 # unconditional top-level `import yaml` caused
 # `attestplane.signing.__init__` to crash on collection.
-
 from attestplane.signing.base import (
-    SIGNATURE_SCHEMA_VERSION,
     SigningError,
     derive_key_id,
 )
-
 
 _MAX_FILE_SIZE_BYTES: Final[int] = 1 * 1024 * 1024  # 1 MB
 _REQUIRED_ENTRY_KEYS: Final[frozenset[str]] = frozenset({

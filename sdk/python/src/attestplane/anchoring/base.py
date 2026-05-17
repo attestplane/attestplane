@@ -26,7 +26,7 @@ and verify the boundary discipline (no forbidden mutating verbs).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Final, Literal
 
@@ -249,7 +249,7 @@ __all__ = [
     "AnchorRecord",
     "AnchorStatus",
     "AnchorVerificationError",
-    "TimestampRequest",
     "TSAProvider",
     "TSAUnavailableError",
+    "TimestampRequest",
 ]

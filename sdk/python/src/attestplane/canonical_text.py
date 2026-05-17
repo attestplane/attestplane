@@ -44,7 +44,7 @@ import unicodedata
 from typing import Final
 
 _ZERO_WIDTH_CHARS: Final[frozenset[str]] = frozenset({
-    "​",  # ZERO WIDTH SPACE
+    "\u200b",  # ZERO WIDTH SPACE
     "‌",  # ZERO WIDTH NON-JOINER
     "‍",  # ZERO WIDTH JOINER
     "﻿",  # ZERO WIDTH NO-BREAK SPACE (BOM)

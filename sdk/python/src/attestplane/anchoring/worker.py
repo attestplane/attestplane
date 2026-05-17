@@ -44,9 +44,9 @@ from __future__ import annotations
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Callable, Deque
 
 from attestplane.anchoring.base import (
     AnchorPolicy,
@@ -127,7 +127,7 @@ class Anchorer:
         self._clock_skew_warn = clock_skew_warn_seconds
         self._now = now
         self._sleep = sleep
-        self._queue: Deque[PendingAnchor] = deque()
+        self._queue: deque[PendingAnchor] = deque()
         self._results: list[AnchorerResult] = []
         self._lock = threading.Lock()
         self._wakeup = threading.Event()

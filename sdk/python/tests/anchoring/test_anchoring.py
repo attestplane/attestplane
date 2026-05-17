@@ -4,9 +4,7 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import UTC, datetime, timedelta, timezone
-from typing import Any
 
 import pytest
 
@@ -16,10 +14,8 @@ from attestplane.anchoring import (
     AnchorError,
     AnchorPolicy,
     AnchorRecord,
-    AnchorVerificationResult,
     MockTSAProvider,
     MultiTSAProvider,
-    SingleAnchorResult,
     TimestampRequest,
     TSAProvider,
     TSAUnavailableError,
@@ -27,7 +23,6 @@ from attestplane.anchoring import (
 )
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.types import ChainedEvent, ChainHead, EventDraft
-
 
 # --- Fixture helpers ---------------------------------------------------------
 

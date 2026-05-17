@@ -23,7 +23,8 @@ from datetime import UTC, datetime
 from typing import Final
 
 try:
-    from asn1crypto import algos, cms, tsp, x509 as asn1_x509
+    from asn1crypto import algos, cms, tsp  # noqa: F401  (conditional import — try/except guard)
+    from asn1crypto import x509 as asn1_x509
     from cryptography import x509
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes

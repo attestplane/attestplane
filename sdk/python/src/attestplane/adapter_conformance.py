@@ -198,7 +198,7 @@ def replay_fixture(
             else:
                 runtime_event = runtime_input
             actual_draft = adapter.translate(runtime_event)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             results.append(AdapterCaseResult(
                 case_name=case_name, ok=False,
                 reason=f"adapter raised: {type(exc).__name__}: {exc}",

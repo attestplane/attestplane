@@ -63,7 +63,6 @@ from attestplane.adapters.base import AdapterTranslationError, GenericRuntimeAda
 from attestplane.event_types import TOOL_CALL_EVENT
 from attestplane.types import EventDraft, SubjectRef
 
-
 _KNOWN_OBSERVATION_TYPES: frozenset[str] = frozenset({
     "GENERATION", "SPAN", "EVENT",
 })

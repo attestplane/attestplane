@@ -165,11 +165,11 @@ implementation; spec doc citing RFC / algorithm sources (not AIOS).
 **Forbidden**: any code comment of the form `// ported from aios-canonical`
 or any commit message referencing AIOS commit hashes.
 
-#### Mode A.3 — Taxonomy / glossary re-use (with authority redaction)
+#### Mode A.3 — Taxonomy / glossary reuse (with authority redaction)
 
-A string-set / enum value taxonomy from AIOS is re-used in Attestplane,
+A string-set / enum value taxonomy from AIOS is reused in Attestplane,
 with explicit authority-bearing values dropped at the point of
-re-use. Example: the `ProofType` enum in `~/aios/crates/aios-sdk-evidence/src/proof.rs`
+reuse. Example: the `ProofType` enum in `~/aios/crates/aios-sdk-evidence/src/proof.rs`
 has 11 variants; Attestplane keeps the substrate-meaningful subset
 (`SchemaBacked`, `FixtureBacked`, `Replay`, `DeterministicReplay`,
 `DryRun`) and explicitly drops authority-flavoured variants
@@ -256,7 +256,7 @@ so the amendment is a project-strategy decision.
 5. **The four `schema_version` counters are independent**: `chain.schema_version = 1`, `anchor_schema_version = 1`, `signature_schema_version = 1`, `reason_code_schema_version = 1` (new in ADR-0010).
 6. **The four forbidden-verb gates are not weakened**: `KeyProvider` 4 verbs / `TSAProvider` 4 verbs / `AbstractStorageBackend` 9 verbs / `GenericRuntimeAdapter` 15 verbs. `GenericRuntimeAdapter`'s only effective public method remains `translate()`.
 7. **Attestplane stays substrate.** Not Control Plane / orchestration / scheduler. No absorption introduces decision / dispatch / execute semantics.
-8. **AIOS commercial source does not enter the Attestplane repo as a verbatim copy** (founder MEMORY rule + ADR-0004 § 4 dependency direction). Because the founder owns both copyrights, the constraint is strategic, not legal. All A-class deliverables are independent convergence (A.1/A.2), taxonomy re-use with redaction (A.3), or schema-shape re-issue (A.6/A.7/A.8/A.9/A.10) — each enforces scope discipline regardless of whether a verbatim copy would be legally available.
+8. **AIOS commercial source does not enter the Attestplane repo as a verbatim copy** (founder MEMORY rule + ADR-0004 § 4 dependency direction). Because the founder owns both copyrights, the constraint is strategic, not legal. All A-class deliverables are independent convergence (A.1/A.2), taxonomy reuse with redaction (A.3), or schema-shape re-issue (A.6/A.7/A.8/A.9/A.10) — each enforces scope discipline regardless of whether a verbatim copy would be legally available.
 9. **Every new `event_type` ships with an anti-scope-creep invariant text** in the absorption map MD.
 10. **Every new schema ships Py + TS dual-replay fixture.**
 11. **`release_claims` / obligation `status` fields** accept only `mapping_target / designed_toward / field_supported / verified_in_test`. CI rejects `compliant / certified / ready`.
@@ -426,7 +426,7 @@ posture toward AIOS:
    Python adapter spec stub `sdk/python/src/attestplane/adapters/aios_spec.py`
    is docstring-only (no executable adapter logic). Future extractions
    proceed via this ADR's Modes A.1/A.2/A.3/A.6 — independent
-   convergence, taxonomy re-use with redaction, or schema-shape
+   convergence, taxonomy reuse with redaction, or schema-shape
    re-issue.
 3. **Schema provenance**: schemas under `schemas/v1/` issued under
    `https://attestplane.io/` `$id` (INV-NEW-1 CI-enforced). No

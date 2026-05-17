@@ -33,7 +33,6 @@ from attestplane.proof_bundle import (
 from attestplane.signing import InMemoryKeyProvider, Signer
 from attestplane.types import ChainHead, EventDraft
 
-
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 _SCHEMAS_DIR = Path(__file__).resolve().parents[4] / "schemas" / "v1"
 

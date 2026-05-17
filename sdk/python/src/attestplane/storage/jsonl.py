@@ -106,7 +106,8 @@ class JsonlStorageBackend(AbstractStorageBackend):
     fresh backend pointed at a non-existent path returns an empty chain
     from ``read_all`` and creates the file on first append.
 
-    On append: the row is serialised with ``json.dumps(..., separators=(',', ':'), sort_keys=True)`` followed by ``\\n``,
+    On append: the row is serialised with
+    ``json.dumps(..., separators=(',', ':'), sort_keys=True)`` followed by ``\\n``,
     written with ``write()``, then flushed and ``os.fsync``ed. ``ChainedEvent``
     bytes themselves are not canonical-JSON encoded — they are a convenience
     storage form. Chain integrity is guaranteed by the substrate's
@@ -118,7 +119,7 @@ class JsonlStorageBackend(AbstractStorageBackend):
     silently skips malformed lines.
     """
 
-    __slots__ = ("_path", "_lock", "_handle")
+    __slots__ = ("_handle", "_lock", "_path")
 
     def __init__(self, path: str | os.PathLike[str]) -> None:
         self._path = Path(path)

@@ -138,8 +138,8 @@ def test_backoff_caps_at_max() -> None:
         anchorer.step_once()
 
     # After enough attempts, backoff has plateaued.
-    with anchorer._lock:  # noqa: SLF001
-        pending = anchorer._queue[0]  # noqa: SLF001
+    with anchorer._lock:
+        pending = anchorer._queue[0]
     assert pending.attempts >= 6
     next_attempt = pending.next_attempt_at
     assert next_attempt is not None
@@ -257,4 +257,4 @@ def test_stop_without_start_is_safe() -> None:
 
 def test_custom_policy_accepted() -> None:
     anchorer = Anchorer(MockTSAProvider(), policy=AnchorPolicy(batch_size=128, max_idle_seconds=120))
-    assert anchorer._policy.batch_size == 128  # noqa: SLF001
+    assert anchorer._policy.batch_size == 128

@@ -19,7 +19,7 @@ from attestplane.obligations import (
     load_dora_article_8,
     load_eu_ai_act_article_12,
 )
-from attestplane.obligations.registry import _validate_entry, _ALLOWED_IMPLEMENTATION_STATUSES
+from attestplane.obligations.registry import _ALLOWED_IMPLEMENTATION_STATUSES, _validate_entry
 
 
 def _good_entry(**overrides: object) -> dict[str, object]:
@@ -161,9 +161,6 @@ def test_registry_is_frozen() -> None:
 
 def test_duplicate_obligation_id_raises(tmp_path) -> None:
     """Two entries with the same obligation_id in one file is a load error."""
-    import json
-    from importlib import resources
-    from unittest.mock import patch
 
     bad_data = {
         "framework": "Test",

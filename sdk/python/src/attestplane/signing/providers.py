@@ -45,7 +45,6 @@ from attestplane.signing.base import (
     SigningMaterial,
 )
 
-
 _ED25519_SEED_LEN: Final[int] = 32
 
 

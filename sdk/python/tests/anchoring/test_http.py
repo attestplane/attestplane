@@ -34,7 +34,6 @@ from attestplane.anchoring.http import (
 from attestplane.anchoring.rfc3161 import parse_timestamp_response
 from attestplane.anchoring.testing import TestTSAAuthority
 
-
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 

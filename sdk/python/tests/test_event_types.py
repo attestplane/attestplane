@@ -51,7 +51,7 @@ def test_set_cardinality_is_twelve() -> None:
 
 
 def test_set_contents_match_expected() -> None:
-    assert event_types.ALL_EVENT_TYPES_V1 == frozenset(_EXPECTED_V1_PAIRS.values())
+    assert frozenset(_EXPECTED_V1_PAIRS.values()) == event_types.ALL_EVENT_TYPES_V1
 
 
 def test_set_is_immutable() -> None:

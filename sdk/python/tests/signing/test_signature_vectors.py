@@ -22,12 +22,9 @@ from attestplane.canonical import canonicalize
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import deserialize_signature_record
 from attestplane.signing import (
-    InMemoryKeyProvider,
-    SignatureRecord,
     SignatureStatus,
     TrustRootEntry,
     TrustRoots,
-    derive_key_id,
     verify_chain_with_signatures,
 )
 from attestplane.signing.signer import _build_segment_head_payload

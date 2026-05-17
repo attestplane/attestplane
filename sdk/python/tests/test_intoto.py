@@ -13,9 +13,9 @@ import pytest
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.intoto import (
     DSSE_PAYLOAD_TYPE,
-    IntotoError,
     PREDICATE_TYPE_V1,
     STATEMENT_TYPE,
+    IntotoError,
     canonical_json_bytes,
     dsse_envelope_to_statement,
     proof_bundle_to_in_toto_statement,

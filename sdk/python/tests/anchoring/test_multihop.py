@@ -25,7 +25,6 @@ from attestplane.anchoring.testing import TestTSAAuthority, TestTSAProvider
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.types import ChainHead, EventDraft
 
-
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 

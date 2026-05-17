@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 >
 > **Hard rule**: no AIOS Rust file appears as a verbatim copy under `sdk/`. The constraint is strategic, not legal — the founder may legally relicense any AIOS file to Apache-2.0 as part of an extraction, but the absorption discipline below prevents authority surface from drifting into the OSS substrate.
 >
-> Every extraction is either *independent convergence* (zero flow) or *taxonomy re-use with redaction* or *schema-shape re-issue under Attestplane `$id`* (no `$ref` to AIOS).
+> Every extraction is either *independent convergence* (zero flow) or *taxonomy reuse with redaction* or *schema-shape re-issue under Attestplane `$id`* (no `$ref` to AIOS).
 
 ## 1. Layer model
 

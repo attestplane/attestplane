@@ -19,7 +19,6 @@ from attestplane.anchoring import AnchorVerificationError
 from attestplane.anchoring.ocsp import parse_and_verify_ocsp
 from attestplane.anchoring.testing import TestTSAAuthority
 
-
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 

@@ -28,7 +28,6 @@ Ed25519 + key serialisation).
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -36,7 +35,10 @@ from typing import Any, Final
 
 try:
     from cryptography.exceptions import InvalidSignature
-    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives import (  # noqa: F401  (conditional import — try/except guard)
+        hashes,
+        serialization,
+    )
     from cryptography.hazmat.primitives.asymmetric.ed25519 import (
         Ed25519PrivateKey,
         Ed25519PublicKey,
@@ -56,7 +58,6 @@ from attestplane.anchoring.base import (
     TSAUnavailableError,
 )
 from attestplane.anchoring.http import HttpTransport, UrllibHttpTransport
-
 
 # Synthetic OCSP marker for Sigstore Rekor anchors per ADR-0006 § 3.
 SIGSTORE_REKOR_OCSP_MARKER: Final[bytes] = b"SIGSTORE-REKOR-NO-OCSP-APPLIES"
@@ -371,9 +372,9 @@ def verify_rekor_signed_entry_timestamp(
 
 __all__ = [
     "PUBLIC_REKOR_URL",
-    "ParsedRekorEntry",
     "SIGSTORE_REKOR_OCSP_MARKER",
     "SIGSTORE_REKOR_PROVIDER_PREFIX",
+    "ParsedRekorEntry",
     "SigstoreRekorAnchor",
     "is_sigstore_rekor_anchor",
     "parse_rekor_log_entry",

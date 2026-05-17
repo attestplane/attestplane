@@ -31,15 +31,16 @@ never appears in ``substrate.append()`` call stacks. ADR-0003 § 4
 from __future__ import annotations
 
 import threading
-import time
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Deque, Final
+from typing import Final
 
 try:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+        Ed25519PrivateKey,  # noqa: F401  (conditional import — try/except guard)
+    )
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
         "attestplane.signing.signer requires the 'signing' extras. "
@@ -52,15 +53,13 @@ from attestplane.signing.base import (
     SIGNATURE_SCHEMA_VERSION,
     KeyProvider,
     SignatureMode,
-    SignatureRecord,
     SignaturePolicy,
+    SignatureRecord,
     SigningError,
     SigningMaterial,
-    derive_key_id,
 )
 from attestplane.signing.providers import MultiSignerProvider
-from attestplane.types import AuditEvent, ChainHead, ChainedEvent
-
+from attestplane.types import AuditEvent, ChainedEvent, ChainHead
 
 _FIVE_KEY_PAYLOAD: Final[tuple[str, ...]] = (
     "chain_id",
@@ -212,7 +211,7 @@ class Signer:
         self._now = now
 
         # Background-worker state.
-        self._queue: Deque[_PendingSignature] = deque()
+        self._queue: deque[_PendingSignature] = deque()
         self._results: list[SignerResult] = []
         self._stats = SignerStats()
         self._lock = threading.Lock()
@@ -396,7 +395,7 @@ class Signer:
             # Pull from snapshot, enqueue new segment heads.
             try:
                 self.pull_segment_heads_from_snapshot()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 with self._lock:
                     self._stats.provider_errors += 1
             while not self._shutdown.is_set():

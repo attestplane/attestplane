@@ -29,7 +29,7 @@ from __future__ import annotations
 import urllib.request
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Callable, Final
+from typing import Final
 
 try:
     from asn1crypto import algos, tsp
@@ -51,7 +51,6 @@ from attestplane.anchoring.rfc3161 import (
     parse_timestamp_response,
     verify_timestamp_token,
 )
-
 
 RFC3161_CONTENT_TYPE_REQUEST: Final[str] = "application/timestamp-query"
 RFC3161_CONTENT_TYPE_RESPONSE: Final[str] = "application/timestamp-reply"
@@ -85,7 +84,7 @@ class UrllibHttpTransport(HttpTransport):
         self._user_agent = user_agent
 
     def submit(self, url: str, request_der: bytes, *, timeout_seconds: float = 30.0) -> bytes:
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # noqa: S310  (URL schemes validated upstream in caller)
             url,
             data=request_der,
             method="POST",
@@ -96,7 +95,7 @@ class UrllibHttpTransport(HttpTransport):
             },
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
+            with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:  # noqa: S310  (URL schemes validated upstream in caller)
                 content_type = resp.headers.get("Content-Type", "")
                 if RFC3161_CONTENT_TYPE_RESPONSE not in content_type:
                     raise TSAUnavailableError(
@@ -210,7 +209,7 @@ class Rfc3161HttpProvider(TSAProvider):
             parsed = parse_timestamp_response(response_der)
         except AnchorVerificationError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise AnchorVerificationError(
                 f"failed to parse TSA response from {self._url}: {exc}"
             ) from exc
@@ -326,11 +325,11 @@ class DigiCertProvider(Rfc3161HttpProvider):
 
 
 __all__ = [
+    "RFC3161_CONTENT_TYPE_REQUEST",
+    "RFC3161_CONTENT_TYPE_RESPONSE",
     "DigiCertProvider",
     "FreeTSAProvider",
     "HttpTransport",
-    "RFC3161_CONTENT_TYPE_REQUEST",
-    "RFC3161_CONTENT_TYPE_RESPONSE",
     "RecordedHttpTransport",
     "Rfc3161HttpProvider",
     "UrllibHttpTransport",

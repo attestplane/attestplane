@@ -25,7 +25,8 @@ ADR can ship as additive-only.
 from __future__ import annotations
 
 import re
-from typing import Final, Literal, Mapping
+from collections.abc import Mapping
+from typing import Final, Literal
 
 REASON_CODE_SCHEMA_VERSION: Final[int] = 1
 """Frozen at 1 for the v1 enum set. Independent of chain / anchor /
@@ -111,7 +112,10 @@ REASON_CODE_DESCRIPTIONS: Final[Mapping[str, str]] = {
     "CHAIN_OK": "Chain integrity verified end-to-end.",
     "CHAIN_SEQ_MISMATCH": "ChainedEvent.seq does not equal expected position in chain.",
     "CHAIN_PREV_HASH_MISMATCH": "ChainedEvent.prev_hash does not equal previous event's event_hash.",
-    "CHAIN_EVENT_HASH_MISMATCH": "ChainedEvent.event_hash does not equal hash_event(audit_event); canonicalize bytes have drifted.",
+    "CHAIN_EVENT_HASH_MISMATCH": (
+        "ChainedEvent.event_hash does not equal hash_event(audit_event); "
+        "canonicalize bytes have drifted."
+    ),
     "SIGNATURE_OK": "Ed25519 signature verified.",
     "SIGNATURE_INVALID": "Ed25519 verification failed (cryptographic mismatch).",
     "SIGNATURE_UNKNOWN_KEY": "key_id is not present in the configured trust roots.",
@@ -122,7 +126,10 @@ REASON_CODE_DESCRIPTIONS: Final[Mapping[str, str]] = {
     "ANCHOR_INVALID": "Anchor record's signature, hash, or format check failed.",
     "ANCHOR_CERT_EXPIRED": "TSA certificate chain expired at verification_time.",
     "ANCHOR_OCSP_FAILED": "OCSP response invalid, revoked, or missing for the TSA certificate.",
-    "ANCHOR_MISSING_LTV_ARTIFACTS": "tsa_cert_chain or ocsp_responses is empty; CAdES-A long-term validation unsupported.",
+    "ANCHOR_MISSING_LTV_ARTIFACTS": (
+        "tsa_cert_chain or ocsp_responses is empty; "
+        "CAdES-A long-term validation unsupported."
+    ),
     "PAYLOAD_OK": "Payload validates against its declared event schema.",
     "PAYLOAD_MISSING_REQUIRED_FIELD": "A required payload field is absent.",
     "PAYLOAD_FIELD_TYPE_MISMATCH": "A payload field is present but has the wrong type.",

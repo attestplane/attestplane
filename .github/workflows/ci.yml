@@ -50,8 +50,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: codespell-project/actions-codespell@406322ec52dd7b488e48c1c4b82e2a8b3a1bf630 # v2
         with:
-          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal
-          skip: .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore
+          # in-toto is the attestation-format standard (SLSA/Sigstore ecosystem).
+          # afterAll is a vitest API name. Both are valid project terms.
+          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll
+          skip: .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,sdk/typescript/dist
 
   link-check:
     name: Link check (lychee)

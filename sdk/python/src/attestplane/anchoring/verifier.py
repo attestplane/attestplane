@@ -323,7 +323,7 @@ def verify_chain_with_anchors(
                             if cand.subject.native == leaf_asn1.issuer.native:
                                 issuer_der = c
                                 break
-                        except Exception:  # noqa: BLE001
+                        except Exception:
                             continue
                     if issuer_der is None and trust_roots_der:
                         issuer_der = trust_roots_der[0]

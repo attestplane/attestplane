@@ -8,20 +8,17 @@ per the architect review § 1 decisions 10 + 12.
 
 from __future__ import annotations
 
-import base64
-from datetime import UTC, datetime, timedelta
-from typing import Literal
+from datetime import UTC, datetime
 
 import pytest
 
 pytest.importorskip("cryptography")
 
-from attestplane.canonical import canonicalize
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.signing import (
+    SIGNATURE_SCHEMA_VERSION,
     InMemoryKeyProvider,
     MultiSignerProvider,
-    SIGNATURE_SCHEMA_VERSION,
     SignatureRecord,
     Signer,
     TrustRootEntry,
@@ -30,7 +27,6 @@ from attestplane.signing import (
     verify_chain_full,
     verify_chain_with_signatures,
 )
-from attestplane.signing.signer import _build_segment_head_payload
 from attestplane.types import ChainHead, EventDraft
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
