@@ -9,7 +9,7 @@
 
 ## 1. Mission
 
-Attestplane is an Open Trust Substrate (开放信任底座) for verifiable AI agent compliance — providing permanent, cryptographically-anchored audit trails that satisfy EU AI Act, NIST AI RMF, ISO 42001, and related regulatory frameworks. The project is committed to remaining **permanently open source under Apache 2.0**. No commercial arrangement will ever compromise this commitment. The substrate exists to advance public infrastructure for trustworthy AI governance; community adoption and regulator trust are assets that belong to no single entity.
+Attestplane is an Open Trust Substrate for verifiable AI agent compliance — providing permanent, cryptographically-anchored audit trails that satisfy EU AI Act, NIST AI RMF, ISO 42001, and related regulatory frameworks. The project is committed to remaining **permanently open source under Apache 2.0**. No commercial arrangement will ever compromise this commitment. The substrate exists to advance public infrastructure for trustworthy AI governance; community adoption and regulator trust are assets that belong to no single entity.
 
 ---
 
