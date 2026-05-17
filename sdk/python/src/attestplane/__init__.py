@@ -30,6 +30,12 @@ from attestplane.event_types import (
     WORKER_ASSIGNMENT_EVENT,
     is_known_v1_event_type,
 )
+from attestplane.obligations import (
+    ObligationEntry,
+    ObligationRegistryError,
+    Registry,
+    load_eu_ai_act_article_12,
+)
 from attestplane.hashchain import (
     GENESIS_HASH,
     SCHEMA_VERSION,
@@ -76,6 +82,9 @@ __all__ = [
     "ChainedEvent",
     "EventDraft",
     "GenericRuntimeAdapter",
+    "ObligationEntry",
+    "ObligationRegistryError",
+    "Registry",
     "SubjectRef",
     "VerificationResult",
     "__version__",
@@ -84,5 +93,6 @@ __all__ = [
     "genesis_head",
     "hash_event",
     "is_known_v1_event_type",
+    "load_eu_ai_act_article_12",
     "verify_chain",
 ]

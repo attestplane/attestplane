@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/v1/obligation_registry.schema.json",
+  "title": "Attestplane Obligation Registry Entry",
+  "description": "Schema for a single regulatory-obligation entry as loaded by attestplane.obligations.registry. Each entry maps a specific regulatory article / paragraph to the Attestplane evidence event types and fields that satisfy (or are designed toward) it. Locked by ADR-0008 cross-reference and the claim-safety triad in docs/policy/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "framework",
+    "article",
+    "paragraph",
+    "obligation_id",
+    "regulatory_text",
+    "required_evidence_fields",
+    "optional_evidence_fields",
+    "event_type_mapping",
+    "verifier_expectation",
+    "implementation_status",
+    "legal_disclaimer",
+    "source_citation"
+  ],
+  "properties": {
+    "framework": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short stable framework name, e.g. 'EU AI Act', 'DORA', 'NIS2', 'GDPR', 'ISO 42001', 'NIST AI RMF'."
+    },
+    "article": {
+      "type": "string",
+      "pattern": "^[0-9]+[A-Za-z]?$",
+      "description": "Article number as a string (article numbering may be alphanumeric in some frameworks). Numeric leading required."
+    },
+    "paragraph": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Paragraph / sub-paragraph identifier, e.g. '1', '2(a)', '3(d)'. Free-form short string; preserve the regulator's notation."
+    },
+    "obligation_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$",
+      "description": "Stable dotted identifier; lower_snake_case segments. Format <framework_slug>.<article_slug>.<paragraph_slug>.<aspect_slug>. Renaming an obligation_id is a breaking change."
+    },
+    "regulatory_text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Verbatim citation of the regulatory text. MUST be a quotation from the source regulation; paraphrase belongs in a separate 'paraphrase' field if needed (not part of v1 schema). Use single quotes around inline phrasing; preserve original capitalisation."
+    },
+    "required_evidence_fields": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Top-level EventDraft / AuditEvent fields that MUST be populated for an event to count as evidence satisfying this obligation. Field names follow snake_case from types.py / types.ts."
+    },
+    "optional_evidence_fields": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Fields that, when present, strengthen the evidence. Verifier MAY surface their absence as a warning."
+    },
+    "event_type_mapping": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*_event$"
+      },
+      "uniqueItems": true,
+      "minItems": 1,
+      "description": "v1 evidence event_type strings whose occurrence contributes evidence for this obligation. Each string MUST be a member of attestplane.event_types.ALL_EVENT_TYPES_V1; verifier raises on unknown strings."
+    },
+    "verifier_expectation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One-sentence description of what a verifier checks. Imperative voice. Example: 'Every eval_event has matched_input_ref populated.'"
+    },
+    "implementation_status": {
+      "type": "string",
+      "enum": [
+        "mapping_target",
+        "designed_toward",
+        "field_supported",
+        "verified_in_test"
+      ],
+      "description": "Locked enum. MUST be one of four values; any other value is rejected by the schema and by the claim-safety triad. See docs/policy/forbidden_claims.md § Obligation-registry implementation_status."
+    },
+    "legal_disclaimer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plain-language disclaimer that the entry is a mapping target, not a compliance opinion. Repeated per entry so a verifier output that quotes a single entry still carries the disclaimer."
+    },
+    "source_citation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Canonical bibliographic citation: regulation name, official identifier, adoption date, publication reference. Must be sufficient for a regulator or auditor to locate the source."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional implementation notes; never used for legal interpretation."
+    }
+  }
+}
