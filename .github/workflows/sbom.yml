@@ -1,0 +1,71 @@
+name: sbom
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "sdk/python/**"
+      - ".github/workflows/sbom.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+defaults:
+  run:
+    working-directory: sdk/python
+
+jobs:
+  cyclonedx:
+    name: Generate CycloneDX SBOM (sdk/python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+
+      - name: Install package + dev extras
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install -e '.[dev]'
+
+      - name: Generate CycloneDX SBOM (JSON + XML)
+        run: |
+          .venv/bin/cyclonedx-py environment .venv \
+            --of JSON \
+            -o attestplane-python.cdx.json
+          .venv/bin/cyclonedx-py environment .venv \
+            --of XML \
+            -o attestplane-python.cdx.xml
+
+      - name: Validate SBOM spec compliance
+        run: |
+          .venv/bin/python -c "
+          import json
+          d = json.load(open('attestplane-python.cdx.json'))
+          assert d['bomFormat'] == 'CycloneDX'
+          assert d['specVersion'].startswith('1.')
+          assert len(d.get('components', [])) > 0
+          print(f\"spec={d['specVersion']}  components={len(d['components'])}\")
+          "
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: attestplane-python-sbom-${{ github.sha }}
+          path: |
+            sdk/python/attestplane-python.cdx.json
+            sdk/python/attestplane-python.cdx.xml
+          retention-days: 90
+          if-no-files-found: error

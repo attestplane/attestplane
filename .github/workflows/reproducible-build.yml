@@ -1,0 +1,87 @@
+name: reproducible-build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "sdk/python/**"
+      - ".github/workflows/reproducible-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reproducible-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+defaults:
+  run:
+    working-directory: sdk/python
+
+jobs:
+  reproduce:
+    name: Build attestplane wheel + sdist twice, compare bytes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+
+      - name: Compute SOURCE_DATE_EPOCH from HEAD
+        id: sde
+        run: |
+          echo "value=$(git log -1 --pretty=%ct HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: First build
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
+        run: |
+          uv venv --python 3.12 .venv1
+          .venv1/bin/pip install --quiet build hatchling
+          .venv1/bin/python -m build --wheel --sdist -o /tmp/build1
+          ls -la /tmp/build1
+
+      - name: Second build (separate venv, same SOURCE_DATE_EPOCH)
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
+        run: |
+          uv venv --python 3.12 .venv2
+          .venv2/bin/pip install --quiet build hatchling
+          .venv2/bin/python -m build --wheel --sdist -o /tmp/build2
+          ls -la /tmp/build2
+
+      - name: Compare wheel + sdist sha256
+        run: |
+          set -e
+          h1=$(cd /tmp/build1 && sha256sum ./*.whl ./*.tar.gz | awk '{print $1, $2}' | sort)
+          h2=$(cd /tmp/build2 && sha256sum ./*.whl ./*.tar.gz | awk '{print $1, $2}' | sort)
+          if [ "$h1" != "$h2" ]; then
+            echo "::error::wheel/sdist not reproducible — bytes differ between builds"
+            echo "--- build1 hashes ---"
+            echo "$h1"
+            echo "--- build2 hashes ---"
+            echo "$h2"
+            echo "--- diff ---"
+            diff <(echo "$h1") <(echo "$h2") || true
+            exit 1
+          fi
+          echo "Reproducible build verified. Hashes:"
+          echo "$h1"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: attestplane-python-${{ github.sha }}
+          path: |
+            /tmp/build1/*.whl
+            /tmp/build1/*.tar.gz
+          retention-days: 30
+          if-no-files-found: error
