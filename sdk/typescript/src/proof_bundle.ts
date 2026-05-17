@@ -11,9 +11,14 @@
  * inputs produce the same proof-bundle dict.
  */
 
-import { headOf, SCHEMA_VERSION, verifyChain } from './hashchain.js';
-import type { ChainedEvent, SubjectRef } from './types.js';
+import { SCHEMA_VERSION, headOf, verifyChain } from './hashchain.js';
 import { VERSION as _SDK_VERSION } from './index_version.js';
+import {
+  SIGNATURE_SCHEMA_VERSION,
+  type SignatureRecord,
+  validateSignatureRecord,
+} from './signing/base.js';
+import type { ChainedEvent, SubjectRef } from './types.js';
 
 export const DEFAULT_FORBIDDEN_FIELDS: readonly string[] = [
   'customer_names',
@@ -73,6 +78,30 @@ export interface ProofBundle {
   };
   readonly framework_mappings: readonly FrameworkMapping[];
   readonly forbidden_fields: readonly string[];
+  /**
+   * Additive `signatures` field per ADR-0005 T5. Absent when no
+   * SignatureRecord has been added (preserves byte equality with
+   * v0.0.1-alpha bundles).
+   */
+  readonly signatures?: readonly SerializedSignatureRecord[];
+}
+
+/**
+ * Wire-format `SignatureRecord` per `_serialize_signature_record` in
+ * `sdk/python/src/attestplane/proof_bundle.py`. Field-by-field
+ * byte-stable copy of Python's encoding.
+ */
+export interface SerializedSignatureRecord {
+  readonly signature_schema_version: number;
+  readonly signed_seq: number;
+  readonly signed_event_hash_hex: string;
+  readonly signature_hex: string;
+  readonly key_id: string;
+  readonly public_key_der_b64: string;
+  readonly signing_cert_chain_b64: readonly string[];
+  readonly signed_at: string;
+  readonly signature_mode: 'segment_head' | 'per_event';
+  readonly signed_payload_b64: string;
 }
 
 export interface SerializedSubjectRef {
@@ -108,6 +137,103 @@ function bytesToHex(bytes: Uint8Array): string {
     out += v;
   }
   return out;
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    throw new Error(`hex string has odd length: ${hex.length}`);
+  }
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    const byte = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    if (Number.isNaN(byte)) {
+      throw new Error(`invalid hex at offset ${i * 2}: ${hex.slice(i * 2, i * 2 + 2)}`);
+    }
+    out[i] = byte;
+  }
+  return out;
+}
+
+function b64encode(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString('base64');
+}
+
+function b64decode(b64: string): Uint8Array {
+  return new Uint8Array(Buffer.from(b64, 'base64'));
+}
+
+function parseSignedAtTimestamp(ts: string): Date {
+  // Python emits "YYYY-MM-DDTHH:MM:SS.ffffffZ" (microsecond precision +
+  // literal Z). Date.parse accepts trailing-Z ISO; sub-millisecond
+  // digits are silently truncated to ms precision, which is acceptable
+  // because we only compare ISO-form on re-emit — never round-trip Date
+  // back to bytes.
+  const t = Date.parse(ts);
+  if (Number.isNaN(t)) {
+    throw new Error(`invalid signed_at timestamp: ${JSON.stringify(ts)}`);
+  }
+  return new Date(t);
+}
+
+/**
+ * Encode a `SignatureRecord` as the wire-format dict per Python's
+ * `_serialize_signature_record`. Hex for fixed-length crypto values
+ * (event_hash, signature); base64 for variable blobs (public_key_der,
+ * cert_chain, signed_payload); RFC-3339 µs-Z for the datetime.
+ */
+export function serializeSignatureRecord(record: SignatureRecord): SerializedSignatureRecord {
+  return {
+    signature_schema_version: record.signature_schema_version,
+    signed_seq: record.signed_seq,
+    signed_event_hash_hex: bytesToHex(record.signed_event_hash),
+    signature_hex: bytesToHex(record.signature),
+    key_id: record.key_id,
+    public_key_der_b64: b64encode(record.public_key_der),
+    signing_cert_chain_b64: record.signing_cert_chain.map((c) => b64encode(c)),
+    signed_at: formatTimestampMicros(record.signed_at),
+    signature_mode: record.signature_mode,
+    signed_payload_b64: b64encode(record.signed_payload),
+  };
+}
+
+/**
+ * Inverse of `serializeSignatureRecord`. Validates the result via
+ * `validateSignatureRecord` so malformed records surface as a
+ * `SigningError`.
+ */
+export function deserializeSignatureRecord(raw: SerializedSignatureRecord): SignatureRecord {
+  const required = [
+    'signature_schema_version',
+    'signed_seq',
+    'signed_event_hash_hex',
+    'signature_hex',
+    'key_id',
+    'public_key_der_b64',
+    'signing_cert_chain_b64',
+    'signed_at',
+    'signature_mode',
+    'signed_payload_b64',
+  ] as const;
+  const obj = raw as unknown as Record<string, unknown>;
+  for (const k of required) {
+    if (!(k in obj)) {
+      throw new Error(`deserializeSignatureRecord: missing field ${k}`);
+    }
+  }
+  const record: SignatureRecord = {
+    signature_schema_version: Number(raw.signature_schema_version),
+    signed_seq: Number(raw.signed_seq),
+    signed_event_hash: hexToBytes(raw.signed_event_hash_hex),
+    signature: hexToBytes(raw.signature_hex),
+    key_id: String(raw.key_id),
+    public_key_der: b64decode(raw.public_key_der_b64),
+    signing_cert_chain: raw.signing_cert_chain_b64.map((c) => b64decode(c)),
+    signed_at: parseSignedAtTimestamp(raw.signed_at),
+    signature_mode: raw.signature_mode,
+    signed_payload: b64decode(raw.signed_payload_b64),
+  };
+  validateSignatureRecord(record);
+  return record;
 }
 
 function formatTimestampMicros(d: Date): string {
@@ -156,6 +282,7 @@ export class ProofBundleBuilder {
   private readonly _anchor_ref: string | null;
   private readonly _events: ChainedEvent[] = [];
   private readonly _framework_mappings: FrameworkMapping[] = [];
+  private readonly _signatures: SignatureRecord[] = [];
 
   constructor(input: ProofBundleBuilderInput) {
     this._chain_id = input.chain_id;
@@ -180,6 +307,24 @@ export class ProofBundleBuilder {
     this._framework_mappings.push(mapping);
   }
 
+  /**
+   * Add `SignatureRecord` instances per ADR-0005 T5. Each entry is
+   * validated immediately via `validateSignatureRecord`; the bundle's
+   * `signatures` field is emitted only when at least one record has
+   * been added (preserves byte equality with v0.0.1-alpha bundles).
+   */
+  extendSignatures(records: readonly SignatureRecord[]): void {
+    for (const r of records) {
+      validateSignatureRecord(r);
+      if (r.signature_schema_version !== SIGNATURE_SCHEMA_VERSION) {
+        throw new Error(
+          `extendSignatures: signature_schema_version must be ${SIGNATURE_SCHEMA_VERSION}, got ${r.signature_schema_version}`,
+        );
+      }
+      this._signatures.push(r);
+    }
+  }
+
   build(options?: { readonly now?: Date }): ProofBundle {
     const actualNow = options?.now ?? new Date();
     const result = verifyChain(this._events);
@@ -197,7 +342,7 @@ export class ProofBundleBuilder {
       ...(this._anchor_ref != null ? { anchor_ref: this._anchor_ref } : {}),
     };
 
-    return {
+    const bundle: ProofBundle = {
       bundle_version: 1,
       chain_metadata: chainMetadata,
       events: this._events.map(serializeChainedEvent),
@@ -211,7 +356,11 @@ export class ProofBundleBuilder {
       },
       framework_mappings: [...this._framework_mappings],
       forbidden_fields: [...this._forbidden_fields],
+      ...(this._signatures.length > 0
+        ? { signatures: this._signatures.map(serializeSignatureRecord) }
+        : {}),
     };
+    return bundle;
   }
 }
 
@@ -275,14 +424,15 @@ export function buildAuditorExport(
 
   let earliest: string;
   let latest: string;
-  if (bundle.events.length > 0) {
+  const firstEvent = bundle.events[0];
+  if (firstEvent !== undefined) {
     earliest = bundle.events.reduce(
       (acc, ev) => (ev.event.timestamp < acc ? ev.event.timestamp : acc),
-      bundle.events[0]!.event.timestamp,
+      firstEvent.event.timestamp,
     );
     latest = bundle.events.reduce(
       (acc, ev) => (ev.event.timestamp > acc ? ev.event.timestamp : acc),
-      bundle.events[0]!.event.timestamp,
+      firstEvent.event.timestamp,
     );
   } else {
     earliest = bundle.verification_report.verified_at;

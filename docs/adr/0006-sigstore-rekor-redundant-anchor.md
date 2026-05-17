@@ -115,6 +115,48 @@ Callers either generate the keypair once per deployment (recommended)
 or pass `None` to use an ephemeral key (suitable for tests and
 substrate-local-only verification).
 
+#### 4.1. Amendment (2026-05-17) — coexistence with ADR-0005 event signing
+
+[ADR-0005](0005-event-signing-scheme.md) ships the formal event-signing
+scheme. Both ADRs introduce Ed25519 keys, with distinct roles. The
+amendment locks how they coexist in a single `ProofBundle`:
+
+| Field | Role | Key source | Verification |
+|---|---|---|---|
+| `ProofBundle.anchor_records[].tsa_token` (Rekor) | Submits the chain head to a transparency log; the log's signature attests **inclusion + time** | Rekor's *own* signing key (Sigstore / private Rekor instance) | Rekor public key (embedded in `cosign` / `slsa-verifier`) |
+| `SigstoreRekorAnchor`'s `signing_key=` constructor argument | Signs the submission payload that Rekor stores; allows an organisation to bind the Rekor entry to its identity | Substrate operator's *Rekor-submission* key (often a separate key per deployment) | Operator publishes the corresponding pubkey out-of-band |
+| `ProofBundle.signatures[].signature` (ADR-0005) | Signs `canonicalize(AuditEvent)` or the 5-key segment-head payload to bind individual events to the substrate operator | `KeyProvider`-supplied operator key (`InMemoryKeyProvider` / `FileKeyProvider` / `EnvKeyProvider` / `MultiSignerProvider`) | `TrustRoots` lookup by `key_id`, RFC 8410 SPKI |
+
+Two design points the amendment locks:
+
+1. **`SigstoreRekorAnchor`'s submission key MAY but NEED NOT be the
+   same key supplied to ADR-0005's `KeyProvider`.** They are
+   independent. A deployer who already has a Sigstore-bound key may
+   reuse it as the substrate's signing key; a deployer who prefers
+   separation of duties uses two distinct keys. The SDK does not
+   enforce either policy.
+2. **`SignatureRecord.signing_cert_chain` is reserved for the Fulcio
+   path (see ADR-0005 § 9 + the anticipated ADR-0007).** When
+   `SigstoreRekorAnchor` is given a Fulcio-issued short-lived
+   certificate, that certificate populates `signing_cert_chain` on the
+   *signature record*, and the Rekor log entry's `body.spec.publicKey`
+   field references the *same* cert. The two layers will be linked
+   when ADR-0007 lands; v1 leaves both layers ungated.
+
+Plurality (§ 5 below) extends naturally to event signing:
+`MultiSignerProvider` (ADR-0005 § 4) and `MultiTSAProvider`
+(ADR-0003 § 2) compose independently. A deployer may run:
+
+- N signing keys via `MultiSignerProvider`
+- M anchor providers via `MultiTSAProvider` (mix of RFC-3161 TSAs + Sigstore Rekor)
+
+and the resulting `ProofBundle` carries up to `len(events) × N`
+signature records and up to `len(events) × M` anchor records, all
+verifiable independently. The verifier accepts any single valid
+signature per seq as evidence of operator binding (plurality priority,
+ADR-0005 § 7) and any single valid anchor as evidence of temporal
+binding (existing ADR-0003 + ADR-0006 § 5 semantics).
+
 ### 5. Plurality recommendation generalises
 
 [ADR-0003 § 2](0003-tsa-rfc-3161-anchoring.md) recommended ≥ 2 RFC-3161

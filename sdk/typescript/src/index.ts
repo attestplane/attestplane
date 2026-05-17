@@ -104,7 +104,9 @@ export {
   DEFAULT_FORBIDDEN_FIELDS,
   ProofBundleBuilder,
   buildAuditorExport,
+  deserializeSignatureRecord,
   serializeChainedEvent,
+  serializeSignatureRecord,
   type AuditorExport,
   type AuditorExportOptions,
   type FrameworkMapping,
@@ -113,6 +115,7 @@ export {
   type ProofBundleBuilderInput,
   type SerializedAuditEvent,
   type SerializedChainedEvent,
+  type SerializedSignatureRecord,
   type SerializedSubjectRef,
 } from './proof_bundle.js';
 export {
@@ -123,4 +126,58 @@ export {
   verifyProofBundleFile,
   type BundleVerificationResult,
 } from './verifier.js';
+
+// ADR-0005 event-signing surface (T6).
+export {
+  KeyBoundaryError,
+  KeyProvider,
+  KeyProviderError,
+  SIGNATURE_SCHEMA_VERSION,
+  SignatureVerificationError,
+  SigningError,
+  DEFAULT_SIGNATURE_POLICY,
+  deriveKeyId,
+  makeSignaturePolicy,
+  validateSignatureRecord,
+  type SignatureMode,
+  type SignaturePolicy,
+  type SignatureRecord,
+  type SigningMaterial,
+} from './signing/base.js';
+export {
+  EnvKeyProvider,
+  FileKeyProvider,
+  InMemoryKeyProvider,
+  MultiSignerProvider,
+  exportPublicKeyDer,
+  seedToPrivateKey,
+  type EnvKeyProviderOptions,
+  type FileKeyProviderOptions,
+  type InMemoryKeyProviderOptions,
+} from './signing/providers.js';
+export {
+  Signer,
+  buildPerEventPayload,
+  buildSegmentHeadPayload,
+  type SignerOptions,
+} from './signing/signer.js';
+export {
+  TrustRoots,
+  TrustRootsError,
+  loadTrustRoots,
+  parseTrustRoots,
+  type TrustRootEntry,
+} from './signing/trust_roots.js';
+export {
+  STATUS_RANK,
+  verifyChainFull,
+  verifyChainWithSignatures,
+  type BundleVerificationResult as ChainBundleVerificationResult,
+  type SignatureStatus,
+  type SingleSignatureResult,
+  type VerifyChainFullOptions,
+  type VerifyChainWithSignaturesOptions,
+  type VerifyChainWithSignaturesResult,
+} from './signing/verifier_ext.js';
+
 export { VERSION } from './index_version.js';

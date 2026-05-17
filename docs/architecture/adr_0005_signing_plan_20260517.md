@@ -230,3 +230,7 @@ edits — mirrors the `competitive_positioning_upgrade_plan_20260517 §
 
 - **2026-05-17** — Initial plan from `opus-architect` dispatch after
   Track 2 completion (commit fb0600e).
+- **2026-05-17** — T1+T2 (KeyProvider ABC + 4 concrete providers) shipped (commit 01ef2b6).
+- **2026-05-17** — T3+T4 (Signer worker + TrustRoots YAML + verifier extension) shipped after architect review (commit 35819c0); see `adr_0005_t3_t4_review_20260517.md`.
+- **2026-05-17** — T5+T7 (proof_bundle additive signatures + 5 frozen signature_vectors.json) shipped (commit 0fc0776).
+- **2026-05-17 PM** — T6 (TypeScript mirror) shipped after architect walkthrough; see `adr_0005_t6_review_20260517.md`. 16/16 conformance assertions pass; vitest 320/320 green; no new runtime deps. Cross-language byte stability confirmed via JWK→PKCS#8 recipe revision.

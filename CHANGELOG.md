@@ -46,6 +46,21 @@ verify against the new code.
   record-only events, universal rule that authority/execution stays in
   the runtime. ADR-0003's "Follow-up ADRs anticipated" renumbered
   accordingly (signing→0005, Sigstore→0006, retention→0007).
+- [ADR-0005 — Event signing scheme](docs/adr/0005-event-signing-scheme.md):
+  Ed25519 sidecar `SignatureRecord` (independent
+  `signature_schema_version = 1`); two signing modes (segment-head
+  default, per-event opt-in); `KeyProvider` abstraction with
+  forbidden-verb gate (`revoke`/`rotate`/`delete`/`replace`) preserving
+  ADR-0004 § 1 boundary; `TrustRoots` config + `verify_chain_with_signatures` /
+  `verify_chain_full` verifier extension with plurality priority +
+  coverage transitivity; five frozen `signature_vectors.json`
+  cross-language conformance vectors. Strictly additive — v0.0.1-alpha
+  bundles continue to verify byte-for-byte.
+- [ADR-0006 § 4.1 amendment](docs/adr/0006-sigstore-rekor-redundant-anchor.md):
+  formalises coexistence of `SigstoreRekorAnchor`'s submission key,
+  ADR-0005 operator signing key, and Fulcio cert chain — independent
+  layers in a single `ProofBundle`, with `MultiSignerProvider` and
+  `MultiTSAProvider` composing freely.
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md):
   twelve canonical `event_type` strings, three independent version
   numbers (`chain.schema_version` / `anchor_schema_version` /
@@ -93,6 +108,25 @@ verify against the new code.
   `inspect`, `export`, `doctor`); each supports `--json`. Entry-point
   registered via `[project.scripts]`; `pip install attestplane`
   installs the executable.
+- `signing/` (ADR-0005, optional `[signing]` extras):
+  - `base.py` — `SIGNATURE_SCHEMA_VERSION`, `SignatureRecord`,
+    `SigningMaterial`, `SignaturePolicy`, `KeyProvider` ABC with
+    `__init_subclass__` forbidden-verb gate, `derive_key_id`, error
+    hierarchy (`SigningError` / `KeyProviderError` /
+    `SignatureVerificationError` / `KeyBoundaryError`).
+  - `providers.py` — `InMemoryKeyProvider`, `FileKeyProvider`,
+    `EnvKeyProvider`, `MultiSignerProvider`.
+  - `signer.py` — hybrid sync + background-worker `Signer` (mirrors
+    `Anchorer`); `_build_segment_head_payload`, `_build_per_event_payload`.
+  - `trust_roots.py` — `yaml.safe_load`-only loader, 1 MB cap, strict
+    schema, `key_id` cross-check.
+  - `verifier_ext.py` — `verify_chain_with_signatures`,
+    `verify_chain_full`, `BundleVerificationResult`,
+    `SingleSignatureResult`, 5-value `SignatureStatus` enum with
+    plurality priority + coverage transitivity (option a).
+- `proof_bundle.py` extension — additive `signatures` field on
+  `ProofBundleBuilder`, `_serialize_signature_record` /
+  `deserialize_signature_record` round-trip.
 
 ### Added — TypeScript SDK (`sdk/typescript/src/`)
 
@@ -105,6 +139,32 @@ verify against the new code.
 - `verifier.ts` — TypeScript port (async; uses `node:fs/promises`).
 - `canonical_text.ts` — TypeScript port. Loads the SAME
   `text_vectors.json` as the Python SDK; CI fails on any byte drift.
+- `signing/` (ADR-0005 T6, no new runtime dependencies — `node:crypto`
+  primitives only):
+  - `base.ts` — TypeScript mirror of Python `base.py`. Errors,
+    `SignatureRecord` interface + `validateSignatureRecord`,
+    `KeyProvider` abstract class with constructor-time forbidden-verb
+    gate, `SigningMaterial`, `SignaturePolicy`, `deriveKeyId`.
+  - `providers.ts` — `InMemoryKeyProvider` / `FileKeyProvider` /
+    `EnvKeyProvider` / `MultiSignerProvider`. Ed25519 seed →
+    `KeyObject` via RFC 8410 PKCS#8 wrap (the JWK seed path in the
+    architect's initial recipe was rejected by Node 22 because it
+    requires the public `x` field; PKCS#8 wrap is byte-equal to
+    Python's `cryptography` serialisation).
+  - `signer.ts` — sync-only `Signer` with `signEvent`,
+    `signSegmentHead`, `buildSegmentHeadPayload`, `buildPerEventPayload`
+    (background worker explicitly deferred per `adr_0005_t6_review_20260517.md`
+    § 1 decision 5).
+  - `trust_roots.ts` — JSON-only loader (TS opts out of YAML to keep
+    `uuid` as the only runtime dep), 1 MB cap, strict schema,
+    `parseTrustRoots` for non-file callers.
+  - `verifier_ext.ts` — `verifyChainWithSignatures`, `verifyChainFull`,
+    `BundleVerificationResult` (re-exported as
+    `ChainBundleVerificationResult` to avoid collision with the
+    `proof_bundle.ts` verifier result type), `STATUS_RANK`.
+- `proof_bundle.ts` extension — `SerializedSignatureRecord` interface,
+  `serializeSignatureRecord` / `deserializeSignatureRecord`, additive
+  `ProofBundle.signatures?` field, `ProofBundleBuilder.extendSignatures`.
 
 ### Added — Conformance fixtures
 
@@ -114,6 +174,11 @@ verify against the new code.
   `malformed_payload.json`) pinning gates A2 and A3.
 - `sdk/python/tests/conformance/text_vectors.json` — 12 frozen text
   canonicalization vectors.
+- `sdk/python/tests/conformance/signature_vectors.json` — 5 frozen
+  event-signing vectors (ADR-0005 T7) covering segment-head + per-event
+  modes, multi-signer plurality, unknown-key + tampered-payload negative
+  cases. Both SDKs replay this file; cross-language drift fails CI on
+  either side.
 
 ### Added — Documentation
 
