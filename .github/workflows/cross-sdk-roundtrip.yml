@@ -1,0 +1,71 @@
+name: cross-sdk-roundtrip
+
+# Tier-2 pre-merge thorough gate. Proves the Python and TypeScript SDKs
+# agree byte-for-byte on canonical_text + canonical (JSON) for the corpus
+# in tests/cross_sdk/corpus.json. This is the closing edge of the
+# Py → TS → Py loop required by docs/ci_testing_framework_20260518.md §G1.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-sdk-roundtrip-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  roundtrip:
+    name: Py → TS → Py canonical byte equivalence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22"
+
+      - name: Install Python SDK
+        working-directory: sdk/python
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install -e '.[dev]'
+
+      - name: Build TypeScript SDK
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm run build
+
+      - name: Step 1 — Python emit
+        run: sdk/python/.venv/bin/python tests/cross_sdk/py_emit.py
+
+      - name: Step 2 — TypeScript round-trip
+        run: node tests/cross_sdk/ts_roundtrip.mjs
+
+      - name: Step 3 — Python verify
+        run: sdk/python/.venv/bin/python tests/cross_sdk/py_verify.py
+
+      - name: Upload round-trip artefacts on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: cross-sdk-roundtrip-${{ github.sha }}
+          path: |
+            tests/cross_sdk/py_emit.json
+            tests/cross_sdk/ts_reemit.json
+          retention-days: 7
+          if-no-files-found: ignore

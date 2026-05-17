@@ -1,0 +1,42 @@
+name: invariants
+
+# Tier-0 invariant gates. Must complete in &lt; 30s on a clean runner — these
+# are the substrate-level red lines: AP-EVD/1.0 schema bytes + Accepted ADR
+# Decisions. Any drift here is a deliberate governance event, not a normal
+# code change.
+#
+# See docs/ci_testing_framework_20260518.md and docs/adr/0014-adapter-conformance-fixture-pinning.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: invariants-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  schema-hashes:
+    name: AP-EVD/1.0 schemas/v1 hash lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Verify canonical-JSON SHA-256 of every schemas/v1/*.schema.json
+        run: bash scripts/check-schema-hashes.sh
+
+  adr-frozen-blocks:
+    name: Accepted ADR Decision sections frozen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Verify ## Decision SHA-256 of every Accepted ADR
+        run: bash scripts/check-adr-frozen-blocks.sh

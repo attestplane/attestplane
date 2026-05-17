@@ -1,0 +1,19 @@
+{
+  "canonical_text": [
+    {"id": "ascii_simple",      "text": "hello world"},
+    {"id": "ascii_punct",       "text": "GET /v1/agents?limit=10 HTTP/1.1"},
+    {"id": "unicode_cjk",       "text": "你好，世界。Attestplane 证据基础设施"},
+    {"id": "unicode_mixed",     "text": "Tier-0 invariant ✓ AP-EVD/1.0 protocol"},
+    {"id": "whitespace_runs",   "text": "a   b\t\tc\n\nd"},
+    {"id": "trailing_nl",       "text": "line one\nline two\n"},
+    {"id": "datetime_str",      "text": "2026-05-18T13:24:00Z"},
+    {"id": "json_like",         "text": "{\"a\":1,\"b\":[true,null,\"x\"]}"}
+  ],
+  "canonical_json": [
+    {"id": "obj_flat",          "value": {"b": 2, "a": 1}},
+    {"id": "obj_nested",        "value": {"outer": {"y": [3, 1, 2], "x": "v"}}},
+    {"id": "obj_unicode_keys",  "value": {"键": "值", "k": "v"}},
+    {"id": "array_mixed",       "value": [1, "two", true, null, {"k": "v"}]},
+    {"id": "obj_with_null",     "value": {"a": null, "b": 0, "c": false}}
+  ]
+}

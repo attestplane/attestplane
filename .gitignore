@@ -41,3 +41,7 @@ htmlcov/
 
 # Local config
 .local/
+
+# Cross-SDK round-trip ephemeral artefacts (regenerated on every run)
+tests/cross_sdk/py_emit.json
+tests/cross_sdk/ts_reemit.json
