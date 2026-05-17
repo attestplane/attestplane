@@ -109,11 +109,11 @@ install_auto_audit(app, substrate=substrate)
 ### Node.js / Express / NestJS
 
 ```bash
-npm install @attestplane/sdk  # alpha; API may change
+npm install @attestplane/attestplane  # alpha; API may change
 ```
 
 ```typescript
-import { AttestSubstrate, installAutoAudit } from "@attestplane/sdk";
+import { AttestSubstrate, installAutoAudit } from "@attestplane/attestplane";
 
 const substrate = new AttestSubstrate({
   chainStore: "postgresql://...",
