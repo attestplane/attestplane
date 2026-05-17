@@ -142,7 +142,7 @@ Five buckets:
 
 ### 2.2 INTEGRATE-REFACTOR (8 items)
 
-- **`crates/aios-audit::CardinalityError` concept** → Attestplane `verify_segment(events, predicate, expected_count)` for global-chain segment-deletion detection. Anticipated ADR-0005. 1.5 PD.
+- **`crates/aios-audit::CardinalityError` concept** → Attestplane `verify_segment(events, predicate, expected_count)` for global-chain segment-deletion detection. Anticipated ADR-0010 (segment cardinality). 1.5 PD.
 - **`schemas/replay/replay_proof.schema.json`** → Attestplane `replay_proof.schema.json` with `tenant_id` removed; field-by-field rewrite. 1 PD.
 - **`schemas/evidence/external_customer_evidence.schema.json`** → Attestplane `auditor_export.schema.json` with `test_fixture` flag dropped; redaction-status / consent-status retained. 1 PD.
 - **`crates/aios-sdk-evidence::EvidenceBundle` + `AuditEnvelope`** → Attestplane `proof_bundle.py` / `proof_bundle.ts` types. 2 PD.
@@ -153,9 +153,9 @@ Five buckets:
 
 ### 2.3 REFERENCE-ONLY (5 items)
 
-- **`crates/aios-cp/src/repo/audit.rs`** — informs Attestplane ADR-0004 (PostgreSQL multi-writer backend). Read; do not copy. 0 PD this round.
+- **`crates/aios-cp/src/repo/audit.rs`** — informs Attestplane storage-backend ADR (PostgreSQL multi-writer; number TBD post-M5). Read; do not copy. 0 PD this round.
 - **`crates/aios-cp/src/audit_anchor_job.rs`** — informs ADR-0003 TSA implementation. 0 PD this round.
-- **`crates/aios-replay-runner`** — pattern for ADR (anticipated) ADR-0007 deterministic replay. 0 PD this round.
+- **`crates/aios-replay-runner`** — pattern for ADR (anticipated) ADR-0011 deterministic replay. 0 PD this round.
 - **`crates/aios-cp/src/api/audit.rs` + utoipa annotations** — spec-clone the OpenAPI shape into Attestplane M5 `/v1/auditor/*` design. 0 PD this round (informs Phase 1 ticket #15).
 - **AIOS ADRs 0007 / 0010 / 0016 / 0021 / 0026 / 0030 / 0031 / 0042 / 0047** — read these before writing the corresponding Attestplane ADR. 1 PD reading + sidebar notes.
 
@@ -510,7 +510,7 @@ examples/                   # NEW directory
 
 ### 6.2 Chain scoping
 
-**Global chain stays in Attestplane.** Add `verify_segment(events, predicate, expected_count=None)` for AIOS-like per-run sub-chains via filtering (anticipated ADR-0005, ticket #5 below). Per-`run_id` scoping is structural to AIOS DB and does not transfer to a substrate that has no `runs` table.
+**Global chain stays in Attestplane.** Add `verify_segment(events, predicate, expected_count=None)` for AIOS-like per-run sub-chains via filtering (anticipated ADR-0010, ticket #5 below). Per-`run_id` scoping is structural to AIOS DB and does not transfer to a substrate that has no `runs` table.
 
 ### 6.3 Schema language
 
@@ -637,7 +637,7 @@ Solo founder with 8 weeks (~40 working days) to M5 deadline → Phase 0+1 fits i
 4. **`aios-sdk-evidence::EvidenceBundle` shape** → Attestplane `proof_bundle.py` types — INTEGRATE-REFACTOR
 5. **`schemas/replay/replay_proof.schema.json`** (minus tenant_id) → Attestplane `replay_proof.schema.json` — INTEGRATE-REFACTOR (Phase 2)
 6. **AIOS `/v1/auditor/*` OpenAPI surface (utoipa)** → spec-clone for Attestplane M5 API — REFERENCE-ONLY
-7. **`aios-audit::CardinalityError` concept** → Attestplane `verify_segment` ADR-0005 — INTEGRATE-REFACTOR
+7. **`aios-audit::CardinalityError` concept** → Attestplane `verify_segment` ADR-0010 — INTEGRATE-REFACTOR
 8. **`schemas/evidence/external_customer_evidence.schema.json`** (minus test_fixture flag) → Attestplane `auditor_export.schema.json` — INTEGRATE-REFACTOR
 9. **AIOS phase-gated acceptance test pattern** (`test_phase{N}_acceptance.py`) → Attestplane `tests/gates/test_v0_1_gates.py` — INTEGRATE-REFACTOR
 10. **`docs/claims/forbidden_claims.md`** → Attestplane `docs/policy/forbidden_claims.md` — INTEGRATE-REFACTOR

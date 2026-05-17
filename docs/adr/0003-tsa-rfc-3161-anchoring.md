@@ -124,8 +124,8 @@ v0.1 minimum: at TSA-issuance time, snapshot the **full TSA certificate chain pl
 
 Deferred to later ADRs:
 
-- **Re-anchoring** (anchor-of-anchor at a 12-month cadence) — ADR-0006.
-- **Sigstore / Rekor transparency-log redundancy** — ADR-0005.
+- **Re-anchoring** (anchor-of-anchor at a 12-month cadence) — ADR-0007.
+- **Sigstore / Rekor transparency-log redundancy** — ADR-0006.
 
 Both must ship before the first cert in our default TSA set expires (~12 months from M6).
 
@@ -186,6 +186,8 @@ Both must ship before the first cert in our default TSA set expires (~12 months 
 
 ## Follow-up ADRs anticipated
 
-- **ADR-0004 — Event signing scheme.** Ed25519 per-substrate keypair signs the chain tip alongside TSA anchoring. Closes the "who appended this" gap that TSA alone does not address.
-- **ADR-0005 — Sigstore / Rekor transparency-log integration.** v0.2; redundant anchor with public verifiability, completes the supply-chain story.
-- **ADR-0006 — Retention, re-anchoring cadence, archival format.** 12-month re-anchor policy, `AttestBundle` long-term archival schema, GDPR Art. 17 erasure vs. AI Act Art. 12 retention conflict resolution.
+Numbering note: when this ADR was first drafted, slots 0004/0005/0006 were reserved for the three items below. The boundary ADR ([ADR-0004](0004-aios-to-attestplane-boundary.md)) was deemed more load-bearing and took the 0004 slot; the three items below renumber by +1.
+
+- **ADR-0005 — Event signing scheme.** Ed25519 per-substrate keypair signs the chain tip alongside TSA anchoring. Closes the "who appended this" gap that TSA alone does not address.
+- **ADR-0006 — Sigstore / Rekor transparency-log integration.** v0.2; redundant anchor with public verifiability, completes the supply-chain story.
+- **ADR-0007 — Retention, re-anchoring cadence, archival format.** 12-month re-anchor policy, `AttestBundle` long-term archival schema, GDPR Art. 17 erasure vs. AI Act Art. 12 retention conflict resolution.
