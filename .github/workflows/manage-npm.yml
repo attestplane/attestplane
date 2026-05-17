@@ -1,0 +1,83 @@
+name: manage-npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'npm administrative action'
+        required: true
+        type: choice
+        options:
+          - dist-tag-list
+          - dist-tag-remove-latest
+          - dist-tag-set-alpha-to-latest-version
+      version:
+        description: 'Version (when action requires it)'
+        required: false
+        default: '0.0.1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manage-npm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+defaults:
+  run:
+    working-directory: sdk/typescript
+
+jobs:
+  manage:
+    name: npm ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@attestplane/attestplane
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Configure npm auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > ~/.npmrc
+
+      - name: List current dist-tags
+        run: |
+          set -e
+          echo "Current dist-tags for @attestplane/attestplane:"
+          npm dist-tag ls @attestplane/attestplane
+
+      - name: Remove 'latest' dist-tag
+        if: inputs.action == 'dist-tag-remove-latest'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -e
+          npm dist-tag rm @attestplane/attestplane latest
+          echo ""
+          echo "After:"
+          npm dist-tag ls @attestplane/attestplane
+
+      - name: Set 'alpha' tag to specified version
+        if: inputs.action == 'dist-tag-set-alpha-to-latest-version'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -e
+          npm dist-tag add "@attestplane/attestplane@${{ inputs.version }}" alpha
+          echo ""
+          echo "After:"
+          npm dist-tag ls @attestplane/attestplane
