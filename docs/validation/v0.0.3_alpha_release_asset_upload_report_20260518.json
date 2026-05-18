@@ -1,0 +1,132 @@
+{
+  "report": "v0.0.3_alpha_release_asset_upload_report",
+  "date": "2026-05-18",
+  "upload_timestamp_utc": "2026-05-18T07:04:43Z",
+  "verdict": "V003AlphaReleaseAssetUploadComplete",
+  "main_commit": "d2b90a53005ed98b3374883d5b394e61664bd718",
+  "frozen_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "tag_moved": false,
+  "github_release_url": "https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha",
+  "github_release_state": {
+    "is_prerelease": true,
+    "tag_name": "v0.0.3-alpha",
+    "title_modified": false,
+    "body_modified": false,
+    "prerelease_flag_modified": false
+  },
+  "uploaded_assets": [
+    {
+      "name": "attestplane-0.0.3a0-py3-none-any.whl",
+      "size_bytes": 153372,
+      "content_type": "application/octet-stream",
+      "sha256": "623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d",
+      "asset_id": "RA_kwDOSfWZnc4ZN2K-"
+    },
+    {
+      "name": "attestplane-0.0.3a0.tar.gz",
+      "size_bytes": 207215,
+      "content_type": "application/x-gtar",
+      "sha256": "e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db",
+      "asset_id": "RA_kwDOSfWZnc4ZN2LD"
+    },
+    {
+      "name": "attestplane-attestplane-0.0.3-alpha.tgz",
+      "size_bytes": 110826,
+      "content_type": "application/x-gtar",
+      "sha256": "471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53",
+      "asset_id": "RA_kwDOSfWZnc4ZN2LB"
+    },
+    {
+      "name": "checksums.sha256",
+      "size_bytes": 961,
+      "content_type": "application/octet-stream",
+      "asset_id": "RA_kwDOSfWZnc4ZN2LA",
+      "note": "text manifest of the three SHA-256 above"
+    },
+    {
+      "name": "artifact-manifest.json",
+      "size_bytes": 4731,
+      "content_type": "application/json",
+      "asset_id": "RA_kwDOSfWZnc4ZN2LC",
+      "note": "P3.3 dry-run artefact manifest (schema p3_3_release_asset_dry_run_manifest.v1)"
+    }
+  ],
+  "asset_count": 5,
+  "checksums_path": "release/artifacts/v0.0.3-alpha/checksums.sha256",
+  "artifact_manifest_path": "release/artifacts/v0.0.3-alpha/artifact-manifest.json",
+  "pre_upload_gates_passed": [
+    "working_tree_clean",
+    "branch_main",
+    "main_equals_origin_main",
+    "v0_0_3_alpha_tag_frozen",
+    "github_release_assets_empty_pre_upload",
+    "pypi_unchanged",
+    "npm_unchanged",
+    "npm_latest_dist_tag_unchanged_pre_upload",
+    "python_build_reproduced",
+    "twine_check_passed",
+    "typescript_lint_test_build_passed",
+    "npm_pack_reproduced",
+    "check_release_assets_dry_run_gate_passed",
+    "hygiene_scan_clean",
+    "sha256_manifest_artefact_consistency_verified",
+    "checksums_sha256_line_consistency_verified",
+    "claim_scan_clean",
+    "jq_empty_passed",
+    "git_diff_check_clean"
+  ],
+  "upload_command_executed": "gh release upload v0.0.3-alpha sdk/python/dist/attestplane-0.0.3a0.tar.gz sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz release/artifacts/v0.0.3-alpha/checksums.sha256 release/artifacts/v0.0.3-alpha/artifact-manifest.json",
+  "clobber_used": false,
+  "hygiene_scan": {
+    "result": "clean",
+    "files_scanned_total": 295,
+    "files_scanned_python_sdist": 128,
+    "files_scanned_python_wheel": 54,
+    "files_scanned_npm_tarball": 113
+  },
+  "release_surface_invariants_post_upload": {
+    "tag_moved": false,
+    "github_release_is_prerelease": true,
+    "github_release_title_modified": false,
+    "github_release_body_modified": false,
+    "pypi_published_in_this_action": false,
+    "npm_published_in_this_action": false,
+    "npm_latest_dist_tag_modified": false,
+    "npm_latest_dist_tag_current": "0.0.1-alpha.1",
+    "publish_workflow_triggered": false,
+    "tag_recut_or_repushed": false,
+    "force_push_performed": false
+  },
+  "safe_claims": [
+    "v0.0.3-alpha GitHub Release now carries 5 audit-friendly assets",
+    "assets are traceable to main d2b90a53 and tag 9bde6338",
+    "asset SHA-256 byte-identical to committed checksums.sha256 and artifact-manifest.json",
+    "hygiene scan on artefact bodies returned clean before upload",
+    "Release continues to be a prerelease",
+    "downstream consumers should read this as alpha-stage evidence not production artefact"
+  ],
+  "no_go_claims": [
+    "the upload does NOT make v0.0.3-alpha production-ready",
+    "the upload does NOT make v0.0.3-alpha compliance-ready",
+    "the upload does NOT make v0.0.3-alpha certification-ready",
+    "the upload does NOT constitute SLSA Level 3 attestation",
+    "the upload does NOT constitute certified provenance",
+    "the upload is NOT production-grade supply-chain security",
+    "SHA-256 checksums are integrity metadata not cryptographic signing",
+    "the uploaded artifact-manifest.json is documentation not legal or compliance attestation",
+    "the GitHub Release copy of the npm tarball is a convenience mirror not a separately attested artefact",
+    "local-built wheel and sdist are NOT byte-identical to PyPI registry artefacts which were built from main 51c4e6a"
+  ],
+  "remaining_limitations": [
+    "no cosign or Sigstore signature on the uploaded assets in this round",
+    "no SLSA L3 provenance attestation generated for the uploaded assets",
+    "local-built copies on GitHub Release are NOT bit-identical to PyPI / npm registry artefacts",
+    "npm latest dist-tag promotion is deferred",
+    "alpha tier release; not a stable / GA / certification target"
+  ],
+  "generated_by": {
+    "release_steward": "Claude Code Opus 4.7",
+    "main_loop": true,
+    "date": "2026-05-18"
+  }
+}
