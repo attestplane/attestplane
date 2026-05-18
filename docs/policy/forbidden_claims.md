@@ -78,7 +78,7 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
 - **"Multi-tenant"** / **"Tenant-isolated"** — tenant isolation is M6+.
 - **"Durable"** / **"Crash-safe"** / **"Persistent"** as a blanket
   production claim — JSONL storage exists as an alpha backend, but
-  durability, multi-writer behavior, corruption recovery, and
+  durability, multi-writer behavior, destructive repair, and
   production operations remain deployer responsibilities unless a
   specific backend and test boundary are cited.
 
