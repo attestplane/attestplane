@@ -97,12 +97,20 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural DSSE envelope types for static typing; Python keeps dict-shaped helper inputs and outputs.",
       "review_by": "v0.0.3-alpha",
-      "symbol": "DSSE_PAYLOAD_TYPE",
-      "typescript": false
+      "symbol": "DsseEnvelope",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural DSSE signature types for static typing; Python keeps dict-shaped helper inputs and outputs.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "DsseSignature",
+      "typescript": true
     },
     {
       "classification": "language_specific",
@@ -153,12 +161,20 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural in-toto statement types for static typing; Python keeps dict-shaped helper inputs and outputs.",
       "review_by": "v0.0.3-alpha",
-      "symbol": "IntotoError",
-      "typescript": false
+      "symbol": "IntotoStatement",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural in-toto subject types for static typing; Python keeps dict-shaped helper inputs and outputs.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "IntotoSubject",
+      "typescript": true
     },
     {
       "classification": "roadmap",
@@ -185,28 +201,12 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exposes an implementation-status type alias for registry typing; Python uses Literal typing internally.",
       "review_by": "v0.0.3-alpha",
-      "symbol": "ObligationEntry",
-      "typescript": false
-    },
-    {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
-      "review_by": "v0.0.3-alpha",
-      "symbol": "ObligationRegistryError",
-      "typescript": false
-    },
-    {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
-      "review_by": "v0.0.3-alpha",
-      "symbol": "PREDICATE_TYPE_V1",
-      "typescript": false
+      "symbol": "ObligationImplementationStatus",
+      "typescript": true
     },
     {
       "classification": "language_specific",
@@ -241,14 +241,6 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
-      "review_by": "v0.0.3-alpha",
-      "symbol": "Registry",
-      "typescript": false
-    },
-    {
       "classification": "language_specific",
       "python": false,
       "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
@@ -262,14 +254,6 @@
       "reason": "Python adapter event class is public; TypeScript uses structural adapter inputs in v0.0.2-alpha.",
       "review_by": "v0.0.3-alpha",
       "symbol": "RuntimeEvent",
-      "typescript": false
-    },
-    {
-      "classification": "roadmap",
-      "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
-      "review_by": "v0.0.3-alpha",
-      "symbol": "STATEMENT_TYPE",
       "typescript": false
     },
     {
@@ -497,20 +481,28 @@
       "typescript": false
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps a convenience helper that combines proof bundle statement construction and DSSE envelope construction; TypeScript ships the shape helpers separately in P2.4.",
       "review_by": "v0.0.3-alpha",
       "symbol": "bundle_to_dsse_envelope",
       "typescript": false
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps legacy convenience naming; TypeScript P2.4 exposes proofBundleToInTotoStatement.",
       "review_by": "v0.0.3-alpha",
       "symbol": "bundle_to_in_toto_statement",
       "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 in-toto parity uses camelCase while Python keeps canonical_json_bytes naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "canonicalJsonBytes",
+      "typescript": true
     },
     {
       "classification": "language_specific",
@@ -585,9 +577,17 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 in-toto parity uses camelCase while Python keeps dsse_envelope_to_statement naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "dsseEnvelopeToStatement",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps snake_case in-toto DSSE parser; TypeScript P2.4 exposes dsseEnvelopeToStatement.",
       "review_by": "v0.0.3-alpha",
       "symbol": "dsse_envelope_to_statement",
       "typescript": false
@@ -673,6 +673,30 @@
       "typescript": false
     },
     {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 obligation parity uses camelCase while Python keeps load_all_registries naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "loadAllRegistries",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 obligation parity uses camelCase while Python keeps load_dora_article_8 naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "loadDoraArticle8",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 obligation parity uses camelCase while Python keeps load_eu_ai_act_article_12 naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "loadEuAiActArticle12",
+      "typescript": true
+    },
+    {
       "classification": "experimental",
       "python": false,
       "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
@@ -681,25 +705,25 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps snake_case obligation loader; TypeScript P2.4 exposes loadAllRegistries.",
       "review_by": "v0.0.3-alpha",
       "symbol": "load_all_registries",
       "typescript": false
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps snake_case obligation loader; TypeScript P2.4 exposes loadDoraArticle8.",
       "review_by": "v0.0.3-alpha",
       "symbol": "load_dora_article_8",
       "typescript": false
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps snake_case obligation loader; TypeScript P2.4 exposes loadEuAiActArticle12.",
       "review_by": "v0.0.3-alpha",
       "symbol": "load_eu_ai_act_article_12",
       "typescript": false
@@ -745,6 +769,30 @@
       "typescript": true
     },
     {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 obligation parity provides camelCase lookup helper; Python registry exposes equivalent instance lookup behavior.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "obligationById",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 obligation parity provides camelCase filter helper; Python registry exposes equivalent instance filter behavior.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "obligationsByEventType",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 obligation parity provides camelCase filter helper; Python registry exposes equivalent instance filter behavior.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "obligationsByImplementationStatus",
+      "typescript": true
+    },
+    {
       "classification": "experimental",
       "python": false,
       "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
@@ -761,9 +809,17 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 in-toto parity uses camelCase while Python keeps proof_bundle_to_in_toto_statement naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "proofBundleToInTotoStatement",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps snake_case in-toto statement helper; TypeScript P2.4 exposes proofBundleToInTotoStatement.",
       "review_by": "v0.0.3-alpha",
       "symbol": "proof_bundle_to_in_toto_statement",
       "typescript": false
@@ -833,9 +889,17 @@
       "typescript": true
     },
     {
-      "classification": "roadmap",
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript P2.4 in-toto parity uses camelCase while Python keeps statement_to_dsse_envelope naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "statementToDsseEnvelope",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
       "python": true,
-      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "reason": "Python keeps snake_case DSSE envelope helper; TypeScript P2.4 exposes statementToDsseEnvelope.",
       "review_by": "v0.0.3-alpha",
       "symbol": "statement_to_dsse_envelope",
       "typescript": false

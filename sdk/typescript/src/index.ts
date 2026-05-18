@@ -161,6 +161,32 @@ export {
   type SerializedSubjectRef,
 } from './proof_bundle.js';
 export {
+  DSSE_PAYLOAD_TYPE,
+  IntotoError,
+  PREDICATE_TYPE_V1,
+  STATEMENT_TYPE,
+  canonicalJsonBytes,
+  dsseEnvelopeToStatement,
+  proofBundleToInTotoStatement,
+  statementToDsseEnvelope,
+  type DsseEnvelope,
+  type DsseSignature,
+  type IntotoStatement,
+  type IntotoSubject,
+} from './intoto.js';
+export {
+  ObligationRegistryError,
+  loadAllRegistries,
+  loadDoraArticle8,
+  loadEuAiActArticle12,
+  obligationById,
+  obligationsByEventType,
+  obligationsByImplementationStatus,
+  type ImplementationStatus as ObligationImplementationStatus,
+  type ObligationEntry,
+  type Registry,
+} from './obligations.js';
+export {
   BundleSchemaError,
   BundleVerificationError,
   shortSummary,

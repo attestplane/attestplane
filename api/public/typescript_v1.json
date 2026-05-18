@@ -284,6 +284,30 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "DSSE_PAYLOAD_TYPE",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "DsseEnvelope",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "DsseSignature",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "EVAL_EVENT",
       "notes": "",
       "source": "src/event_types.ts",
@@ -428,6 +452,30 @@
     {
       "documented": false,
       "kind": "class",
+      "name": "IntotoError",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "IntotoStatement",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "IntotoSubject",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
       "name": "KeyBoundaryError",
       "notes": "",
       "source": "src/signing/base.ts",
@@ -547,10 +595,42 @@
     },
     {
       "documented": false,
+      "kind": "type",
+      "name": "ObligationEntry",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ObligationImplementationStatus",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "ObligationRegistryError",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
       "kind": "constant",
       "name": "POLICY_CHECK_EVENT",
       "notes": "",
       "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "PREDICATE_TYPE_V1",
+      "notes": "",
+      "source": "src/intoto.ts",
       "stability": "alpha_public"
     },
     {
@@ -660,6 +740,14 @@
     {
       "documented": false,
       "kind": "type",
+      "name": "Registry",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
       "name": "ReplayCoverage",
       "notes": "",
       "source": "src/replay_verifier.ts",
@@ -719,6 +807,14 @@
       "name": "SIGNATURE_SCHEMA_VERSION",
       "notes": "",
       "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "STATEMENT_TYPE",
+      "notes": "",
+      "source": "src/intoto.ts",
       "stability": "alpha_public"
     },
     {
@@ -1044,6 +1140,14 @@
     {
       "documented": false,
       "kind": "function",
+      "name": "canonicalJsonBytes",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
       "name": "canonicalize",
       "notes": "",
       "source": "src/canonical.ts",
@@ -1087,6 +1191,14 @@
       "name": "deserializeSignatureRecord",
       "notes": "",
       "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "dsseEnvelopeToStatement",
+      "notes": "",
+      "source": "src/intoto.ts",
       "stability": "alpha_public"
     },
     {
@@ -1140,6 +1252,30 @@
     {
       "documented": false,
       "kind": "function",
+      "name": "loadAllRegistries",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "loadDoraArticle8",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "loadEuAiActArticle12",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
       "name": "loadTrustRoots",
       "notes": "",
       "source": "src/signing/trust_roots.ts",
@@ -1188,6 +1324,30 @@
     {
       "documented": false,
       "kind": "function",
+      "name": "obligationById",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "obligationsByEventType",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "obligationsByImplementationStatus",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
       "name": "parseTimestampResponse",
       "notes": "",
       "source": "src/rfc3161.ts",
@@ -1199,6 +1359,14 @@
       "name": "parseTrustRoots",
       "notes": "",
       "source": "src/signing/trust_roots.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "proofBundleToInTotoStatement",
+      "notes": "",
+      "source": "src/intoto.ts",
       "stability": "alpha_public"
     },
     {
@@ -1247,6 +1415,14 @@
       "name": "shortSummary",
       "notes": "",
       "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "statementToDsseEnvelope",
+      "notes": "",
+      "source": "src/intoto.ts",
       "stability": "alpha_public"
     },
     {
