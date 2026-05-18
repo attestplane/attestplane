@@ -1,0 +1,6 @@
+{
+  "byte_offset": 0,
+  "detail": "final JSONL record is not newline-terminated",
+  "kind": "partial_trailing_line",
+  "line_no": 2
+}

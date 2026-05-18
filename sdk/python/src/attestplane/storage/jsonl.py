@@ -37,6 +37,9 @@ from attestplane.storage.base import (
 )
 from attestplane.types import AuditEvent, ChainedEvent, ChainHead, SubjectRef
 
+SUPPORTED_STORAGE_RECORD_VERSION = 1
+STORAGE_RECORD_VERSION_FIELD = "storage_record_version"
+
 
 def _serialize_subject(ref: SubjectRef | None) -> dict[str, str] | None:
     if ref is None:
@@ -241,6 +244,18 @@ class JsonlStorageBackend(AbstractStorageBackend):
                     line_no=line_no,
                     byte_offset=line_offset,
                     detail="JSONL row must be an object",
+                ))
+                break
+            version = obj.get(STORAGE_RECORD_VERSION_FIELD)
+            if version is not None and version != SUPPORTED_STORAGE_RECORD_VERSION:
+                issues.append(JsonlStorageIssue(
+                    kind="unknown_record_version",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail=(
+                        f"unsupported {STORAGE_RECORD_VERSION_FIELD}={version!r}; "
+                        f"supported={SUPPORTED_STORAGE_RECORD_VERSION}"
+                    ),
                 ))
                 break
             required = {"seq", "prev_hash_hex", "event_hash_hex", "event"}
