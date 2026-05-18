@@ -1,0 +1,37 @@
+{
+  "branch": "feat/p3-4-positive-crypto-wiring-20260518",
+  "head": "a1af21d",
+  "merge_commit": "a1af21dc86f01a64327eaa1e1b5e816772192c26",
+  "pr_number": 10,
+  "gitleaks_result": {
+    "command": "gitleaks detect --source . --no-git --redact --report-format json --report-path /tmp/attestplane-gitleaks/post-merge-redacted.json",
+    "clean": true,
+    "findings_count": 0,
+    "redacted_report_path": "/tmp/attestplane-gitleaks/post-merge-redacted.json"
+  },
+  "python_tests": {
+    "command": "sdk/python/.venv/bin/python -m pytest sdk/python/tests/adapters/test_langsmith.py sdk/python/tests/signing/test_base.py sdk/python/tests/anchoring/test_sigstore.py -q",
+    "result": "passed",
+    "summary": "59 passed",
+    "note": "system/default Python interpreter missing pytest for that command; repo pytest environment available and passed"
+  },
+  "typescript_tests": {
+    "command": "npm test -- test/adapters/langsmith.test.ts",
+    "working_directory": "sdk/typescript",
+    "result": "passed",
+    "summary": "16 passed"
+  },
+  "pre_merge_workflow_dispatch_ci_verdict": "REMOTE_CI_SUCCESS",
+  "release_blocker_status": {
+    "gitleaks_not_clean": "resolved",
+    "rotation_required": false,
+    "history_cleanup_required": false
+  },
+  "remaining_limitations": [
+    "No publish was performed.",
+    "No deployment was performed.",
+    "No GitHub Release was created.",
+    "Post-merge evidence commit is local until explicitly approved for push."
+  ],
+  "go_no_go": "GO_POST_MERGE_LOCAL_GATE"
+}
