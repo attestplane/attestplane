@@ -60,7 +60,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.2-alpha (on `main`, release candidate)** adds:
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.3-alpha (GitHub prerelease)** builds on the v0.0.2-alpha substrate release and adds:
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (newline-terminated records, optional fsync,
@@ -77,7 +77,7 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
-Cross-language byte-equality enforced by 17 frozen conformance fixtures (Python ↔ TypeScript). 1,095 tests green in CI (680 Python + 415 TypeScript) across 11 Accepted ADRs. Green tests indicate alpha substrate conformance, not production readiness or regulatory compliance.
+Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate alpha substrate conformance, not production readiness or regulatory compliance.
 
 Attestplane is infrastructure your team owns, operates, and audits independently. The substrate stays in your control plane.
 
@@ -106,9 +106,9 @@ Attestplane is designed to live underneath, not replace, the AI observability an
 | Standards (this project's protocol) | **`AP-EVD/1.0`** Attestplane Evidence Protocol ([ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md)) | Two-sided conformance protocol — Side B adapters target it; Side A verifiers cite it | **Shipped** v1.0 (founder + 14-day RFC governance; OpenSSF/CNCF donation path reserved) |
 | AI governance (US) | [Credo AI](https://www.credo.ai/), [Trustible](https://www.trustible.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
 | AI governance (UK/EU) | [Holistic AI](https://www.holisticai.com/), [Modulos](https://www.modulos.ai/), [Saidot](https://www.saidot.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
-| TSA (free/OSS) | [FreeTSA](https://freetsa.org/) | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.2-alpha) |
-| TSA (commercial) | [DigiCert](https://www.digicert.com/) | RFC-3161 anchor (commercial SLA) | Shipped on `main` (v0.0.2-alpha) |
-| eIDAS qualified TSAs | EU LOTL members (e.g., [Guardtime KSI](https://guardtime.com/ksi)) | Pluggable qualified-TSA backends via `load_qualified_tsa_trust_roots()` | Shipped on `main` (v0.0.2-alpha) |
+| TSA (free/OSS) | [FreeTSA](https://freetsa.org/) | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.3-alpha line) |
+| TSA (commercial) | [DigiCert](https://www.digicert.com/) | RFC-3161 anchor (commercial SLA) | Shipped on `main` (v0.0.3-alpha line) |
+| eIDAS qualified TSAs | EU LOTL members (e.g., [Guardtime KSI](https://guardtime.com/ksi)) | Pluggable qualified-TSA backends via `load_qualified_tsa_trust_roots()` | Shipped on `main` (v0.0.3-alpha line) |
 
 Integration with each partner does **not** imply endorsement by the partner. These are technical integration paths from Attestplane's side; downstream partners may or may not formally support Attestplane in their documentation.
 
@@ -168,7 +168,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 
 ## Current release posture: public alpha
 
-The first public alpha is live on TestPyPI (sandbox) and npm with the `alpha` dist-tag. The `main` branch is preparing the v0.0.2-alpha line. That line is alpha-grade substrate work: it expands the core with schemas, sidecar primitives, storage, adapters, and verifier predicates, but it is not pre-beta, not production-ready, and not compliance-ready.
+The public alpha line is live as a GitHub prerelease. The current package-facing version alignment prepares `0.0.3a0` for PyPI and `0.0.3-alpha` for npm. This line is alpha-grade substrate work: it expands the core with schemas, sidecar primitives, storage, adapters, verifier predicates, public API drift gates, storage compatibility policy, and release provenance hygiene, but it is not pre-beta, not production-ready, and not compliance-ready.
 
 The current `attestplane verify` command is deliberately narrow:
 
@@ -189,7 +189,7 @@ Implemented in v0.0.1-alpha published artifacts:
 - cross-language conformance vectors
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
-Designed and merged on `main` since v0.0.1-alpha (candidate surface for v0.0.2-alpha; not yet a production claim):
+Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface through v0.0.3-alpha; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)

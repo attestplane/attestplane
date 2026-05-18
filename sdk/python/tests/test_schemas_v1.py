@@ -281,7 +281,7 @@ def test_governance_ingestion_minimum_valid_instance() -> None:
         "verification_status": {
             "ok": True,
             "verified_at": "2026-05-17T12:00:00.000000Z",
-            "verifier_version": "0.0.2a0",
+            "verifier_version": "0.0.3a0",
             "verification_method": "canonical-bytes-walk",
         },
         "framework_coverage": [],
@@ -309,7 +309,7 @@ def test_governance_ingestion_rejects_wrong_version() -> None:
         "verification_status": {
             "ok": True,
             "verified_at": "2026-05-17T12:00:00.000000Z",
-            "verifier_version": "0.0.2a0",
+            "verifier_version": "0.0.3a0",
             "verification_method": "canonical-bytes-walk",
         },
         "framework_coverage": [],
@@ -351,7 +351,7 @@ def test_governance_ingestion_with_framework_coverage() -> None:
         "verification_status": {
             "ok": True,
             "verified_at": "2026-05-17T13:00:00.000000Z",
-            "verifier_version": "0.0.2a0",
+            "verifier_version": "0.0.3a0",
             "verification_method": "canonical-bytes-walk",
         },
         "framework_coverage": [
@@ -394,7 +394,7 @@ def test_governance_ingestion_rejects_bad_implementation_status() -> None:
         "verification_status": {
             "ok": True,
             "verified_at": "2026-05-17T12:00:00.000000Z",
-            "verifier_version": "0.0.2a0",
+            "verifier_version": "0.0.3a0",
             "verification_method": "canonical-bytes-walk",
         },
         "framework_coverage": [
