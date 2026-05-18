@@ -1,0 +1,133 @@
+{
+  "report": "v0.0.3_alpha_package_publish_report",
+  "date": "2026-05-18",
+  "verdict": "V003AlphaPackagePublishComplete",
+  "publish_method": "GitHub Actions workflow_dispatch + OIDC trusted publishing",
+  "repository_state": {
+    "branch": "main",
+    "main": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457",
+    "origin_main": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457",
+    "v0_0_3_alpha_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+    "tag_moved": false,
+    "working_tree_clean": true
+  },
+  "tag_main_split": {
+    "explanation": "v0.0.3-alpha tag pinned to manifest commit 9bde633; post-tag package-version alignment merged into main at 51c4e6a; registry publish used main; tag was not moved.",
+    "tag_commit": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+    "publish_commit": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457"
+  },
+  "github_release": {
+    "url": "https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha",
+    "tag_name": "v0.0.3-alpha",
+    "is_prerelease": true,
+    "assets": [],
+    "assets_uploaded_by_this_flow": false
+  },
+  "testpypi": {
+    "status": "success",
+    "package": "attestplane",
+    "version": "0.0.3a0",
+    "workflow_run_url": "https://github.com/attestplane/attestplane/actions/runs/26014938583",
+    "build_sha": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457"
+  },
+  "pypi_production": {
+    "status": "success",
+    "package": "attestplane",
+    "version": "0.0.3a0",
+    "workflow_run_url": "https://github.com/attestplane/attestplane/actions/runs/26015857159",
+    "build_sha": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457",
+    "earlier_failed_runs": [
+      "https://github.com/attestplane/attestplane/actions/runs/26014976590",
+      "https://github.com/attestplane/attestplane/actions/runs/26015071303",
+      "https://github.com/attestplane/attestplane/actions/runs/26015179242"
+    ],
+    "blocked_reason_resolved": "PyPI Pending Publisher record was absent or misconfigured during the first three runs; founder added the record on pypi.org with Environment name 'pypi' before the successful retry.",
+    "artefacts": [
+      {
+        "filename": "attestplane-0.0.3a0-py3-none-any.whl",
+        "packagetype": "bdist_wheel",
+        "size": 146526
+      },
+      {
+        "filename": "attestplane-0.0.3a0.tar.gz",
+        "packagetype": "sdist",
+        "size": 199207
+      }
+    ],
+    "install_verification": {
+      "command": "pip install --no-cache-dir attestplane==0.0.3a0",
+      "result": "success"
+    },
+    "import_verification": {
+      "command": "import attestplane; print(attestplane.__version__)",
+      "result": "0.0.3a0"
+    },
+    "oidc_claims_presented": {
+      "sub": "repo:attestplane/attestplane:environment:pypi",
+      "repository": "attestplane/attestplane",
+      "repository_owner": "attestplane",
+      "workflow_ref": "attestplane/attestplane/.github/workflows/publish-python.yml@refs/heads/main",
+      "environment": "pypi"
+    },
+    "pypi_pending_publisher": {
+      "project_name": "attestplane",
+      "owner": "attestplane",
+      "repository_name": "attestplane",
+      "workflow_name": "publish-python.yml",
+      "environment_name": "pypi"
+    }
+  },
+  "npm": {
+    "status": "success",
+    "package": "@attestplane/attestplane",
+    "version": "0.0.3-alpha",
+    "workflow_run_url": "https://github.com/attestplane/attestplane/actions/runs/26016636341",
+    "build_sha": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457",
+    "publish_command": "npm publish --provenance --access public --tag alpha",
+    "provenance": "npm provenance attestation via GitHub OIDC id-token: write",
+    "auth": "secrets.NPM_TOKEN",
+    "dist_tags_after_publish": {
+      "latest": "0.0.1-alpha.1",
+      "alpha": "0.0.3-alpha"
+    },
+    "latest_intentionally_changed": false,
+    "install_verification": {
+      "command": "npm install @attestplane/attestplane@0.0.3-alpha --ignore-scripts",
+      "result": "success",
+      "installed_version": "0.0.3-alpha",
+      "type": "module",
+      "main": "./dist/index.js"
+    }
+  },
+  "what_was_not_done": {
+    "github_release_assets_uploaded": false,
+    "local_twine_upload": false,
+    "local_npm_publish": false,
+    "tag_moved": false,
+    "tag_recut": false,
+    "tag_repushed": false,
+    "github_release_state_modified": false,
+    "npm_latest_dist_tag_changed": false,
+    "npm_dist_tag_add_latest_executed": false
+  },
+  "safe_claims": [
+    "v0.0.3-alpha is an alpha release suitable for early-stage evaluation",
+    "Python package installable as attestplane==0.0.3a0 from PyPI",
+    "TypeScript package installable as @attestplane/attestplane@0.0.3-alpha from npm under alpha dist-tag",
+    "Both packages published with OIDC-attested provenance",
+    "Build provenance ties artefacts to main 51c4e6ac... via known workflow files"
+  ],
+  "no_go_claims": [
+    "No production-ready claim",
+    "No compliance-ready claim",
+    "No certification-ready claim",
+    "No SLSA Level 3 claim",
+    "No production-grade supply-chain claim",
+    "No EU AI Act / DORA / ISO 42001 conformance claim"
+  ],
+  "generated_by": {
+    "release_steward": "Claude Code Opus 4.7",
+    "main_loop": true,
+    "date": "2026-05-18"
+  }
+}
