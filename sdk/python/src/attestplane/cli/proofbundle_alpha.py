@@ -28,8 +28,19 @@ ALPHA_ENVELOPE_SCHEMA_VERSION = 1
 VERIFICATION_SCOPE = "proofbundle_alpha_local"
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 
+# P3.2: signature / anchor extension interface allowlist.
+# Cryptographic verification is NOT implemented in this alpha branch — the
+# verifier accepts these algorithm/type names ONLY as inputs to fail-closed
+# branches, never as evidence of successful verification. See
+# docs/validation/p3_2_signed_anchored_verification_report.md.
+SIGNATURE_ALGORITHM_ALLOWLIST = {"ed25519"}
+ANCHOR_TYPE_ALLOWLIST = {"rfc3161"}
+
 CheckStatus = Literal["pass", "fail"]
 FailureKind = Literal["verification_failed", "invalid_input"]
+ExtensionStatus = Literal[
+    "skipped", "passed", "failed", "invalid_input", "unsupported", "not_implemented"
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,22 +318,210 @@ def _check_provenance(root: dict[str, Any]) -> AlphaCheck:
     return _pass("provenance_shape", "no certified provenance or SLSA level is claimed")
 
 
-def verify_alpha_proofbundle_file(path: Path) -> dict[str, Any]:
-    """Verify a local P3.1 ProofBundle verification envelope.
+def _signature_extension(
+    root: dict[str, Any] | None,
+    requested: bool,
+) -> tuple[ExtensionStatus, dict[str, Any], AlphaCheck | None]:
+    """P3.2b signature verification extension — fail-closed only.
+
+    When ``requested`` is ``False`` (default), returns ``skipped`` with no
+    check added. When ``True``, inspects ``root['signature_material']``
+    and ``root['dsse_envelope']['signatures']``:
+
+    * absent or empty → ``invalid_input`` (missing_material) + exit 2
+    * algorithm outside :data:`SIGNATURE_ALGORITHM_ALLOWLIST` → ``unsupported``
+      + exit 2
+    * material present and algorithm in allowlist → ``not_implemented``
+      + exit 2; the alpha verifier does NOT perform cryptographic signature
+      verification, so a positive ``passed`` cannot honestly be emitted.
+
+    Positive cryptographic verification is deferred to a follow-up branch.
+    """
+    summary: dict[str, Any] = {
+        "performed": False,
+        "scope": "p3_2_signature_extension_alpha",
+    }
+    if not requested:
+        return "skipped", summary, None
+
+    if not isinstance(root, dict):
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            "input root unavailable for signature verification",
+        )
+        return "invalid_input", summary, check
+
+    material = root.get("signature_material")
+    envelope = root.get("dsse_envelope") if isinstance(root.get("dsse_envelope"), dict) else None
+    signatures = envelope.get("signatures") if isinstance(envelope, dict) else None
+    if material is None and (not isinstance(signatures, list) or len(signatures) == 0):
+        summary["reason"] = "missing_material"
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            (
+                "--verify-signature requested but proof bundle carries no "
+                "signature_material and dsse_envelope.signatures is empty"
+            ),
+        )
+        return "invalid_input", summary, check
+
+    algorithm = None
+    if isinstance(material, dict):
+        algorithm = material.get("algorithm")
+    if algorithm is None and isinstance(signatures, list) and signatures:
+        sig = signatures[0] if isinstance(signatures[0], dict) else None
+        if sig is not None:
+            algorithm = sig.get("algorithm")
+    summary["declared_algorithm"] = algorithm
+    if algorithm is not None and algorithm not in SIGNATURE_ALGORITHM_ALLOWLIST:
+        summary["reason"] = "unsupported_algorithm"
+        summary["allowlist"] = sorted(SIGNATURE_ALGORITHM_ALLOWLIST)
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            f"signature algorithm {algorithm!r} is not in alpha allowlist",
+        )
+        return "unsupported", summary, check
+
+    summary["reason"] = "alpha_cryptographic_verification_not_implemented"
+    summary["allowlist"] = sorted(SIGNATURE_ALGORITHM_ALLOWLIST)
+    check = _fail(
+        "signature_verification",
+        "invalid_input",
+        (
+            "alpha verifier does not perform cryptographic DSSE signature "
+            "verification; positive --verify-signature path is deferred to a "
+            "follow-up branch with test-only key material and PAE binding"
+        ),
+    )
+    return "not_implemented", summary, check
+
+
+def _anchor_extension(
+    root: dict[str, Any] | None,
+    requested: bool,
+) -> tuple[ExtensionStatus, dict[str, Any], AlphaCheck | None]:
+    """P3.2c anchor verification extension — fail-closed only.
+
+    When ``requested`` is ``False`` (default), returns ``skipped`` with no
+    check added. When ``True``, inspects ``root['anchor_records']``:
+
+    * absent or empty → ``invalid_input`` (missing_material) + exit 2
+    * any record with ``anchor_type`` outside
+      :data:`ANCHOR_TYPE_ALLOWLIST` → ``unsupported`` + exit 2
+    * records present and types in allowlist → ``not_implemented`` + exit 2;
+      the alpha verifier does NOT perform RFC-3161 token + cert-chain
+      verification, so a positive ``passed`` cannot honestly be emitted.
+
+    No network access is attempted under any condition.
+    """
+    summary: dict[str, Any] = {
+        "performed": False,
+        "scope": "p3_2_anchor_extension_alpha",
+        "network_access_attempted": False,
+    }
+    if not requested:
+        return "skipped", summary, None
+
+    if not isinstance(root, dict):
+        check = _fail(
+            "anchor_verification",
+            "invalid_input",
+            "input root unavailable for anchor verification",
+        )
+        return "invalid_input", summary, check
+
+    records = root.get("anchor_records")
+    if not isinstance(records, list) or len(records) == 0:
+        summary["reason"] = "missing_material"
+        check = _fail(
+            "anchor_verification",
+            "invalid_input",
+            "--verify-anchor requested but proof bundle carries no anchor_records[]",
+        )
+        return "invalid_input", summary, check
+
+    declared_types: list[Any] = []
+    for record in records:
+        if not isinstance(record, dict):
+            summary["reason"] = "invalid_record_shape"
+            check = _fail(
+                "anchor_verification",
+                "invalid_input",
+                "anchor_records[] must contain JSON objects",
+            )
+            return "invalid_input", summary, check
+        declared_types.append(record.get("anchor_type"))
+    summary["declared_anchor_types"] = declared_types
+    unsupported = [t for t in declared_types if t not in ANCHOR_TYPE_ALLOWLIST]
+    if unsupported:
+        summary["reason"] = "unsupported_anchor_type"
+        summary["allowlist"] = sorted(ANCHOR_TYPE_ALLOWLIST)
+        summary["unsupported_types"] = unsupported
+        check = _fail(
+            "anchor_verification",
+            "invalid_input",
+            f"anchor_type(s) {unsupported!r} not in alpha allowlist",
+        )
+        return "unsupported", summary, check
+
+    summary["reason"] = "alpha_anchor_verification_not_implemented"
+    summary["allowlist"] = sorted(ANCHOR_TYPE_ALLOWLIST)
+    check = _fail(
+        "anchor_verification",
+        "invalid_input",
+        (
+            "alpha verifier does not perform RFC-3161 cryptographic anchor "
+            "verification; positive --verify-anchor path is deferred to a "
+            "follow-up branch using anchor_vectors.json test material"
+        ),
+    )
+    return "not_implemented", summary, check
+
+
+def verify_alpha_proofbundle_file(
+    path: Path,
+    *,
+    verify_signature: bool = False,
+    verify_anchor: bool = False,
+) -> dict[str, Any]:
+    """Verify a local P3.1/P3.2 ProofBundle verification envelope.
 
     Returns a machine-readable report. ``exit_code`` follows the CLI contract:
     0 valid, 1 verification failed, 2 invalid input/malformed/unsupported.
+
+    When ``verify_signature`` or ``verify_anchor`` is ``True``, the matching
+    fail-closed extension is exercised. The alpha verifier does NOT perform
+    cryptographic verification; it only validates that the proof bundle
+    carries declared verification material and supported algorithms /
+    anchor types, and otherwise fails closed.
     """
     checks: list[AlphaCheck] = []
     root, parse_check = _load_json(path)
     checks.append(parse_check)
     if parse_check.status == "fail":
-        return _report(path, checks)
+        return _report(
+            path, checks,
+            verify_signature=verify_signature, verify_anchor=verify_anchor,
+            signature_status="skipped" if not verify_signature else "invalid_input",
+            anchor_status="skipped" if not verify_anchor else "invalid_input",
+            signature_summary={"performed": False, "reason": "input_unparseable"},
+            anchor_summary={"performed": False, "reason": "input_unparseable"},
+        )
 
     root_dict, shape_check = _check_root_shape(root)
     checks.append(shape_check)
     if root_dict is None:
-        return _report(path, checks)
+        return _report(
+            path, checks,
+            verify_signature=verify_signature, verify_anchor=verify_anchor,
+            signature_status="skipped" if not verify_signature else "invalid_input",
+            anchor_status="skipped" if not verify_anchor else "invalid_input",
+            signature_summary={"performed": False, "reason": "root_not_object"},
+            anchor_summary={"performed": False, "reason": "root_not_object"},
+        )
 
     checks.append(_check_schema_version(root_dict))
     proof_bundle, proof_checks = _check_proof_bundle(root_dict)
@@ -336,13 +535,38 @@ def verify_alpha_proofbundle_file(path: Path) -> dict[str, Any]:
         _check_storage_compatibility(root_dict),
         _check_provenance(root_dict),
     ])
-    return _report(path, checks)
+
+    sig_status, sig_summary, sig_check = _signature_extension(root_dict, verify_signature)
+    if sig_check is not None:
+        checks.append(sig_check)
+    anc_status, anc_summary, anc_check = _anchor_extension(root_dict, verify_anchor)
+    if anc_check is not None:
+        checks.append(anc_check)
+
+    return _report(
+        path, checks,
+        verify_signature=verify_signature, verify_anchor=verify_anchor,
+        signature_status=sig_status, anchor_status=anc_status,
+        signature_summary=sig_summary, anchor_summary=anc_summary,
+    )
 
 
-def _report(path: Path, checks: list[AlphaCheck]) -> dict[str, Any]:
+def _report(
+    path: Path,
+    checks: list[AlphaCheck],
+    *,
+    verify_signature: bool = False,
+    verify_anchor: bool = False,
+    signature_status: ExtensionStatus = "skipped",
+    anchor_status: ExtensionStatus = "skipped",
+    signature_summary: dict[str, Any] | None = None,
+    anchor_summary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     failed = [check for check in checks if check.status == "fail"]
     invalid = any(check.failure_kind == "invalid_input" for check in failed)
     exit_code = 2 if invalid else 1 if failed else 0
+    sig_perf = signature_status == "passed"
+    anc_perf = anchor_status == "passed"
     return {
         "ok": exit_code == 0,
         "exit_code": exit_code,
@@ -354,12 +578,50 @@ def _report(path: Path, checks: list[AlphaCheck]) -> dict[str, Any]:
             "checks_failed": len(failed),
         },
         "network_access_performed": False,
-        "signature_verification_performed": False,
-        "anchor_verification_performed": False,
+        "signature_verification_requested": verify_signature,
+        "signature_verification_performed": sig_perf,
+        "signature_verification_status": signature_status,
+        "signature_verification_summary": signature_summary,
+        "signature_verification_claims": {
+            "cryptographic_verification_performed": sig_perf,
+            "certified_provenance": False,
+            "production_supply_chain_security": False,
+            "slsa_level_claimed": None,
+        },
+        "anchor_verification_requested": verify_anchor,
+        "anchor_verification_performed": anc_perf,
+        "anchor_verification_status": anchor_status,
+        "anchor_verification_summary": anchor_summary,
+        "anchor_verification_claims": {
+            "anchor_verification_performed": anc_perf,
+            "long_term_archival_trust": False,
+            "legal_timestamp_attestation": False,
+            "network_access_attempted": False,
+        },
+        # Back-compat scalar fields (kept identical to P3.1 shape so existing
+        # consumers do not break).
         "compliance_certification": False,
         "production_ready": False,
         "certified_provenance": False,
         "slsa_level_claimed": None,
+        "safe_claims": [
+            "alpha local structural ProofBundle verifier",
+            "fail-closed missing/tampered/unsupported detection",
+            "deterministic JSON report",
+            "no network access",
+        ],
+        "no_go_claims": [
+            "not production-ready",
+            "not compliance-ready",
+            "not certification-ready",
+            "not certified provenance",
+            "not SLSA L3",
+            "not production-grade supply-chain security",
+            "not legal timestamp attestation",
+            "not long-term archival trust guarantee",
+            "alpha verifier does not perform cryptographic DSSE signature verification",
+            "alpha verifier does not perform RFC-3161 anchor verification",
+        ],
         "warning": (
             "Alpha local ProofBundle verifier: shape, hash, chain, obligation, "
             "storage compatibility, and provenance-shape checks only. It does not "
@@ -371,6 +633,8 @@ def _report(path: Path, checks: list[AlphaCheck]) -> dict[str, Any]:
 
 __all__ = [
     "ALPHA_ENVELOPE_SCHEMA_VERSION",
+    "ANCHOR_TYPE_ALLOWLIST",
+    "SIGNATURE_ALGORITHM_ALLOWLIST",
     "VERIFICATION_SCOPE",
     "verify_alpha_proofbundle_file",
 ]

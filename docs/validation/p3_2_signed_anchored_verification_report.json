@@ -1,0 +1,126 @@
+{
+  "report": "p3_2_signed_anchored_verification_report",
+  "date": "2026-05-18",
+  "verdict": "P3.2SignedAnchoredVerificationReadyWithLimitations",
+  "branch": "feat/p3-2-signed-anchored-verification-20260518",
+  "base_commit": "7a89d54d0b8ec956bdba00d588a4f56297bfefc2",
+  "frozen_v0_0_3_alpha_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "scope": "alpha signed/anchored verification interface; positive crypto path deferred",
+  "p3_2a_extension_interface": {
+    "status": "implemented",
+    "cli_flags": ["--verify-signature", "--verify-anchor"],
+    "default_behaviour": "byte-equivalent to P3.1; both *_status='skipped'",
+    "report_fields_added": [
+      "signature_verification_requested",
+      "signature_verification_performed",
+      "signature_verification_status",
+      "signature_verification_summary",
+      "signature_verification_claims",
+      "anchor_verification_requested",
+      "anchor_verification_performed",
+      "anchor_verification_status",
+      "anchor_verification_summary",
+      "anchor_verification_claims",
+      "safe_claims",
+      "no_go_claims"
+    ]
+  },
+  "p3_2b_dsse_signature_verification": {
+    "status": "fail_closed_only",
+    "cryptographic_verification_performed": false,
+    "alpha_allowlist_algorithms": ["ed25519"],
+    "fail_closed_paths": [
+      "missing_material",
+      "unsupported_algorithm",
+      "alpha_cryptographic_verification_not_implemented"
+    ],
+    "positive_path_deferred_reason": "test-only key material + DSSE PAE + ed25519 verifier wiring is out of P3.2 scope"
+  },
+  "p3_2c_anchor_verification": {
+    "status": "fail_closed_only",
+    "anchor_verification_performed": false,
+    "alpha_allowlist_anchor_types": ["rfc3161"],
+    "network_access_attempted": false,
+    "fail_closed_paths": [
+      "missing_material",
+      "unsupported_anchor_type",
+      "alpha_anchor_verification_not_implemented"
+    ],
+    "positive_path_deferred_reason": "wiring to anchoring/verifier.py verify_chain_with_anchors + anchor_vectors.json test material is out of P3.2 scope"
+  },
+  "p3_2d_negative_fixtures_and_gates": {
+    "fixtures_added": [
+      "signature_shape_valid_but_not_requested.json",
+      "missing_signature_material.json",
+      "tampered_dsse_signature.json",
+      "unsupported_signature_algorithm.json",
+      "anchor_shape_valid_but_not_requested.json",
+      "missing_anchor_material.json",
+      "expired_tsa_timestamp.json",
+      "invalid_anchor_chain.json",
+      "unsupported_anchor_type.json",
+      "signature_and_anchor_requested_missing_material.json"
+    ],
+    "total_fixture_count": 20,
+    "p3_1_fixture_count": 10,
+    "p3_2_fixture_count": 10,
+    "unit_tests": "sdk/python/tests/cli/test_proofbundle_alpha.py — 25 parametrized cases, all green",
+    "new_gate_script": "scripts/check-signed-anchored-verification.sh"
+  },
+  "p3_2e_publish_readiness": {
+    "source_code_ready": true,
+    "package_version_bumped_this_branch": false,
+    "pypi_published_this_branch": false,
+    "npm_published_this_branch": false,
+    "github_release_modified_this_branch": false,
+    "v0_0_3_alpha_tag_moved": false,
+    "npm_latest_dist_tag_changed": false,
+    "recommendation": "merge to main as alpha foundation; do not publish a new package version solely for P3.2"
+  },
+  "cli_usage": {
+    "default": "python -m attestplane.cli.main verify-proofbundle <path>",
+    "verify_signature": "python -m attestplane.cli.main verify-proofbundle <path> --verify-signature",
+    "verify_anchor": "python -m attestplane.cli.main verify-proofbundle <path> --verify-anchor",
+    "both": "python -m attestplane.cli.main verify-proofbundle <path> --verify-signature --verify-anchor"
+  },
+  "exit_code_contract": {
+    "0": "valid (default flags; all P3.1 structural checks pass)",
+    "1": "verification failed",
+    "2": "invalid input / malformed / unsupported / missing extension material / not implemented"
+  },
+  "safe_claims": [
+    "optional alpha signature verification request path implemented",
+    "optional alpha anchor verification request path implemented",
+    "deterministic JSON report shape extended without breaking P3.1 consumers",
+    "fail-closed coverage of missing material, unsupported algorithm, unsupported anchor type, not-implemented positive path",
+    "default verify-proofbundle behaviour byte-equivalent to P3.1",
+    "no network access under any flag combination"
+  ],
+  "no_go_claims": [
+    "not production-ready",
+    "not compliance-ready",
+    "not certification-ready",
+    "not certified provenance",
+    "not SLSA L3",
+    "not production-grade supply-chain security",
+    "not legal timestamp attestation",
+    "not long-term archival trust guarantee",
+    "alpha verifier does not perform cryptographic DSSE signature verification in this branch",
+    "alpha verifier does not perform RFC-3161 anchor token verification in this branch",
+    "alpha verifier does not perform certificate revocation checking",
+    "alpha verifier does not load eIDAS qualified TSA trusted lists",
+    "alpha verifier does not validate full PKI lifecycle"
+  ],
+  "remaining_limitations": [
+    "cryptographic DSSE signature verification deferred to follow-up branch",
+    "RFC-3161 token verification deferred to follow-up branch",
+    "algorithm allowlist currently ed25519 only; RSA/ECDSA deferred",
+    "anchor type allowlist currently rfc3161 only; Sigstore Rekor deferred",
+    "test-only crypto material; production PKI lifecycle out of scope"
+  ],
+  "generated_by": {
+    "release_steward": "Claude Code Opus 4.7",
+    "main_loop": true,
+    "date": "2026-05-18"
+  }
+}
