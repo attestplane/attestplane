@@ -1,0 +1,17 @@
+# Attestplane v0.0.3-alpha release asset checksums (SHA-256)
+#
+# Local dry-run build, P3.3 release-asset-hygiene branch.
+# Build commit: 544283f153a11e3c455b62d680de50a029537903 (main).
+# Frozen tag target: 9bde6338df008afe58d561b0ba66eaaf75e298ad.
+#
+# Format: <sha256>  <path-relative-to-repo-root>
+# Compatible with: shasum -a 256 -c (when invoked from repo root with the
+# listed paths present locally).
+#
+# These checksums describe artifact integrity only. They are NOT
+# cryptographic signatures, NOT certified provenance, NOT a SLSA Level 3
+# attestation, and NOT a production-grade supply-chain control.
+
+623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d  sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl
+e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db  sdk/python/dist/attestplane-0.0.3a0.tar.gz
+471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53  sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz

@@ -1,0 +1,115 @@
+{
+  "schema_version": "p3_3_release_asset_dry_run_manifest.v1",
+  "release": "v0.0.3-alpha",
+  "github_release_url": "https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha",
+  "frozen_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "main_build_commit": "544283f153a11e3c455b62d680de50a029537903",
+  "tag_main_split_explanation": "The v0.0.3-alpha annotated tag is pinned to the manifest commit (9bde6338...). Local dry-run artifacts in this manifest were built from main HEAD at 544283f1..., which is the post-tag package-version alignment + P3.1 verifier merge + P3.2 signed/anchored verification merge. Registry-side packages (PyPI attestplane==0.0.3a0 and npm @attestplane/attestplane@0.0.3-alpha) were published from an earlier main HEAD (51c4e6a...). The tag was not moved.",
+  "artifacts": [
+    {
+      "name": "python-wheel",
+      "path": "sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl",
+      "kind": "python-wheel",
+      "version": "0.0.3a0",
+      "sha256": "623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d",
+      "size_bytes": 153372,
+      "build_source": "local dry-run from main 544283f1...",
+      "build_tool": "python -m build (hatchling)",
+      "twine_check": "PASSED",
+      "registry_status": {
+        "pypi_production": "attestplane==0.0.3a0 already published; this local artifact is NOT byte-identical to the registry artifact and is intended for dry-run/checksum manifest only"
+      }
+    },
+    {
+      "name": "python-sdist",
+      "path": "sdk/python/dist/attestplane-0.0.3a0.tar.gz",
+      "kind": "python-sdist",
+      "version": "0.0.3a0",
+      "sha256": "e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db",
+      "size_bytes": 207215,
+      "build_source": "local dry-run from main 544283f1...",
+      "build_tool": "python -m build (hatchling)",
+      "twine_check": "PASSED",
+      "registry_status": {
+        "pypi_production": "attestplane==0.0.3a0 already published; this local artifact is NOT byte-identical to the registry artifact and is intended for dry-run/checksum manifest only"
+      }
+    },
+    {
+      "name": "npm-tarball",
+      "path": "sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz",
+      "kind": "npm-tarball",
+      "version": "0.0.3-alpha",
+      "sha256": "471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53",
+      "size_bytes": 110826,
+      "build_source": "local dry-run from main 544283f1...",
+      "build_tool": "npm pack",
+      "registry_status": {
+        "npm": "@attestplane/attestplane@0.0.3-alpha already published; this local tarball is NOT byte-identical to the registry artifact and is intended for dry-run/checksum manifest only",
+        "dist_tag_alpha": "0.0.3-alpha",
+        "dist_tag_latest": "0.0.1-alpha.1 (untouched)"
+      }
+    }
+  ],
+  "hygiene_scan": {
+    "forbidden_patterns_checked": [
+      ".env",
+      "credentials",
+      "token",
+      "secret",
+      "node_modules",
+      "__pycache__",
+      ".DS_Store",
+      ".git",
+      "private_key",
+      "id_rsa",
+      "id_ed25519",
+      "pypirc",
+      ".npmrc"
+    ],
+    "result": "clean",
+    "files_scanned": {
+      "python_sdist": 128,
+      "python_wheel": 54,
+      "npm_tarball": 113
+    }
+  },
+  "safety": {
+    "no_secrets_found": true,
+    "no_upload_performed": true,
+    "no_publish_performed": true,
+    "no_tag_moved": true,
+    "no_github_release_modified": true,
+    "no_github_release_assets_uploaded": true,
+    "no_publish_workflow_triggered": true,
+    "npm_latest_dist_tag_changed": false,
+    "network_access_attempted": false
+  },
+  "checksums_file": "release/artifacts/v0.0.3-alpha/checksums.sha256",
+  "upload_plan_file": "release/artifacts/v0.0.3-alpha/upload-plan.md",
+  "safe_claims": [
+    "release asset dry-run readiness for v0.0.3-alpha",
+    "SHA-256 checksums generated and reproducible",
+    "artifact manifest validates against jq empty",
+    "no upload performed in this branch",
+    "no PyPI/npm publish performed in this branch",
+    "tag/main split documented and preserved",
+    "hygiene scan reports no secret/credential leakage"
+  ],
+  "no_go_claims": [
+    "not production-ready",
+    "not compliance-ready",
+    "not certification-ready",
+    "not SLSA Level 3",
+    "not certified provenance",
+    "not production-grade supply-chain security",
+    "checksums are integrity metadata, not cryptographic signing",
+    "local dry-run artifacts are NOT byte-identical to registry artifacts",
+    "this manifest is not a substitute for cosign/Sigstore signatures",
+    "this manifest is not a legal/compliance attestation"
+  ],
+  "generated_by": {
+    "release_steward": "Claude Code Opus 4.7",
+    "main_loop": true,
+    "date": "2026-05-18"
+  }
+}
