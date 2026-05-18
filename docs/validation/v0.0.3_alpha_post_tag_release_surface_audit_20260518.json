@@ -1,0 +1,101 @@
+{
+  "audit": "v0.0.3-alpha post-tag release surface audit",
+  "result": "V003AlphaReleaseSurfaceFrozen",
+  "current_branch": "main",
+  "main_at_audit_start": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "origin_main_at_audit_start": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "tag": "v0.0.3-alpha",
+  "annotated_tag_object": "addd2f318dc4e43509ceea6750ceda61d17b5ca7",
+  "tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "release_content_commit": "be5383d9d555b5b1eac437efc8c8a4201a028cab",
+  "manifest_commit": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "remote_status": {
+    "origin_main_matches_manifest_commit_at_audit_start": true,
+    "origin_tag_pushed": true,
+    "origin_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad"
+  },
+  "release_draft": {
+    "path": "docs/validation/v0.0.3_alpha_github_release_draft_20260518.md",
+    "edited_in_this_audit": false,
+    "claim_audit": "PASS",
+    "violations": [],
+    "status": "alpha hardening release",
+    "cli_verify_scope": "chain_report_only"
+  },
+  "tag_evidence": {
+    "release_notes_draft": true,
+    "rc_gate_md_json": true,
+    "artifact_manifest": true,
+    "p2_validation_evidence": true,
+    "public_api_manifests": true,
+    "storage_compatibility_manifest_and_fixtures": true,
+    "fault_matrix": true,
+    "release_provenance_scripts_and_docs": true
+  },
+  "artifact_manifest": {
+    "path": "release/artifacts/v0.0.3-alpha.manifest.json",
+    "release": "v0.0.3-alpha",
+    "tag": "v0.0.3-alpha",
+    "target_commit": "be5383d9d555b5b1eac437efc8c8a4201a028cab",
+    "tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+    "target_commit_explanation": "target_commit records the release-content merge commit; the tag points to the later manifest commit so the manifest is included in the tag",
+    "slsa_level_claimed": null
+  },
+  "passed_gates_summary": [
+    "scripts/check-storage-compatibility.sh",
+    "scripts/check-release-provenance.sh",
+    "scripts/check-fault-injection.sh",
+    "scripts/check-public-api.sh",
+    "bash scripts/check-policy.sh",
+    "jq empty docs/validation/*.json api/public/*.json storage/compat/*.json release/artifacts/*.json tests/fault_injection/*.json",
+    "git diff --check",
+    "quick Python release/storage/provenance tests: 25 passed",
+    "cd sdk/typescript && npm run lint"
+  ],
+  "safe_claims": [
+    "alpha-grade dual-SDK tamper-evident evidence substrate",
+    "restricted canonicalization and canonical text primitives",
+    "SHA-256 hash-chain primitives",
+    "evidence payload schemas and fail-closed validators",
+    "read-only verifier predicates with hardened ProofBundle and settlement guardrails",
+    "Python/TypeScript conformance strengthened by public API, fault-injection, and cross-SDK gates",
+    "JSONL alpha opt-in storage guardrails and compatibility policy",
+    "release artifact manifest and checksum/provenance hygiene gates",
+    "in-toto/DSSE deterministic shape helpers only"
+  ],
+  "no_go_claims": [
+    "production-ready",
+    "compliance-ready",
+    "certification system",
+    "EU AI Act, DORA, or GDPR compliant",
+    "full CLI ProofBundle verifier",
+    "default signed verification",
+    "default anchored verification",
+    "runtime governance or AIOS runtime integration",
+    "execution authority, scheduler, gateway authority, billing, secret store, or UI read model",
+    "ACID, database-grade durability, or multi-writer correctness",
+    "formal verification or exhaustive mutation testing",
+    "SLSA L3 completed",
+    "certified provenance",
+    "production-grade supply-chain security",
+    "automatic destructive storage repair"
+  ],
+  "out_of_scope_publish_actions": {
+    "github_release_created": false,
+    "release_assets_uploaded": false,
+    "pypi_published": false,
+    "testpypi_published": false,
+    "npm_published": false,
+    "tag_moved": false,
+    "force_push": false
+  },
+  "github_release_can_be_created_later": true,
+  "github_release_creation_requirements": {
+    "tag": "v0.0.3-alpha",
+    "notes_file": "docs/validation/v0.0.3_alpha_github_release_draft_20260518.md",
+    "prerelease": true,
+    "latest": false
+  },
+  "pypi_npm_publish_status": "blocked_out_of_scope",
+  "final_recommendation": "V003AlphaReleaseSurfaceFrozen"
+}
