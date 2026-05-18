@@ -322,7 +322,7 @@ def _signature_extension(
     root: dict[str, Any] | None,
     requested: bool,
 ) -> tuple[ExtensionStatus, dict[str, Any], AlphaCheck | None]:
-    """P3.2b signature verification extension — fail-closed only.
+    """P3.4 signature verification extension — real DSSE PAE + ed25519 verify.
 
     When ``requested`` is ``False`` (default), returns ``skipped`` with no
     check added. When ``True``, inspects ``root['signature_material']``
@@ -331,15 +331,12 @@ def _signature_extension(
     * absent or empty → ``invalid_input`` (missing_material) + exit 2
     * algorithm outside :data:`SIGNATURE_ALGORITHM_ALLOWLIST` → ``unsupported``
       + exit 2
-    * material present and algorithm in allowlist → ``not_implemented``
-      + exit 2; the alpha verifier does NOT perform cryptographic signature
-      verification, so a positive ``passed`` cannot honestly be emitted.
-
-    Positive cryptographic verification is deferred to a follow-up branch.
+    * verification material present and verify-success → ``passed`` + exit 0
+    * verification material present and verify-failure → ``failed`` + exit 1
     """
     summary: dict[str, Any] = {
         "performed": False,
-        "scope": "p3_2_signature_extension_alpha",
+        "scope": "p3_4_signature_extension_alpha",
     }
     if not requested:
         return "skipped", summary, None
@@ -355,55 +352,214 @@ def _signature_extension(
     material = root.get("signature_material")
     envelope = root.get("dsse_envelope") if isinstance(root.get("dsse_envelope"), dict) else None
     signatures = envelope.get("signatures") if isinstance(envelope, dict) else None
-    if material is None and (not isinstance(signatures, list) or len(signatures) == 0):
+    # Order: algorithm allowlist check before missing_material so a fixture
+    # declaring `signature_material.algorithm = "rsa-pss-broken"` reaches
+    # `unsupported` rather than `missing_material` (which would happen if
+    # signatures[] also happens to be empty).
+    if isinstance(material, dict):
+        algorithm = material.get("algorithm")
+        summary["declared_algorithm"] = algorithm
+        if algorithm is not None and algorithm not in SIGNATURE_ALGORITHM_ALLOWLIST:
+            summary["reason"] = "unsupported_algorithm"
+            summary["allowlist"] = sorted(SIGNATURE_ALGORITHM_ALLOWLIST)
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"signature algorithm {algorithm!r} is not in alpha allowlist",
+            )
+            return "unsupported", summary, check
+    if not isinstance(signatures, list) or len(signatures) == 0:
         summary["reason"] = "missing_material"
         check = _fail(
             "signature_verification",
             "invalid_input",
             (
-                "--verify-signature requested but proof bundle carries no "
-                "signature_material and dsse_envelope.signatures is empty"
+                "--verify-signature requested but dsse_envelope.signatures is empty"
             ),
         )
         return "invalid_input", summary, check
-
-    algorithm = None
-    if isinstance(material, dict):
-        algorithm = material.get("algorithm")
-    if algorithm is None and isinstance(signatures, list) and signatures:
-        sig = signatures[0] if isinstance(signatures[0], dict) else None
-        if sig is not None:
-            algorithm = sig.get("algorithm")
-    summary["declared_algorithm"] = algorithm
-    if algorithm is not None and algorithm not in SIGNATURE_ALGORITHM_ALLOWLIST:
-        summary["reason"] = "unsupported_algorithm"
-        summary["allowlist"] = sorted(SIGNATURE_ALGORITHM_ALLOWLIST)
+    if not isinstance(material, dict):
+        summary["reason"] = "missing_material"
         check = _fail(
             "signature_verification",
             "invalid_input",
-            f"signature algorithm {algorithm!r} is not in alpha allowlist",
+            "--verify-signature requested but signature_material block missing",
         )
-        return "unsupported", summary, check
+        return "invalid_input", summary, check
 
-    summary["reason"] = "alpha_cryptographic_verification_not_implemented"
+    algorithm = material.get("algorithm")
+
+    # Real DSSE PAE + ed25519 verify path.
+    try:
+        from cryptography.exceptions import InvalidSignature
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+        from cryptography.hazmat.primitives.serialization import load_pem_public_key
+
+        from attestplane.intoto import DSSE_PAYLOAD_TYPE, dsse_pae
+    except ImportError as exc:
+        summary["reason"] = "cryptography_extras_missing"
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            f"cryptography library not installed: {exc}",
+        )
+        return "invalid_input", summary, check
+
+    payload_type = envelope.get("payloadType") if isinstance(envelope, dict) else None
+    if payload_type != DSSE_PAYLOAD_TYPE:
+        summary["reason"] = "wrong_payload_type"
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            f"dsse_envelope.payloadType {payload_type!r} is not {DSSE_PAYLOAD_TYPE!r}",
+        )
+        return "invalid_input", summary, check
+
+    payload_b64 = envelope.get("payload") if isinstance(envelope, dict) else None
+    if not isinstance(payload_b64, str):
+        summary["reason"] = "payload_not_base64_string"
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            "dsse_envelope.payload must be a base64 string",
+        )
+        return "invalid_input", summary, check
+    try:
+        payload_bytes = base64.standard_b64decode(payload_b64)
+    except Exception as exc:
+        summary["reason"] = "payload_base64_decode_failed"
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            f"dsse_envelope.payload base64 decode failed: {exc}",
+        )
+        return "invalid_input", summary, check
+
+    pae = dsse_pae(payload_type, payload_bytes)
+
+    public_keys = material.get("public_keys")
+    if not isinstance(public_keys, list) or len(public_keys) == 0:
+        summary["reason"] = "missing_public_keys"
+        check = _fail(
+            "signature_verification",
+            "invalid_input",
+            "signature_material.public_keys must be a non-empty array",
+        )
+        return "invalid_input", summary, check
+    keys_by_keyid: dict[str, Ed25519PublicKey] = {}
+    for idx, key_entry in enumerate(public_keys):
+        if not isinstance(key_entry, dict):
+            summary["reason"] = "invalid_public_key_entry"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"public_keys[{idx}] must be an object",
+            )
+            return "invalid_input", summary, check
+        keyid = key_entry.get("keyid")
+        pem = key_entry.get("public_key_pem")
+        if not isinstance(keyid, str) or not isinstance(pem, str):
+            summary["reason"] = "missing_keyid_or_pem"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"public_keys[{idx}] missing keyid or public_key_pem string",
+            )
+            return "invalid_input", summary, check
+        try:
+            pub = load_pem_public_key(pem.encode("utf-8"))
+        except Exception as exc:
+            summary["reason"] = "invalid_pem_public_key"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"public_keys[{idx}].public_key_pem load failed: {exc}",
+            )
+            return "invalid_input", summary, check
+        if not isinstance(pub, Ed25519PublicKey):
+            summary["reason"] = "wrong_public_key_type"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                (
+                    f"public_keys[{idx}] is not an ed25519 public key "
+                    f"(got {type(pub).__name__}); allowlist is {sorted(SIGNATURE_ALGORITHM_ALLOWLIST)}"
+                ),
+            )
+            return "unsupported", summary, check
+        ed_pub: Ed25519PublicKey = pub
+        keys_by_keyid[keyid] = ed_pub
+
+    verified = 0
+    for sidx, sig_entry in enumerate(signatures):
+        if not isinstance(sig_entry, dict):
+            summary["reason"] = "invalid_signature_entry"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"dsse_envelope.signatures[{sidx}] must be an object",
+            )
+            return "invalid_input", summary, check
+        keyid = sig_entry.get("keyid")
+        sig_b64 = sig_entry.get("sig")
+        if not isinstance(keyid, str) or not isinstance(sig_b64, str):
+            summary["reason"] = "missing_sig_or_keyid"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"signatures[{sidx}] missing keyid or sig string",
+            )
+            return "invalid_input", summary, check
+        verify_key = keys_by_keyid.get(keyid)
+        if verify_key is None:
+            summary["reason"] = "unknown_keyid"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"signatures[{sidx}].keyid {keyid!r} not present in signature_material.public_keys",
+            )
+            return "invalid_input", summary, check
+        try:
+            sig_bytes = base64.standard_b64decode(sig_b64)
+        except Exception as exc:
+            summary["reason"] = "sig_base64_decode_failed"
+            check = _fail(
+                "signature_verification",
+                "invalid_input",
+                f"signatures[{sidx}].sig base64 decode failed: {exc}",
+            )
+            return "invalid_input", summary, check
+        try:
+            verify_key.verify(sig_bytes, pae)
+        except InvalidSignature:
+            summary["reason"] = "signature_does_not_verify"
+            summary["failed_signature_index"] = sidx
+            check = _fail(
+                "signature_verification",
+                "verification_failed",
+                (
+                    f"DSSE ed25519 signature[{sidx}] (keyid={keyid!r}) does not "
+                    f"verify against payload PAE"
+                ),
+            )
+            return "failed", summary, check
+        verified += 1
+
+    summary["performed"] = True
+    summary["verified_signature_count"] = verified
     summary["allowlist"] = sorted(SIGNATURE_ALGORITHM_ALLOWLIST)
-    check = _fail(
+    summary["reason"] = "dsse_ed25519_pae_signatures_verified"
+    return "passed", summary, _pass(
         "signature_verification",
-        "invalid_input",
-        (
-            "alpha verifier does not perform cryptographic DSSE signature "
-            "verification; positive --verify-signature path is deferred to a "
-            "follow-up branch with test-only key material and PAE binding"
-        ),
+        f"verified {verified} DSSE ed25519 signature(s) over PAE",
     )
-    return "not_implemented", summary, check
 
 
 def _anchor_extension(
     root: dict[str, Any] | None,
     requested: bool,
 ) -> tuple[ExtensionStatus, dict[str, Any], AlphaCheck | None]:
-    """P3.2c anchor verification extension — fail-closed only.
+    """P3.4 anchor verification extension — real RFC-3161 verify.
 
     When ``requested`` is ``False`` (default), returns ``skipped`` with no
     check added. When ``True``, inspects ``root['anchor_records']``:
@@ -411,15 +567,17 @@ def _anchor_extension(
     * absent or empty → ``invalid_input`` (missing_material) + exit 2
     * any record with ``anchor_type`` outside
       :data:`ANCHOR_TYPE_ALLOWLIST` → ``unsupported`` + exit 2
-    * records present and types in allowlist → ``not_implemented`` + exit 2;
-      the alpha verifier does NOT perform RFC-3161 token + cert-chain
-      verification, so a positive ``passed`` cannot honestly be emitted.
+    * material present and verify-success → ``passed`` + exit 0
+    * material present and verify-failure → ``failed`` + exit 1
 
-    No network access is attempted under any condition.
+    Verification calls
+    :func:`attestplane.anchoring.rfc3161.verify_timestamp_token` with
+    the trust roots supplied in each anchor record. No network access
+    is attempted under any condition.
     """
     summary: dict[str, Any] = {
         "performed": False,
-        "scope": "p3_2_anchor_extension_alpha",
+        "scope": "p3_4_anchor_extension_alpha",
         "network_access_attempted": False,
     }
     if not requested:
@@ -467,18 +625,131 @@ def _anchor_extension(
         )
         return "unsupported", summary, check
 
-    summary["reason"] = "alpha_anchor_verification_not_implemented"
+    # Real RFC-3161 cryptographic verification path.
+    try:
+        from attestplane.anchoring.base import AnchorVerificationError
+        from attestplane.anchoring.rfc3161 import (
+            parse_timestamp_response,
+            verify_timestamp_token,
+        )
+    except ImportError as exc:
+        summary["reason"] = "anchor_extras_missing"
+        check = _fail(
+            "anchor_verification",
+            "invalid_input",
+            f"attestplane anchor extras not installed: {exc}",
+        )
+        return "invalid_input", summary, check
+
+    verified = 0
+    for ridx, record in enumerate(records):
+        token_b64 = record.get("tsa_token_b64")
+        digest_hex = record.get("anchored_event_hash_hex")
+        trust_b64s = record.get("trust_roots_der_b64")
+        if not isinstance(token_b64, str) or not isinstance(digest_hex, str):
+            summary["reason"] = "missing_token_or_digest"
+            check = _fail(
+                "anchor_verification",
+                "invalid_input",
+                f"anchor_records[{ridx}] missing tsa_token_b64 or anchored_event_hash_hex",
+            )
+            return "invalid_input", summary, check
+        if not isinstance(trust_b64s, list) or len(trust_b64s) == 0:
+            summary["reason"] = "missing_trust_roots"
+            check = _fail(
+                "anchor_verification",
+                "invalid_input",
+                f"anchor_records[{ridx}].trust_roots_der_b64 must be a non-empty array",
+            )
+            return "invalid_input", summary, check
+        try:
+            token_der = base64.standard_b64decode(token_b64)
+        except Exception as exc:
+            summary["reason"] = "token_base64_decode_failed"
+            check = _fail(
+                "anchor_verification",
+                "invalid_input",
+                f"anchor_records[{ridx}].tsa_token_b64 decode failed: {exc}",
+            )
+            return "invalid_input", summary, check
+        try:
+            expected_digest = bytes.fromhex(digest_hex)
+        except ValueError as exc:
+            summary["reason"] = "digest_not_hex"
+            check = _fail(
+                "anchor_verification",
+                "invalid_input",
+                f"anchor_records[{ridx}].anchored_event_hash_hex not valid hex: {exc}",
+            )
+            return "invalid_input", summary, check
+        trust_ders: list[bytes] = []
+        for tidx, t_b64 in enumerate(trust_b64s):
+            if not isinstance(t_b64, str):
+                summary["reason"] = "invalid_trust_root_entry"
+                check = _fail(
+                    "anchor_verification",
+                    "invalid_input",
+                    f"anchor_records[{ridx}].trust_roots_der_b64[{tidx}] must be a string",
+                )
+                return "invalid_input", summary, check
+            try:
+                trust_ders.append(base64.standard_b64decode(t_b64))
+            except Exception as exc:
+                summary["reason"] = "trust_root_decode_failed"
+                check = _fail(
+                    "anchor_verification",
+                    "invalid_input",
+                    f"anchor_records[{ridx}].trust_roots_der_b64[{tidx}] decode failed: {exc}",
+                )
+                return "invalid_input", summary, check
+        try:
+            parsed = parse_timestamp_response(token_der)
+        except AnchorVerificationError as exc:
+            summary["reason"] = "token_parse_failed"
+            check = _fail(
+                "anchor_verification",
+                "verification_failed",
+                f"anchor_records[{ridx}] tsa_token parse failed: {exc}",
+            )
+            return "failed", summary, check
+        # Optional intermediates_der pass-through (cert-chain depth > 1).
+        intermediates_der: list[bytes] = []
+        import contextlib
+        chain_b64s = record.get("tsa_cert_chain_b64")
+        if isinstance(chain_b64s, list):
+            # Skip the first entry (leaf) — it's already inside the token.
+            for c_b64 in chain_b64s[1:]:
+                if isinstance(c_b64, str):
+                    # Best-effort: malformed intermediates trip the cert-walk
+                    # check downstream, so we don't surface decode errors here.
+                    with contextlib.suppress(Exception):
+                        intermediates_der.append(base64.standard_b64decode(c_b64))
+        try:
+            verify_timestamp_token(
+                parsed,
+                expected_digest=expected_digest,
+                trust_roots_der=trust_ders,
+                intermediates_der=intermediates_der or None,
+            )
+        except AnchorVerificationError as exc:
+            summary["reason"] = "rfc3161_verify_failed"
+            summary["failed_anchor_index"] = ridx
+            check = _fail(
+                "anchor_verification",
+                "verification_failed",
+                f"anchor_records[{ridx}] RFC-3161 verification failed: {exc}",
+            )
+            return "failed", summary, check
+        verified += 1
+
+    summary["performed"] = True
+    summary["verified_anchor_count"] = verified
     summary["allowlist"] = sorted(ANCHOR_TYPE_ALLOWLIST)
-    check = _fail(
+    summary["reason"] = "rfc3161_tokens_verified"
+    return "passed", summary, _pass(
         "anchor_verification",
-        "invalid_input",
-        (
-            "alpha verifier does not perform RFC-3161 cryptographic anchor "
-            "verification; positive --verify-anchor path is deferred to a "
-            "follow-up branch using anchor_vectors.json test material"
-        ),
+        f"verified {verified} RFC-3161 anchor token(s) against trust roots",
     )
-    return "not_implemented", summary, check
 
 
 def verify_alpha_proofbundle_file(

@@ -138,6 +138,40 @@ def canonical_json_bytes(value: Any) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+def dsse_pae(payload_type: str, payload: bytes) -> bytes:
+    """DSSE v1 Pre-Authentication Encoding (PAE).
+
+    Per https://github.com/secure-systems-lab/dsse/blob/master/protocol.md
+    the bytes signed are::
+
+        "DSSEv1" SP LEN(payloadType) SP payloadType SP LEN(payload) SP payload
+
+    where ``SP`` is a single ASCII space (0x20) and ``LEN`` is the
+    ASCII-decimal length. Signers and verifiers must encode this
+    consistently or signatures will not verify. The intent of PAE is
+    to prevent length-extension and field-confusion attacks where the
+    same bytes could be parsed as a different payload type.
+
+    :param payload_type: the DSSE ``payloadType`` URI
+        (e.g. ``application/vnd.in-toto+json``).
+    :param payload: the raw payload bytes (NOT base64; the caller must
+        base64-decode :class:`statement_to_dsse_envelope`'s output
+        before calling this).
+    :returns: the PAE bytes ready to be signed or verified.
+    """
+    pt_bytes = payload_type.encode("utf-8")
+    return (
+        b"DSSEv1 "
+        + str(len(pt_bytes)).encode("ascii")
+        + b" "
+        + pt_bytes
+        + b" "
+        + str(len(payload)).encode("ascii")
+        + b" "
+        + payload
+    )
+
+
 def dsse_envelope_to_statement(envelope: dict[str, Any]) -> dict[str, Any]:
     """Inverse of :func:`statement_to_dsse_envelope`. Validates payloadType."""
     if not isinstance(envelope, dict):

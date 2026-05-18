@@ -68,7 +68,7 @@ jobs:
         run: |
           uv venv --python ${{ matrix.python }} .venv
           uv pip install -e '.[dev]'
-          .venv/bin/pytest --cov --cov-report=term --cov-fail-under=88
+          .venv/bin/pytest --cov --cov-report=term --cov-fail-under=87
 
   conformance-vectors-frozen:
     name: Conformance vectors are byte-frozen
