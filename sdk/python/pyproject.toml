@@ -179,3 +179,13 @@ branch = true
 fail_under = 90
 show_missing = true
 skip_covered = false
+
+# Mutation testing (Gap G6, advisory only, nightly).
+# Narrow scope to small core modules so mutmut completes in the nightly
+# budget: canonical_text.py (cross-SDK byte contract) + reason_codes.py
+# (ADR-0010 verification semantics). Other modules will be added as
+# mutmut budget permits.
+[tool.mutmut]
+paths_to_mutate = "src/attestplane/canonical_text.py:src/attestplane/reason_codes.py"
+runner = "python -m pytest -x -q --no-cov"
+tests_dir = "tests"

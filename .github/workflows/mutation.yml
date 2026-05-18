@@ -1,0 +1,78 @@
+name: mutation
+
+# Gap G6: mutation testing — Tier-3 nightly advisory.
+# NOT blocking: mutation score is a long-term quality signal, not a merge gate.
+#
+# Scope (Python): narrow core modules locked in pyproject.toml [tool.mutmut]:
+#   - src/attestplane/canonical_text.py (cross-SDK byte contract)
+#   - src/attestplane/reason_codes.py   (ADR-0010 verification semantics)
+# Scope (TypeScript): scaffold only this iteration — Stryker integration
+# tracked as follow-up (see #G6 TS in docs/ci_testing_framework_20260518.md).
+
+on:
+  schedule:
+    - cron: "23 4 * * *"  # nightly at 04:23 UTC, off-peak
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+defaults:
+  run:
+    working-directory: sdk/python
+
+jobs:
+  python-mutmut:
+    name: mutmut (canonical_text + reason_codes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+
+      - name: Install SDK + mutmut
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install -e '.[dev]'
+          uv pip install mutmut
+
+      - name: Run mutmut (advisory)
+        run: |
+          set +e
+          .venv/bin/mutmut run --no-progress
+          rc=$?
+          echo "mutmut exit=$rc (non-zero is informational only — survivors exist or test failure)"
+
+      - name: Report mutation results
+        run: |
+          echo "=== mutmut results ==="
+          .venv/bin/mutmut results || true
+          echo ""
+          echo "=== mutation score summary ==="
+          .venv/bin/mutmut html 2>/dev/null || true
+          # Surface counts in a single line for at-a-glance triage:
+          if [ -f .mutmut-cache ] || [ -f html/index.html ]; then
+            echo "Mutation cache present — see html/ artefact for full report"
+          fi
+
+      - name: Upload mutation HTML report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: mutmut-report-${{ github.sha }}
+          path: |
+            sdk/python/html/
+            sdk/python/.mutmut-cache
+          retention-days: 30
+          if-no-files-found: ignore
