@@ -28,7 +28,8 @@ try:
     from cryptography import x509
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import padding
+    from cryptography.hazmat.primitives.asymmetric import ec, padding
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
@@ -232,22 +233,39 @@ def verify_timestamp_token(
         raise AnchorVerificationError(f"leaf cert is not valid DER: {exc}") from exc
 
     public_key = leaf.public_key()
-    if not isinstance(public_key, RSAPublicKey):
+    if isinstance(public_key, RSAPublicKey):
+        try:
+            public_key.verify(
+                parsed.signature,
+                parsed.signed_attrs_der,
+                padding.PKCS1v15(),
+                hashes.SHA256(),
+            )
+        except InvalidSignature as exc:
+            raise AnchorVerificationError(
+                "TSA RSA signature does not verify against leaf cert"
+            ) from exc
+    elif isinstance(public_key, EllipticCurvePublicKey):
+        # ECDSA leaf path: required to verify tokens from TSAs that issued
+        # an EC-curve leaf cert (e.g. FreeTSA after their 2026 cert
+        # rotation). The SignerInfo digest algorithm stays SHA-256
+        # (verified above on messageImprint), and the signature payload
+        # is the same DER-encoded signed_attrs.
+        try:
+            public_key.verify(
+                parsed.signature,
+                parsed.signed_attrs_der,
+                ec.ECDSA(hashes.SHA256()),
+            )
+        except InvalidSignature as exc:
+            raise AnchorVerificationError(
+                "TSA ECDSA signature does not verify against leaf cert"
+            ) from exc
+    else:
         raise AnchorVerificationError(
-            f"v1 supports RSA leaf keys only; got {type(public_key).__name__}"
+            f"unsupported leaf key type: {type(public_key).__name__} "
+            f"(supported: RSA, EllipticCurve)"
         )
-
-    try:
-        public_key.verify(
-            parsed.signature,
-            parsed.signed_attrs_der,
-            padding.PKCS1v15(),
-            hashes.SHA256(),
-        )
-    except InvalidSignature as exc:
-        raise AnchorVerificationError(
-            "TSA signature does not verify against leaf cert"
-        ) from exc
 
     # Check time validity for the leaf.
     actual_when = verification_time or datetime.now(UTC)

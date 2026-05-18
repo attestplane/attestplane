@@ -36,7 +36,8 @@ try:
     from asn1crypto import x509 as asn1_x509
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+    from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
     from cryptography.hazmat.primitives.asymmetric.rsa import (
         RSAPrivateKey,
         RSAPublicKey,  # noqa: F401  (conditional import — try/except guard)
@@ -98,12 +99,18 @@ class TestTSAAuthority:
         cert_validity_days: int = 365,
         common_name: str = "Attestplane Test TSA",
         intermediate_count: int = 0,
+        leaf_key_type: str = "rsa",
     ) -> None:
+        if leaf_key_type not in ("rsa", "ec"):
+            raise ValueError(
+                f"leaf_key_type must be 'rsa' or 'ec', got {leaf_key_type!r}"
+            )
         actual_now = now or datetime.now(UTC)
         self._issued_at_authority = actual_now
         self._cert_validity = timedelta(days=cert_validity_days)
         self._root_validity = timedelta(days=cert_validity_days * 10)
         self._common_name = common_name
+        self._leaf_key_type = leaf_key_type
 
         self._root_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self._root_cert = self._build_root_cert(self._root_key, actual_now)
@@ -128,7 +135,14 @@ class TestTSAAuthority:
             prev_key = inter_key
             prev_cert = inter_cert
 
-        self._leaf_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        # Leaf key: either RSA-2048 (default, mirrors what most TSAs used
+        # historically) or NIST P-256 EC (FreeTSA after its 2026 cert
+        # rotation; many modern TSAs are migrating to EC for efficiency).
+        self._leaf_key: RSAPrivateKey | EllipticCurvePrivateKey
+        if leaf_key_type == "ec":
+            self._leaf_key = ec.generate_private_key(ec.SECP256R1())
+        else:
+            self._leaf_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self._leaf_cert = self._build_leaf_cert(
             self._leaf_key, prev_key, prev_cert, actual_now,
         )
@@ -220,11 +234,19 @@ class TestTSAAuthority:
         signed_bytes = bytearray(signed_attrs_der)
         signed_bytes[0] = 0x31  # SET tag (asn1crypto sometimes emits IMPLICIT)
 
-        signature = self._leaf_key.sign(
-            bytes(signed_bytes),
-            padding.PKCS1v15(),
-            hashes.SHA256(),
-        )
+        if isinstance(self._leaf_key, EllipticCurvePrivateKey):
+            signature = self._leaf_key.sign(
+                bytes(signed_bytes),
+                ec.ECDSA(hashes.SHA256()),
+            )
+            sig_alg_name = "sha256_ecdsa"
+        else:
+            signature = self._leaf_key.sign(
+                bytes(signed_bytes),
+                padding.PKCS1v15(),
+                hashes.SHA256(),
+            )
+            sig_alg_name = "rsassa_pkcs1v15"
 
         signer_info = cms.SignerInfo({
             "version": "v1",
@@ -237,7 +259,7 @@ class TestTSAAuthority:
             "digest_algorithm": algos.DigestAlgorithm({"algorithm": "sha256"}),
             "signed_attrs": signed_attrs,
             "signature_algorithm": algos.SignedDigestAlgorithm({
-                "algorithm": "rsassa_pkcs1v15",
+                "algorithm": sig_alg_name,
             }),
             "signature": signature,
         })
@@ -472,7 +494,7 @@ class TestTSAAuthority:
 
     def _build_leaf_cert(
         self,
-        leaf_key: RSAPrivateKey,
+        leaf_key: RSAPrivateKey | EllipticCurvePrivateKey,
         signer_key: RSAPrivateKey,
         signer_cert: x509.Certificate,
         now: datetime,
