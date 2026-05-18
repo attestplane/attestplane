@@ -79,6 +79,7 @@ def test_verify_proofbundle_valid_minimal_fixture(
         ("unsupported_version.json", 2, "schema_version"),
         ("missing_dsse_shape.json", 2, "required_fields"),
         ("missing_storage_compat.json", 2, "required_fields"),
+        ("missing_provenance_shape.json", 2, "required_fields"),
     ],
 )
 def test_verify_proofbundle_negative_fixtures_fail_closed(
