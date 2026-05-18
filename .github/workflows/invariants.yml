@@ -48,3 +48,11 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Verify canonical-JSON SHA-256 of every fixture
         run: bash scripts/check-fixture-hashes.sh
+
+  public-api:
+    name: Public API manifest drift gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Verify Python/TypeScript public API manifests
+        run: bash scripts/check-public-api.sh

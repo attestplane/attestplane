@@ -1,0 +1,105 @@
+{
+  "phase": "P2.1",
+  "baseline_release": "v0.0.2-alpha",
+  "gate": "public_api_diff",
+  "status": "PASS",
+  "python_manifest": "api/public/python_v1.json",
+  "typescript_manifest": "api/public/typescript_v1.json",
+  "allowlist": "api/public/py_ts_allowlist_v1.json",
+  "checked_rules": [
+    "manifest schema_version is public_api_manifest.v1",
+    "allowlist schema_version is public_api_allowlist.v1",
+    "current exported symbols have no unrecorded additions",
+    "alpha_public baseline symbols remain exported",
+    "documented baseline symbols remain exported",
+    "Py/TS asymmetries are allowlisted",
+    "allowlist entries include reason and review_by",
+    "manifest and allowlist JSON output is deterministic"
+  ],
+  "allowed_asymmetries": [
+    {
+      "classification": "language_specific",
+      "count": 86
+    },
+    {
+      "classification": "experimental",
+      "count": 22
+    },
+    {
+      "classification": "roadmap",
+      "count": 21
+    },
+    {
+      "classification": "intentional",
+      "count": 1
+    }
+  ],
+  "violations": [],
+  "commands": [
+    {
+      "command": "scripts/check-public-api.sh",
+      "result": "PASS, python=127 symbols, typescript=171 exports, allowlist=130 asymmetries"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS, 725 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS, 451 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS, zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "jq empty docs/validation/p2_public_api_diff_gate_20260518.json api/public/*.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "safe_claims_unchanged": true,
+  "no_go_claims_unchanged": true,
+  "remaining_p2": [
+    "public API deprecation policy",
+    "semantic compatibility checks beyond root exports",
+    "durable storage hardening",
+    "mutation testing",
+    "broader fault-injection gates"
+  ]
+}

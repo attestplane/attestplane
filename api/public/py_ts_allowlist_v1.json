@@ -1,0 +1,1053 @@
+{
+  "allowed_asymmetries": [
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python JSONL storage surface is public; TypeScript storage parity is not shipped in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "AbstractStorageBackend",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "AnchorStatus",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "AppendOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "AuditorExport",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "AuditorExportOptions",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "CertStatus",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ChainBundleVerificationResult",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ChainEventForReplay",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ChainEventForSettlement",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ChainExtendOptions",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "DEFAULT_ANCHOR_POLICY",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "DEFAULT_SIGNATURE_POLICY",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "DSSE_PAYLOAD_TYPE",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "EnvKeyProviderOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "EventDraftInput",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "EventTypeV1",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "FileKeyProviderOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ImplementationStatus",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "InMemoryKeyProviderOptions",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "IntotoError",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python JSONL storage surface is public; TypeScript storage parity is not shipped in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "JsonlStorageBackend",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "MockTSAProviderInput",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "MultiTSAProviderInput",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ObligationEntry",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ObligationRegistryError",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "PREDICATE_TYPE_V1",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ParsedTimestampTs",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exposes a dedicated payload validation error class; Python validators raise ValueError in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "PayloadValidationError",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ProofBundle",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ProofBundleBuilderInput",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "Registry",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "ReplayOptions",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python adapter event class is public; TypeScript uses structural adapter inputs in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "RuntimeEvent",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "STATEMENT_TYPE",
+      "typescript": false
+    },
+    {
+      "classification": "intentional",
+      "python": false,
+      "reason": "Recorded v0.0.2-alpha API asymmetry; review before v0.0.3-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "STATUS_RANK",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SerializedAuditEvent",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SerializedChainedEvent",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SerializedSignatureRecord",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SerializedSubjectRef",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SignatureStatus",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript package ergonomics or helper surface has no Python root equivalent.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "Signer",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SignerOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SingleSignatureResult",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python JSONL storage surface is public; TypeScript storage parity is not shipped in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "StorageError",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python JSONL storage surface is public; TypeScript storage parity is not shipped in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "StorageReadError",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python JSONL storage surface is public; TypeScript storage parity is not shipped in v0.0.2-alpha.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "StorageWriteError",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "SubjectScheme",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "TranslateAdapter",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "TrustRootEntry",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript package ergonomics or helper surface has no Python root equivalent.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "TrustRoots",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript package ergonomics or helper surface has no Python root equivalent.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "TrustRootsError",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript package ergonomics or helper surface has no Python root equivalent.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VERSION",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VerifyChainFullOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VerifyChainWithAnchorsOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VerifyChainWithSignaturesOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VerifyChainWithSignaturesResult",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VerifyTimestampOptions",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python exposes __version__; TypeScript exposes VERSION.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "__version__",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "buildAuditorExport",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "buildPerEventPayload",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "buildSegmentHeadPayload",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "build_auditor_export",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "bundle_to_dsse_envelope",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "bundle_to_in_toto_statement",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "canonicalizeText",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "canonicalize_text",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "chainExtend",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "chain_extend",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "checkSettlementPrecondition",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "check_settlement_precondition",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "deriveKeyId",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "derive_key_id",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript serialization helpers are exported for alpha proof/signature ergonomics; Python uses dataclass/dict helpers.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "deserializeSignatureRecord",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "dsse_envelope_to_statement",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "exportPublicKeyDer",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "genesisHead",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "genesis_head",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "hashEvent",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "hash_event",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript package ergonomics or helper surface has no Python root equivalent.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "headOf",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "isKnownReasonCode",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "isKnownV1EventType",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "is_known_reason_code",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "is_known_v1_event_type",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "loadTrustRoots",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "load_all_registries",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "load_dora_article_8",
+      "typescript": false
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python obligation registry loaders are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "load_eu_ai_act_article_12",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "makeAnchorPolicy",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "makeEventDraft",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "makeSignaturePolicy",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "makeSubjectRef",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "makeTimestampRequest",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "parseTimestampResponse",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "parseTrustRoots",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "proof_bundle_to_in_toto_statement",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "reasonCodeMatchesFormat",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "reason_code_matches_format",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "replayFixture",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "replay_fixture",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "seedToPrivateKey",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript serialization helpers are exported for alpha proof/signature ergonomics; Python uses dataclass/dict helpers.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "serializeChainedEvent",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript serialization helpers are exported for alpha proof/signature ergonomics; Python uses dataclass/dict helpers.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "serializeSignatureRecord",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript package ergonomics or helper surface has no Python root equivalent.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "shortSummary",
+      "typescript": true
+    },
+    {
+      "classification": "roadmap",
+      "python": true,
+      "reason": "Python in-toto/DSSE helpers are public in v0.0.2-alpha; TypeScript parity is a P2 decision.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "statement_to_dsse_envelope",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "textHash",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "textHashHex",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "text_hash",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "text_hash_hex",
+      "typescript": false
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validateAnchorRecord",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validateLeaseLifecycleEventPayload",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validatePolicyCheckEventPayload",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validateReplayEventPayload",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validateSignatureRecord",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validate_lease_lifecycle_event_payload",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validate_policy_check_event_payload",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "validate_replay_event_payload",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyChain",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyChainFull",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyChainWithAnchors",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyChainWithSignatures",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyProofBundle",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyProofBundleFile",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyReplayManifest",
+      "typescript": true
+    },
+    {
+      "classification": "experimental",
+      "python": false,
+      "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verifyTimestampToken",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verify_chain",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verify_chain_with_anchors",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verify_proof_bundle",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verify_proof_bundle_file",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "verify_replay_manifest",
+      "typescript": false
+    }
+  ],
+  "baseline_release": "v0.0.2-alpha",
+  "forbidden_drift": [
+    "removing alpha_public symbol without deprecation note",
+    "changing symbol stability silently",
+    "documenting a symbol that is not exported",
+    "exporting a new alpha_public symbol without manifest update"
+  ],
+  "notes": "This allowlist records exact Py/TS root API asymmetries at v0.0.2-alpha. It is not a claim that both SDKs are semantically identical.",
+  "schema_version": "public_api_allowlist.v1"
+}
