@@ -1,0 +1,156 @@
+{
+  "release_candidate": "v0.0.3-alpha",
+  "rc_gate_status": "GO",
+  "current_branch": "feat/p2-storage-compatibility-20260518",
+  "head": "6ef1d8445cd4633426e1d90565a961300059e208",
+  "main": "c8dabc964e9a2ba84453bb5150f14a9262ea8681",
+  "origin_main": "c8dabc964e9a2ba84453bb5150f14a9262ea8681",
+  "branch_ahead_behind_main": {
+    "ahead": 6,
+    "behind": 0
+  },
+  "branch_ahead_behind_origin_main": {
+    "ahead": 6,
+    "behind": 0
+  },
+  "existing_tags": {
+    "local_v0_0_3_alpha": [],
+    "remote_v0_0_3_alpha": []
+  },
+  "included_commits": [
+    {
+      "short": "9d1874e",
+      "message": "feat(api): add public API diff gate"
+    },
+    {
+      "short": "d24b455",
+      "message": "feat(storage): harden JSONL durability guardrails"
+    },
+    {
+      "short": "9656962",
+      "message": "test(fault): add deterministic fault-injection gate"
+    },
+    {
+      "short": "4b4d2f1",
+      "message": "feat(parity): record obligations and in-toto API decisions"
+    },
+    {
+      "short": "bb09d9d",
+      "message": "feat(release): add provenance artifact gate"
+    },
+    {
+      "short": "6ef1d84",
+      "message": "feat(storage): add compatibility manifest and migration policy"
+    }
+  ],
+  "validation_files": [
+    "docs/validation/p2_public_api_diff_gate_20260518.md",
+    "docs/validation/p2_public_api_diff_gate_20260518.json",
+    "docs/validation/p2_durable_storage_hardening_20260518.md",
+    "docs/validation/p2_durable_storage_hardening_20260518.json",
+    "docs/validation/p2_fault_injection_gate_20260518.md",
+    "docs/validation/p2_fault_injection_gate_20260518.json",
+    "docs/validation/p2_parity_obligations_intoto_20260518.md",
+    "docs/validation/p2_parity_obligations_intoto_20260518.json",
+    "docs/validation/p2_release_provenance_pipeline_20260518.md",
+    "docs/validation/p2_release_provenance_pipeline_20260518.json",
+    "docs/validation/p2_storage_compatibility_20260518.md",
+    "docs/validation/p2_storage_compatibility_20260518.json"
+  ],
+  "manifest_consistency": {
+    "public_api": "PASS: baseline v0.0.2-alpha; python symbols=127; typescript exports=193; allowlist entries=138 with reason and review_by",
+    "storage_compatibility": "PASS: baseline v0.0.2-alpha; jsonl alpha_opt_in; multi_writer_safe=false; unknown_record_version fail_closed",
+    "fault_matrix": "PASS: baseline v0.0.2-alpha; active=50; covered_active=50; roadmap=1",
+    "release_provenance": "PASS: v0.0.2-alpha post-release hygiene baseline; slsa_level_claimed=null; no production-grade or certified provenance claim"
+  },
+  "commands": [
+    "git status --short --branch",
+    "git branch --show-current",
+    "git rev-parse HEAD",
+    "git fetch --all --tags --prune",
+    "git rev-list -n 1 v0.0.2-alpha",
+    "git tag -l \"v0.0.3-alpha*\"",
+    "git ls-remote --tags origin \"v0.0.3-alpha*\"",
+    "git log --oneline --decorate --graph --max-count=20",
+    "git rev-list --left-right --count main...HEAD",
+    "git rev-list --left-right --count origin/main...HEAD",
+    "scripts/check-storage-compatibility.sh",
+    "scripts/check-release-provenance.sh",
+    "scripts/check-fault-injection.sh",
+    "scripts/check-public-api.sh",
+    "sdk/python/.venv/bin/pytest",
+    "cd sdk/python && .venv/bin/ruff check src tests",
+    "cd sdk/python && .venv/bin/mypy",
+    "cd sdk/typescript && npm test",
+    "cd sdk/typescript && npm run typecheck",
+    "cd sdk/typescript && npm run lint",
+    "bash scripts/check-schema-hashes.sh",
+    "bash scripts/check-fixture-hashes.sh",
+    "bash scripts/check-adr-frozen-blocks.sh",
+    "bash scripts/check-policy.sh",
+    "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+    "jq empty docs/validation/*.json api/public/*.json storage/compat/*.json release/artifacts/*.json tests/fault_injection/*.json",
+    "git diff --check",
+    "ask_opus.sh reviewer \"Attestplane v0.0.3-alpha RC gate review...\""
+  ],
+  "test_results": {
+    "storage_compatibility_gate": "PASS",
+    "release_provenance_gate": "PASS",
+    "fault_injection_gate": "PASS",
+    "public_api_gate": "PASS",
+    "python_tests": "PASS: 791 passed",
+    "ruff": "PASS",
+    "mypy": "PASS",
+    "typescript_tests": "PASS: 502 passed",
+    "typescript_typecheck": "PASS",
+    "typescript_lint": "PASS",
+    "schema_hashes": "PASS",
+    "fixture_hashes": "PASS",
+    "adr_frozen_blocks": "PASS",
+    "policy": "PASS",
+    "cross_sdk_roundtrip": "PASS",
+    "json_validation": "PASS",
+    "git_diff_check": "PASS",
+    "opus_reviewer_gate": "PASS"
+  },
+  "claim_gate": {
+    "status": "PASS",
+    "violations": [],
+    "safe_claims": [
+      "alpha-grade dual-SDK tamper-evident evidence substrate",
+      "restricted canonicalization and canonical text primitives",
+      "SHA-256 hash-chain primitives",
+      "evidence payload schemas and fail-closed validators",
+      "read-only verifier predicates with hardened ProofBundle and settlement guardrails",
+      "Python/TypeScript conformance strengthened by public API, fault-injection, and cross-SDK gates",
+      "JSONL alpha opt-in storage guardrails and compatibility policy",
+      "release artifact manifest and checksum/provenance hygiene gates",
+      "in-toto/DSSE deterministic shape helpers only"
+    ],
+    "no_go_claims": [
+      "production-ready",
+      "compliance-ready",
+      "certification system",
+      "EU AI Act, DORA, or GDPR compliant",
+      "full CLI ProofBundle verifier",
+      "default signed verification",
+      "default anchored verification",
+      "runtime governance or AIOS runtime integration",
+      "execution authority, scheduler, gateway authority, billing, secret store, or UI read model",
+      "ACID, database-grade durability, or multi-writer correctness",
+      "formal verification or exhaustive mutation testing",
+      "SLSA L3 completed",
+      "certified provenance",
+      "production-grade supply-chain security",
+      "automatic destructive storage repair"
+    ]
+  },
+  "cli_verify_scope": "chain_report_only",
+  "production_ready": false,
+  "compliance_ready": false,
+  "certification_claim": false,
+  "formal_verification_claim": false,
+  "slsa_l3_claim": false,
+  "database_grade_storage_claim": false,
+  "verdict": "GO: ready for merge/tag preparation as v0.0.3-alpha"
+}
