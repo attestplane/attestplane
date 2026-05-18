@@ -507,8 +507,8 @@ def verify_alpha_proofbundle_file(
             verify_signature=verify_signature, verify_anchor=verify_anchor,
             signature_status="skipped" if not verify_signature else "invalid_input",
             anchor_status="skipped" if not verify_anchor else "invalid_input",
-            signature_summary={"performed": False, "reason": "input_unparseable"},
-            anchor_summary={"performed": False, "reason": "input_unparseable"},
+            signature_summary={"performed": False, "reason": "input_unparsable"},
+            anchor_summary={"performed": False, "reason": "input_unparsable"},
         )
 
     root_dict, shape_check = _check_root_shape(root)

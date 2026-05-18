@@ -73,7 +73,7 @@ jobs:
       - name: Install Python SDK test dependencies
         run: |
           python -m venv sdk/python/.venv
-          sdk/python/.venv/bin/python -m pip install -e "sdk/python[test,anchor]"
+          sdk/python/.venv/bin/python -m pip install -e "sdk/python[dev,anchor]"
       - name: Install TypeScript SDK dependencies
         run: npm ci --prefix sdk/typescript
       - name: Verify deterministic fail-closed fault matrix

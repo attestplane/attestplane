@@ -12,6 +12,9 @@ Intoto = "Intoto"
 # `mis` as a standalone token appears inside hyphenated compounds like
 # `mis-classifying`, `mis-translating` — valid English usage in ADRs.
 mis = "mis"
+# `anc` is the variable-name shortform for "anchor" in the P3.2 verifier
+# (anc_status, anc_summary, anc_check, anc_perf). Not "and" misspelled.
+anc = "anc"
 
 [default.extend-identifiers]
 # BaFin = Bundesanstalt fur Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority).
@@ -20,6 +23,10 @@ BaFin = "BaFin"
 # ASN.1 BIT STRING(s) — standard term; typos tokenises `STRINGs` and
 # flags the suffix `STRIN`.
 STRINGs = "STRINGs"
+# Frozen git short-sha in a release-gate report (8afe7b7); typos
+# tokenises and reads the leading 3 chars as `afe` → `safe` typo.
+# This is a fixed historical hash, not an English word.
+"8afe7b7" = "8afe7b7"
 
 [files]
 extend-exclude = [

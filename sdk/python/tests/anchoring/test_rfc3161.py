@@ -18,6 +18,9 @@ import pytest
 pytest.importorskip("cryptography")
 pytest.importorskip("asn1crypto")
 
+from cryptography import x509 as cx509
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from attestplane.anchoring import (
     ANCHOR_SCHEMA_VERSION,
     AnchorRecord,
@@ -372,9 +375,6 @@ def test_unsupported_leaf_key_type_fails_closed(monkeypatch: pytest.MonkeyPatch)
     which neither ``RSAPublicKey`` nor ``EllipticCurvePublicKey``. The verifier
     must raise ``AnchorVerificationError`` with the unsupported-key message.
     """
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography import x509 as cx509
-
     authority = TestTSAAuthority(now=_NOW)
     digest = hashlib.sha256(b"unsupported-key-defensive").digest()
     der = authority.sign_timestamp_response(digest, gen_time=_NOW)

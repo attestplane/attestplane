@@ -1,5 +1,13 @@
 {
   "default": true,
+  // MD004 enforces a single unordered-list bullet style across all
+  // files. We standardise on `-` (dash) because every list across the
+  // repo uses dashes; one file (`docs/release-notes/v0.0.2-alpha.draft.md`)
+  // had a paragraph-internal `+` that markdownlint mistook for a list
+  // bullet and started inferring `+` as the file-wide style, then
+  // flagged every subsequent legitimate `-` line. Explicit dash style
+  // pins the contract.
+  "MD004": { "style": "dash" },
   "MD013": false,
   "MD033": false,
   "MD034": false,
