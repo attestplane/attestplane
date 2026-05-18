@@ -301,4 +301,3 @@ P3 can be considered complete for the next alpha only when all planned P3 items 
 - public API manifest updates if any public exports are introduced;
 - cross-SDK parity or documented asymmetry decisions;
 - release notes that keep the release alpha-only unless separately authorized by evidence.
-

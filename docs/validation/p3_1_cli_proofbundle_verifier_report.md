@@ -94,4 +94,3 @@ Added `scripts/check-proofbundle-verifier.sh`, which runs:
 ## Validation Result
 
 Status: PASS after running the commands listed in the companion JSON report.
-

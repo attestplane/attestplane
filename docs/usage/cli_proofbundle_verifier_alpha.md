@@ -60,7 +60,6 @@ The JSON report includes:
 - `certified_provenance: false`
 - `slsa_level_claimed: null`
 
-
 ---
 
 ## P3.2 alpha signature / anchor extension flags
