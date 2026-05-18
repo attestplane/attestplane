@@ -10,16 +10,21 @@
  *
  * Restricted profile (per ADR-0002):
  * - Strings are UTF-8 and must be NFC-normalized.
- * - Integers (number or bigint) are limited to the signed 64-bit range.
+ * - Integers are JSON numbers in the JS safe-integer range and limited to the
+ *   signed 64-bit range; bigint is rejected because JSON has no bigint type.
  * - Floats / NaN / Infinity are forbidden.
  * - Object keys are strings, emitted in code-point order, no duplicates.
- * - Datetimes are RFC 3339 UTC microsecond strings with a `Z` suffix.
+ * - Datetimes are explicit RFC 3339 UTC microsecond strings with a `Z` suffix;
+ *   Date objects are rejected to avoid implicit millisecond truncation.
  * - Uint8Array is encoded as base64url without padding.
  */
 
 const ASCII_CONTROL_LIMIT = 0x20;
 const INT64_MIN_BIGINT = -(2n ** 63n);
 const INT64_MAX_BIGINT = 2n ** 63n - 1n;
+const HIGH_SURROGATE_MIN = 0xd800;
+const LOW_SURROGATE_MAX = 0xdfff;
+const INT64_LITERAL = Symbol('attestplane.int64_literal');
 
 const ESCAPES = new Map<number, string>([
   [0x08, '\\b'],
@@ -44,8 +49,29 @@ export function canonicalize(value: unknown): Uint8Array {
   return new TextEncoder().encode(out.join(''));
 }
 
+export interface Int64LiteralForConformance {
+  readonly [INT64_LITERAL]: true;
+  readonly source: string;
+}
+
+export function int64LiteralForConformance(source: string): Int64LiteralForConformance {
+  if (!/^-?\d+$/.test(source)) {
+    throw new CanonicalizationError(`int64 literal source must be base-10 integer, got ${source}`);
+  }
+  const asBigint = BigInt(source);
+  if (asBigint < INT64_MIN_BIGINT || asBigint > INT64_MAX_BIGINT) {
+    throw new CanonicalizationError(`int64 literal ${source} outside signed 64-bit range`);
+  }
+  return { [INT64_LITERAL]: true, source };
+}
+
 function emit(value: unknown, out: string[], path: string): void {
-  if (value === null || value === undefined) {
+  if (value === undefined) {
+    throw new CanonicalizationError(
+      `${path}: undefined is forbidden in canonical payloads; use null explicitly`,
+    );
+  }
+  if (value === null) {
     out.push('null');
     return;
   }
@@ -64,17 +90,20 @@ function emit(value: unknown, out: string[], path: string): void {
         `${path}: float values are forbidden in canonical payloads (use integers, base64-encoded bytes, or string representations)`,
       );
     }
-    // JS Number safely represents integers up to 2^53 - 1. Anything outside
-    // the signed 64-bit range would be expressed as bigint by the caller.
-    out.push(value.toString());
-    return;
-  }
-  if (typeof value === 'bigint') {
-    if (value < INT64_MIN_BIGINT || value > INT64_MAX_BIGINT) {
+    if (!Number.isSafeInteger(value)) {
+      throw new CanonicalizationError(
+        `${path}: unsafe integer ${value} outside JavaScript safe-integer range`,
+      );
+    }
+    const asBigint = BigInt(value);
+    if (asBigint < INT64_MIN_BIGINT || asBigint > INT64_MAX_BIGINT) {
       throw new CanonicalizationError(`${path}: integer ${value} outside signed 64-bit range`);
     }
     out.push(value.toString());
     return;
+  }
+  if (typeof value === 'bigint') {
+    throw new CanonicalizationError(`${path}: bigint is forbidden in canonical JSON payloads`);
   }
   if (typeof value === 'string') {
     emitString(value, out, path);
@@ -85,7 +114,12 @@ function emit(value: unknown, out: string[], path: string): void {
     return;
   }
   if (value instanceof Date) {
-    emitDate(value, out, path);
+    throw new CanonicalizationError(
+      `${path}: Date objects are forbidden; pass an explicit RFC 3339 UTC timestamp string`,
+    );
+  }
+  if (isInt64LiteralForConformance(value)) {
+    out.push(value.source);
     return;
   }
   if (Array.isArray(value)) {
@@ -99,6 +133,14 @@ function emit(value: unknown, out: string[], path: string): void {
   throw new CanonicalizationError(`${path}: unsupported type ${typeof value} in canonical payload`);
 }
 
+function isInt64LiteralForConformance(value: unknown): value is Int64LiteralForConformance {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    (value as Partial<Int64LiteralForConformance>)[INT64_LITERAL] === true
+  );
+}
+
 function emitString(value: string, out: string[], path: string): void {
   if (value.normalize('NFC') !== value) {
     throw new CanonicalizationError(
@@ -109,6 +151,9 @@ function emitString(value: string, out: string[], path: string): void {
   for (const ch of value) {
     const code = ch.codePointAt(0);
     if (code === undefined) continue;
+    if (code >= HIGH_SURROGATE_MIN && code <= LOW_SURROGATE_MAX) {
+      throw new CanonicalizationError(`${path}: string contains lone surrogate code point`);
+    }
     const mapped = ESCAPES.get(code);
     if (mapped !== undefined) {
       out.push(mapped);
@@ -119,27 +164,6 @@ function emitString(value: string, out: string[], path: string): void {
     }
   }
   out.push('"');
-}
-
-function emitDate(value: Date, out: string[], path: string): void {
-  const ms = value.getTime();
-  if (Number.isNaN(ms)) {
-    throw new CanonicalizationError(`${path}: invalid Date (NaN time value)`);
-  }
-  // JS Date is always interpreted as UTC milliseconds since epoch, so timezone
-  // mismatch is not possible at the API boundary. We zero-pad milliseconds out
-  // to six digits to match Python's microsecond formatting; values supplied at
-  // sub-millisecond precision must be encoded as strings until a typed
-  // Timestamp type is introduced.
-  const yyyy = value.getUTCFullYear().toString().padStart(4, '0');
-  const mm = (value.getUTCMonth() + 1).toString().padStart(2, '0');
-  const dd = value.getUTCDate().toString().padStart(2, '0');
-  const hh = value.getUTCHours().toString().padStart(2, '0');
-  const mi = value.getUTCMinutes().toString().padStart(2, '0');
-  const ss = value.getUTCSeconds().toString().padStart(2, '0');
-  const milli = value.getUTCMilliseconds().toString().padStart(3, '0');
-  const iso = `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}.${milli}000Z`;
-  emitString(iso, out, path);
 }
 
 function emitObject(value: Record<string, unknown>, out: string[], path: string): void {
@@ -163,6 +187,9 @@ function emitObject(value: Record<string, unknown>, out: string[], path: string)
 function emitArray(value: unknown[], out: string[], path: string): void {
   out.push('[');
   for (let i = 0; i < value.length; i++) {
+    if (!Object.prototype.hasOwnProperty.call(value, i)) {
+      throw new CanonicalizationError(`${path}[${i}]: sparse array holes are forbidden`);
+    }
     if (i > 0) out.push(',');
     emit(value[i], out, `${path}[${i}]`);
   }

@@ -123,6 +123,48 @@
         "observed_at": "2026-05-17T12:00:00.000000Z",
         "budget_cap": 1000
       }
+    },
+    {
+      "name": "unknown_top_level_field",
+      "expected_error_contains": "unknown field",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "unexpected_runtime_claim": "x"
+      }
+    },
+    {
+      "name": "missing_schema_version",
+      "expected_error_contains": "missing required fields",
+      "payload": {
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "null_optional_reason_code",
+      "expected_error_contains": "reason_code",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "reason_code": null
+      }
+    },
+    {
+      "name": "invalid_reason_code_format",
+      "expected_error_contains": "reason_code",
+      "payload": {
+        "lease_event_schema_version": 1,
+        "lease_id_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "lifecycle": "granted",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "reason_code": "lowercase_code"
+      }
     }
   ]
 }

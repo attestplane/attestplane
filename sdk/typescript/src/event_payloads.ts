@@ -16,6 +16,7 @@
  */
 
 const HEX64 = /^[0-9a-f]{64}$/;
+const REASON_CODE_PATTERN = /^[A-Z][A-Z0-9_]{1,63}$/;
 
 /**
  * Per ADR-0004 § 2 column 3 + ADR-0009 § 1 Mode A.6 redaction policy.
@@ -77,6 +78,46 @@ function rejectForbiddenFields(payload: Record<string, unknown>, eventType: stri
   }
 }
 
+function rejectUnknownFields(
+  payload: Record<string, unknown>,
+  allowedFields: ReadonlySet<string>,
+  eventType: string,
+): void {
+  const unknown = Object.keys(payload).filter((key) => !allowedFields.has(key));
+  if (unknown.length > 0) {
+    unknown.sort();
+    throw new PayloadValidationError(
+      `${eventType}: unknown field(s) [${unknown.join(', ')}] not allowed by payload schema`,
+    );
+  }
+}
+
+function requireOptionalString(
+  obj: Record<string, unknown>,
+  field: string,
+  eventType: string,
+): void {
+  if (field in obj && typeof obj[field] !== 'string') {
+    throw new PayloadValidationError(
+      `${eventType}.${field}: must be string or absent, got ${obj[field] === null ? 'null' : typeof obj[field]}`,
+    );
+  }
+}
+
+function requireOptionalReasonCode(
+  obj: Record<string, unknown>,
+  field: string,
+  eventType: string,
+): void {
+  if (!(field in obj)) return;
+  const value = obj[field];
+  if (typeof value !== 'string' || !REASON_CODE_PATTERN.test(value)) {
+    throw new PayloadValidationError(
+      `${eventType}.${field}: must match ^[A-Z][A-Z0-9_]{1,63}$, got ${JSON.stringify(value)}`,
+    );
+  }
+}
+
 // ----- lease_lifecycle_event payload -----
 
 export type LeaseLifecycle = 'granted' | 'consumed' | 'expired' | 'revoked';
@@ -110,6 +151,19 @@ const REQUIRED_LEASE_KEYS: readonly string[] = [
   'lifecycle',
   'observed_at',
 ];
+const ALLOWED_LEASE_KEYS: ReadonlySet<string> = new Set([
+  'lease_event_schema_version',
+  'lease_id_hash',
+  'lifecycle',
+  'observed_at',
+  'grantor_runtime_id',
+  'tenant_id_ref',
+  'step_id_ref',
+  'run_id_ref',
+  'artifact_hash_ref',
+  'reason_code',
+  'reason_text',
+]);
 
 const LIFECYCLE_VALUES: ReadonlySet<string> = new Set([
   'granted',
@@ -131,6 +185,7 @@ export function validateLeaseLifecycleEventPayload(payload: unknown): void {
   }
   const obj = payload as Record<string, unknown>;
   rejectForbiddenFields(obj, 'lease_lifecycle_event');
+  rejectUnknownFields(obj, ALLOWED_LEASE_KEYS, 'lease_lifecycle_event');
 
   const missing = REQUIRED_LEASE_KEYS.filter((k) => !(k in obj));
   if (missing.length > 0) {
@@ -158,7 +213,7 @@ export function validateLeaseLifecycleEventPayload(payload: unknown): void {
   }
   requireIsoUtc(obj.observed_at, 'lease_lifecycle_event.observed_at');
 
-  if (obj.artifact_hash_ref !== undefined) {
+  if ('artifact_hash_ref' in obj) {
     if (typeof obj.artifact_hash_ref !== 'string' || !HEX64.test(obj.artifact_hash_ref)) {
       throw new PayloadValidationError(
         `lease_lifecycle_event: artifact_hash_ref (if present) must be 64-hex string, got ${JSON.stringify(obj.artifact_hash_ref)}`,
@@ -171,16 +226,11 @@ export function validateLeaseLifecycleEventPayload(payload: unknown): void {
     'tenant_id_ref',
     'step_id_ref',
     'run_id_ref',
-    'reason_code',
     'reason_text',
   ]) {
-    const v = obj[optField];
-    if (v !== undefined && typeof v !== 'string') {
-      throw new PayloadValidationError(
-        `lease_lifecycle_event.${optField}: must be string or absent, got ${typeof v}`,
-      );
-    }
+    requireOptionalString(obj, optField, 'lease_lifecycle_event');
   }
+  requireOptionalReasonCode(obj, 'reason_code', 'lease_lifecycle_event');
 }
 
 // ----- policy_check_event payload -----
@@ -220,6 +270,20 @@ const REQUIRED_POLICY_KEYS: readonly string[] = [
   'decision',
   'observed_at',
 ];
+const ALLOWED_POLICY_KEYS: ReadonlySet<string> = new Set([
+  'policy_event_schema_version',
+  'policy_id',
+  'rule_id',
+  'decision',
+  'observed_at',
+  'policy_version',
+  'kind',
+  'effect',
+  'expression_hash',
+  'evidence_refs',
+  'reason_code',
+  'reason_text',
+]);
 
 const DECISION_VALUES: ReadonlySet<string> = new Set([
   'allow',
@@ -243,6 +307,7 @@ export function validatePolicyCheckEventPayload(payload: unknown): void {
   }
   const obj = payload as Record<string, unknown>;
   rejectForbiddenFields(obj, 'policy_check_event');
+  rejectUnknownFields(obj, ALLOWED_POLICY_KEYS, 'policy_check_event');
 
   const missing = REQUIRED_POLICY_KEYS.filter((k) => !(k in obj));
   if (missing.length > 0) {
@@ -280,21 +345,21 @@ export function validatePolicyCheckEventPayload(payload: unknown): void {
       );
     }
   }
-  if (obj.effect !== undefined) {
+  if ('effect' in obj) {
     if (typeof obj.effect !== 'string' || !EFFECT_VALUES.has(obj.effect)) {
       throw new PayloadValidationError(
         `policy_check_event.effect: must be one of [BLOCK, INFO, WARN] or absent, got ${JSON.stringify(obj.effect)}`,
       );
     }
   }
-  if (obj.expression_hash !== undefined) {
+  if ('expression_hash' in obj) {
     if (typeof obj.expression_hash !== 'string' || !HEX64.test(obj.expression_hash)) {
       throw new PayloadValidationError(
         `policy_check_event.expression_hash: must be 64-hex string, got ${JSON.stringify(obj.expression_hash)}`,
       );
     }
   }
-  if (obj.evidence_refs !== undefined) {
+  if ('evidence_refs' in obj) {
     if (!Array.isArray(obj.evidence_refs)) {
       throw new PayloadValidationError(
         `policy_check_event.evidence_refs: must be array, got ${typeof obj.evidence_refs}`,
@@ -323,13 +388,10 @@ export function validatePolicyCheckEventPayload(payload: unknown): void {
   }
 
   for (const optField of ['kind', 'reason_code', 'reason_text']) {
-    const v = obj[optField];
-    if (v !== undefined && typeof v !== 'string') {
-      throw new PayloadValidationError(
-        `policy_check_event.${optField}: must be string or absent, got ${typeof v}`,
-      );
-    }
+    if (optField === 'reason_code') continue;
+    requireOptionalString(obj, optField, 'policy_check_event');
   }
+  requireOptionalReasonCode(obj, 'reason_code', 'policy_check_event');
 }
 
 // ----- replay_event payload -----
@@ -373,6 +435,20 @@ const REQUIRED_REPLAY_KEYS: readonly string[] = [
   'deterministic_result',
   'observed_at',
 ];
+const ALLOWED_REPLAY_KEYS: ReadonlySet<string> = new Set([
+  'replay_event_schema_version',
+  'replay_run_id',
+  'original_run_id',
+  'input_hash_match',
+  'artifact_hash_match',
+  'audit_chain_match',
+  'deterministic_result',
+  'observed_at',
+  'snapshot_id_ref',
+  'diff_summary_hash',
+  'reason_code',
+  'reason_text',
+]);
 
 /**
  * Throw `PayloadValidationError` if `payload` violates A.9 invariants.
@@ -389,6 +465,7 @@ export function validateReplayEventPayload(payload: unknown): void {
   }
   const obj = payload as Record<string, unknown>;
   rejectForbiddenFields(obj, 'replay_event');
+  rejectUnknownFields(obj, ALLOWED_REPLAY_KEYS, 'replay_event');
 
   const missing = REQUIRED_REPLAY_KEYS.filter((k) => !(k in obj));
   if (missing.length > 0) {
@@ -441,7 +518,7 @@ export function validateReplayEventPayload(payload: unknown): void {
       );
     }
   }
-  if (obj.diff_summary_hash !== undefined) {
+  if ('diff_summary_hash' in obj) {
     if (typeof obj.diff_summary_hash !== 'string' || !HEX64.test(obj.diff_summary_hash)) {
       throw new PayloadValidationError(
         `replay_event.diff_summary_hash: must be 64-hex string, got ${JSON.stringify(obj.diff_summary_hash)}`,
@@ -450,11 +527,8 @@ export function validateReplayEventPayload(payload: unknown): void {
   }
 
   for (const optField of ['reason_code', 'reason_text']) {
-    const v = obj[optField];
-    if (v !== undefined && typeof v !== 'string') {
-      throw new PayloadValidationError(
-        `replay_event.${optField}: must be string or absent, got ${typeof v}`,
-      );
-    }
+    if (optField === 'reason_code') continue;
+    requireOptionalString(obj, optField, 'replay_event');
   }
+  requireOptionalReasonCode(obj, 'reason_code', 'replay_event');
 }

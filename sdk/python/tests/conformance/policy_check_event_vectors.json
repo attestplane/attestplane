@@ -158,6 +158,52 @@
         "decision": "allow",
         "observed_at": "2026-05-17T12:00:00.000000Z"
       }
+    },
+    {
+      "name": "unknown_top_level_field",
+      "expected_error_contains": "unknown field",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "runtime_governance_claim": "not-allowed"
+      }
+    },
+    {
+      "name": "missing_schema_version",
+      "expected_error_contains": "missing required fields",
+      "payload": {
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "null_optional_kind",
+      "expected_error_contains": "kind",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "kind": null
+      }
+    },
+    {
+      "name": "invalid_reason_code_format",
+      "expected_error_contains": "reason_code",
+      "payload": {
+        "policy_event_schema_version": 1,
+        "policy_id": "p",
+        "rule_id": "r",
+        "decision": "allow",
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "reason_code": "bad-code"
+      }
     }
   ]
 }

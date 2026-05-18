@@ -12,7 +12,7 @@
  * - `buildSegmentHeadPayload(chain_id, head)` — canonical-JSON over a
  *   fixed 5-key object `{chain_id, event_hash, schema_version, seq,
  *   signature_schema_version}`. Cross-language byte-stable.
- * - `buildPerEventPayload(event)` — `canonicalize(audit_event)`
+ * - `buildPerEventPayload(event)` — canonical AuditEvent bytes
  *   bytes. Byte-identical to what `hashEvent()` hashes; already locked
  *   by v0.0.1-alpha `vectors.json`.
  */
@@ -20,7 +20,7 @@
 import { sign as ed25519Sign } from 'node:crypto';
 
 import { canonicalize } from '../canonical.js';
-import { SCHEMA_VERSION as CHAIN_SCHEMA_VERSION } from '../hashchain.js';
+import { SCHEMA_VERSION as CHAIN_SCHEMA_VERSION, canonicalizeAuditEvent } from '../hashchain.js';
 import type { AuditEvent, ChainHead, ChainedEvent } from '../types.js';
 
 import {
@@ -71,11 +71,11 @@ export function buildSegmentHeadPayload(chainId: string, head: ChainHead): Uint8
 
 /**
  * Per-event mode signs the canonical bytes of the AuditEvent. Identical
- * to `hashEvent`'s canonicalize() call → already cross-language byte
+ * to `hashEvent`'s canonicalization call → already cross-language byte
  * stable via `vectors.json`.
  */
 export function buildPerEventPayload(event: AuditEvent): Uint8Array {
-  return canonicalize(event);
+  return canonicalizeAuditEvent(event);
 }
 
 function resolveMaterials(provider: KeyProvider | MultiSignerProvider): SigningMaterial[] {
@@ -123,7 +123,7 @@ export interface SignerOptions {
  * Event-signing producer (sync-only TS variant).
  *
  * Methods:
- * - `signEvent(event)` — per-event mode; signs `canonicalize(event)`.
+ * - `signEvent(event)` — per-event mode; signs canonical AuditEvent bytes.
  * - `signSegmentHead(head)` — segment-head mode; signs the locked
  *   5-key payload.
  *

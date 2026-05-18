@@ -1,0 +1,137 @@
+{
+  "audit_source": "docs/validation/full_software_audit_20260518.md",
+  "branch": "fix/p1-schema-canonical-alignment-20260518",
+  "base_head": "b5ed29edd592a7bcca885536c8daeb4c730a6377",
+  "status": "pass",
+  "release_posture": "alpha-ready with release claims unchanged; CLI verify remains chain_report_only",
+  "scope": [
+    "typescript canonical edge cases",
+    "python/typescript payload validator schema alignment",
+    "typescript replay of shared negative conformance fixtures",
+    "validation evidence"
+  ],
+  "canonical_edge_cases_fixed": [
+    "undefined top-level rejected",
+    "undefined object property rejected",
+    "undefined array item rejected",
+    "sparse array hole rejected",
+    "function rejected",
+    "symbol rejected",
+    "direct bigint rejected",
+    "unsafe integer rejected",
+    "NaN and Infinity rejected",
+    "negative zero locked as canonical zero",
+    "direct Date object rejected by canonical JSON",
+    "AuditEvent timestamp hashing uses explicit typed conversion",
+    "lone surrogate rejected in Python and TypeScript",
+    "canonical JSON rejects non-NFC strings instead of normalizing them"
+  ],
+  "payload_schema_alignment_fixes": [
+    "unknown top-level fields rejected for lease_lifecycle_event",
+    "unknown top-level fields rejected for policy_check_event",
+    "unknown top-level fields rejected for replay_event",
+    "optional null fields rejected where schemas require strings, arrays, or hashes",
+    "reason_code regex enforced in Python and TypeScript",
+    "schema_version required fields remain mandatory and fixed",
+    "enum behavior remains aligned"
+  ],
+  "typescript_negative_fixture_replay": [
+    "settlement_precondition_vectors.json existing verifier vectors",
+    "lease_lifecycle_event_vectors.json positive and negative vectors",
+    "policy_check_event_vectors.json positive and negative vectors",
+    "replay_event_vectors.json positive and negative vectors",
+    "reason_codes_vectors.json format negative examples",
+    "forbidden-field negative vectors inside lease, policy, and replay payload fixtures"
+  ],
+  "fixtures_updated": [
+    "sdk/python/tests/conformance/lease_lifecycle_event_vectors.json",
+    "sdk/python/tests/conformance/policy_check_event_vectors.json",
+    "sdk/python/tests/conformance/replay_event_vectors.json",
+    "sdk/python/tests/conformance/FIXTURE_HASHES.lock"
+  ],
+  "schemas_updated": [],
+  "vectors_updated": [],
+  "safe_claims": [
+    "alpha-grade dual-SDK tamper-evident evidence substrate",
+    "restricted canonicalization and canonical-text primitives",
+    "payload schemas and fail-closed validators",
+    "shared Py/TS conformance fixtures",
+    "chain/report-oriented CLI verification"
+  ],
+  "no_go_claims": [
+    "production-ready",
+    "compliance-ready",
+    "certified",
+    "EU AI Act compliant",
+    "DORA compliant",
+    "GDPR compliant",
+    "full ProofBundle CLI verifier",
+    "CLI signed verification",
+    "CLI anchored verification",
+    "runtime governance",
+    "AIOS runtime integration"
+  ],
+  "validation": [
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS",
+      "summary": "714 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS",
+      "summary": "449 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS_WITH_EXISTING_WARNINGS",
+      "summary": "exit 0 with two existing Biome noNonNullAssertion warnings in test/proof_bundle.test.ts"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "jq empty docs/validation/p1_schema_canonical_alignment_20260518.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "remaining_limits": [
+    "Schema validation is not compliance certification.",
+    "CLI verify remains chain_report_only.",
+    "CLI verify does not perform signature or anchor verification.",
+    "No AIOS runtime, scheduler, gateway, worker execution, billing, secret store, or UI read model was introduced."
+  ]
+}

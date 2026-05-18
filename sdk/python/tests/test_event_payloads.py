@@ -37,7 +37,7 @@ def test_vectors_file_loads() -> None:
     vectors = _load_vectors()
     assert vectors["$schema_version"] == 1
     assert len(vectors["positive_vectors"]) == 4
-    assert len(vectors["negative_vectors"]) == 7
+    assert len(vectors["negative_vectors"]) == 11
 
 
 @pytest.mark.parametrize(
@@ -120,7 +120,7 @@ def test_policy_vectors_file_loads() -> None:
     vectors = _load_policy_vectors()
     assert vectors["$schema_version"] == 1
     assert len(vectors["positive_vectors"]) == 4
-    assert len(vectors["negative_vectors"]) == 8
+    assert len(vectors["negative_vectors"]) == 12
 
 
 @pytest.mark.parametrize(

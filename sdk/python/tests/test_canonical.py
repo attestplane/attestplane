@@ -42,6 +42,19 @@ def test_string_unicode_nfc_required() -> None:
         canonicalize(nfd)
 
 
+def test_string_rejects_lone_surrogate() -> None:
+    with pytest.raises(CanonicalizationError, match="surrogate"):
+        canonicalize("\ud800")
+    with pytest.raises(CanonicalizationError, match="surrogate"):
+        canonicalize("\udc00")
+
+
+def test_canonical_json_does_not_normalize_strings_implicitly() -> None:
+    assert canonicalize("①") == '"①"'.encode()
+    with pytest.raises(CanonicalizationError, match="NFC"):
+        canonicalize("A\u030a")
+
+
 def test_int64_bounds() -> None:
     assert canonicalize(2**63 - 1) == str(2**63 - 1).encode()
     assert canonicalize(-(2**63)) == str(-(2**63)).encode()

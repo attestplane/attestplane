@@ -22,6 +22,8 @@ import re
 from datetime import datetime
 from typing import Any, Final, Literal, NotRequired, TypedDict
 
+from attestplane.reason_codes import reason_code_matches_format
+
 # --- Shared validation primitives ------------------------------------------
 
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -85,6 +87,40 @@ def _reject_forbidden_fields(payload: dict[str, Any], event_type: str) -> None:
         )
 
 
+def _reject_unknown_fields(
+    payload: dict[str, Any],
+    *,
+    allowed_fields: frozenset[str],
+    event_type: str,
+) -> None:
+    unknown = sorted(set(payload) - allowed_fields)
+    if unknown:
+        raise _PayloadValidationError(
+            f"{event_type}: unknown field(s) {unknown} not allowed by payload schema"
+        )
+
+
+def _require_optional_string(payload: dict[str, Any], field: str, event_type: str) -> None:
+    if field in payload and not isinstance(payload[field], str):
+        raise _PayloadValidationError(
+            f"{event_type}.{field}: must be string or absent, "
+            f"got {type(payload[field]).__name__}"
+        )
+
+
+def _require_optional_reason_code(
+    payload: dict[str, Any], field: str, event_type: str
+) -> None:
+    if field not in payload:
+        return
+    value = payload[field]
+    if not isinstance(value, str) or not reason_code_matches_format(value):
+        raise _PayloadValidationError(
+            f"{event_type}.{field}: must match ^[A-Z][A-Z0-9_]{{1,63}}$, "
+            f"got {value!r}"
+        )
+
+
 # --- lease_lifecycle_event payload ----------------------------------------
 
 LeaseLifecycle = Literal["granted", "consumed", "expired", "revoked"]
@@ -128,6 +164,19 @@ _REQUIRED_LEASE_KEYS: Final[frozenset[str]] = frozenset({
     "lifecycle",
     "observed_at",
 })
+_ALLOWED_LEASE_KEYS: Final[frozenset[str]] = frozenset({
+    "lease_event_schema_version",
+    "lease_id_hash",
+    "lifecycle",
+    "observed_at",
+    "grantor_runtime_id",
+    "tenant_id_ref",
+    "step_id_ref",
+    "run_id_ref",
+    "artifact_hash_ref",
+    "reason_code",
+    "reason_text",
+})
 _LIFECYCLE_VALUES: Final[frozenset[str]] = frozenset({
     "granted", "consumed", "expired", "revoked",
 })
@@ -151,6 +200,11 @@ def validate_lease_lifecycle_event_payload(payload: dict[str, Any]) -> None:
             f"lease_lifecycle_event payload must be dict, got {type(payload).__name__}"
         )
     _reject_forbidden_fields(payload, "lease_lifecycle_event")
+    _reject_unknown_fields(
+        payload,
+        allowed_fields=_ALLOWED_LEASE_KEYS,
+        event_type="lease_lifecycle_event",
+    )
     missing = _REQUIRED_LEASE_KEYS - set(payload.keys())
     if missing:
         raise _PayloadValidationError(
@@ -176,7 +230,7 @@ def validate_lease_lifecycle_event_payload(payload: dict[str, Any]) -> None:
     _require_iso_utc(payload["observed_at"], "lease_lifecycle_event.observed_at")
 
     artifact_ref = payload.get("artifact_hash_ref")
-    if artifact_ref is not None and (
+    if "artifact_hash_ref" in payload and (
         not isinstance(artifact_ref, str) or not _HEX64.match(artifact_ref)
     ):
         raise _PayloadValidationError(
@@ -186,14 +240,10 @@ def validate_lease_lifecycle_event_payload(payload: dict[str, Any]) -> None:
 
     for opt_field in (
         "grantor_runtime_id", "tenant_id_ref", "step_id_ref",
-        "run_id_ref", "reason_code", "reason_text",
+        "run_id_ref", "reason_text",
     ):
-        v = payload.get(opt_field)
-        if v is not None and not isinstance(v, str):
-            raise _PayloadValidationError(
-                f"lease_lifecycle_event.{opt_field}: must be string or absent, "
-                f"got {type(v).__name__}"
-            )
+        _require_optional_string(payload, opt_field, "lease_lifecycle_event")
+    _require_optional_reason_code(payload, "reason_code", "lease_lifecycle_event")
 
 
 # --- policy_check_event payload --------------------------------------------
@@ -241,6 +291,20 @@ _REQUIRED_POLICY_KEYS: Final[frozenset[str]] = frozenset({
     "decision",
     "observed_at",
 })
+_ALLOWED_POLICY_KEYS: Final[frozenset[str]] = frozenset({
+    "policy_event_schema_version",
+    "policy_id",
+    "rule_id",
+    "decision",
+    "observed_at",
+    "policy_version",
+    "kind",
+    "effect",
+    "expression_hash",
+    "evidence_refs",
+    "reason_code",
+    "reason_text",
+})
 _DECISION_VALUES: Final[frozenset[str]] = frozenset({
     "allow", "deny", "abstain", "require_approval",
 })
@@ -268,6 +332,11 @@ def validate_policy_check_event_payload(payload: dict[str, Any]) -> None:
             f"policy_check_event payload must be dict, got {type(payload).__name__}"
         )
     _reject_forbidden_fields(payload, "policy_check_event")
+    _reject_unknown_fields(
+        payload,
+        allowed_fields=_ALLOWED_POLICY_KEYS,
+        event_type="policy_check_event",
+    )
     missing = _REQUIRED_POLICY_KEYS - set(payload.keys())
     if missing:
         raise _PayloadValidationError(
@@ -301,13 +370,13 @@ def validate_policy_check_event_payload(payload: dict[str, Any]) -> None:
                 f"got {pv!r}"
             )
     effect = payload.get("effect")
-    if effect is not None and effect not in _EFFECT_VALUES:
+    if "effect" in payload and effect not in _EFFECT_VALUES:
         raise _PayloadValidationError(
             f"policy_check_event.effect: must be one of "
             f"{sorted(_EFFECT_VALUES)} or absent, got {effect!r}"
         )
     expr_hash = payload.get("expression_hash")
-    if expr_hash is not None and (
+    if "expression_hash" in payload and (
         not isinstance(expr_hash, str) or not _HEX64.match(expr_hash)
     ):
         raise _PayloadValidationError(
@@ -315,7 +384,7 @@ def validate_policy_check_event_payload(payload: dict[str, Any]) -> None:
             f"got {expr_hash!r}"
         )
     refs = payload.get("evidence_refs")
-    if refs is not None:
+    if "evidence_refs" in payload:
         if not isinstance(refs, list):
             raise _PayloadValidationError(
                 f"policy_check_event.evidence_refs: must be list, "
@@ -338,13 +407,9 @@ def validate_policy_check_event_payload(payload: dict[str, Any]) -> None:
                 )
             seen.add(ref)
 
-    for opt_field in ("kind", "reason_code", "reason_text"):
-        v = payload.get(opt_field)
-        if v is not None and not isinstance(v, str):
-            raise _PayloadValidationError(
-                f"policy_check_event.{opt_field}: must be string or absent, "
-                f"got {type(v).__name__}"
-            )
+    for opt_field in ("kind", "reason_text"):
+        _require_optional_string(payload, opt_field, "policy_check_event")
+    _require_optional_reason_code(payload, "reason_code", "policy_check_event")
 
 
 # --- replay_event payload --------------------------------------------------
@@ -392,6 +457,20 @@ _REQUIRED_REPLAY_KEYS: Final[frozenset[str]] = frozenset({
     "deterministic_result",
     "observed_at",
 })
+_ALLOWED_REPLAY_KEYS: Final[frozenset[str]] = frozenset({
+    "replay_event_schema_version",
+    "replay_run_id",
+    "original_run_id",
+    "input_hash_match",
+    "artifact_hash_match",
+    "audit_chain_match",
+    "deterministic_result",
+    "observed_at",
+    "snapshot_id_ref",
+    "diff_summary_hash",
+    "reason_code",
+    "reason_text",
+})
 
 
 def validate_replay_event_payload(payload: dict[str, Any]) -> None:
@@ -415,6 +494,11 @@ def validate_replay_event_payload(payload: dict[str, Any]) -> None:
             f"replay_event payload must be dict, got {type(payload).__name__}"
         )
     _reject_forbidden_fields(payload, "replay_event")
+    _reject_unknown_fields(
+        payload,
+        allowed_fields=_ALLOWED_REPLAY_KEYS,
+        event_type="replay_event",
+    )
     missing = _REQUIRED_REPLAY_KEYS - set(payload.keys())
     if missing:
         raise _PayloadValidationError(
@@ -472,20 +556,15 @@ def validate_replay_event_payload(payload: dict[str, Any]) -> None:
             )
 
     diff_hash = payload.get("diff_summary_hash")
-    if diff_hash is not None and (
+    if "diff_summary_hash" in payload and (
         not isinstance(diff_hash, str) or not _HEX64.match(diff_hash)
     ):
         raise _PayloadValidationError(
             f"replay_event.diff_summary_hash: must be 64-hex string, got {diff_hash!r}"
         )
 
-    for opt_field in ("reason_code", "reason_text"):
-        v = payload.get(opt_field)
-        if v is not None and not isinstance(v, str):
-            raise _PayloadValidationError(
-                f"replay_event.{opt_field}: must be string or absent, "
-                f"got {type(v).__name__}"
-            )
+    _require_optional_string(payload, "reason_text", "replay_event")
+    _require_optional_reason_code(payload, "reason_code", "replay_event")
 
 
 __all__ = [

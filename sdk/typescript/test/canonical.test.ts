@@ -21,16 +21,21 @@ describe('canonicalize / primitives', () => {
     expect(() => canonicalize(1.5)).toThrow(CanonicalizationError);
     expect(() => canonicalize(Number.NaN)).toThrow(CanonicalizationError);
     expect(() => canonicalize(Number.POSITIVE_INFINITY)).toThrow(CanonicalizationError);
+    expect(() => canonicalize(Number.NEGATIVE_INFINITY)).toThrow(CanonicalizationError);
   });
 
-  it('bigint within int64 range', () => {
-    expect(decode(canonicalize(2n ** 63n - 1n))).toBe((2n ** 63n - 1n).toString());
-    expect(decode(canonicalize(-(2n ** 63n)))).toBe((-(2n ** 63n)).toString());
+  it('rejects unsafe integers', () => {
+    expect(() => canonicalize(Number.MAX_SAFE_INTEGER + 1)).toThrow(CanonicalizationError);
+    expect(() => canonicalize(Number.MIN_SAFE_INTEGER - 1)).toThrow(CanonicalizationError);
   });
 
-  it('rejects bigint outside int64 range', () => {
-    expect(() => canonicalize(2n ** 63n)).toThrow(CanonicalizationError);
-    expect(() => canonicalize(-(2n ** 63n) - 1n)).toThrow(CanonicalizationError);
+  it('locks negative zero as canonical zero', () => {
+    expect(Object.is(-0, 0)).toBe(false);
+    expect(decode(canonicalize(-0))).toBe('0');
+  });
+
+  it('rejects bigint because JSON has no cross-language bigint type', () => {
+    expect(() => canonicalize(1n)).toThrow(CanonicalizationError);
   });
 });
 
@@ -53,17 +58,24 @@ describe('canonicalize / strings', () => {
     expect(canonicalize(nfc)).toEqual(new TextEncoder().encode('"é"'));
     expect(() => canonicalize(nfd)).toThrow(CanonicalizationError);
   });
+
+  it('rejects lone surrogate code points before UTF-8 encoding', () => {
+    expect(() => canonicalize('\ud800')).toThrow(CanonicalizationError);
+    expect(() => canonicalize('\udc00')).toThrow(CanonicalizationError);
+  });
+
+  it('does not normalize ordinary strings implicitly', () => {
+    expect(decode(canonicalize('①'))).toBe('"①"');
+    expect(() => canonicalize('A\u030a')).toThrow(CanonicalizationError);
+  });
 });
 
 describe('canonicalize / dates', () => {
-  it('UTC milliseconds zero-padded to microseconds', () => {
-    const d = new Date('2026-05-17T12:00:00.000Z');
-    expect(decode(canonicalize(d))).toBe('"2026-05-17T12:00:00.000000Z"');
-  });
-
-  it('non-zero milliseconds also zero-padded', () => {
-    const d = new Date('2026-05-17T12:00:00.123Z');
-    expect(decode(canonicalize(d))).toBe('"2026-05-17T12:00:00.123000Z"');
+  it('rejects Date objects; timestamps must be explicit canonical strings', () => {
+    expect(() => canonicalize(new Date('2026-05-17T12:00:00.000Z'))).toThrow(CanonicalizationError);
+    expect(decode(canonicalize('2026-05-17T12:00:00.000000Z'))).toBe(
+      '"2026-05-17T12:00:00.000000Z"',
+    );
   });
 });
 
@@ -91,12 +103,29 @@ describe('canonicalize / objects', () => {
     const obj = { outer: { b: [1, 2, 3], a: 'x' } };
     expect(decode(canonicalize(obj))).toBe('{"outer":{"a":"x","b":[1,2,3]}}');
   });
+
+  it('rejects undefined object property values instead of omitting them', () => {
+    expect(() => canonicalize({ a: undefined })).toThrow(CanonicalizationError);
+  });
+
+  it('uses deterministic nested code-point key ordering', () => {
+    const obj = { z: { '10': 1, '2': 2, A: 3, a: 4 }, a: 5 };
+    expect(decode(canonicalize(obj))).toBe('{"a":5,"z":{"10":1,"2":2,"A":3,"a":4}}');
+  });
 });
 
 describe('canonicalize / arrays', () => {
   it('preserves insertion order', () => {
     expect(decode(canonicalize([3, 1, 2]))).toBe('[3,1,2]');
     expect(decode(canonicalize([]))).toBe('[]');
+  });
+
+  it('rejects undefined array items and sparse array holes', () => {
+    expect(() => canonicalize([1, undefined, 3])).toThrow(CanonicalizationError);
+    const sparse = new Array<number>(3);
+    sparse[0] = 1;
+    sparse[2] = 3;
+    expect(() => canonicalize(sparse)).toThrow(CanonicalizationError);
   });
 });
 
@@ -109,6 +138,7 @@ describe('canonicalize / SubjectRef', () => {
 
 describe('canonicalize / unsupported types', () => {
   it('rejects unsupported types', () => {
+    expect(() => canonicalize(undefined)).toThrow(CanonicalizationError);
     expect(() => canonicalize(Symbol('x'))).toThrow(CanonicalizationError);
     expect(() => canonicalize(() => 0)).toThrow(CanonicalizationError);
   });
