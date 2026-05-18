@@ -1,0 +1,26 @@
+# Conformance fixture hash lock (Gap G7).
+#
+# Canonical-JSON SHA-256 of every sdk/python/tests/conformance/*.json
+# fixture. Fixtures are the cross-SDK contract — TS replays them
+# byte-for-byte. Recompute with:
+#   ./scripts/check-fixture-hashes.sh --update
+# Verify with:
+#   ./scripts/check-fixture-hashes.sh
+#
+# Editing a fixture is a deliberate cross-SDK conformance event. The PR
+# must bump the affected fixture's $schema_version (and the matching
+# generator if one exists), and update this lock in the same commit.
+#
+# Format: <sha256>  <filename>
+#
+
+7cbadd5401187ca1b70bdb92b965771799c1aafbaea33f05254a8260a7646beb  anchor_vectors.json
+1441d740221fc681a894f726904bb39d94b84d996ce52c5834b21b5853574ad5  lease_lifecycle_event_vectors.json
+7317e2908fa595d70cade708e3724b0c1474d603479a1a407da6af9abc8b12ca  policy_check_event_vectors.json
+d8d3c7eecfb42cdad1b8f7da9e1f998cb6e19ec3a254b2e591ca2d2f130220f5  proof_bundle_policy_trace_vectors.json
+0d351a37903617b5fe2ae36c5b708098f6b46c417342deb445882ce408fff0cc  reason_codes_vectors.json
+6e077e41ef57571381869cd18f504da656fa4f540ccc7f6fddf6568603c96d4d  replay_event_vectors.json
+d56c7ba60cfd98e3ead9b48dcad94d894f914440cc1310bda3e59ddf3ee7cbe2  settlement_precondition_vectors.json
+f89fb4acecfc58f0de5163f889a3c8047d0e13f4b239cc902d77db12f3f16592  signature_vectors.json
+4a6bbdad4c8d02fcf1d0b182c9d3b7f82020caed965553c4b47759cbf6ee74a0  text_vectors.json
+32d0e9d00e08bcac299ebf07ab04861fbb2a11af975fe0b498607bda8a3b8d3a  vectors.json
