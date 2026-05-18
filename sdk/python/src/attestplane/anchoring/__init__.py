@@ -52,7 +52,7 @@ from attestplane.anchoring.worker import (
 # HTTP transport classes; importing requires the 'anchor' extras.
 # Guarded so substrate-only installs don't fail on missing crypto deps.
 try:
-    from attestplane.anchoring.http import (
+    from attestplane.anchoring.http import (  # noqa: F401
         DigiCertProvider,
         FreeTSAProvider,
         HttpTransport,
@@ -68,7 +68,7 @@ except ImportError:  # pragma: no cover
 
 # Sigstore Rekor anchor; requires the 'anchor' extras.
 try:
-    from attestplane.anchoring.sigstore import (
+    from attestplane.anchoring.sigstore import (  # noqa: F401
         PUBLIC_REKOR_URL,
         SIGSTORE_REKOR_OCSP_MARKER,
         SIGSTORE_REKOR_PROVIDER_PREFIX,
@@ -98,9 +98,6 @@ __all__ = [
     "ANCHOR_SCHEMA_VERSION",
     "ETSI_QTST_URI",
     "ETSI_TSA_URI",
-    "PUBLIC_REKOR_URL",
-    "SIGSTORE_REKOR_OCSP_MARKER",
-    "SIGSTORE_REKOR_PROVIDER_PREFIX",
     "AnchorBoundaryError",
     "AnchorError",
     "AnchorPolicy",
@@ -111,30 +108,41 @@ __all__ = [
     "Anchorer",
     "AnchorerResult",
     "CertStatus",
-    "DigiCertProvider",
     "EidasError",
-    "FreeTSAProvider",
-    "HttpTransport",
     "MockTSAProvider",
     "MultiTSAProvider",
-    "ParsedRekorEntry",
     "PendingAnchor",
     "QualifiedTsaEntry",
-    "RecordedHttpTransport",
-    "Rfc3161HttpProvider",
-    "SigstoreRekorAnchor",
     "SingleAnchorResult",
     "TSAProvider",
     "TSAUnavailableError",
     "TimestampRequest",
     "TrustedListParseError",
-    "UrllibHttpTransport",
     "WorkerStats",
-    "is_sigstore_rekor_anchor",
     "load_qualified_tsa_trust_roots",
-    "make_replay_transport",
-    "parse_rekor_log_entry",
     "parse_trusted_list",
     "verify_chain_with_anchors",
-    "verify_rekor_signed_entry_timestamp",
 ]
+
+if _HTTP_AVAILABLE:
+    __all__.extend([
+        "DigiCertProvider",
+        "FreeTSAProvider",
+        "HttpTransport",
+        "RecordedHttpTransport",
+        "Rfc3161HttpProvider",
+        "UrllibHttpTransport",
+        "make_replay_transport",
+    ])
+
+if _SIGSTORE_AVAILABLE:
+    __all__.extend([
+        "PUBLIC_REKOR_URL",
+        "SIGSTORE_REKOR_OCSP_MARKER",
+        "SIGSTORE_REKOR_PROVIDER_PREFIX",
+        "ParsedRekorEntry",
+        "SigstoreRekorAnchor",
+        "is_sigstore_rekor_anchor",
+        "parse_rekor_log_entry",
+        "verify_rekor_signed_entry_timestamp",
+    ])

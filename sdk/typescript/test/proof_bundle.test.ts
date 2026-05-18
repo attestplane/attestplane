@@ -48,6 +48,15 @@ function buildGoodChain(n: number): ChainedEvent[] {
   return chain;
 }
 
+function eventAt(bundle: Record<string, unknown>, index: number): Record<string, unknown> {
+  const events = bundle.events as Array<Record<string, unknown>>;
+  const item = events[index];
+  if (item === undefined) {
+    throw new Error(`expected bundle event at index ${index}`);
+  }
+  return item.event as Record<string, unknown>;
+}
+
 describe('ProofBundleBuilder', () => {
   it('builds an empty bundle with sentinel head', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'empty', producer_runtime: 'test' });
@@ -190,9 +199,7 @@ describe('verifyProofBundle', () => {
     const builder = new ProofBundleBuilder({ chain_id: 't', producer_runtime: 'test' });
     builder.extend(buildGoodChain(3));
     const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
-    const events = bundle.events as Array<Record<string, unknown>>;
-    const ev1 = events[1]!;
-    const event = ev1.event as Record<string, unknown>;
+    const event = eventAt(bundle, 1);
     event.payload = { index: 999 };
     const result = verifyProofBundle(bundle);
     expect(result.ok).toBe(false);
@@ -205,9 +212,7 @@ describe('verifyProofBundle', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'd', producer_runtime: 'test' });
     builder.extend(buildGoodChain(3));
     const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
-    const events = bundle.events as Array<Record<string, unknown>>;
-    const ev1 = events[1]!;
-    (ev1.event as Record<string, unknown>).payload = { tampered: true };
+    eventAt(bundle, 1).payload = { tampered: true };
     // Leave verification_report.ok at true (simulating post-build tampering).
     const result = verifyProofBundle(bundle);
     expect(result.ok).toBe(false);

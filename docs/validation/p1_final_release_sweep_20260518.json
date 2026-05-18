@@ -1,0 +1,131 @@
+{
+  "release_posture": "alpha_ready_final_p1_sweep_passed",
+  "cli_verify_scope": "chain_report_only",
+  "optional_extra_export_surface": {
+    "python_core_import_without_optionals": "covered_by_test_import_surface",
+    "python_root_all_optional_signing_symbols": "conditional_on_optional_dependencies",
+    "python_anchoring_optional_exports": "conditional_on_http_and_sigstore_dependencies",
+    "typescript_root_imports": "covered_by_package_import_smoke",
+    "release_blockers": []
+  },
+  "claim_drift_findings": [
+    {
+      "status": "no_release_blocker_found",
+      "detail": "High-risk claim matches are no-go lists, explicit negative wording, tests, or validation/audit records."
+    }
+  ],
+  "public_api_surface_findings": [
+    {
+      "status": "no_release_blocker_found",
+      "report": "docs/validation/public_api_surface_sweep_20260518.json"
+    }
+  ],
+  "examples_smoke_tests": [
+    {
+      "area": "repository_examples",
+      "status": "not_applicable",
+      "detail": "No top-level examples directory exists in this repository snapshot."
+    },
+    {
+      "area": "python_readme_imports",
+      "status": "covered",
+      "test": "sdk/python/tests/test_import_surface.py"
+    },
+    {
+      "area": "typescript_readme_imports",
+      "status": "covered",
+      "test": "sdk/typescript/test/package_import_smoke.test.ts"
+    }
+  ],
+  "lint_warnings_remaining": [],
+  "safe_claims": [
+    "alpha-grade dual-SDK tamper-evident evidence substrate",
+    "restricted canonicalization and canonical text hashing",
+    "SHA-256 hash-chain primitives",
+    "evidence payload schemas and fail-closed validators",
+    "sidecar signing and anchoring primitives",
+    "read-only verifier predicates",
+    "CLI verify is chain_report_only"
+  ],
+  "no_go_claims": [
+    "production-ready",
+    "production-grade",
+    "pre-beta-ready",
+    "compliance-ready",
+    "EU AI Act compliant",
+    "DORA compliant",
+    "GDPR compliant",
+    "compliance certification",
+    "external certification",
+    "CLI full ProofBundle verifier",
+    "default CLI signed verification",
+    "default CLI anchored verification",
+    "runtime governance",
+    "execution authority",
+    "scheduler",
+    "gateway authority",
+    "AIOS runtime integration"
+  ],
+  "remaining_p2": [
+    "generated public API diff gate",
+    "TypeScript obligation registry and in-toto/DSSE parity decision",
+    "durable storage hardening",
+    "mutation testing",
+    "broader fault-injection gates"
+  ],
+  "validation_commands": [
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS, 720 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS, 451 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS, zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "jq empty docs/validation/p1_final_release_sweep_20260518.json docs/validation/public_api_surface_sweep_20260518.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "readiness_verdict": "v0.0.2-alpha final P1 sweep passed; alpha-ready only, with no production or compliance certification claim"
+}

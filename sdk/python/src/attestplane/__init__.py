@@ -17,6 +17,11 @@ from attestplane.adapters import (
     AdapterError,
     AdapterTranslationError,
     GenericRuntimeAdapter,
+    LangFuseAdapter,
+    LangFuseObservation,
+    LangSmithAdapter,
+    LangSmithRun,
+    RuntimeEvent,
 )
 from attestplane.anchoring import (
     ANCHOR_SCHEMA_VERSION,
@@ -117,7 +122,7 @@ from attestplane.settlement_verifier import (
 # Event signing primitives (T1+T2 of ADR-0005 plan).
 # Guarded so substrate-only installs without [signing] extras don't fail.
 try:
-    from attestplane.signing import (
+    from attestplane.signing import (  # noqa: F401
         SIGNATURE_SCHEMA_VERSION,
         EnvKeyProvider,
         FileKeyProvider,
@@ -219,6 +224,10 @@ __all__ = [
     "FORBIDDEN_PAYLOAD_FIELDS",
     "FrameworkMapping",
     "GenericRuntimeAdapter",
+    "LangFuseAdapter",
+    "LangFuseObservation",
+    "LangSmithAdapter",
+    "LangSmithRun",
     "LeaseLifecycle",
     "LeaseLifecycleEventPayload",
     "PolicyCheckEventPayload",
@@ -236,22 +245,6 @@ __all__ = [
     "ReasonCodeV1",
     "is_known_reason_code",
     "reason_code_matches_format",
-    # Event signing (ADR-0005) — guarded re-exports; available iff [signing] extras installed.
-    "SIGNATURE_SCHEMA_VERSION",
-    "EnvKeyProvider",
-    "FileKeyProvider",
-    "InMemoryKeyProvider",
-    "KeyBoundaryError",
-    "KeyProvider",
-    "KeyProviderError",
-    "MultiSignerProvider",
-    "SignatureMode",
-    "SignatureRecord",
-    "SignatureVerificationError",
-    "SignaturePolicy",
-    "SigningError",
-    "SigningMaterial",
-    "derive_key_id",
     "MockTSAProvider",
     "MultiTSAProvider",
     "JsonlStorageBackend",
@@ -259,6 +252,7 @@ __all__ = [
     "ObligationRegistryError",
     "ProofBundleBuilder",
     "Registry",
+    "RuntimeEvent",
     "SingleAnchorResult",
     "StorageError",
     "StorageReadError",
@@ -297,3 +291,22 @@ __all__ = [
     "verify_proof_bundle",
     "verify_proof_bundle_file",
 ]
+
+if _SIGNING_AVAILABLE:
+    __all__.extend([
+        "SIGNATURE_SCHEMA_VERSION",
+        "EnvKeyProvider",
+        "FileKeyProvider",
+        "InMemoryKeyProvider",
+        "KeyBoundaryError",
+        "KeyProvider",
+        "KeyProviderError",
+        "MultiSignerProvider",
+        "SignatureMode",
+        "SignatureRecord",
+        "SignatureVerificationError",
+        "SignaturePolicy",
+        "SigningError",
+        "SigningMaterial",
+        "derive_key_id",
+    ])
