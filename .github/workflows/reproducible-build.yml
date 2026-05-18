@@ -1,5 +1,15 @@
 name: reproducible-build
 
+# Gap G5: dual-runner reproducible build.
+# Builds the attestplane Python wheel on two independent runner images
+# (ubuntu-latest + macos-latest) and then compares SHA-256 byte-for-byte.
+# Two independent OSes producing the same wheel bytes is the audit signal
+# Big 4 / SLSA L3 actually care about — same-runner two-builds (the prior
+# behaviour) only proves the build is determinism-tolerant on one machine.
+#
+# Pure-Python wheel filenames are platform-independent (py3-none-any) so
+# this comparison is meaningful for the attestplane substrate today.
+
 on:
   push:
     branches: [main]
@@ -25,9 +35,13 @@ defaults:
     working-directory: sdk/python
 
 jobs:
-  reproduce:
-    name: Build attestplane wheel + sdist twice, compare bytes
-    runs-on: ubuntu-latest
+  build:
+    name: Build attestplane wheel on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -38,54 +52,73 @@ jobs:
 
       - name: Compute SOURCE_DATE_EPOCH from HEAD
         id: sde
+        working-directory: ${{ github.workspace }}
         run: |
           echo "value=$(git log -1 --pretty=%ct HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: First build (wheel only)
+      - name: Build wheel
         env:
           SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
         run: |
-          uv venv --python 3.12 .venv1
-          uv pip install --python .venv1/bin/python build hatchling
-          .venv1/bin/python -m build --wheel -o /tmp/build1
-          ls -la /tmp/build1
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python build hatchling
+          .venv/bin/python -m build --wheel -o dist
+          ls -la dist
 
-      - name: Second build (separate venv, same SOURCE_DATE_EPOCH)
-        env:
-          SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}
+      - name: Hash wheel
+        id: hash
         run: |
-          uv venv --python 3.12 .venv2
-          uv pip install --python .venv2/bin/python build hatchling
-          .venv2/bin/python -m build --wheel -o /tmp/build2
-          ls -la /tmp/build2
-
-      - name: Compare wheel sha256
-        # Only the wheel is checked. Hatchling's sdist is sensitive to source-
-        # tree state (cache directories, .venv*, build artifacts) that varies
-        # between local and CI environments; sdist reproducibility will be
-        # tackled in a follow-up ADR. The wheel is the primary distribution
-        # artifact that customers install, so byte-stability there is what
-        # matters for supply-chain attestation today.
-        run: |
-          set -e
-          h1=$(cd /tmp/build1 && sha256sum ./*.whl | awk '{print $1, $2}' | sort)
-          h2=$(cd /tmp/build2 && sha256sum ./*.whl | awk '{print $1, $2}' | sort)
-          if [ "$h1" != "$h2" ]; then
-            echo "::error::wheel not reproducible — bytes differ between builds"
-            echo "--- build1 ---"
-            echo "$h1"
-            echo "--- build2 ---"
-            echo "$h2"
-            echo "--- diff ---"
-            diff <(echo "$h1") <(echo "$h2") || true
-            exit 1
-          fi
-          echo "Wheel byte-identical across two builds. Hashes:"
-          echo "$h1"
+          set -euo pipefail
+          (cd dist && sha256sum ./*.whl | sort) > wheel.sha256
+          cat wheel.sha256
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: attestplane-python-${{ github.sha }}
-          path: /tmp/build1/*.whl
+          name: attestplane-wheel-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            sdk/python/dist/*.whl
+            sdk/python/wheel.sha256
           retention-days: 30
           if-no-files-found: error
+
+  verify:
+    name: Two independent runners produced byte-identical wheel
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: attestplane-wheel-ubuntu-latest-${{ github.sha }}
+          path: ubuntu-build
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: attestplane-wheel-macos-latest-${{ github.sha }}
+          path: macos-build
+
+      - name: Compare wheel SHA-256 across ubuntu vs macos
+        run: |
+          set -euo pipefail
+          h_ubuntu=$(cat ubuntu-build/wheel.sha256)
+          h_macos=$(cat macos-build/wheel.sha256)
+          echo "--- ubuntu-latest ---"
+          echo "$h_ubuntu"
+          echo "--- macos-latest ---"
+          echo "$h_macos"
+          if [ "$h_ubuntu" != "$h_macos" ]; then
+            echo ""
+            echo "::error::Dual-runner reproducible-build FAILED — wheel bytes differ between ubuntu and macos"
+            echo ""
+            echo "Diff of wheel.sha256:"
+            diff <(echo "$h_ubuntu") <(echo "$h_macos") || true
+            echo ""
+            echo "Diagnostic: list both wheels"
+            ls -la ubuntu-build macos-build
+            exit 1
+          fi
+          echo ""
+          echo "Wheel byte-identical across two independent runner images ✓"
+          echo "$h_ubuntu"
