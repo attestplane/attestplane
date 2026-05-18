@@ -1,0 +1,113 @@
+{
+  "report": "p3_3_release_assets_checksums_report",
+  "date": "2026-05-18",
+  "verdict": "P3.3ReleaseAssetsChecksumsReadyForPR",
+  "branch": "feat/p3-3-release-assets-checksums-20260518",
+  "base_commit": "544283f153a11e3c455b62d680de50a029537903",
+  "release_target": "v0.0.3-alpha",
+  "frozen_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+  "main_build_commit": "544283f153a11e3c455b62d680de50a029537903",
+  "registry_build_commit": "51c4e6ac9bc08b6bdd4da9289bbf50b26f8d0457",
+  "tag_main_split_explanation": "v0.0.3-alpha tag pinned to manifest commit 9bde6338. Registry packages on PyPI and npm were built from main@51c4e6a via OIDC trusted publishing. P3.3 local dry-run artefacts were built from main@544283f1 (post-P3.1+P3.2 merges). Local dry-run artefacts are not byte-identical to registry artefacts; tag was not moved.",
+  "artifacts_built": [
+    {
+      "kind": "python-wheel",
+      "path": "sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl",
+      "size_bytes": 153372,
+      "sha256": "623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d",
+      "twine_check": "PASSED"
+    },
+    {
+      "kind": "python-sdist",
+      "path": "sdk/python/dist/attestplane-0.0.3a0.tar.gz",
+      "size_bytes": 207215,
+      "sha256": "e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db",
+      "twine_check": "PASSED"
+    },
+    {
+      "kind": "npm-tarball",
+      "path": "sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz",
+      "size_bytes": 110826,
+      "sha256": "471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53"
+    }
+  ],
+  "checksums_file": "release/artifacts/v0.0.3-alpha/checksums.sha256",
+  "manifest_file": "release/artifacts/v0.0.3-alpha/artifact-manifest.json",
+  "upload_plan_file": "release/artifacts/v0.0.3-alpha/upload-plan.md",
+  "gate_script": "scripts/check-release-assets-dry-run.sh",
+  "hygiene_scan": {
+    "result": "clean",
+    "forbidden_patterns_checked": [
+      ".env",
+      "credentials",
+      "token",
+      "secret",
+      "node_modules",
+      "__pycache__",
+      ".DS_Store",
+      ".git",
+      "private_key",
+      "id_rsa",
+      "id_ed25519",
+      "pypirc",
+      ".npmrc"
+    ],
+    "files_scanned_python_sdist": 128,
+    "files_scanned_python_wheel": 54,
+    "files_scanned_npm_tarball": 113
+  },
+  "release_surface_invariants": {
+    "v0_0_3_alpha_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
+    "v0_0_3_alpha_tag_moved": false,
+    "github_release_is_prerelease": true,
+    "github_release_assets_count": 0,
+    "github_release_assets": [],
+    "pypi_attestplane_version": "0.0.3a0",
+    "pypi_published_in_this_branch": false,
+    "npm_package_version": "0.0.3-alpha",
+    "npm_published_in_this_branch": false,
+    "npm_dist_tag_latest": "0.0.1-alpha.1",
+    "npm_dist_tag_latest_changed_in_this_branch": false,
+    "npm_dist_tag_alpha": "0.0.3-alpha",
+    "publish_workflow_triggered_in_this_branch": false,
+    "github_release_modified_in_this_branch": false,
+    "upload_performed_in_this_branch": false
+  },
+  "safe_claims": [
+    "release asset dry-run readiness for v0.0.3-alpha",
+    "SHA-256 checksums generated and reproducible",
+    "artifact manifest validates against jq empty",
+    "no upload performed in this branch",
+    "no PyPI/npm publish performed in this branch",
+    "tag/main/build split documented and preserved",
+    "hygiene scan reports no secret/credential leakage",
+    "twine check PASSED for wheel and sdist",
+    "npm tarball generated with 114 files no forbidden entries",
+    "gate script asserts upload-plan non-execution and tag freeze post-build"
+  ],
+  "no_go_claims": [
+    "not production-ready",
+    "not compliance-ready",
+    "not certification-ready",
+    "not SLSA Level 3 attestation",
+    "not certified provenance",
+    "not production-grade supply-chain security",
+    "checksums are integrity metadata not cryptographic signing",
+    "local dry-run artefacts are not byte-identical to registry artefacts",
+    "not a substitute for cosign or Sigstore signatures",
+    "not a legal or compliance attestation by itself"
+  ],
+  "remaining_limitations": [
+    "local dry-run artefacts not bit-identical to PyPI/npm registry artefacts",
+    "reproducible-build dual-runner gate tracked separately in Sprint-2 G5",
+    "no cosign signature on checksums manifest in this branch",
+    "no SLSA L3 build provenance attestation in this dry-run",
+    "upload command documented but deliberately not executed",
+    "future upload execution requires founder authorization"
+  ],
+  "generated_by": {
+    "release_steward": "Claude Code Opus 4.7",
+    "main_loop": true,
+    "date": "2026-05-18"
+  }
+}
