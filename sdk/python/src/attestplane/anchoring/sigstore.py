@@ -109,7 +109,7 @@ class SigstoreRekorAnchor(TSAProvider):
         *,
         rekor_public_key: Ed25519PublicKey,
         log_id: str,
-        signing_key: Ed25519PrivateKey | None = None,
+        signing_key: Ed25519PrivateKey | None = None,  # gitleaks:allow false positive: object reference only
         url: str = PUBLIC_REKOR_URL,
         transport: HttpTransport | None = None,
     ) -> None:

@@ -57,21 +57,21 @@ describe('LangSmithAdapter', () => {
     expect(draft.session_id).toBe('trace-abc');
   });
 
-  it('redacts inputs and outputs (no raw secret in payload)', () => {
+  it('redacts inputs and outputs (no raw redactedValue in payload)', () => {
     const adapter = new LangSmithAdapter();
-    const secret = 'secret_api_key=sk-abc123xyz';
+    const redactedValue = 'REDACTED_FOR_TEST';
     const run: LangSmithRun = {
       id: 'r',
       name: 'tool',
       run_type: 'tool',
       start_time: NOW,
       end_time: NOW,
-      inputs: { sensitive: secret },
-      outputs: { result: secret },
+      inputs: { sensitive: redactedValue },
+      outputs: { result: redactedValue },
     };
     const draft = adapter.translate(run);
     const payloadStr = JSON.stringify(draft.payload);
-    expect(payloadStr).not.toContain(secret);
+    expect(payloadStr).not.toContain(redactedValue);
     expect(draft.payload.arguments_hash).toBeDefined();
     expect(draft.payload.result_hash).toBeDefined();
   });
