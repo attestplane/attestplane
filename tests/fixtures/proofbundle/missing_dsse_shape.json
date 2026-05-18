@@ -1,0 +1,176 @@
+{
+  "artifact": {
+    "canonicalization": "attestplane.restricted_jcs.v1",
+    "hash_algorithm": "sha256",
+    "sha256": "0e245766eefc183139e63ccc51253ff0121cf6122a2ef50617729ac13ffcca86",
+    "target": "proof_bundle"
+  },
+  "hash_chain": {
+    "head_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+    "head_seq": 0
+  },
+  "in_toto_statement": {
+    "_type": "https://in-toto.io/Statement/v1",
+    "predicate": {
+      "chain_metadata": {
+        "chain_id": "p3-cli-proofbundle",
+        "evidence_taxonomy_version": 1,
+        "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "head_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+        "head_seq": 0,
+        "producer_runtime": "attestplane-test",
+        "schema_version": 1
+      },
+      "events": [
+        {
+          "event": {
+            "actor": "agent://p3/test",
+            "event_id": "00000000-0000-7000-8000-000000000001",
+            "event_type": "eval_event",
+            "human_verifier": null,
+            "matched_input_ref": "sha256:matched-input-ref",
+            "payload": {
+              "artifact_ref": "local://artifact-A",
+              "score": 1
+            },
+            "reference_db_ref": null,
+            "schema_version": 1,
+            "session_id": null,
+            "subject_ref": null,
+            "timestamp": "2026-05-18T12:00:00.000000Z"
+          },
+          "event_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+          "prev_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+          "seq": 0
+        }
+      ],
+      "forbidden_fields": [
+        "customer_names",
+        "person_names",
+        "pii",
+        "raw_documents",
+        "contracts",
+        "scripts",
+        "tickets",
+        "emails",
+        "secrets",
+        "tokens",
+        "jwts",
+        "private_keys",
+        "raw_audit_payloads"
+      ],
+      "framework_mappings": [
+        {
+          "evidence_event_indexes": [
+            0
+          ],
+          "implementation_status_at_bundle_time": "field_supported",
+          "obligation_id": "eu_ai_act.art12.3c.matched_input_data"
+        }
+      ],
+      "verification_report": {
+        "first_bad_index": null,
+        "ok": true,
+        "reason": null,
+        "verification_method": "canonical-bytes-walk",
+        "verified_at": "2026-05-18T12:00:00.000000Z",
+        "verifier_version": "0.0.2a0"
+      }
+    },
+    "predicateType": "https://attestplane.io/v1/agent-runtime-event",
+    "subject": [
+      {
+        "digest": {
+          "sha256": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a"
+        },
+        "name": "p3-cli-proofbundle"
+      }
+    ]
+  },
+  "obligation_references": [
+    {
+      "obligation_id": "eu_ai_act.art12.3c.matched_input_data",
+      "source": "framework_mappings"
+    }
+  ],
+  "proof_bundle": {
+    "bundle_version": 1,
+    "chain_metadata": {
+      "chain_id": "p3-cli-proofbundle",
+      "evidence_taxonomy_version": 1,
+      "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "head_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+      "head_seq": 0,
+      "producer_runtime": "attestplane-test",
+      "schema_version": 1
+    },
+    "events": [
+      {
+        "event": {
+          "actor": "agent://p3/test",
+          "event_id": "00000000-0000-7000-8000-000000000001",
+          "event_type": "eval_event",
+          "human_verifier": null,
+          "matched_input_ref": "sha256:matched-input-ref",
+          "payload": {
+            "artifact_ref": "local://artifact-A",
+            "score": 1
+          },
+          "reference_db_ref": null,
+          "schema_version": 1,
+          "session_id": null,
+          "subject_ref": null,
+          "timestamp": "2026-05-18T12:00:00.000000Z"
+        },
+        "event_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+        "prev_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "seq": 0
+      }
+    ],
+    "forbidden_fields": [
+      "customer_names",
+      "person_names",
+      "pii",
+      "raw_documents",
+      "contracts",
+      "scripts",
+      "tickets",
+      "emails",
+      "secrets",
+      "tokens",
+      "jwts",
+      "private_keys",
+      "raw_audit_payloads"
+    ],
+    "framework_mappings": [
+      {
+        "evidence_event_indexes": [
+          0
+        ],
+        "implementation_status_at_bundle_time": "field_supported",
+        "obligation_id": "eu_ai_act.art12.3c.matched_input_data"
+      }
+    ],
+    "verification_report": {
+      "first_bad_index": null,
+      "ok": true,
+      "reason": null,
+      "verification_method": "canonical-bytes-walk",
+      "verified_at": "2026-05-18T12:00:00.000000Z",
+      "verifier_version": "0.0.2a0"
+    }
+  },
+  "proofbundle_verifier_schema_version": 1,
+  "provenance": {
+    "certified_provenance": false,
+    "production_supply_chain_security": false,
+    "shape_only": true,
+    "slsa_level_claimed": null
+  },
+  "storage_compatibility": {
+    "backend": "jsonl",
+    "multi_writer_safe": false,
+    "record_format": "chained_event_jsonl.v1",
+    "schema_version": "storage_compatibility_manifest.v1"
+  }
+}
