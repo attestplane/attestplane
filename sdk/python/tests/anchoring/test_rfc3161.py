@@ -363,3 +363,36 @@ def test_ec_leaf_provider_anchor_record_verifies() -> None:
     # convention as the RSA leaf path. Leaf-key-class branch is exercised
     # via the verify_timestamp_token path inside verify_chain_with_anchors.
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+
+
+def test_unsupported_leaf_key_type_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Defensive branch — non-RSA / non-EC leaf must surface fail-closed.
+
+    Triggered by patching ``leaf.public_key()`` to return an Ed25519PublicKey,
+    which neither ``RSAPublicKey`` nor ``EllipticCurvePublicKey``. The verifier
+    must raise ``AnchorVerificationError`` with the unsupported-key message.
+    """
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography import x509 as cx509
+
+    authority = TestTSAAuthority(now=_NOW)
+    digest = hashlib.sha256(b"unsupported-key-defensive").digest()
+    der = authority.sign_timestamp_response(digest, gen_time=_NOW)
+    parsed = parse_timestamp_response(der)
+    materials = authority.materials()
+
+    ed_public = Ed25519PrivateKey.generate().public_key()
+    original = cx509.Certificate.public_key
+
+    def fake_public_key(self: cx509.Certificate) -> object:
+        # Only swap for the leaf parse; intermediates/root walk shouldn't hit it.
+        return ed_public
+
+    monkeypatch.setattr(cx509.Certificate, "public_key", fake_public_key)
+    with pytest.raises(AnchorVerificationError, match="unsupported leaf key type"):
+        verify_timestamp_token(
+            parsed,
+            expected_digest=digest,
+            trust_roots_der=[materials.root_cert_der],
+            verification_time=_NOW,
+        )
