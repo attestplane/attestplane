@@ -298,3 +298,68 @@ def test_verify_chain_without_trust_roots_remains_unverified() -> None:
     result = verify_chain_with_anchors(chain, [anchor])
     assert result.ok is True
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+
+
+# ----- P3 / Issue #9 follow-up: EC-leaf TSA support (FreeTSA 2026 rotation) ---
+
+
+def test_authority_with_ec_leaf_round_trips() -> None:
+    """EC (NIST P-256) leaf TSA — verifier must accept ECDSA signature.
+
+    Reproduces the FreeTSA 2026 cert rotation locally: leaf cert public
+    key is ECPublicKey instead of RSA. The verifier accepted only RSA
+    before issue #9; this test pins the new EC branch.
+    """
+    authority = TestTSAAuthority(now=_NOW, leaf_key_type="ec")
+    digest = hashlib.sha256(b"ec-leaf-roundtrip").digest()
+    der = authority.sign_timestamp_response(digest, gen_time=_NOW, serial_number=1)
+    parsed = parse_timestamp_response(der)
+    assert parsed.hash_algorithm == "sha256"
+    assert parsed.message_imprint == digest
+    materials = authority.materials()
+    verify_timestamp_token(
+        parsed,
+        expected_digest=digest,
+        trust_roots_der=[materials.root_cert_der],
+        verification_time=_NOW,
+    )  # must not raise
+
+
+def test_ec_leaf_signature_tamper_fails_closed() -> None:
+    """Tampering the ECDSA signature byte must surface as fail-closed."""
+    authority = TestTSAAuthority(now=_NOW, leaf_key_type="ec")
+    digest = hashlib.sha256(b"ec-leaf-tamper").digest()
+    der = authority.sign_timestamp_response(digest, gen_time=_NOW)
+    parsed = parse_timestamp_response(der)
+    # Flip one bit of the signature.
+    bad_sig = bytearray(parsed.signature)
+    bad_sig[-1] ^= 0x01
+    from dataclasses import replace
+    tampered = replace(parsed, signature=bytes(bad_sig))
+    materials = authority.materials()
+    with pytest.raises(AnchorVerificationError, match="ECDSA signature does not verify"):
+        verify_timestamp_token(
+            tampered,
+            expected_digest=digest,
+            trust_roots_der=[materials.root_cert_der],
+            verification_time=_NOW,
+        )
+
+
+def test_ec_leaf_provider_anchor_record_verifies() -> None:
+    """End-to-end EC-leaf TSA through TestTSAProvider + verify_chain_with_anchors."""
+    authority = TestTSAAuthority(now=_NOW, leaf_key_type="ec")
+    provider = TestTSAProvider(authority=authority)
+    chain = _build_chain(1)
+    head_hash = chain[0].event_hash
+    anchor = provider.request_timestamp(
+        TimestampRequest(digest=head_hash),
+        anchored_seq=0,
+        now=_NOW,
+    )
+    result = verify_chain_with_anchors(chain, [anchor])
+    assert result.ok is True
+    # Absent OCSP material the cert_status stays VALID_UNVERIFIED — same
+    # convention as the RSA leaf path. Leaf-key-class branch is exercised
+    # via the verify_timestamp_token path inside verify_chain_with_anchors.
+    assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
