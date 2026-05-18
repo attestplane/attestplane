@@ -5,6 +5,9 @@ Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 > **Status: alpha (v0.0.1).** Wire format is byte-locked against the Python
 > SDK's [`vectors.json`](../python/tests/conformance/vectors.json) — see
 > [ADR-0002][adr2]. APIs may still change before v0.1.0.
+> The current Python CLI `attestplane verify` path is chain/report-oriented
+> only. It does not perform full ProofBundle, signature, anchor,
+> `policy_trace_refs`, or compliance certification verification.
 
 See the [project README][project-readme] for background, governance, and
 trademark policy.
@@ -65,6 +68,8 @@ will reproduce the exact byte value from the same input.
 - Built-in fields designed toward **EU AI Act Art. 12(2)(a)** auditability from day one.
 - Byte-identical canonical format compatible with the Python SDK.
 - Strong **GDPR pseudonymization typing** via `SubjectRef`.
+- Alpha-grade verifier predicates; do not treat this SDK as production-ready
+  governance, compliance certification, or runtime execution authority.
 
 ## API conventions
 

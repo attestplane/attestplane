@@ -17,12 +17,20 @@
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
 > **Alpha software.** API surfaces are not yet stable. Not for production use without review of your specific compliance obligations.
+>
+> **Current verifier scope.** Attestplane is an alpha-grade dual-SDK
+> tamper-evident evidence substrate. It provides restricted
+> canonicalization, SHA-256 hash-chain primitives, evidence payload
+> schemas, sidecar signing/anchoring primitives, and read-only verifier
+> predicates. The current CLI `attestplane verify` path is
+> chain/report-oriented and must not be treated as a full ProofBundle,
+> signed, anchored, or compliance certification verifier.
 
 ---
 
 ## What is Attestplane?
 
-Attestplane is an Apache-2.0 cryptographic evidence substrate that records AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain; signs the chain with Ed25519; anchors it through RFC-3161 time-stamp authorities and Sigstore Rekor; and exports the result as a verifiable proof bundle that survives forensic scrutiny.
+Attestplane is an Apache-2.0 cryptographic evidence substrate for recording AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain. The current alpha includes sidecar signing and anchoring primitives plus proof-bundle export surfaces, but those sidecars are not part of the default CLI verifier path. `attestplane verify` is chain/report-oriented: it replays bundle events and compares the embedded `verification_report` with the recomputed chain result.
 
 ### Two sides of one evidence protocol
 
@@ -31,9 +39,9 @@ Attestplane is built around a single shared protocol — **`AP-EVD/1.0`** (Attes
 | Side | Who | Role |
 |---|---|---|
 | **Produce** | Banks · Insurers · Hospitals · Governments · HR platforms · any AI-using organisation under EU AI Act / DORA / NIS2 / GDPR / NIST AI RMF / China algorithmic-recommendation regs | Embed the SDK; emit byte-faithful evidence events from the AI runtime |
-| **Verify** | Law firms · Big 4 AI assurance practices · Notified bodies (TÜV / BSI / DEKRA) · regulators (BaFin / CSSF / DNB / CAC) | Consume signed proof bundles; cite `AP-EVD/1.0` conformance in legal opinions, audit reports, conformity assessments |
+| **Verify** | Law firms · Big 4 AI assurance practices · Notified bodies (TÜV / BSI / DEKRA) · regulators (BaFin / CSSF / DNB / CAC) | Consume proof bundles and sidecar evidence; cite `AP-EVD/1.0` conformance in legal opinions, audit reports, conformity assessments |
 
-Both sides depend on the same OSS protocol; both can independently verify the same bundle bytes. Law firms and Big 4 audit practices participate on **both** sides — they use AI internally (Produce) **and** issue compliance opinions to clients (Verify).
+Both sides depend on the same OSS protocol; both can independently inspect and replay the same bundle bytes. Law firms and Big 4 audit practices participate on **both** sides — they use AI internally (Produce) **and** issue compliance opinions to clients (Verify). The current alpha does not itself issue those opinions and does not certify legal compliance.
 
 ### What Attestplane is not
 
@@ -53,7 +61,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.2-alpha (on `main`, release candidate)** adds:
 
-- Verifier library + `attestplane` CLI
+- Verifier predicates + `attestplane` CLI for chain/report-oriented checks; the CLI does not perform full ProofBundle, signature, anchor, `policy_trace_refs`, or compliance certification verification
 - JSONL storage backend (fsync on every append, 9-verb forbidden gate)
 - RFC-3161 anchoring with FreeTSA / DigiCert / Sigstore Rekor + real OCSP + multi-hop cert chains + eIDAS Trusted List
 - Ed25519 sidecar signing scheme ([ADR-0005](docs/adr/0005-event-signing-scheme.md)) with KeyProvider abstraction + plurality verification
@@ -66,7 +74,7 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
-Cross-language byte-equality enforced by 17 frozen conformance fixtures (Python ↔ TypeScript). 1,095 tests green in CI (680 Python + 415 TypeScript) across 11 Accepted ADRs.
+Cross-language byte-equality enforced by 17 frozen conformance fixtures (Python ↔ TypeScript). 1,095 tests green in CI (680 Python + 415 TypeScript) across 11 Accepted ADRs. Green tests indicate alpha substrate conformance, not production readiness or regulatory compliance.
 
 Attestplane is infrastructure your team owns, operates, and audits independently. The substrate stays in your control plane.
 
@@ -115,9 +123,9 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │  Core Substrate  —  Apache 2.0  —  github.com/attestplane/          │
 │                                                                      │
 │  ┌──────────────┐   ┌────────────────┐   ┌──────────────────────┐  │
-│  │  SHA-256     │   │  RFC-3161      │   │  Sigstore / SLSA L3  │  │
-│  │  hash chain  │──▶│  TSA anchoring │──▶│  signing + SBOM      │  │
-│  │  (v0.0.1) ✓  │   │  (v0.1, M5)    │   │  (v0.2, M6+)         │  │
+│  │  SHA-256     │   │  sidecar       │   │  supply-chain        │  │
+│  │  hash chain  │──▶│  anchoring     │──▶│  provenance/SBOM     │  │
+│  │  (shipped) ✓ │   │  primitives    │   │  (release gates)     │  │
 │  └──────────────┘   └────────────────┘   └──────────────────────┘  │
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -150,18 +158,26 @@ Integration with each partner does **not** imply endorsement by the partner. The
 - **EU AI Act Article 12(2)(a) fields built in** — `session_id`, `reference_db_ref`, `matched_input_ref`, `human_verifier` are first-class fields on every event from v0.0.1.
 - **GDPR pseudonymization at the type level** — the `SubjectRef` strong type forces callers to declare a pseudonymization scheme (`sha256_salted`, `opaque`, `none`); raw PII cannot be silently written into the subject field.
 - **Self-hosted first** — the substrate runs inside your own infrastructure; your attestation data stays in your control plane. EU financial entities subject to DORA Recital 56 can deploy without adding Attestplane as a Critical Third-Party Provider.
-- **Supply-chain attestation** — npm provenance is published to the Sigstore transparency log on every TypeScript SDK release; Python SDK ships with reproducible-wheel verification and CycloneDX SBOM on every push. Full Sigstore release signing and SLSA L3 build provenance are planned for M5–M6.
-- **RFC-3161 TSA anchoring design** — [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md) locks the v0.1 design: pluggable TSA providers, batch-tail anchoring off the `append()` critical path, CAdES-A long-term validation evidence frozen at issuance, sidecar `AnchorRecord` that preserves the v0.0.1 chain contract. Code ships with M5.
+- **Supply-chain attestation hygiene** — npm provenance, reproducible-wheel checks, and CycloneDX SBOM generation are part of the release pipeline. These release gates must not be described as SLSA L3 certification or production readiness.
+- **RFC-3161 TSA anchoring sidecar primitives** — [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md) defines pluggable TSA providers, batch-tail anchoring off the `append()` critical path, and sidecar `AnchorRecord` data that preserves the v0.0.1 chain contract. The current CLI verify path does not perform anchored verification.
 
 ---
 
-## Current release: v0.0.1-alpha (2026-05-17)
+## Current release posture: public alpha
 
-The first public alpha is live on TestPyPI (sandbox) and npm (production with the `alpha` dist-tag). The shipped surface is the substrate core (types, restricted-JCS canonicalization, SHA-256 hash chain, in-memory append-only container). RFC-3161 anchoring, signing, framework-mapping endpoint, FastAPI/Express/NestJS helpers, and a Rust SDK are **not** in v0.0.1 — see the [roadmap](#roadmap) below.
+The first public alpha is live on TestPyPI (sandbox) and npm with the `alpha` dist-tag. The `main` branch is preparing the v0.0.2-alpha line. That line is alpha-grade substrate work: it expands the core with schemas, sidecar primitives, storage, adapters, and verifier predicates, but it is not pre-beta, not production-ready, and not compliance-ready.
 
-## v0.0.1-alpha status
+The current `attestplane verify` command is deliberately narrow:
 
-Implemented in v0.0.1-alpha (published artifacts):
+- It replays bundle events and checks hash-chain/report agreement.
+- It does not perform full ProofBundle verification.
+- It does not verify signatures or anchors.
+- It does not verify `policy_trace_refs` closure.
+- It does not issue compliance certification.
+
+## Published v0.0.1-alpha status
+
+Implemented in v0.0.1-alpha published artifacts:
 
 - Python SDK
 - TypeScript SDK
@@ -170,23 +186,18 @@ Implemented in v0.0.1-alpha (published artifacts):
 - cross-language conformance vectors
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
-Designed and merged on `main` since v0.0.1-alpha (ships in v0.1 / M5; not in current published artifacts):
+Designed and merged on `main` since v0.0.1-alpha (candidate surface for v0.0.2-alpha; not yet a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
 - [`ATTESTATION_GATES.md` — five gates A1–A5](docs/architecture/ATTESTATION_GATES.md): pre-merge / nightly / release-blocker discipline
-- `GenericRuntimeAdapter` ABC (Python + TypeScript): the only adapter surface that ships in the substrate; concrete adapters live in execution-plane repositories
+- `GenericRuntimeAdapter` ABC (Python + TypeScript): runtime evidence ingestion/normalization only; it is not runtime execution authority
 - Compliance obligation registry (EU AI Act Article 12 + DORA Article 8): machine-readable framework mappings with locked `implementation_status` enum per the claim-safety triad
 - Negative conformance vectors: five frozen broken-chain fixtures pinning gates A2 and A3
 
 Not yet implemented:
 
-- verifier CLI
-- proof bundle / auditor export schema
 - additional obligation registries (NIS2 Article 21, GDPR Article 30, ISO 42001, NIST AI RMF)
-- RFC3161/TSA anchoring
-- Sigstore/Rekor integration
-- durable storage backend
 - AIOS / LangGraph / OpenAI / Claude / Codex / MCP adapters
 - production / enterprise / cloud features
 

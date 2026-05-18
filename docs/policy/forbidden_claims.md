@@ -29,7 +29,9 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
 | "regulator-ready" | "auditor-oriented alpha substrate" |
 | "production-grade" | "alpha; not for production without your own compliance review" |
 | "certified" | "designed against [framework] criteria; no external certification claimed" |
-| "cryptographically anchored" (today) | "designed for RFC-3161 anchoring (ships v0.1 / M5)" |
+| "cryptographically anchored" (default verifier) | "sidecar anchoring primitives exist; the CLI verifier remains chain/report-oriented" |
+| "full ProofBundle verifier" | "`attestplane verify` performs chain/report-oriented checks only" |
+| "signed/anchored verification" | "signing/anchoring are sidecar primitives unless a specific verifier path performs those checks" |
 | "fully compliant" | obligation-registry-cited `implementation_status` (see below) |
 
 ## A. Regulatory compliance
@@ -51,10 +53,16 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
 
 - **"Tamper-proof"** — SHA-256 hash chains are tamper-evident, not
   tamper-proof. Replace with "tamper-evident".
-- **"Cryptographically anchored"** (in present tense) — RFC-3161 anchoring
-  is M5 / ADR-0003 design; v0.0.1 has no external anchoring.
-- **"Cryptographic signatures on every event"** — event signing is M7
-  (anticipated ADR-0004).
+- **"Cryptographically anchored"** as a default verification claim —
+  anchoring sidecar primitives exist, but the current `attestplane
+  verify` path does not perform anchored verification. A release note
+  may name a specific sidecar record type or provider only when it
+  also states that the default CLI verifier is chain/report-oriented.
+- **"Cryptographic signatures on every event"** / **"signed
+  verification"** — signing sidecar primitives exist, but the current
+  `attestplane verify` path does not perform signature verification.
+  Do not imply every event is signed or that the CLI validates
+  signatures unless that exact path performs the check.
 - **"Zero-trust"** / **"No trust in Attestplane required"** — only
   defensible once cross-implementation conformance with a non-Attestplane
   verifier is demonstrated.
@@ -62,14 +70,17 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
 ## C. Production / operations
 
 - **"Production-ready"** / **"Production-grade"** / **"Battle-tested"** —
-  substrate is v0.0.1-alpha.
+  substrate is alpha-grade.
 - **"Enterprise-ready"** / **"SSO/SCIM/RBAC available"** — Enterprise tier
   is M8+ scope.
 - **"High-availability"** / **"Active-active"** — v0.0.1 is single-process;
   multi-writer is M6.
 - **"Multi-tenant"** / **"Tenant-isolated"** — tenant isolation is M6+.
-- **"Durable"** / **"Crash-safe"** / **"Persistent"** — v0.0.1 is in-memory
-  only. JSONL backend ships at v0.1 / M5; SQLite at M6; Postgres at M7.
+- **"Durable"** / **"Crash-safe"** / **"Persistent"** as a blanket
+  production claim — JSONL storage exists as an alpha backend, but
+  durability, multi-writer behavior, corruption recovery, and
+  production operations remain deployer responsibilities unless a
+  specific backend and test boundary are cited.
 
 ## D. Performance / scale
 
@@ -94,6 +105,16 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
 
 - **"Verified across all major AI agent frameworks"** — cross-language
   conformance today covers Python and TypeScript only. Rust SDK is M7.
+- **"Full ProofBundle verifier"** / **"complete verifier"** —
+  forbidden for the current CLI. The safe phrase is:
+  "`attestplane verify` is chain/report-oriented and does not perform
+  full ProofBundle, signature, anchor, `policy_trace_refs`, or
+  compliance certification verification."
+- **"Runtime governance"** — forbidden when it implies runtime
+  execution authority, scheduling, settlement, grant/revoke, billing,
+  or policy enforcement. Attestplane adapters ingest and normalize
+  evidence; the runtime remains responsible for authority and side
+  effects.
 - **"Drop-in replacement for [framework]"** — Attestplane is a substrate
   layer, not a replacement for any agent framework, logging system, or
   observability platform.

@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 The Attestplane Authors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Allowed Claims (v0.0.1-alpha)
+# Allowed Claims (public alpha)
 
 This is the counterpart of [`forbidden_claims.md`](forbidden_claims.md): the
 list of statements about Attestplane that are **supported by shipped
@@ -57,11 +57,13 @@ safe to use when paired with the milestone qualifier ("M5", "M6", or "M7").
 - "Designed toward DORA Article 8 audit-trail obligations" — obligation
   registry ships at M5.
 
-## v0.0.2-alpha (release candidate on `main` as of 2026-05-17)
+## v0.0.2-alpha (release candidate on `main` as of 2026-05-18)
 
 These claims are safe to use ONCE v0.0.2-alpha is tagged and the
 artifacts are published. Until publication, milestone-qualified
-phrasings ("ships in v0.1 / M5") remain the safer form.
+phrasings remain the safer form. None of these claims permits
+production use, compliance readiness, broad verifier-completeness,
+signed-verifier, anchored-verifier, or certification language.
 
 ### Architectural framing
 
@@ -70,9 +72,15 @@ phrasings ("ships in v0.1 / M5") remain the safer form.
   attestation framework. MUST be paired with the disclaimer that
   Attestplane is independent of the OpenSSF and the SLSA project (see
   README headline + section "What is Attestplane?").
-- "**Bottom-up cryptographic evidence substrate**" — accurate
-  description of v0.0.2-alpha (hash chain + RFC-3161 + OCSP +
-  multi-hop chain + eIDAS Trusted List).
+- "**Alpha-grade dual-SDK tamper-evident evidence substrate**" —
+  accurate description of v0.0.2-alpha (restricted canonicalization,
+  SHA-256 hash-chain primitives, evidence payload schemas, sidecar
+  signing/anchoring primitives, and read-only verifier predicates).
+- "`attestplane verify` is chain/report-oriented" — accurate. The CLI
+  replays bundle events and compares the embedded
+  `verification_report` with the recomputed chain result. It does not
+  perform full ProofBundle, signature, anchor, `policy_trace_refs`, or
+  compliance certification verification.
 - "**Evidence layer beneath [observability tool]**" — accurate
   framing for the LangSmith / LangFuse / Arize Phoenix / Helicone /
   OpenLLMetry integration pattern.
@@ -91,17 +99,18 @@ phrasings ("ships in v0.1 / M5") remain the safer form.
 - "**Sigstore bundle compatible**" — after Track 1 ships.
 - "**DSSE-wrapped attestation**" — accurate post-Track 1.
 
-### Anchoring + LTV
+### Anchoring + LTV sidecars
 
-- "**RFC-3161 anchored**" — accurate; FreeTSA + DigiCert + multi-hop
-  cert chain + RFC-6960 OCSP all shipped on `main`. Public material
-  MUST cite the trust root source (deployer's own / FreeTSA /
-  DigiCert / eIDAS LOTL).
+- "**RFC-3161 anchoring sidecar primitives**" — accurate for source
+  surfaces that explicitly mention the sidecar boundary. Public
+  material MUST NOT say the default CLI performs anchored
+  verification.
 - "**eIDAS qualified-TSA compatible**" — accurate via
   `load_qualified_tsa_trust_roots()`. Does NOT mean Attestplane is
   itself a QTSP (forbidden per `forbidden_claims.md § G`).
-- "**Sigstore Rekor anchor**" — accurate AFTER Track 2 (anticipated
-  ADR-0006) ships at M5.
+- "**Sigstore Rekor anchor sidecar**" — accurate only for the shipped
+  sidecar path and only when it does not imply default CLI anchored
+  verification or partner endorsement.
 
 ### Integration adapters (post Track 3, ticket #31/#32)
 

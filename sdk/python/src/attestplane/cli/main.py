@@ -4,7 +4,7 @@
 
 Subcommands::
 
-    verify <bundle.json>           — verify a proof bundle, exit 0/1
+    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1
     inspect <chain.jsonl>          — print a chain summary, exit 0/1
     export <chain.jsonl> --out OUT — build a proof bundle from a JSONL chain
     doctor                         — environment self-check, exit 0/1
@@ -22,6 +22,25 @@ from pathlib import Path
 from typing import Any
 
 from attestplane import __version__
+
+VERIFY_SCOPE = "chain_report_only"
+VERIFY_SCOPE_NOTICE = (
+    "MODE: chain/report-only. This command replays bundle events and compares the embedded "
+    "verification_report with the recomputed chain result. It does not perform full ProofBundle "
+    "verification, signature verification, anchor verification, policy_trace_refs verification, "
+    "or compliance certification."
+)
+
+
+def _verify_scope_metadata() -> dict[str, Any]:
+    return {
+        "verification_scope": VERIFY_SCOPE,
+        "full_proof_bundle_verification": False,
+        "signature_verification_performed": False,
+        "anchor_verification_performed": False,
+        "compliance_certification": False,
+        "warning": VERIFY_SCOPE_NOTICE,
+    }
 
 
 def _add_format_flag(p: argparse.ArgumentParser) -> None:
@@ -45,7 +64,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="cmd", required=True, metavar="SUBCOMMAND")
 
-    p_verify = sub.add_parser("verify", help="verify a proof bundle JSON file")
+    p_verify = sub.add_parser(
+        "verify",
+        help=(
+            "chain/report-oriented proof-bundle check; not full ProofBundle, "
+            "signature, anchor, policy_trace_refs, or compliance verification"
+        ),
+        description=VERIFY_SCOPE_NOTICE,
+    )
     p_verify.add_argument("bundle", type=Path, help="path to bundle.json")
     _add_format_flag(p_verify)
 
@@ -93,16 +119,16 @@ def cmd_verify(args: argparse.Namespace) -> int:
         result = verify_proof_bundle_file(args.bundle)
     except BundleSchemaError as exc:
         _emit(
-            {"ok": False, "error": "schema", "detail": str(exc)},
+            {"ok": False, "error": "schema", "detail": str(exc), **_verify_scope_metadata()},
             args.json_output,
-            human=f"FAIL: schema error in {args.bundle}: {exc}",
+            human=f"FAIL: schema error in {args.bundle}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
     except BundleVerificationError as exc:
         _emit(
-            {"ok": False, "error": "io", "detail": str(exc)},
+            {"ok": False, "error": "io", "detail": str(exc), **_verify_scope_metadata()},
             args.json_output,
-            human=f"FAIL: cannot read {args.bundle}: {exc}",
+            human=f"FAIL: cannot read {args.bundle}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
 
@@ -119,8 +145,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
             "reason": result.chain_result.reason,
         },
         "bundle_reported_ok": result.bundle_reported_ok,
+        **_verify_scope_metadata(),
     }
-    _emit(payload, args.json_output, human=result.short_summary())
+    _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
     return 0 if result.ok else 1
 
 
