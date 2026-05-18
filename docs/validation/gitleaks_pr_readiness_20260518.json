@@ -1,0 +1,78 @@
+{
+  "branch": "fix/security-gitleaks-redaction-20260518",
+  "base_branch": "feat/p3-4-positive-crypto-wiring-20260518",
+  "head_under_test": "3ef5e96",
+  "diff_files": [
+    "docs/validation/gitleaks_remediation_20260518.json",
+    "docs/validation/gitleaks_remediation_20260518.md",
+    "sdk/python/src/attestplane/anchoring/sigstore.py",
+    "sdk/python/src/attestplane/signing/base.py",
+    "sdk/python/tests/adapters/test_langsmith.py",
+    "sdk/typescript/test/adapters/langsmith.test.ts"
+  ],
+  "gitleaks_result": {
+    "command": "gitleaks detect --source . --no-git --redact --report-format json --report-path /tmp/attestplane-gitleaks/pr-readiness-redacted.json",
+    "clean": true,
+    "findings_count": 0,
+    "redacted_report_path": "/tmp/attestplane-gitleaks/pr-readiness-redacted.json"
+  },
+  "tests_result": {
+    "python": {
+      "command": "sdk/python/.venv/bin/python -m pytest sdk/python/tests/adapters/test_langsmith.py sdk/python/tests/signing/test_base.py sdk/python/tests/anchoring/test_sigstore.py -q",
+      "result": "passed",
+      "summary": "59 passed",
+      "note": "system/default Python interpreter missing pytest for that command; repo pytest environment available and passed"
+    },
+    "typescript": {
+      "command": "npm test -- test/adapters/langsmith.test.ts",
+      "working_directory": "sdk/typescript",
+      "result": "passed",
+      "summary": "16 passed"
+    },
+    "skipped": [
+      {
+        "scope": "remote_ci",
+        "reason": "Remote CI triggering is prohibited for this local PR preparation phase."
+      },
+      {
+        "scope": "release_publish_scripts",
+        "reason": "Publish, deploy, upload, and GitHub Release operations are prohibited."
+      }
+    ]
+  },
+  "evidence_files": [
+    "docs/validation/gitleaks_remediation_20260518.md",
+    "docs/validation/gitleaks_remediation_20260518.json",
+    "docs/validation/gitleaks_pr_readiness_20260518.md",
+    "docs/validation/gitleaks_pr_readiness_20260518.json"
+  ],
+  "release_gate_local_status": "GO_FOR_PR_PREP",
+  "rotation_required": false,
+  "history_cleanup_required": false,
+  "jit_review": {
+    "target_repo_gate": "not_part_of_target_repo_gate",
+    "automation_control_repo_status": "timeout_optional_degraded",
+    "fallback": "local_static_review"
+  },
+  "remaining_limitations": [
+    "Remote CI was not triggered.",
+    "No push or PR has been created.",
+    "JIT Review remains optional degraded in the automation control repo.",
+    "No production deployment or publish was performed."
+  ],
+  "recommended_pr_title": "fix(security): remediate gitleaks findings for release gate",
+  "recommended_pr_body": "Summary:\\n- Remediates 4 gitleaks findings blocking the local release gate.\\n- Replaces LangSmith test fixtures with explicit mock/test-only placeholders.\\n- Adds narrow inline allow markers for false-positive key object references.\\n- Adds validation evidence for remediation.\\n\\nValidation:\\n- gitleaks detect --source . --no-git --redact: 0 findings\\n- sdk/python/.venv/bin/python -m pytest sdk/python/tests/adapters/test_langsmith.py sdk/python/tests/signing/test_base.py sdk/python/tests/anchoring/test_sigstore.py -q: 59 passed\\n- npm test -- test/adapters/langsmith.test.ts: 16 passed\\n- L0 automation dry-run from control repo: passed\\n- control repo pytest: 15 passed\\n\\nSecurity:\\n- No secret values are printed or persisted in reports.\\n- rotation_required: no\\n- history_cleanup_required: no\\n- gitleaks_not_clean resolved.\\n\\nLimitations:\\n- Remote CI not triggered.\\n- No push/PR yet.\\n- JIT Review remains optional degraded in the automation control repo.",
+  "reviewer_checklist": [
+    "Confirm the fixture placeholder changes preserve LangSmith redaction behavior.",
+    "Confirm inline gitleaks allow markers are limited to false-positive object references.",
+    "Confirm remediation evidence does not contain secret values.",
+    "Confirm no release, deploy, publish, or remote CI action was performed."
+  ],
+  "explicit_non_actions": {
+    "push": false,
+    "pr_created": false,
+    "merge": false,
+    "ci_triggered": false,
+    "publish": false
+  }
+}
