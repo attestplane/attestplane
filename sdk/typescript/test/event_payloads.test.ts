@@ -68,7 +68,7 @@ describe('lease_lifecycle_event payload conformance', () => {
   it('vectors file loads', () => {
     expect(VECTORS.$schema_version).toBe(1);
     expect(VECTORS.positive_vectors.length).toBe(4);
-    expect(VECTORS.negative_vectors.length).toBe(7);
+    expect(VECTORS.negative_vectors.length).toBe(11);
   });
 
   for (const vec of VECTORS.positive_vectors) {
@@ -146,7 +146,7 @@ describe('policy_check_event payload conformance', () => {
   it('vectors file loads', () => {
     expect(POLICY_VECTORS.$schema_version).toBe(1);
     expect(POLICY_VECTORS.positive_vectors.length).toBe(4);
-    expect(POLICY_VECTORS.negative_vectors.length).toBe(8);
+    expect(POLICY_VECTORS.negative_vectors.length).toBe(12);
   });
 
   for (const vec of POLICY_VECTORS.positive_vectors) {

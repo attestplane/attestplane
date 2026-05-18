@@ -63,7 +63,7 @@ describe('replay_event payload conformance', () => {
   it('vectors file loads', () => {
     expect(VECTORS.$schema_version).toBe(1);
     expect(VECTORS.positive_vectors.length).toBe(4);
-    expect(VECTORS.negative_vectors.length).toBe(6);
+    expect(VECTORS.negative_vectors.length).toBe(10);
     expect(VECTORS.verifier_vectors.length).toBe(4);
   });
 

@@ -14,8 +14,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { createHash } from 'node:crypto';
-import { canonicalize } from '../src/canonical.js';
-import { SCHEMA_VERSION, chainExtend, genesisHead, headOf } from '../src/hashchain.js';
+import { int64LiteralForConformance } from '../src/canonical.js';
+import {
+  SCHEMA_VERSION,
+  canonicalizeAuditEvent,
+  chainExtend,
+  genesisHead,
+  headOf,
+} from '../src/hashchain.js';
 import {
   type ChainHead,
   type ChainedEvent,
@@ -76,7 +82,8 @@ interface VectorFile {
 // JSON.parse silently rounds integers > Number.MAX_SAFE_INTEGER (2^53 - 1)
 // to the nearest double, which would corrupt vector 8 (int64 boundary values).
 // Node 22+ exposes the source literal to the reviver; we promote any literal
-// outside the safe-integer range to BigInt, which the canonicalizer accepts.
+// outside the safe-integer range to a test-only int64 literal wrapper. Public
+// canonicalize() still rejects direct bigint inputs.
 function parseJsonWithBigInts(text: string): unknown {
   return JSON.parse(
     text,
@@ -92,7 +99,7 @@ function parseJsonWithBigInts(text: string): unknown {
       if (!/^-?\d+$/.test(source)) return value;
       const asBig = BigInt(source);
       if (asBig > BigInt(Number.MAX_SAFE_INTEGER) || asBig < BigInt(-Number.MAX_SAFE_INTEGER)) {
-        return asBig;
+        return int64LiteralForConformance(source);
       }
       return value;
     },
@@ -153,7 +160,7 @@ describe('cross-language conformance vs Python vectors.json', () => {
       const ts = new Date(entry.timestamp);
       const chained = chainExtend(head, draft, { now: ts, event_id: entry.event_id });
       expect(bytesToHex(chained.event_hash)).toBe(entry.event_hash_hex);
-      const sha = createHash('sha256').update(canonicalize(chained.event)).digest();
+      const sha = createHash('sha256').update(canonicalizeAuditEvent(chained.event)).digest();
       expect(Buffer.from(sha).toString('hex')).toBe(entry.canonical_bytes_sha256_hex);
       expect(bytesToHex(chained.prev_hash)).toBe(entry.prev_hash_hex);
       expect(chained.seq).toBe(entry.seq);

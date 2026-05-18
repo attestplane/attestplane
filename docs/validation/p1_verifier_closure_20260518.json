@@ -1,0 +1,152 @@
+{
+  "audit_source": [
+    "docs/validation/full_software_audit_20260518.md",
+    "docs/validation/full_software_audit_20260518.json"
+  ],
+  "date": "2026-05-18",
+  "branch": "fix/p1-verifier-closure-20260518",
+  "scope": [
+    "ProofBundle metadata closure checks",
+    "policy_trace_refs verification",
+    "settlement amount_hash fail-closed behavior",
+    "empty-anchor ambiguity removal",
+    "read-only verifier invariant tests",
+    "Python and TypeScript verifier parity"
+  ],
+  "fixed": [
+    {
+      "area": "proof_bundle",
+      "summary": "Verifier checks top-level critical metadata, chain head metadata, embedded report agreement, redaction terms, and allowed verification methods."
+    },
+    {
+      "area": "policy_trace_refs",
+      "summary": "Verifier checks exact chain-seq-ordered refs to actual policy_check_event hashes and rejects missing, dangling, wrong-type, duplicate, empty, and mismatched refs."
+    },
+    {
+      "area": "settlement",
+      "summary": "Settlement verifier fails closed when expected_settlement_amount_hash is supplied but the observed settlement amount_hash is missing, null, empty, malformed, or mismatched."
+    },
+    {
+      "area": "anchoring",
+      "summary": "Anchor verifier returns verification_status=not_performed and ok=false when no anchor evidence is supplied."
+    },
+    {
+      "area": "read_only",
+      "summary": "Read-only tests cover ProofBundle verifier, settlement verifier, policy_trace_refs verifier, and anchoring verifier."
+    }
+  ],
+  "not_fixed": [
+    "Default CLI verify is still not full ProofBundle verification.",
+    "Default CLI verify does not perform signature verification.",
+    "Default CLI verify does not perform anchor verification.",
+    "No compliance certification or production readiness claim is introduced.",
+    "No AIOS runtime, scheduler, gateway, worker execution, billing, secret store, or UI read model is introduced."
+  ],
+  "cli_verify_scope": {
+    "verification_scope": "chain_report_only",
+    "full_proof_bundle_verification": false,
+    "proof_bundle_metadata_closure_performed": true,
+    "policy_trace_refs_verification_performed": true,
+    "signature_verification_performed": false,
+    "anchor_verification_performed": false,
+    "compliance_certification": false
+  },
+  "fixtures": [
+    {
+      "path": "sdk/python/tests/conformance/settlement_precondition_vectors.json",
+      "schema_version": 2,
+      "change": "Added missing/null/empty/malformed amount_hash fail-closed vectors."
+    },
+    {
+      "path": "sdk/python/tests/conformance/FIXTURE_HASHES.lock",
+      "change": "Updated pinned hash for settlement_precondition_vectors.json."
+    }
+  ],
+  "tests_added_or_updated": [
+    "sdk/python/tests/test_proof_bundle.py",
+    "sdk/python/tests/test_proof_bundle_policy_trace.py",
+    "sdk/python/tests/test_settlement_verifier.py",
+    "sdk/python/tests/anchoring/test_anchoring.py",
+    "sdk/python/tests/cli/test_main.py",
+    "sdk/python/tests/test_release_claims.py",
+    "sdk/typescript/test/proof_bundle.test.ts",
+    "sdk/typescript/test/proof_bundle_policy_trace.test.ts",
+    "sdk/typescript/test/settlement_verifier.test.ts",
+    "sdk/typescript/test/anchoring.test.ts"
+  ],
+  "safe_claims_unchanged": [
+    "Alpha-grade dual-SDK tamper-evident evidence substrate.",
+    "Chain/report-oriented CLI verification with metadata and policy_trace_refs closure guardrails.",
+    "Read-only verifier predicates.",
+    "Sidecar signing/anchoring primitives."
+  ],
+  "no_go_claims_unchanged": [
+    "production-ready",
+    "production-grade",
+    "compliance-ready",
+    "EU AI Act compliant",
+    "DORA compliant",
+    "GDPR compliant",
+    "full ProofBundle verifier",
+    "default CLI signed verification",
+    "default CLI anchored verification",
+    "runtime governance",
+    "production governance",
+    "compliance certification",
+    "completed AIOS runtime integration"
+  ],
+  "validation": [
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS",
+      "detail": "700 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS",
+      "detail": "432 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS_WITH_EXISTING_WARNINGS",
+      "detail": "Exited 0 with two existing Biome noNonNullAssertion warnings in test/proof_bundle.test.ts"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "jq empty docs/validation/p1_verifier_closure_20260518.json",
+      "result": "PASS"
+    }
+  ],
+  "release_posture": "P1 verifier closure hardened; still alpha, not production-ready, not compliance-ready"
+}

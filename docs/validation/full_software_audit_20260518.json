@@ -1,0 +1,378 @@
+{
+  "audit_status": "completed_with_auth_blocked_opus_consultation",
+  "audit_date": "2026-05-18",
+  "audit_start_head": "4d1bf9c228f796f7dc7072f8ebc227e27f9d6150",
+  "branch": "main...origin/main",
+  "release_readiness": "alpha-ready with P0 release-claim/verifier blocker; not pre-beta-ready; not production-ready",
+  "p0_blockers": [
+    {
+      "id": "P0-VERIFIER-001",
+      "area": "verifier",
+      "paths": [
+        "sdk/python/src/attestplane/cli/main.py",
+        "sdk/python/src/attestplane/verifier.py",
+        "sdk/typescript/src/verifier.ts"
+      ],
+      "problem": "Public attestplane verify path performs chain/report verification only and can be mistaken for full ProofBundle verification.",
+      "recommended_fix": "Either label it explicitly as chain-only/partial verification or implement full verification states for metadata, signatures, anchors, policy_trace_refs, and claimed verification_method.",
+      "tests_needed": [
+        "CLI rejects or reports partial status for invalid signatures",
+        "CLI rejects or reports partial status for missing anchors when anchor method is claimed",
+        "CLI rejects tampered chain_metadata",
+        "CLI rejects forged policy_trace_refs"
+      ],
+      "release_impact": "Blocks next release claims about full verifier or production-grade proof verification."
+    },
+    {
+      "id": "P0-CLAIMS-001",
+      "area": "release_claims",
+      "paths": [
+        "README.md",
+        "docs/release-notes/v0.0.2-alpha.draft.md"
+      ],
+      "problem": "Release-facing docs contain contradictory shipped/not-shipped status and can imply stronger verifier/anchoring/signing readiness than implementation proves.",
+      "recommended_fix": "Reconcile docs into implemented, partial, deterministic/mock, adapter stub, experimental, roadmap, and production-not-claimed buckets.",
+      "tests_needed": [
+        "policy grep/gate for forbidden release claims"
+      ],
+      "release_impact": "Blocks claim-safe next release messaging."
+    }
+  ],
+  "p1_hardening": [
+    {
+      "id": "P1-CORE-001",
+      "area": "core_primitives",
+      "paths": ["sdk/typescript/src/canonical.ts"],
+      "problem": "TypeScript object key ordering uses UTF-16 sort rather than Unicode code-point order.",
+      "recommended_fix": "Sort object keys by Unicode code point to match Python and the canonical-json spec.",
+      "tests_needed": ["cross-SDK vector with astral-plane object keys"]
+    },
+    {
+      "id": "P1-CORE-002",
+      "area": "core_primitives",
+      "paths": ["sdk/typescript/src/canonical.ts"],
+      "problem": "TypeScript canonicalization accepts undefined, array holes, and unsafe JS integers.",
+      "recommended_fix": "Reject undefined/hole values and reject number integers outside Number.MAX_SAFE_INTEGER; require bigint for int64 boundary values.",
+      "tests_needed": ["negative canonical vectors for undefined, holes, unsafe integers, int64 overflow as number"]
+    },
+    {
+      "id": "P1-CORE-003",
+      "area": "core_primitives",
+      "paths": [
+        "sdk/python/src/attestplane/canonical.py",
+        "sdk/typescript/src/canonical.ts"
+      ],
+      "problem": "Surrogate rejection is not explicit or consistent.",
+      "recommended_fix": "Reject surrogate code points with CanonicalizationError in both SDKs.",
+      "tests_needed": ["unpaired surrogate negative conformance vector"]
+    },
+    {
+      "id": "P1-CORE-004",
+      "area": "core_primitives",
+      "paths": [
+        "sdk/typescript/src/types.ts",
+        "sdk/typescript/src/canonical.ts"
+      ],
+      "problem": "TypeScript Date cannot preserve Python microsecond timestamp contract.",
+      "recommended_fix": "Introduce a timestamp value/string type or explicitly constrain TS-produced events to millisecond timestamps.",
+      "tests_needed": ["cross-SDK timestamp vector with .123456Z"]
+    },
+    {
+      "id": "P1-SCHEMA-001",
+      "area": "payload_schemas",
+      "paths": [
+        "sdk/python/src/attestplane/event_payloads.py",
+        "sdk/typescript/src/event_payloads.ts",
+        "schemas/v1"
+      ],
+      "problem": "Hand validators accept unknown fields while schemas use additionalProperties:false.",
+      "recommended_fix": "Add per-payload allowlists matching schema properties.",
+      "tests_needed": ["extra unknown field negative vectors for lease/policy/replay"]
+    },
+    {
+      "id": "P1-SCHEMA-002",
+      "area": "reason_codes",
+      "paths": [
+        "sdk/python/src/attestplane/event_payloads.py",
+        "sdk/typescript/src/event_payloads.ts",
+        "schemas/v1/*_event.schema.json"
+      ],
+      "problem": "Payload validators do not enforce reason_code regex.",
+      "recommended_fix": "Use reason_code format validators while still allowing unknown caller-domain codes that match the format.",
+      "tests_needed": ["invalid lowercase/too-short reason_code vectors"]
+    },
+    {
+      "id": "P1-VERIFIER-001",
+      "area": "proof_bundle",
+      "paths": [
+        "sdk/python/src/attestplane/verifier.py",
+        "sdk/typescript/src/verifier.ts"
+      ],
+      "problem": "ProofBundle metadata closure is unchecked.",
+      "recommended_fix": "Verify recomputed head hash, head seq, genesis hash, schema version, and verification method.",
+      "tests_needed": ["tampered metadata fixtures"]
+    },
+    {
+      "id": "P1-VERIFIER-002",
+      "area": "proof_bundle",
+      "paths": [
+        "sdk/python/src/attestplane/proof_bundle.py",
+        "sdk/typescript/src/proof_bundle.ts",
+        "sdk/python/src/attestplane/verifier.py",
+        "sdk/typescript/src/verifier.ts"
+      ],
+      "problem": "policy_trace_refs are builder-derived but not verifier-checked.",
+      "recommended_fix": "Check exact absent/present/order/content semantics.",
+      "tests_needed": ["missing, extra, reordered, duplicate, and non-policy refs"]
+    },
+    {
+      "id": "P1-SETTLEMENT-001",
+      "area": "settlement_verifier",
+      "paths": [
+        "sdk/python/src/attestplane/settlement_verifier.py",
+        "sdk/typescript/src/settlement_verifier.ts"
+      ],
+      "problem": "Expected amount hash can pass when the settlement event omits amount_hash.",
+      "recommended_fix": "Fail closed with amount_hash_missing or amount_hash_malformed.",
+      "tests_needed": ["shared settlement vector for missing observed amount_hash"]
+    },
+    {
+      "id": "P1-ANCHOR-001",
+      "area": "anchoring",
+      "paths": [
+        "sdk/python/src/attestplane/anchoring/verifier.py",
+        "sdk/typescript/src/anchoring.ts"
+      ],
+      "problem": "Empty anchor set can still produce ok=true.",
+      "recommended_fix": "Add require_anchors policy or split chain_ok from anchor_ok/full_anchor_status.",
+      "tests_needed": ["empty-anchor negative test under anchored verification policy"]
+    },
+    {
+      "id": "P1-STORAGE-001",
+      "area": "storage",
+      "paths": ["sdk/python/src/attestplane/storage/jsonl.py"],
+      "problem": "JSONL storage direct append does not meet unchanged-on-failure atomicity contract and read_all does not verify chain integrity.",
+      "recommended_fix": "Clarify contract or implement safer append and strict integrity read mode.",
+      "tests_needed": ["fsync failure, tamper, partial-line, concurrent read/append tests"]
+    },
+    {
+      "id": "P1-CONFORMANCE-001",
+      "area": "cross_language_conformance",
+      "paths": [
+        "sdk/python/tests/conformance/negative",
+        "sdk/typescript/test/conformance.test.ts"
+      ],
+      "problem": "Frozen negative chain fixtures are Python-only.",
+      "recommended_fix": "Replay every negative fixture in TypeScript.",
+      "tests_needed": ["TS negative fixture replay"]
+    },
+    {
+      "id": "P1-AUDITOR-001",
+      "area": "auditor_export",
+      "paths": [
+        "sdk/python/src/attestplane/proof_bundle.py",
+        "sdk/typescript/src/proof_bundle.ts"
+      ],
+      "problem": "TypeScript auditor export always emits empty framework_coverage.",
+      "recommended_fix": "Add registry input and coverage rollup parity with Python or explicitly label TS as lacking this feature.",
+      "tests_needed": ["shared auditor export fixture"]
+    },
+    {
+      "id": "P1-EXPORTS-001",
+      "area": "package_exports",
+      "paths": [
+        "sdk/python/src/attestplane/__init__.py",
+        "sdk/python/src/attestplane/anchoring/__init__.py"
+      ],
+      "problem": "__all__ can include optional-extra symbols that are not imported.",
+      "recommended_fix": "Conditionally include optional symbols or provide explicit lazy stubs.",
+      "tests_needed": ["substrate-only install import-star/API introspection tests"]
+    }
+  ],
+  "p2_roadmap": [
+    "Add py_ts_surface_diff.json generation with an intentional allowlist.",
+    "Add first-class governance ingestion builder or clearly keep it schema-plus-recipe only.",
+    "Add multi-writer durable storage backend.",
+    "Add queue durability and quarantine semantics for anchoring/signing workers.",
+    "Move or mark anchoring/testing.py as internal test-support API.",
+    "Expand adapter fixtures with nested datetime/date-like values, Unicode, nulls, arrays, and unknown kinds.",
+    "Expand mutation/fault-injection beyond canonical_text.py and reason_codes.py.",
+    "Upgrade reproducible-build evidence from same-runner self-check to independent dual-runner comparison.",
+    "Add more supply-chain release blockers for SLSA/Rekor only when actually enforced."
+  ],
+  "safe_claims": [
+    "Alpha OSS tamper-evident evidence substrate.",
+    "Restricted canonical bytes and SHA-256 hash-chain primitives for covered fixtures.",
+    "Python and TypeScript SDKs with meaningful but incomplete conformance coverage.",
+    "Payload schemas and validators for observed governance evidence.",
+    "Read-only verifier predicates for replay and settlement observations.",
+    "Sidecar signing and anchoring primitives, with production hardening still required.",
+    "Runtime evidence adapter abstraction plus LangSmith/Langfuse evidence normalization.",
+    "AIOS governance semantics can be represented as evidence shapes without importing AIOS runtime authority."
+  ],
+  "no_go_claims": [
+    "EU AI Act compliant",
+    "DORA compliant",
+    "GDPR compliant",
+    "production-ready",
+    "production-grade runtime governance",
+    "full ProofBundle verifier",
+    "runtime execution authority",
+    "concrete AIOS integration in this OSS repo",
+    "SLSA L3 provenance completed",
+    "anchored verification unless anchors are actually checked",
+    "signed verification unless signatures are actually checked",
+    "schema-shape validation as runtime governance"
+  ],
+  "module_findings": [
+    {"module": "canonical.ts", "severity": "P1", "finding": "Unicode ordering, undefined, unsafe number, surrogate, timestamp risks."},
+    {"module": "verifier.py/verifier.ts", "severity": "P0/P1", "finding": "Partial chain verifier presented through public verify path; metadata closure missing."},
+    {"module": "proof_bundle.py/proof_bundle.ts", "severity": "P1", "finding": "policy_trace_refs not verified; TS auditor coverage missing."},
+    {"module": "settlement_verifier.py/settlement_verifier.ts", "severity": "P1", "finding": "Missing amount_hash can pass despite amount binding claim."},
+    {"module": "event_payloads.py/event_payloads.ts", "severity": "P1", "finding": "Validator/schema drift on unknown fields and reason_code format."},
+    {"module": "anchoring/verifier.py", "severity": "P1", "finding": "Empty anchor set can report ok=true."},
+    {"module": "storage/jsonl.py", "severity": "P1", "finding": "Atomicity and read-integrity contract gaps."},
+    {"module": "__init__.py and anchoring/__init__.py", "severity": "P1", "finding": "Optional-extra export surface can include undefined names."},
+    {"module": "adapters", "severity": "P2", "finding": "Evidence-only boundary mostly sound; fixtures need edge cases."}
+  ],
+  "test_gaps": [
+    "TS negative chain fixture replay.",
+    "ProofBundle metadata tamper fixtures.",
+    "policy_trace_refs verifier fixtures.",
+    "Settlement missing amount_hash vector.",
+    "Canonical astral-key, surrogate, unsafe-number, undefined, timestamp vectors.",
+    "Schema/validator additionalProperties parity tests.",
+    "Reason-code format negative tests.",
+    "Empty-anchor anchored-verification negative test.",
+    "JSONL fsync/tamper/concurrency tests.",
+    "Substrate-only optional-extra export tests.",
+    "Shared auditor-export framework coverage fixture.",
+    "Adapter nested datetime/Unicode/null edge fixtures."
+  ],
+  "schema_gaps": [
+    "Payload schemas use additionalProperties:false but hand validators do not enforce unknown-field rejection.",
+    "reason_code format is declared in schemas but not enforced in validators.",
+    "replay_event deterministic_result AND invariant is code-only and not schema-enforced.",
+    "Event payload schemas and settlement_precondition_claim are not all included in schema meta-validation tests.",
+    "schemas/v1/README.md is stale relative to SCHEMA_HASHES.lock."
+  ],
+  "security_gaps": [
+    "Public verify path can be mistaken for full proof verification.",
+    "Empty anchors can pass aggregate ok.",
+    "DigiCert default URL uses HTTP.",
+    "FileKeyProvider leaks key path in provider_id and errors.",
+    "JSONL storage lacks strict integrity validation on read.",
+    "Worker exception paths can lose queued work or hide failures.",
+    "Reproducible-build proof is same-runner self-check, not independent dual-runner proof."
+  ],
+  "cross_language_gaps": [
+    "TS canonical key ordering differs at non-BMP keys.",
+    "TS Date cannot represent Python microsecond timestamps.",
+    "TS accepts undefined and unsafe number values.",
+    "TS auditor export omits framework coverage.",
+    "TS negative chain fixtures missing.",
+    "No machine-gated Py/TS public surface diff.",
+    "Adapter hashing fixtures do not cover non-JSON-native values."
+  ],
+  "aios_absorption_candidates": [
+    "lease lifecycle evidence semantics",
+    "policy decision trace",
+    "verification-before-settlement predicate",
+    "replay timeline",
+    "event causality/correlation/causation refs",
+    "worker/runtime adapter evidence",
+    "audit projection",
+    "capability boundary as evidence",
+    "settlement verifier evidence",
+    "governance timeline",
+    "evidence pack"
+  ],
+  "aios_absorption_rejected": [
+    "Rust control plane runtime",
+    "worker scheduler",
+    "distributed execution protocol",
+    "gateway authority",
+    "UI read model",
+    "real runtime side effects",
+    "secret store",
+    "billing or settlement execution",
+    "concrete AIOS adapter in the OSS substrate repo"
+  ],
+  "verification": [
+    {
+      "command": "git status --short --branch",
+      "status": "passed_at_start",
+      "summary": "## main...origin/main"
+    },
+    {
+      "command": "git rev-parse HEAD",
+      "status": "passed",
+      "summary": "4d1bf9c228f796f7dc7072f8ebc227e27f9d6150"
+    },
+    {
+      "command": "ask_opus.sh reviewer ...",
+      "status": "blocked",
+      "summary": "Not logged in - Please run /login"
+    },
+    {
+      "command": "./scripts/check-schema-hashes.sh",
+      "status": "passed_by_agent_d",
+      "summary": "AP-EVD/1.0 schemas: 8 files, all canonical hashes match"
+    },
+    {
+      "command": ".venv/bin/pytest",
+      "status": "passed",
+      "summary": "680 passed in 12.30s"
+    },
+    {
+      "command": ".venv/bin/ruff check src tests",
+      "status": "passed",
+      "summary": "All checks passed"
+    },
+    {
+      "command": ".venv/bin/mypy",
+      "status": "passed",
+      "summary": "Success: no issues found in 45 source files"
+    },
+    {
+      "command": "npm test",
+      "status": "passed",
+      "summary": "24 test files and 415 tests passed"
+    },
+    {
+      "command": "npm run lint",
+      "status": "passed_with_warnings",
+      "summary": "Biome exited 0 with two existing noNonNullAssertion warnings in test/proof_bundle.test.ts"
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "passed",
+      "summary": "tsc --noEmit passed"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "status": "passed",
+      "summary": "8 schema hashes match"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "status": "passed",
+      "summary": "10 fixture hashes match"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "status": "passed",
+      "summary": "13 Accepted ADR Decision sections match"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "status": "passed",
+      "summary": "All policy invariant checks passed"
+    },
+    {
+      "command": "jq empty docs/validation/full_software_audit_20260518.json",
+      "status": "passed",
+      "summary": "JSON parses successfully"
+    }
+  ]
+}

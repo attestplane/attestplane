@@ -3,10 +3,10 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
-import { canonicalize } from '../src/canonical.js';
 import {
   GENESIS_HASH,
   SCHEMA_VERSION,
+  canonicalizeAuditEvent,
   chainExtend,
   genesisHead,
   hashEvent,
@@ -61,10 +61,10 @@ describe('chainExtend', () => {
 });
 
 describe('hashEvent', () => {
-  it('equals sha256(canonicalize(event))', () => {
+  it('equals sha256(canonicalizeAuditEvent(event))', () => {
     const draft = makeEventDraft({ event_type: 't', actor: 'a', payload: { x: 1 } });
     const chained = chainExtend(genesisHead(), draft, { now: FIXED_NOW, event_id: 'e' });
-    const expected = createHash('sha256').update(canonicalize(chained.event)).digest();
+    const expected = createHash('sha256').update(canonicalizeAuditEvent(chained.event)).digest();
     expect(chained.event_hash).toEqual(new Uint8Array(expected));
   });
 });

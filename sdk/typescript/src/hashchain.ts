@@ -27,7 +27,11 @@ export function genesisHead(): ChainHead {
 }
 
 export function hashEvent(event: AuditEvent): Uint8Array {
-  return new Uint8Array(createHash('sha256').update(canonicalize(event)).digest());
+  return new Uint8Array(createHash('sha256').update(canonicalizeAuditEvent(event)).digest());
+}
+
+export function canonicalizeAuditEvent(event: AuditEvent): Uint8Array {
+  return canonicalize(canonicalEvent(event));
 }
 
 export interface ChainExtendOptions {
@@ -109,4 +113,28 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
     if (a[i] !== b[i]) return false;
   }
   return true;
+}
+
+function canonicalEvent(event: AuditEvent): Record<string, unknown> {
+  const timestamp = (event as { readonly timestamp: unknown }).timestamp;
+  return {
+    ...event,
+    timestamp:
+      timestamp instanceof Date ? formatDateUtcMicroseconds(timestamp, '$.timestamp') : timestamp,
+  };
+}
+
+function formatDateUtcMicroseconds(value: Date, path: string): string {
+  const ms = value.getTime();
+  if (Number.isNaN(ms)) {
+    throw new Error(`${path}: invalid Date (NaN time value)`);
+  }
+  const yyyy = value.getUTCFullYear().toString().padStart(4, '0');
+  const mm = (value.getUTCMonth() + 1).toString().padStart(2, '0');
+  const dd = value.getUTCDate().toString().padStart(2, '0');
+  const hh = value.getUTCHours().toString().padStart(2, '0');
+  const mi = value.getUTCMinutes().toString().padStart(2, '0');
+  const ss = value.getUTCSeconds().toString().padStart(2, '0');
+  const milli = value.getUTCMilliseconds().toString().padStart(3, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}.${milli}000Z`;
 }

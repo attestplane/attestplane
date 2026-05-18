@@ -30,6 +30,8 @@ from typing import Any, Final
 INT64_MIN: Final[int] = -(2**63)
 INT64_MAX: Final[int] = 2**63 - 1
 _ASCII_CONTROL_LIMIT: Final[int] = 0x20
+_SURROGATE_MIN: Final[int] = 0xD800
+_SURROGATE_MAX: Final[int] = 0xDFFF
 
 _ESCAPES: Final[dict[int, str]] = {
     0x08: "\\b",
@@ -113,6 +115,10 @@ def _emit_string(value: str, out: list[str], *, path: str) -> None:
     out.append('"')
     for ch in value:
         code = ord(ch)
+        if _SURROGATE_MIN <= code <= _SURROGATE_MAX:
+            raise CanonicalizationError(
+                f"{path}: string contains lone surrogate code point"
+            )
         escape = _ESCAPES.get(code)
         if escape is not None:
             out.append(escape)

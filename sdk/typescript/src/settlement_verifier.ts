@@ -34,6 +34,8 @@ export interface ChainEventForSettlement {
   readonly payload: Record<string, unknown>;
 }
 
+const HEX64 = /^[0-9a-f]{64}$/;
+
 export function checkSettlementPrecondition(
   chainEvents: readonly ChainEventForSettlement[],
   claim: SettlementPreconditionClaim,
@@ -126,15 +128,40 @@ export function checkSettlementPrecondition(
   }
   if (
     claim.expected_settlement_amount_hash !== undefined &&
-    settlementAmountHash !== null &&
-    settlementAmountHash !== claim.expected_settlement_amount_hash
+    !HEX64.test(claim.expected_settlement_amount_hash)
   ) {
     return {
       ok: false,
-      reason: `amount_hash_mismatch: claim expected ${claim.expected_settlement_amount_hash}, settlement event reports ${settlementAmountHash}`,
+      reason: 'expected_settlement_amount_hash_malformed',
       lease_consumed_seq: leaseConsumedSeq,
       settlement_event_seq: settlementEventSeq,
     };
+  }
+  if (claim.expected_settlement_amount_hash !== undefined) {
+    if (settlementAmountHash === null) {
+      return {
+        ok: false,
+        reason: 'amount_hash_missing',
+        lease_consumed_seq: leaseConsumedSeq,
+        settlement_event_seq: settlementEventSeq,
+      };
+    }
+    if (!HEX64.test(settlementAmountHash)) {
+      return {
+        ok: false,
+        reason: `amount_hash_malformed: settlement event reports ${JSON.stringify(settlementAmountHash)}`,
+        lease_consumed_seq: leaseConsumedSeq,
+        settlement_event_seq: settlementEventSeq,
+      };
+    }
+    if (settlementAmountHash !== claim.expected_settlement_amount_hash) {
+      return {
+        ok: false,
+        reason: `amount_hash_mismatch: claim expected ${claim.expected_settlement_amount_hash}, settlement event reports ${settlementAmountHash}`,
+        lease_consumed_seq: leaseConsumedSeq,
+        settlement_event_seq: settlementEventSeq,
+      };
+    }
   }
 
   return {

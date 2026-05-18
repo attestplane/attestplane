@@ -2,8 +2,12 @@
 
 Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 
-> **Status: alpha (v0.0.1).** APIs may change before v0.1.0. The canonical
+> **Status: alpha (v0.0.2a0).** APIs may change before v0.1.0. The canonical
 > hash format and conformance vectors, however, are frozen — see [ADR-0002][adr2].
+> The current CLI `attestplane verify` path is chain/report-oriented with
+> ProofBundle metadata and `policy_trace_refs` closure checks. It does not
+> perform full ProofBundle, signature, anchor, or compliance certification
+> verification.
 
 See the [project README][project-readme] for background, governance, and
 trademark policy. The full design rationale for this SDK lives in [ADR-0002][adr2].
@@ -18,6 +22,16 @@ pip install attestplane
 ```
 
 Requires Python ≥ 3.11.
+
+Optional sidecar extras are deliberately separate from the core substrate:
+
+```bash
+pip install 'attestplane[anchor]'   # RFC-3161/OCSP/HTTP anchoring helpers
+pip install 'attestplane[signing]'  # Ed25519 signing helpers + YAML trust roots
+```
+
+`import attestplane` works without those extras. Symbols that require optional
+dependencies are exported only when the corresponding extra is installed.
 
 ## Quickstart
 
@@ -44,26 +58,26 @@ assert sub.verify().ok      # True
 
 - An **append-only** audit log with cryptographic integrity (SHA-256 hash chain).
 - Built-in fields designed toward **EU AI Act Art. 12(2)(a)** auditability from day one.
-- A **deterministic canonical format** that future TypeScript and Rust SDKs
-  will produce byte-identical hashes for, anchored by the conformance vector
-  file shipped in this package.
+- A **deterministic canonical format** that the TypeScript SDK also verifies;
+  future SDKs must match the same conformance vector file shipped in this
+  package.
 - Strong **GDPR pseudonymization typing** via `SubjectRef`.
 
 ## What this SDK does NOT give you (yet)
 
 | Feature | Where |
 |---|---|
-| Durable storage | Anticipated ADR-0004 (M6) — bring your own DB |
-| Multi-process concurrency | Anticipated ADR-0004 — single-process for v0.0.1 |
-| RFC 3161 TSA anchoring | Design locked by [ADR-0003](https://github.com/attestplane/attestplane/blob/main/docs/adr/0003-tsa-rfc-3161-anchoring.md); code ships v0.1 / M5 |
-| Rekor / Sigstore submission as redundant anchor | Anticipated ADR-0005 (M6) |
-| Cryptographic signatures on events | Anticipated ADR-0004 (M7) |
+| Production storage guarantees | JSONL exists as an alpha backend; validate durability and concurrency for your deployment |
+| Multi-process concurrency | Bring your own locking/backend policy for alpha deployments |
+| Full ProofBundle verification | Current CLI is chain/report-oriented only |
+| Signed or anchored CLI verification | Signing/anchoring are sidecar primitives unless an explicit verifier path performs those checks |
 | Retention / truncation policy | Out of scope — deployer responsibility |
 
 ## EU AI Act Article 12(2)(a) mapping
 
 The four enumerated subitems of Art. 12(2)(a) are surfaced as `EventDraft`
-fields. All are optional in v0.0.1 — populate the ones your use case requires.
+fields. All remain optional in v0.0.2a0 — populate the ones your use case
+requires.
 
 | Art. 12(2)(a) language | `EventDraft` field | Type |
 |---|---|---|
@@ -85,7 +99,7 @@ canonicalization is stricter than vanilla JCS (RFC 8785):
 | Allowed in `payload` | Forbidden in `payload` |
 |---|---|
 | UTF-8 NFC strings | Other Unicode normalization forms |
-| Signed-int64 integers | Floats, NaN, ±Inf, ±0 |
+| Signed-int64 integers | Floats, NaN, ±Inf |
 | `True` / `False` / `None` | — |
 | `dict` (string keys, sorted on emit) | Non-string keys; duplicate keys |
 | `list` / `tuple` (order preserved) | — |

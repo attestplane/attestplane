@@ -153,6 +153,64 @@
         "observed_at": "2026-05-17T12:00:00.000000Z",
         "signature": "deadbeef"
       }
+    },
+    {
+      "name": "unknown_top_level_field",
+      "expected_error_contains": "unknown field",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "replay_workload_body": "not-allowed"
+      }
+    },
+    {
+      "name": "missing_schema_version",
+      "expected_error_contains": "missing required fields",
+      "payload": {
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z"
+      }
+    },
+    {
+      "name": "null_optional_snapshot_id_ref",
+      "expected_error_contains": "snapshot_id_ref",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "snapshot_id_ref": null
+      }
+    },
+    {
+      "name": "invalid_reason_code_format",
+      "expected_error_contains": "reason_code",
+      "payload": {
+        "replay_event_schema_version": 1,
+        "replay_run_id": "x",
+        "original_run_id": "y",
+        "input_hash_match": true,
+        "artifact_hash_match": true,
+        "audit_chain_match": true,
+        "deterministic_result": true,
+        "observed_at": "2026-05-17T12:00:00.000000Z",
+        "reason_code": "bad code"
+      }
     }
   ],
   "verifier_vectors": [

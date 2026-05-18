@@ -47,6 +47,19 @@ def test_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
     assert "attestplane" in out
 
 
+def test_verify_help_declares_partial_scope(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["verify", "--help"])
+    assert exc_info.value.code == 0
+    out = capsys.readouterr().out
+    normalized = " ".join(out.split())
+    assert "chain/report-oriented" in normalized
+    assert "not a full verifier" in normalized
+    assert "policy_trace_refs closure" in normalized
+    assert "signature verification" in normalized
+    assert "anchor verification" in normalized
+
+
 def test_doctor_command(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["doctor"])
     assert rc == 0
@@ -84,6 +97,8 @@ def test_export_then_verify_roundtrip(
     out = capsys.readouterr().out
     assert out.startswith("OK")
     assert "'demo'" in out
+    assert "MODE: chain/report-oriented, not a full verifier" in out
+    assert "policy_trace_refs closure" in out
 
 
 def test_export_then_verify_json_output(
@@ -101,6 +116,14 @@ def test_export_then_verify_json_output(
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is True
     assert payload["event_count"] == 2
+    assert payload["verification_scope"] == "chain_report_only"
+    assert payload["full_proof_bundle_verification"] is False
+    assert payload["proof_bundle_metadata_closure_performed"] is True
+    assert payload["policy_trace_refs_verification_performed"] is True
+    assert payload["signature_verification_performed"] is False
+    assert payload["anchor_verification_performed"] is False
+    assert payload["compliance_certification"] is False
+    assert "not a full verifier" in payload["warning"]
 
 
 def test_verify_detects_tampered_bundle(

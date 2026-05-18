@@ -27,8 +27,8 @@ def _load_vectors() -> dict:
 
 def test_vectors_file_loads() -> None:
     v = _load_vectors()
-    assert v["$schema_version"] == 1
-    assert len(v["verifier_vectors"]) == 8
+    assert v["$schema_version"] == 2
+    assert len(v["verifier_vectors"]) == 12
 
 
 @pytest.mark.parametrize(
@@ -74,6 +74,24 @@ def test_pure_function_identical_results() -> None:
     r2 = check_settlement_precondition(chain, claim)
     assert r1 == r2
     assert r1.ok is True
+
+
+def test_read_only_invariant() -> None:
+    chain = [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "a" * 64}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "s", "amount_hash": "b" * 64}},
+    ]
+    before = json.loads(json.dumps(chain))
+    claim = SettlementPreconditionClaim(
+        claim_kind="settlement_precondition",
+        lease_id_hash="a" * 64,
+        settlement_run_id="s",
+        expected_settlement_amount_hash="b" * 64,
+    )
+    assert check_settlement_precondition(chain, claim).ok is True
+    assert chain == before
 
 
 def test_handles_malformed_chain() -> None:

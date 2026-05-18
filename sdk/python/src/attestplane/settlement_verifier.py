@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+_HEX64 = frozenset("0123456789abcdef")
+
 
 @dataclass(frozen=True, slots=True)
 class SettlementPreconditionClaim:
@@ -155,20 +157,48 @@ def check_settlement_precondition(
         )
     if (
         claim.expected_settlement_amount_hash is not None
-        and settlement_amount_hash is not None
-        and settlement_amount_hash != claim.expected_settlement_amount_hash
+        and (
+            not isinstance(claim.expected_settlement_amount_hash, str)
+            or len(claim.expected_settlement_amount_hash) != 64
+            or any(c not in _HEX64 for c in claim.expected_settlement_amount_hash)
+        )
     ):
         return SettlementVerificationResult(
             ok=False,
-            reason=(
-                f"amount_hash_mismatch: claim expected "
-                f"{claim.expected_settlement_amount_hash}, settlement "
-                f"event reports {settlement_amount_hash}"
-            ),
+            reason="expected_settlement_amount_hash_malformed",
             lease_consumed_seq=lease_consumed_seq,
             settlement_event_seq=settlement_event_seq,
         )
-
+    if claim.expected_settlement_amount_hash is not None:
+        if settlement_amount_hash is None:
+            return SettlementVerificationResult(
+                ok=False,
+                reason="amount_hash_missing",
+                lease_consumed_seq=lease_consumed_seq,
+                settlement_event_seq=settlement_event_seq,
+            )
+        if (
+            not isinstance(settlement_amount_hash, str)
+            or len(settlement_amount_hash) != 64
+            or any(c not in _HEX64 for c in settlement_amount_hash)
+        ):
+            return SettlementVerificationResult(
+                ok=False,
+                reason=f"amount_hash_malformed: settlement event reports {settlement_amount_hash!r}",
+                lease_consumed_seq=lease_consumed_seq,
+                settlement_event_seq=settlement_event_seq,
+            )
+        if settlement_amount_hash != claim.expected_settlement_amount_hash:
+            return SettlementVerificationResult(
+                ok=False,
+                reason=(
+                    f"amount_hash_mismatch: claim expected "
+                    f"{claim.expected_settlement_amount_hash}, settlement "
+                    f"event reports {settlement_amount_hash}"
+                ),
+                lease_consumed_seq=lease_consumed_seq,
+                settlement_event_seq=settlement_event_seq,
+            )
     return SettlementVerificationResult(
         ok=True,
         reason=None,

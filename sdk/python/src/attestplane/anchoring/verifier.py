@@ -57,6 +57,7 @@ CertStatus = Literal[
     "EXPIRED_VALID_AT_ISSUANCE",
     "REVOKED",
 ]
+AnchorVerificationStatus = Literal["verified", "failed", "not_performed"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,10 +91,13 @@ class AnchorVerificationResult:
     anchor_results: tuple[SingleAnchorResult, ...]
     """One entry per (anchor record, chain) pair, in input order."""
 
+    verification_status: AnchorVerificationStatus
+    """Explicit aggregate status; empty anchor evidence is not a successful anchored verification."""
+
     @property
     def ok(self) -> bool:
-        """True iff chain verifies AND every anchor verifies."""
-        return self.chain_ok and all(a.valid for a in self.anchor_results)
+        """True iff chain verifies AND at least one supplied anchor verifies."""
+        return self.chain_ok and self.verification_status == "verified"
 
 
 def verify_chain_with_anchors(
@@ -398,6 +402,12 @@ def verify_chain_with_anchors(
         anchored_seqs.add(anchor.anchored_seq)
 
     unanchored_seqs = seqs_in_chain - anchored_seqs
+    if not anchor_results:
+        verification_status: AnchorVerificationStatus = "not_performed"
+    elif all(a.valid for a in anchor_results):
+        verification_status = "verified"
+    else:
+        verification_status = "failed"
 
     return AnchorVerificationResult(
         chain_ok=chain_result.ok,
@@ -405,11 +415,13 @@ def verify_chain_with_anchors(
         anchored_seqs=frozenset(anchored_seqs),
         unanchored_seqs=frozenset(unanchored_seqs),
         anchor_results=tuple(anchor_results),
+        verification_status=verification_status,
     )
 
 
 __all__ = [
     "AnchorVerificationResult",
+    "AnchorVerificationStatus",
     "CertStatus",
     "SingleAnchorResult",
     "verify_chain_with_anchors",

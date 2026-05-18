@@ -31,7 +31,7 @@ def test_vectors_file_loads() -> None:
     v = _load_vectors()
     assert v["$schema_version"] == 1
     assert len(v["positive_vectors"]) == 4
-    assert len(v["negative_vectors"]) == 6
+    assert len(v["negative_vectors"]) == 10
     assert len(v["verifier_vectors"]) == 4
 
 

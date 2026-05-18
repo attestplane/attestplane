@@ -1,0 +1,120 @@
+{
+  "audit_source": [
+    "docs/validation/full_software_audit_20260518.md",
+    "docs/validation/full_software_audit_20260518.json"
+  ],
+  "date": "2026-05-18",
+  "p0_scope": [
+    "Align public release claims with alpha substrate status.",
+    "Mark attestplane verify as chain/report-oriented partial verification.",
+    "Prevent claims of full ProofBundle, signed, anchored, or compliance certification verification."
+  ],
+  "modified_files": [
+    "README.md",
+    "docs/policy/allowed_claims.md",
+    "docs/policy/forbidden_claims.md",
+    "docs/release-notes/v0.0.2-alpha.draft.md",
+    "sdk/python/README.md",
+    "sdk/python/src/attestplane/cli/main.py",
+    "sdk/python/tests/cli/test_main.py",
+    "sdk/python/tests/test_release_claims.py",
+    "sdk/typescript/README.md",
+    "docs/validation/p0_claim_tightening_20260518.md",
+    "docs/validation/p0_claim_tightening_20260518.json"
+  ],
+  "cli_verify_scope": {
+    "verification_scope": "chain_report_only",
+    "full_proof_bundle_verification": false,
+    "signature_verification_performed": false,
+    "anchor_verification_performed": false,
+    "policy_trace_refs_verification_performed": false,
+    "compliance_certification": false
+  },
+  "retained_limitations": [
+    "CLI verify remains chain/report-oriented.",
+    "No full ProofBundle verification is implemented by this change.",
+    "No signature verification is performed by the default CLI verify path.",
+    "No anchor verification is performed by the default CLI verify path.",
+    "No policy_trace_refs closure verification is performed by the default CLI verify path.",
+    "No compliance certification is issued."
+  ],
+  "safe_claims": [
+    "Alpha-grade dual-SDK tamper-evident evidence substrate.",
+    "Restricted canonicalization.",
+    "SHA-256 hash-chain primitives.",
+    "Evidence payload schemas.",
+    "Sidecar signing/anchoring primitives.",
+    "Read-only verifier predicates.",
+    "Chain/report-oriented CLI verify path."
+  ],
+  "no_go_claims": [
+    "production-ready",
+    "production-grade",
+    "compliance-ready",
+    "EU AI Act compliant",
+    "DORA compliant",
+    "GDPR compliant",
+    "full ProofBundle verifier",
+    "signed verification by default CLI",
+    "anchored verification by default CLI",
+    "compliance certification",
+    "runtime governance",
+    "production governance",
+    "completed AIOS runtime integration"
+  ],
+  "validation": [
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS",
+      "detail": "683 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS",
+      "detail": "415 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS_WITH_EXISTING_WARNINGS",
+      "detail": "Exited 0 with two existing Biome noNonNullAssertion warnings in test/proof_bundle.test.ts"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest sdk/python/tests/test_release_claims.py sdk/python/tests/cli/test_main.py -q",
+      "result": "PASS",
+      "detail": "16 passed"
+    }
+  ],
+  "release_posture": "safe alpha release posture after claim tightening; not pre-beta-ready and not production-ready"
+}

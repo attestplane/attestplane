@@ -2,9 +2,13 @@
 
 Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 
-> **Status: alpha (v0.0.1).** Wire format is byte-locked against the Python
+> **Status: alpha (v0.0.2-alpha.0).** Wire format is byte-locked against the Python
 > SDK's [`vectors.json`](../python/tests/conformance/vectors.json) — see
 > [ADR-0002][adr2]. APIs may still change before v0.1.0.
+> The current Python CLI `attestplane verify` path is chain/report-oriented
+> with ProofBundle metadata and `policy_trace_refs` closure checks. It does
+> not perform full ProofBundle, signature, anchor, or compliance
+> certification verification.
 
 See the [project README][project-readme] for background, governance, and
 trademark policy.
@@ -15,15 +19,15 @@ trademark policy.
 ## Install
 
 ```bash
-# Pin the alpha explicitly; v0.0.1 is on the 'alpha' dist-tag.
+# Pin the alpha explicitly; v0.0.2-alpha.0 is on the 'alpha' dist-tag.
 npm install @attestplane/attestplane@alpha
 # or, equivalent:
-npm install @attestplane/attestplane@0.0.1
+npm install @attestplane/attestplane@0.0.2-alpha.0
 ```
 
 `npm install @attestplane/attestplane` without a tag also resolves to
-0.0.1 today (because it is the only published version) but treat the
-alpha tag as the authoritative pre-release channel until v0.1.0 ships.
+the current published dist-tag. Treat the `alpha` tag as the authoritative
+pre-release channel until v0.1.0 ships.
 
 Requires Node.js ≥ 22.
 
@@ -65,6 +69,8 @@ will reproduce the exact byte value from the same input.
 - Built-in fields designed toward **EU AI Act Art. 12(2)(a)** auditability from day one.
 - Byte-identical canonical format compatible with the Python SDK.
 - Strong **GDPR pseudonymization typing** via `SubjectRef`.
+- Alpha-grade verifier predicates; do not treat this SDK as production-ready
+  governance, compliance certification, or runtime execution authority.
 
 ## API conventions
 
@@ -83,17 +89,18 @@ Payloads must satisfy the restricted profile of ADR-0002:
 |---|---|
 | `string` (NFC-normalized UTF-8) | non-NFC strings |
 | `number` (integer, safe range) | floats, `NaN`, `Infinity` |
-| `bigint` (within signed 64-bit range) | bigint outside int64 |
+| `number` values must be safe integers | unsafe integers; direct `bigint` |
 | `true` / `false` / `null` | — |
 | plain objects (string keys) | non-string keys; duplicate keys |
-| arrays | — |
+| arrays | sparse arrays; `undefined` items |
 | `Uint8Array` (emits as base64url no padding) | other byte types |
-| `Date` (UTC, encoded as RFC 3339 µs `Z`) | invalid Date |
+| explicit RFC 3339 timestamp strings | direct `Date` objects in canonical JSON payloads |
 
 Violations throw `CanonicalizationError` at append time.
 
-For sub-millisecond precision, encode the timestamp as a string (JS `Date`
-only stores millisecond resolution).
+`AttestSubstrate.append()` accepts `Date` at the typed SDK boundary for
+`AuditEvent.timestamp` and converts it explicitly before hashing. Payloads
+should carry timestamps as strings when they need to be part of canonical JSON.
 
 ## Development
 
