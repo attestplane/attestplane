@@ -55,17 +55,17 @@ def test_translates_tool_run() -> None:
 def test_redacts_inputs_and_outputs() -> None:
     """The raw input/output strings MUST NOT appear in the payload."""
     adapter = LangSmithAdapter()
-    secret = "secret_api_key=sk-abc123xyz"
+    redacted_value = "REDACTED_FOR_TEST"
     run = LangSmithRun(
         id="run-2", name="tool", run_type="tool",
         start_time=_NOW, end_time=_NOW,
-        inputs={"sensitive": secret},
-        outputs={"sensitive_result": secret},
+        inputs={"sensitive": redacted_value},
+        outputs={"sensitive_result": redacted_value},
     )
     draft = adapter.translate(run)
 
     payload_str = json.dumps(draft.payload)
-    assert secret not in payload_str
+    assert redacted_value not in payload_str
     # But the hashes are present.
     assert "arguments_hash" in draft.payload
     assert "result_hash" in draft.payload
