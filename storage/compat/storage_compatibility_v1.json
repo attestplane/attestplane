@@ -1,0 +1,104 @@
+{
+  "baseline_release": "v0.0.2-alpha",
+  "fixtures": [
+    {
+      "expected_issue_code": null,
+      "negative": false,
+      "path": "storage/compat/fixtures/jsonl_valid_v1.jsonl"
+    },
+    {
+      "expected_issue_code": "partial_trailing_line",
+      "negative": true,
+      "path": "storage/compat/fixtures/jsonl_partial_tail_v1.jsonl"
+    },
+    {
+      "expected_issue_code": "malformed_json",
+      "negative": true,
+      "path": "storage/compat/fixtures/jsonl_malformed_middle_v1.jsonl"
+    },
+    {
+      "expected_issue_code": "unknown_record_version",
+      "negative": true,
+      "path": "storage/compat/fixtures/jsonl_unknown_record_version_v1.jsonl"
+    },
+    {
+      "expected_issue_code": null,
+      "negative": false,
+      "path": "storage/compat/fixtures/storage_scan_issue_v1.json"
+    },
+    {
+      "expected_issue_code": null,
+      "negative": false,
+      "path": "storage/compat/fixtures/export_refusal_corrupt_storage_v1.json"
+    }
+  ],
+  "formats": [
+    {
+      "canonicalization_required": false,
+      "kind": "record_format",
+      "name": "chained_event_jsonl.v1",
+      "newline_terminated": true,
+      "optional_fields": [
+        "storage_record_version"
+      ],
+      "required_fields": [
+        "seq",
+        "prev_hash_hex",
+        "event_hash_hex",
+        "event"
+      ],
+      "unknown_field_policy": "preserve_ignored_top_level_fields_except_unknown_storage_record_version_fails_closed"
+    },
+    {
+      "kind": "diagnostic_format",
+      "known_codes": [
+        "partial_trailing_line",
+        "invalid_utf8",
+        "malformed_json",
+        "malformed_record",
+        "missing_fields",
+        "malformed_event",
+        "unknown_record_version"
+      ],
+      "name": "storage_scan_issue.v1",
+      "required_fields": [
+        "kind",
+        "line_no",
+        "byte_offset",
+        "detail"
+      ]
+    },
+    {
+      "corrupt_storage_export_policy": "refuse_by_default",
+      "kind": "export_format",
+      "name": "proof_bundle_export.v1"
+    }
+  ],
+  "migration_policy": {
+    "default": "no_destructive_migration",
+    "destructive_repair": "not_enabled_by_default",
+    "downgrade_support": false,
+    "operator_confirmed_repair_required": true,
+    "unknown_issue_code": "preserve_and_report",
+    "unknown_record_version": "fail_closed"
+  },
+  "no_go_claims": [
+    "production storage",
+    "ACID",
+    "database-grade durability",
+    "multi-writer correctness",
+    "automatic destructive repair"
+  ],
+  "schema_version": "storage_compatibility_manifest.v1",
+  "storage_backends": [
+    {
+      "compatibility_policy": "read_current_minor_and_fail_closed_on_unknown_storage_record_version",
+      "destructive_repair": "not_implemented",
+      "multi_writer_safe": false,
+      "name": "jsonl",
+      "record_format": "chained_event_jsonl.v1",
+      "repair_default": "read_only_report",
+      "status": "alpha_opt_in"
+    }
+  ]
+}

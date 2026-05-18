@@ -1,0 +1,100 @@
+{
+  "artifact_manifest": "release/artifacts/v0.0.2-alpha.manifest.json",
+  "checksum_helper": "scripts/release/generate_checksums.py",
+  "claims": {
+    "certified_provenance": false,
+    "production_supply_chain_security": false,
+    "slsa_level_claimed": null
+  },
+  "commands": [
+    {
+      "command": "ask_opus.sh architect \"Attestplane P2.5 release provenance pipeline design review...\"",
+      "result": "PASS advisory review completed; core manifest/checksum direct path approved with dry-run/explicit-execute guardrails"
+    },
+    {
+      "command": "scripts/check-release-provenance.sh",
+      "result": "PASS manifest check passed; checksum dry-run skipped because release/artifacts/files is absent"
+    },
+    {
+      "command": "scripts/check-fault-injection.sh",
+      "result": "PASS active=50 covered=50 roadmap_or_language_specific=1; Python fault tests 40 passed; TypeScript fault tests 39 passed"
+    },
+    {
+      "command": "scripts/check-public-api.sh",
+      "result": "PASS python=127 symbols typescript=193 exports allowlist=138 asymmetries"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS 780 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS no issues in 45 source files"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS 502 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS 8 schema hashes match"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS 10 fixture hashes match"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS 13 frozen ADR sections match"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS 13 Py/TS byte-identical cases"
+    },
+    {
+      "command": "jq empty docs/validation/p2_release_provenance_pipeline_20260518.json release/artifacts/*.json api/public/*.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    },
+    {
+      "command": "ruby -e ... .github/workflows/provenance.yml .github/workflows/sign-release.yml",
+      "result": "PASS YAML parse"
+    }
+  ],
+  "cosign_keyless": "dry_run_helper_added",
+  "gate": "release_provenance_pipeline",
+  "github_release_asset_upload": "dry_run_helper_added",
+  "manifest_checker": "scripts/release/check_release_artifact_manifest.py",
+  "no_go_claims_unchanged": true,
+  "phase": "P2.5",
+  "release": "v0.0.2-alpha",
+  "remaining_p2": [
+    "Decide when release asset signatures become required.",
+    "Decide whether SBOMs should be uploaded as GitHub Release assets.",
+    "Decide whether GitHub Artifact Attestations should become a blocking release gate.",
+    "Add concrete checksum entries when future releases attach Python/npm artifacts."
+  ],
+  "safe_claims_unchanged": true,
+  "status": "PASS",
+  "violations": [],
+  "workflow": ".github/workflows/sign-release.yml and .github/workflows/provenance.yml are manual dry-run first workflows"
+}

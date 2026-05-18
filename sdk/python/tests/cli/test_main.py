@@ -76,6 +76,9 @@ def test_doctor_command_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert payload["ok"] is True
     assert payload["imports"] == "ok"
     assert payload["eu_ai_act_art12_entries"] == 8
+    assert payload["storage"]["jsonl_backend_available"] is True
+    assert payload["storage"]["multi_writer_safe"] is False
+    assert payload["storage"]["concurrent_append_behavior"] == "single_process_thread_lock_only"
 
 
 def test_export_then_verify_roundtrip(
@@ -200,6 +203,25 @@ def test_inspect_malformed_file(
     assert rc == 1
     out = capsys.readouterr().out
     assert "FAIL" in out
+    assert "storage corruption" in out
+
+
+def test_inspect_partial_jsonl_reports_storage_corruption_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    chain_path = tmp_path / "chain.jsonl"
+    _seed_jsonl_chain(chain_path, n=1)
+    chain_path.write_bytes(chain_path.read_bytes() + b'{"seq":1')
+
+    rc = main(["inspect", str(chain_path), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["error"] == "storage_corruption"
+    assert payload["storage_health"] == "corrupt"
+    assert payload["valid_prefix_event_count"] == 1
+    assert payload["issue"]["kind"] == "partial_trailing_line"
 
 
 def test_export_command_emits_summary(
@@ -215,3 +237,22 @@ def test_export_command_emits_summary(
     out = capsys.readouterr().out
     assert "wrote" in out
     assert "2 events" in out
+
+
+def test_export_refuses_corrupt_jsonl(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    chain_path = tmp_path / "chain.jsonl"
+    bundle_path = tmp_path / "bundle.json"
+    _seed_jsonl_chain(chain_path, n=1)
+    chain_path.write_text(chain_path.read_text(encoding="utf-8") + "not valid json\n", encoding="utf-8")
+
+    rc = main(["export", str(chain_path), "--out", str(bundle_path), "--json"])
+
+    assert rc == 1
+    assert not bundle_path.exists()
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["error"] == "storage_corruption"
+    assert payload["valid_prefix_event_count"] == 1
+    assert payload["issue"]["kind"] == "malformed_json"

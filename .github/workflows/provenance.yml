@@ -1,130 +1,60 @@
 name: provenance
 
-# Gap G4: SLSA Level 3 build provenance attestation — Tier-4 pre-release.
+# Manual alpha release provenance hygiene gate.
 #
-# Scaffolding note (per Sprint-2 founder decision):
-# - Sigstore Rekor transparency log is ALREADY active via sign-release.yml
-#   (cosign keyless OIDC defaults to Rekor upload, bundle includes the
-#   inclusion proof).
-# - TypeScript publish already attaches npm-flavoured provenance via
-#   `npm publish --provenance` (publish-typescript.yml).
-# - Python publish already attaches PEP 740 attestation via
-#   pypa/gh-action-pypi-publish OIDC trusted-publishing.
-# - This workflow ADDS an explicit, standards-pure SLSA L3 in-toto
-#   attestation per release artefact, suitable for EU notified body /
-#   Big 4 audit citation independent of PyPI / npm / Sigstore tooling.
-#
-# Activation timing: scaffold runs on every release for shake-down, but
-# the founder commitment is that v0.1.0+ releases are the first that
-# external auditors should reference. v0.0.2-alpha and other alpha tags
-# produce attestations as a dry-run; the artefact is uploaded to the
-# Release but not yet promoted to external partners.
+# This workflow intentionally defaults to dry-run inventory checks. It does
+# not publish PyPI/npm packages, does not create or move tags, does not upload
+# release assets, and does not claim SLSA L3 or production-grade supply-chain
+# security. Future execute-mode provenance publication must be explicitly
+# requested through workflow_dispatch inputs and reviewed against the release
+# artifact manifest.
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to attest (e.g. v0.1.0)'
+        description: "Release tag to inspect"
         required: true
+        default: "v0.0.2-alpha"
         type: string
+      execute:
+        description: "Reserved for future provenance asset upload; dry-run when false"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: provenance-${{ github.workflow }}-${{ github.event.release.tag_name || inputs.tag }}
+  group: provenance-${{ github.workflow }}-${{ inputs.tag }}
   cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  attest:
-    name: SLSA L3 build provenance for release assets
+  dry-run:
+    name: Release artifact manifest and provenance dry-run
     runs-on: ubuntu-latest
-    permissions:
-      contents: write       # write attestation back to the release
-      id-token: write       # OIDC for Sigstore
-      attestations: write   # actions/attest-build-provenance writes here
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Resolve release tag
-        id: resolve
-        run: |
-          set -e
-          if [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Download release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.resolve.outputs.tag }}
-        run: |
-          set -e
-          mkdir -p /tmp/release
-          cd /tmp/release
-          gh release download "$TAG" \
-            --repo "${{ github.repository }}" \
-            --pattern '*' \
-            --skip-existing
-          # Strip signature/cert artefacts so provenance only covers the
-          # underlying primary artefacts (wheels, sdists, tarballs).
-          rm -f -- *.cosign.bundle *.sig *.pem *.intoto.jsonl
-          echo "Assets eligible for provenance attestation:"
-          ls -la
-
-      - name: Generate SLSA L3 in-toto attestation per asset
-        id: attest
-        uses: actions/attest-build-provenance@619dbb2e03d9b68f8b8c0e7c7cdfae5deafd96e7 # v3.0.0
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
         with:
-          subject-path: /tmp/release/*
+          python-version: "3.12"
 
-      - name: Upload .intoto.jsonl bundle to the GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.resolve.outputs.tag }}
-          BUNDLE_PATH: ${{ steps.attest.outputs.bundle-path }}
+      - name: Confirm requested tag exists
         run: |
-          set -e
-          if [ -z "$BUNDLE_PATH" ] || [ ! -f "$BUNDLE_PATH" ]; then
-            echo "::error::no provenance bundle produced at $BUNDLE_PATH"
-            exit 1
-          fi
-          # Use tag-qualified filename so per-release bundles do not collide.
-          cp "$BUNDLE_PATH" "/tmp/release/attestplane-${TAG}.intoto.jsonl"
-          gh release upload "$TAG" \
-            "/tmp/release/attestplane-${TAG}.intoto.jsonl" \
-            --repo "${{ github.repository }}" \
-            --clobber
-          echo "Uploaded attestplane-${TAG}.intoto.jsonl to release $TAG"
+          set -euo pipefail
+          git fetch --tags --force
+          git rev-list -n 1 "${{ inputs.tag }}"
 
-      - name: Verification instructions for external auditors
-        env:
-          TAG: ${{ steps.resolve.outputs.tag }}
+      - name: Run release provenance dry-run gate
+        run: bash scripts/check-release-provenance.sh
+
+      - name: Refuse execute mode until asset upload is separately authorized
+        if: inputs.execute == true
         run: |
-          cat <<EOF
-          Verify SLSA L3 in-toto provenance for any release asset with:
-
-            gh attestation verify <asset> \\
-              --owner ${{ github.repository_owner }} \\
-              --predicate-type https://slsa.dev/provenance/v1
-
-          Or, by Sigstore identity:
-
-            cosign verify-attestation \\
-              --type slsaprovenance \\
-              --certificate-identity-regexp 'https://github.com/${{ github.repository }}/' \\
-              --certificate-oidc-issuer https://token.actions.githubusercontent.com \\
-              <asset>.intoto.jsonl
-
-          NOTE: For alpha tags (v0.0.x-alpha) this attestation is published
-          for shake-down purposes. External partners (EU notified bodies,
-          Big 4 AI assurance, regulators) should reference v0.1.0+ releases
-          per Attestplane release-stage policy.
-          EOF
+          echo "::error::execute=true is reserved; this alpha workflow is dry-run only"
+          exit 1

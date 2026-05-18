@@ -135,6 +135,23 @@ process. It is **not** safe across process boundaries — it holds no durable
 storage and uses a process-local lock. Multi-process / multi-machine backends
 are deferred to ADR-0004 (anticipated M6).
 
+## JSONL storage alpha semantics
+
+`JsonlStorageBackend` is an opt-in alpha backend for one JSONL record per
+`ChainedEvent`. Appends write newline-terminated rows, flush, and fsync by
+default. Callers may disable fsync with `durable=False` for tests or explicit
+best-effort storage.
+
+Reads are fail-closed by default. `read_all()` raises on malformed JSON,
+missing fields, invalid UTF-8, or a partial trailing line. `scan()` is a
+read-only diagnostic path: it returns the valid prefix plus exact line/byte
+offset issues, but it never repairs, truncates, or treats corrupted data as a
+valid full chain.
+
+Concurrency remains single-process. The backend uses a process-local lock only;
+multi-writer safety, file locking, database semantics, ACID guarantees, and
+production crash-safety are not claimed.
+
 ## Development
 
 ```bash

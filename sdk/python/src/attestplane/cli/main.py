@@ -155,19 +155,34 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 def cmd_inspect(args: argparse.Namespace) -> int:
     from attestplane.hashchain import verify_chain
-    from attestplane.storage.base import StorageReadError
     from attestplane.storage.jsonl import JsonlStorageBackend
 
     backend = JsonlStorageBackend(args.chain)
-    try:
-        chain = backend.read_all()
-    except StorageReadError as exc:
+    scan = backend.scan()
+    if scan.issues:
+        issue = scan.issues[0]
         _emit(
-            {"ok": False, "error": "storage_read", "detail": str(exc)},
+            {
+                "ok": False,
+                "error": "storage_corruption",
+                "storage_health": "corrupt",
+                "valid_prefix_event_count": len(scan.events),
+                "issue": {
+                    "kind": issue.kind,
+                    "line_no": issue.line_no,
+                    "byte_offset": issue.byte_offset,
+                    "detail": issue.detail,
+                },
+            },
             args.json_output,
-            human=f"FAIL: cannot read {args.chain}: {exc}",
+            human=(
+                f"FAIL: storage corruption in {args.chain}: "
+                f"{issue.kind} at line {issue.line_no} byte {issue.byte_offset}: "
+                f"{issue.detail}"
+            ),
         )
         return 1
+    chain = list(scan.events)
 
     result = verify_chain(chain)
     event_types: dict[str, int] = {}
@@ -183,6 +198,8 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         "event_type_histogram": event_types,
         "first_bad_index": result.first_bad_index,
         "reason": result.reason,
+        "storage_health": "ok",
+        "valid_prefix_event_count": len(chain),
     }
     if args.json_output:
         _emit(payload, True, human="")
@@ -202,19 +219,34 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
 def cmd_export(args: argparse.Namespace) -> int:
     from attestplane.proof_bundle import ProofBundleBuilder
-    from attestplane.storage.base import StorageReadError
     from attestplane.storage.jsonl import JsonlStorageBackend
 
     backend = JsonlStorageBackend(args.chain)
-    try:
-        chain = backend.read_all()
-    except StorageReadError as exc:
+    scan = backend.scan()
+    if scan.issues:
+        issue = scan.issues[0]
         _emit(
-            {"ok": False, "error": "storage_read", "detail": str(exc)},
+            {
+                "ok": False,
+                "error": "storage_corruption",
+                "storage_health": "corrupt",
+                "valid_prefix_event_count": len(scan.events),
+                "issue": {
+                    "kind": issue.kind,
+                    "line_no": issue.line_no,
+                    "byte_offset": issue.byte_offset,
+                    "detail": issue.detail,
+                },
+            },
             args.json_output,
-            human=f"FAIL: cannot read {args.chain}: {exc}",
+            human=(
+                f"FAIL: refusing export from corrupt storage {args.chain}: "
+                f"{issue.kind} at line {issue.line_no} byte {issue.byte_offset}: "
+                f"{issue.detail}"
+            ),
         )
         return 1
+    chain = list(scan.events)
 
     builder = ProofBundleBuilder(
         chain_id=args.chain_id,
@@ -235,6 +267,7 @@ def cmd_export(args: argparse.Namespace) -> int:
         "event_count": len(chain),
         "chain_id": args.chain_id,
         "head_hash_hex": bundle["chain_metadata"]["head_hash_hex"],
+        "storage_health": "ok",
     }
     _emit(
         payload,
@@ -251,10 +284,15 @@ def cmd_export(args: argparse.Namespace) -> int:
 def cmd_doctor(args: argparse.Namespace) -> int:
     import platform
 
+    from attestplane.storage.jsonl import JsonlStorageBackend
+
     checks = {
         "python_version": platform.python_version(),
         "attestplane_version": __version__,
         "platform": platform.platform(),
+        "storage": JsonlStorageBackend(":memory:").health_report() | {
+            "path": None,
+        },
     }
     payload: dict[str, Any] = {"ok": True, **checks}
 

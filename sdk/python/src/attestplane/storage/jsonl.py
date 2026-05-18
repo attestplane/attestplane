@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,9 @@ from attestplane.storage.base import (
     StorageWriteError,
 )
 from attestplane.types import AuditEvent, ChainedEvent, ChainHead, SubjectRef
+
+SUPPORTED_STORAGE_RECORD_VERSION = 1
+STORAGE_RECORD_VERSION_FIELD = "storage_record_version"
 
 
 def _serialize_subject(ref: SubjectRef | None) -> dict[str, str] | None:
@@ -99,6 +103,34 @@ def _deserialize_event(raw: dict[str, Any]) -> ChainedEvent:
     )
 
 
+@dataclass(frozen=True)
+class JsonlStorageIssue:
+    """Read-only JSONL scan issue with exact file location."""
+
+    kind: str
+    line_no: int
+    byte_offset: int
+    detail: str
+
+
+@dataclass(frozen=True)
+class JsonlStorageScanResult:
+    """Read-only JSONL scan result.
+
+    ``events`` is always the valid prefix before the first corruption issue.
+    Corrupt or partial data is never treated as valid chain continuation.
+    """
+
+    path: str
+    events: tuple[ChainedEvent, ...]
+    issues: tuple[JsonlStorageIssue, ...]
+    complete: bool
+
+    @property
+    def ok(self) -> bool:
+        return self.complete and not self.issues
+
+
 class JsonlStorageBackend(AbstractStorageBackend):
     """File-backed JSON Lines storage; one ChainedEvent per line.
 
@@ -119,10 +151,11 @@ class JsonlStorageBackend(AbstractStorageBackend):
     silently skips malformed lines.
     """
 
-    __slots__ = ("_handle", "_lock", "_path")
+    __slots__ = ("_durable", "_handle", "_lock", "_path")
 
-    def __init__(self, path: str | os.PathLike[str]) -> None:
+    def __init__(self, path: str | os.PathLike[str], *, durable: bool = True) -> None:
         self._path = Path(path)
+        self._durable = durable
         self._lock = threading.Lock()
         self._handle: Any = None
 
@@ -139,50 +172,147 @@ class JsonlStorageBackend(AbstractStorageBackend):
                 line = json.dumps(
                     _serialize_event(event), separators=(",", ":"), sort_keys=True
                 )
+                json.loads(line)
                 handle.write(line + "\n")
                 handle.flush()
-                os.fsync(handle.fileno())
-        except OSError as exc:
+                if self._durable:
+                    os.fsync(handle.fileno())
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise StorageWriteError(
                 f"failed to persist event seq={event.seq} to {self._path}: {exc}"
             ) from exc
 
-    def read_all(self) -> list[ChainedEvent]:
+    def scan(self) -> JsonlStorageScanResult:
+        """Return a read-only scan report.
+
+        The scan never repairs, truncates, or deletes data. On corruption,
+        ``events`` contains only the valid prefix before the first issue and
+        ``complete`` is false.
+        """
+
         if not self._path.exists():
-            return []
+            return JsonlStorageScanResult(
+                path=str(self._path), events=(), issues=(), complete=True
+            )
         try:
-            text = self._path.read_text(encoding="utf-8")
+            data = self._path.read_bytes()
         except OSError as exc:
             raise StorageReadError(
                 f"failed to read chain from {self._path}: {exc}"
             ) from exc
 
         chain: list[ChainedEvent] = []
-        for line_no, raw_line in enumerate(text.splitlines(), start=1):
+        issues: list[JsonlStorageIssue] = []
+        byte_offset = 0
+        for line_no, raw_bytes in enumerate(data.splitlines(keepends=True), start=1):
+            line_offset = byte_offset
+            byte_offset += len(raw_bytes)
+            has_newline = raw_bytes.endswith(b"\n") or raw_bytes.endswith(b"\r\n")
+            if not has_newline:
+                issues.append(JsonlStorageIssue(
+                    kind="partial_trailing_line",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail="final JSONL record is not newline-terminated",
+                ))
+                break
+            try:
+                raw_line = raw_bytes.rstrip(b"\r\n").decode("utf-8", errors="strict")
+            except UnicodeDecodeError as exc:
+                issues.append(JsonlStorageIssue(
+                    kind="invalid_utf8",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail=str(exc),
+                ))
+                break
             if not raw_line.strip():
                 continue
             try:
                 obj = json.loads(raw_line)
             except json.JSONDecodeError as exc:
-                raise StorageReadError(
-                    f"{self._path}:{line_no}: not valid JSON: {exc.msg}"
-                ) from exc
+                issues.append(JsonlStorageIssue(
+                    kind="malformed_json",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail=exc.msg,
+                ))
+                break
+            if not isinstance(obj, dict):
+                issues.append(JsonlStorageIssue(
+                    kind="malformed_record",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail="JSONL row must be an object",
+                ))
+                break
+            version = obj.get(STORAGE_RECORD_VERSION_FIELD)
+            if version is not None and version != SUPPORTED_STORAGE_RECORD_VERSION:
+                issues.append(JsonlStorageIssue(
+                    kind="unknown_record_version",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail=(
+                        f"unsupported {STORAGE_RECORD_VERSION_FIELD}={version!r}; "
+                        f"supported={SUPPORTED_STORAGE_RECORD_VERSION}"
+                    ),
+                ))
+                break
             required = {"seq", "prev_hash_hex", "event_hash_hex", "event"}
             missing = required - set(obj)
             if missing:
-                raise StorageReadError(
-                    f"{self._path}:{line_no}: missing required fields {sorted(missing)}"
-                )
+                issues.append(JsonlStorageIssue(
+                    kind="missing_fields",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail=f"missing required fields {sorted(missing)}",
+                ))
+                break
             try:
                 chain.append(_deserialize_event(obj))
             except (KeyError, ValueError, TypeError) as exc:
-                raise StorageReadError(
-                    f"{self._path}:{line_no}: malformed event row: {exc}"
-                ) from exc
-        return chain
+                issues.append(JsonlStorageIssue(
+                    kind="malformed_event",
+                    line_no=line_no,
+                    byte_offset=line_offset,
+                    detail=str(exc),
+                ))
+                break
+        return JsonlStorageScanResult(
+            path=str(self._path),
+            events=tuple(chain),
+            issues=tuple(issues),
+            complete=not issues,
+        )
+
+    def read_all(self) -> list[ChainedEvent]:
+        scan = self.scan()
+        if scan.issues:
+            issue = scan.issues[0]
+            raise StorageReadError(
+                f"{self._path}:{issue.line_no}@{issue.byte_offset}: "
+                f"{issue.kind}: {issue.detail}"
+            )
+        return list(scan.events)
 
     def head(self) -> ChainHead:
         return head_of(self.read_all())
+
+    def health_report(self) -> dict[str, Any]:
+        """Report JSONL backend capabilities without making production claims."""
+
+        return {
+            "backend": "jsonl",
+            "path": str(self._path),
+            "jsonl_backend_available": True,
+            "durable_fsync_enabled": self._durable,
+            "fsync_supported": hasattr(os, "fsync"),
+            "file_lock_supported": False,
+            "multi_writer_safe": False,
+            "concurrent_append_behavior": "single_process_thread_lock_only",
+            "repair_supported": False,
+            "destructive_repair_supported": False,
+        }
 
     def close(self) -> None:
         with self._lock:

@@ -1,0 +1,68 @@
+{
+  "artifacts": [
+    {
+      "checksum_required": true,
+      "checksum_status": "remote_generated",
+      "kind": "github_source_archive",
+      "name": "source-archive",
+      "notes": "GitHub-generated source archive for the v0.0.2-alpha tag; checksum is not committed here because GitHub generates this remote asset.",
+      "published": true,
+      "required": true,
+      "signature_required": false
+    },
+    {
+      "checksum_required": true,
+      "kind": "python_sdist",
+      "name": "python-sdist",
+      "notes": "Not published in v0.0.2-alpha.",
+      "published": false,
+      "required": false,
+      "signature_required": false
+    },
+    {
+      "checksum_required": true,
+      "kind": "python_wheel",
+      "name": "python-wheel",
+      "notes": "Not published in v0.0.2-alpha.",
+      "published": false,
+      "required": false,
+      "signature_required": false
+    },
+    {
+      "checksum_required": true,
+      "kind": "npm_package",
+      "name": "npm-package",
+      "notes": "Not published in v0.0.2-alpha.",
+      "published": false,
+      "required": false,
+      "signature_required": false
+    },
+    {
+      "checksum_required": true,
+      "kind": "docs_validation_bundle",
+      "name": "validation-evidence-pack",
+      "notes": "Validation evidence is included in the repository tag, not uploaded as a separate GitHub Release asset.",
+      "published": false,
+      "required": true,
+      "signature_required": false
+    }
+  ],
+  "checksums": [],
+  "no_go_claims": [
+    "SLSA L3 completed",
+    "production-grade supply-chain security",
+    "certified provenance"
+  ],
+  "provenance": {
+    "cosign_keyless": "planned",
+    "npm_provenance": "planned",
+    "slsa_level_claimed": null,
+    "testpypi_trusted_publishing": "planned"
+  },
+  "release": "v0.0.2-alpha",
+  "schema_version": "release_artifact_manifest.v1",
+  "signatures": [],
+  "status": "alpha_prerelease",
+  "tag": "v0.0.2-alpha",
+  "target_commit": "c8dabc964e9a2ba84453bb5150f14a9262ea8681"
+}

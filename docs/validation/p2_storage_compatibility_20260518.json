@@ -1,0 +1,103 @@
+{
+  "checker": "scripts/storage/check_storage_compatibility.py",
+  "commands": [
+    {
+      "command": "ask_opus.sh architect \"Attestplane P2.6 storage compatibility/migration policy review...\"",
+      "result": "PASS advisory review completed; preserved no-destructive-migration and fail-closed version policy while keeping v0.0.2-alpha no-version records readable"
+    },
+    {
+      "command": "scripts/check-storage-compatibility.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "scripts/check-release-provenance.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "scripts/check-fault-injection.sh",
+      "result": "PASS active=50 covered=50 roadmap_or_language_specific=1; Python fault tests 40 passed; TypeScript fault tests 39 passed"
+    },
+    {
+      "command": "scripts/check-public-api.sh",
+      "result": "PASS python=127 symbols typescript=193 exports allowlist=138 asymmetries"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS 791 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS no issues in 45 source files"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS 502 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS 8 schema hashes match"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS 10 fixture hashes match"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS 13 frozen ADR sections match"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS 13 Py/TS byte-identical cases"
+    },
+    {
+      "command": "jq empty docs/validation/p2_storage_compatibility_20260518.json storage/compat/storage_compatibility_v1.json api/public/*.json release/artifacts/*.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "export_policy": "ProofBundle export from corrupt JSONL storage is refused by default.",
+  "fixtures": [
+    "storage/compat/fixtures/jsonl_valid_v1.jsonl",
+    "storage/compat/fixtures/jsonl_partial_tail_v1.jsonl",
+    "storage/compat/fixtures/jsonl_malformed_middle_v1.jsonl",
+    "storage/compat/fixtures/jsonl_unknown_record_version_v1.jsonl",
+    "storage/compat/fixtures/storage_scan_issue_v1.json",
+    "storage/compat/fixtures/export_refusal_corrupt_storage_v1.json"
+  ],
+  "gate": "storage_compatibility",
+  "jsonl_record_format": "chained_event_jsonl.v1",
+  "manifest": "storage/compat/storage_compatibility_v1.json",
+  "migration_policy": "no_destructive_migration; unknown explicit storage_record_version fails closed",
+  "no_go_claims_unchanged": true,
+  "phase": "P2.6",
+  "public_api_changes": [],
+  "remaining_p2": [
+    "TypeScript storage backend parity decision.",
+    "Explicit file-locking or lock-provider policy.",
+    "Operator-confirmed destructive repair tooling, if ever added.",
+    "Database backend compatibility manifests if SQLite/Postgres are introduced."
+  ],
+  "safe_claims_unchanged": true,
+  "scan_issue_format": "storage_scan_issue.v1",
+  "status": "PASS",
+  "violations": []
+}

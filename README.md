@@ -63,7 +63,9 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.2-alpha (on `main`, release candidate)** adds:
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
-- JSONL storage backend (fsync on every append, 9-verb forbidden gate)
+- JSONL storage backend (newline-terminated records, optional fsync,
+  read-only corruption scan, 9-verb forbidden gate; alpha opt-in, not
+  production storage)
 - RFC-3161 anchoring with FreeTSA / DigiCert / Sigstore Rekor + real OCSP + multi-hop cert chains + eIDAS Trusted List
 - Ed25519 sidecar signing scheme ([ADR-0005](docs/adr/0005-event-signing-scheme.md)) with KeyProvider abstraction + plurality verification
 - v1 evidence event taxonomy ([ADR-0008](docs/adr/0008-evidence-event-taxonomy-v1.md), 12 types)

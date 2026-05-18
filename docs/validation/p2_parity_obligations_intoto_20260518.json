@@ -1,0 +1,115 @@
+{
+  "allowlist_changes": [
+    "Removed stale exact-name asymmetries for shared obligation and in-toto constants/classes/types now exported by both SDKs.",
+    "Added TypeScript camelCase helper asymmetries as language_specific.",
+    "Refined remaining Python snake_case helper asymmetry reasons to reflect P2.4 parity."
+  ],
+  "commands": [
+    {
+      "command": "scripts/check-fault-injection.sh",
+      "result": "PASS active=50 covered=50 roadmap_or_language_specific=1; Python fault tests 40 passed; TypeScript fault tests 39 passed"
+    },
+    {
+      "command": "scripts/check-public-api.sh",
+      "result": "PASS python=127 symbols typescript=193 exports allowlist=138 asymmetries"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS 774 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS no issues in 45 source files"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS 502 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS 8 schema hashes match"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS 10 fixture hashes match"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS 13 frozen ADR sections match"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS 13 Py/TS byte-identical cases"
+    },
+    {
+      "command": "jq empty docs/validation/p2_parity_obligations_intoto_20260518.json api/public/*.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "deferred_parity": [
+    {
+      "decision": "defer",
+      "reason": "Python keeps a direct convenience helper; TypeScript exposes equivalent composition through proofBundleToInTotoStatement plus statementToDsseEnvelope.",
+      "symbol": "bundle_to_dsse_envelope"
+    },
+    {
+      "decision": "roadmap",
+      "reason": "Python JSONL storage backend is public; TypeScript storage backend parity is not required for this P2.4 obligation/in-toto decision.",
+      "symbol": "JsonlStorageBackend"
+    },
+    {
+      "decision": "language_specific",
+      "reason": "TypeScript structural types support compile-time ergonomics and do not require Python root equivalents.",
+      "symbol": "TypeScript structural exports"
+    }
+  ],
+  "gate": "parity_obligations_intoto",
+  "implemented_parity": [
+    "TypeScript static obligation registry parity for EU AI Act Article 12 and DORA Article 8 mapping data.",
+    "TypeScript lookup/filter helpers for obligation ids, event types, and implementation status.",
+    "TypeScript in-toto Statement v1 shape helper.",
+    "TypeScript unsigned DSSE envelope shape helper and parser.",
+    "TypeScript deterministic canonical JSON bytes helper matching the Python in-toto helper convention."
+  ],
+  "intoto_dsse_decision": "implemented_minimal_typescript_shape_parity_only_no_signing_no_key_management_no_transparency_log_no_slsa_pipeline",
+  "no_go_claims_unchanged": true,
+  "obligation_registry_decision": "implemented_minimal_typescript_static_mapping_parity_not_legal_advice_not_certification",
+  "phase": "P2.4",
+  "public_api_manifest_changes": [
+    "api/public/typescript_v1.json",
+    "api/public/py_ts_allowlist_v1.json"
+  ],
+  "remaining_p2": [
+    "Optional TypeScript bundleToDsseEnvelope convenience helper decision.",
+    "Optional TypeScript JSONL storage backend parity decision.",
+    "Shared generated obligation fixture if registry data expands.",
+    "Potential manifest stability refinement for experimental in-toto / DSSE helpers."
+  ],
+  "safe_claims_unchanged": true,
+  "status": "PASS",
+  "tests_added": [
+    "sdk/typescript/test/obligations.test.ts",
+    "sdk/typescript/test/intoto.test.ts"
+  ],
+  "violations": []
+}

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -108,7 +109,7 @@ def test_malformed_line_raises_read_error(tmp_path: Path) -> None:
     path.write_text("not valid json\n", encoding="utf-8")
     backend = JsonlStorageBackend(path)
 
-    with pytest.raises(StorageReadError, match="not valid JSON"):
+    with pytest.raises(StorageReadError, match="malformed_json"):
         backend.read_all()
 
 
@@ -117,7 +118,7 @@ def test_missing_field_raises_read_error(tmp_path: Path) -> None:
     path.write_text('{"seq":0}\n', encoding="utf-8")
     backend = JsonlStorageBackend(path)
 
-    with pytest.raises(StorageReadError, match="missing required fields"):
+    with pytest.raises(StorageReadError, match="missing_fields"):
         backend.read_all()
 
 
@@ -213,3 +214,98 @@ def test_appending_after_close_reopens(tmp_path: Path) -> None:
 
     rehydrated = JsonlStorageBackend(path).read_all()
     assert rehydrated == chain
+
+
+def test_append_writes_newline_terminated_record(tmp_path: Path) -> None:
+    path = tmp_path / "chain.jsonl"
+    JsonlStorageBackend(path).append(_build_chain(1)[0])
+
+    data = path.read_bytes()
+
+    assert data.endswith(b"\n")
+    assert len(data.splitlines()) == 1
+
+
+def test_append_fsync_called_when_durable_enabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[int] = []
+
+    def fake_fsync(fd: int) -> None:
+        calls.append(fd)
+
+    monkeypatch.setattr("attestplane.storage.jsonl.os.fsync", fake_fsync)
+    JsonlStorageBackend(tmp_path / "chain.jsonl", durable=True).append(_build_chain(1)[0])
+
+    assert len(calls) == 1
+
+
+def test_append_skips_fsync_when_durable_disabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[int] = []
+
+    def fake_fsync(fd: int) -> None:
+        calls.append(fd)
+
+    monkeypatch.setattr("attestplane.storage.jsonl.os.fsync", fake_fsync)
+    JsonlStorageBackend(tmp_path / "chain.jsonl", durable=False).append(_build_chain(1)[0])
+
+    assert calls == []
+
+
+def test_partial_trailing_line_detected_with_byte_offset(tmp_path: Path) -> None:
+    path = tmp_path / "chain.jsonl"
+    backend = JsonlStorageBackend(path)
+    backend.append(_build_chain(1)[0])
+    backend.close()
+    path.write_bytes(path.read_bytes() + b'{"seq":1')
+
+    scan = JsonlStorageBackend(path).scan()
+
+    assert scan.ok is False
+    assert scan.complete is False
+    assert len(scan.events) == 1
+    assert scan.issues[0].kind == "partial_trailing_line"
+    assert scan.issues[0].line_no == 2
+    with pytest.raises(StorageReadError, match="partial_trailing_line"):
+        JsonlStorageBackend(path).read_all()
+
+
+def test_malformed_json_middle_line_reports_valid_prefix(tmp_path: Path) -> None:
+    path = tmp_path / "chain.jsonl"
+    backend = JsonlStorageBackend(path)
+    chain = _build_chain(2)
+    for event in chain:
+        backend.append(event)
+    backend.close()
+    lines = path.read_text(encoding="utf-8").splitlines()
+    path.write_text(f"{lines[0]}\nnot valid json\n{lines[1]}\n", encoding="utf-8")
+
+    scan = JsonlStorageBackend(path).scan()
+
+    assert scan.ok is False
+    assert scan.complete is False
+    assert list(scan.events) == [chain[0]]
+    assert scan.issues[0].kind == "malformed_json"
+    assert scan.issues[0].line_no == 2
+
+
+def test_malformed_record_line_detected(tmp_path: Path) -> None:
+    path = tmp_path / "chain.jsonl"
+    path.write_text("[]\n", encoding="utf-8")
+
+    scan = JsonlStorageBackend(path).scan()
+
+    assert scan.issues[0].kind == "malformed_record"
+
+
+def test_health_report_declares_alpha_concurrency_semantics(tmp_path: Path) -> None:
+    report: dict[str, Any] = JsonlStorageBackend(tmp_path / "chain.jsonl").health_report()
+
+    assert report["jsonl_backend_available"] is True
+    assert report["durable_fsync_enabled"] is True
+    assert report["multi_writer_safe"] is False
+    assert report["file_lock_supported"] is False
+    assert report["concurrent_append_behavior"] == "single_process_thread_lock_only"
+    assert report["repair_supported"] is False

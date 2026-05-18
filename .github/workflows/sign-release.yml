@@ -1,137 +1,120 @@
 name: sign-release
 
+# Manual alpha release asset signing gate.
+#
+# Default mode is dry-run. The workflow does not run on release publication,
+# does not create releases, does not publish PyPI/npm packages, and does not
+# upload signature assets unless execute=true is explicitly supplied.
+
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to sign (e.g. v0.0.1-alpha)'
+        description: "Release tag to inspect (e.g. v0.0.2-alpha)"
         required: true
+        default: "v0.0.2-alpha"
         type: string
+      execute:
+        description: "Actually sign and upload assets; false is dry-run only"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: sign-release-${{ github.workflow }}-${{ github.event.release.tag_name || inputs.tag }}
+  group: sign-release-${{ github.workflow }}-${{ inputs.tag }}
   cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  sign:
-    name: Cosign keyless sign release assets
+  dry-run:
+    name: Cosign keyless signing dry-run
+    if: inputs.execute != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Confirm requested tag exists
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          git rev-list -n 1 "${{ inputs.tag }}"
+
+      - name: Download release asset names
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/release
+          gh release download "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*" \
+            --dir /tmp/release \
+            --skip-existing || true
+          find /tmp/release -maxdepth 1 -type f -print | sort || true
+
+      - name: Run signing helper in dry-run mode
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find /tmp/release -maxdepth 1 -type f ! -name "*.cosign.bundle" ! -name "*.sig" ! -name "*.pem" -print | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No downloaded release assets to sign in dry-run."
+            exit 0
+          fi
+          bash scripts/release/sign_assets_cosign_keyless.sh "${files[@]}"
+
+  execute:
+    name: Cosign keyless sign and upload release assets
+    if: inputs.execute == true
     runs-on: ubuntu-latest
     environment:
       name: release-signing
-      url: ${{ github.server_url }}/${{ github.repository }}/releases
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ inputs.tag }}
     permissions:
       contents: write
       id-token: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Resolve release tag
-        id: resolve
-        run: |
-          set -e
-          if [ -n "${{ github.event.release.tag_name }}" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: 'v3.0.6'
+          cosign-release: "v3.0.6"
 
-      - name: Verify cosign installation
-        run: cosign version
-
-      - name: Download release assets to /tmp/release
+      - name: Download release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p /tmp/release
-          cd /tmp/release
-          gh release download "$TAG" \
+          gh release download "${{ inputs.tag }}" \
             --repo "${{ github.repository }}" \
-            --pattern '*' \
+            --pattern "*" \
+            --dir /tmp/release \
             --skip-existing
-          echo ""
-          echo "Downloaded:"
-          ls -la
-          echo ""
-          echo "Skipping any pre-existing .cosign.bundle files when signing:"
+          find /tmp/release -maxdepth 1 -type f -print | sort
 
-      - name: Sign each asset with cosign keyless (OIDC)
-        env:
-          COSIGN_YES: "true"
-          TAG: ${{ steps.resolve.outputs.tag }}
+      - name: Sign assets with cosign keyless
         run: |
-          set -e
-          cd /tmp/release
-          shopt -s nullglob
-          signed=0
-          for f in *; do
-            case "$f" in
-              *.cosign.bundle) echo "skip: $f (already a signature bundle)"; continue ;;
-            esac
-            echo ""
-            echo "=== signing $f ==="
-            cosign sign-blob \
-              --bundle "${f}.cosign.bundle" \
-              --output-signature "${f}.sig" \
-              --output-certificate "${f}.pem" \
-              "$f"
-            signed=$((signed + 1))
-            echo "  bundle: ${f}.cosign.bundle ($(wc -c < "${f}.cosign.bundle") bytes)"
-          done
-          echo ""
-          echo "Signed $signed assets for $TAG."
+          set -euo pipefail
+          mapfile -t files < <(find /tmp/release -maxdepth 1 -type f ! -name "*.cosign.bundle" ! -name "*.sig" ! -name "*.pem" -print | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no primary release assets found to sign"
+            exit 1
+          fi
+          bash scripts/release/sign_assets_cosign_keyless.sh --execute --require-cosign "${files[@]}"
 
-      - name: Upload signature artifacts to the GitHub Release
+      - name: Upload signature artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
-          set -e
-          cd /tmp/release
-          shopt -s nullglob
-          uploads=( ./*.cosign.bundle ./*.sig ./*.pem )
-          if [ ${#uploads[@]} -eq 0 ]; then
+          set -euo pipefail
+          mapfile -t signatures < <(find /tmp/release -maxdepth 1 \( -name "*.cosign.bundle" -o -name "*.sig" -o -name "*.pem" \) -print | sort)
+          if [ "${#signatures[@]}" -eq 0 ]; then
             echo "::error::no signature artifacts produced"
             exit 1
           fi
-          gh release upload "$TAG" \
-            "${uploads[@]}" \
-            --repo "${{ github.repository }}" \
-            --clobber
-          echo ""
-          echo "Uploaded ${#uploads[@]} signature artifacts to $TAG."
-
-      - name: Print verification instructions
-        env:
-          TAG: ${{ steps.resolve.outputs.tag }}
-        run: |
-          cat <<EOF
-          Verify any release asset locally with:
-
-            cosign verify-blob \\
-              --bundle <asset>.cosign.bundle \\
-              --certificate-identity-regexp 'https://github.com/${{ github.repository }}/' \\
-              --certificate-oidc-issuer https://token.actions.githubusercontent.com \\
-              <asset>
-
-          Or download the .pem certificate + .sig signature and verify with the
-          equivalent flag pair (--certificate / --signature) if you prefer the
-          legacy two-file form.
-
-          All signatures are also publicly viewable in the Sigstore
-          transparency log at https://search.sigstore.dev/ — search by the
-          short tag '${TAG}' or by sha256 of the signed file.
-          EOF
+          bash scripts/release/upload_github_release_assets.sh --tag "${{ inputs.tag }}" --execute --clobber "${signatures[@]}"

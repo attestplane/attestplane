@@ -1,0 +1,6 @@
+{
+  "error": "storage_corruption",
+  "ok": false,
+  "policy": "refuse_by_default",
+  "storage_health": "corrupt"
+}

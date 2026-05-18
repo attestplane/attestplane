@@ -1,0 +1,655 @@
+{
+  "baseline_release": "v0.0.2-alpha",
+  "description": "Deterministic fail-closed fault-injection matrix. This gate is not a mutation engine or formal verification claim.",
+  "faults": [
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_nan",
+      "language": "both",
+      "mutation": "replace finite number with NaN",
+      "protected_invariant": "canonical output must be deterministic JSON",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_canonical_fail_closed[canonical.reject_nan]",
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_nan]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_infinity",
+      "language": "both",
+      "mutation": "replace finite number with Infinity",
+      "protected_invariant": "canonical output must not encode non-finite numbers",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_canonical_fail_closed[canonical.reject_infinity]",
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_infinity]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_undefined_top_level",
+      "language": "typescript",
+      "mutation": "top-level undefined input",
+      "protected_invariant": "undefined must not be silently dropped by JSON.stringify",
+      "status": "active",
+      "tests": [
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_undefined_top_level]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_undefined_object_value",
+      "language": "typescript",
+      "mutation": "object property value is undefined",
+      "protected_invariant": "object members must not be omitted silently",
+      "status": "active",
+      "tests": [
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_undefined_object_value]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_sparse_array_hole",
+      "language": "typescript",
+      "mutation": "sparse array hole",
+      "protected_invariant": "array holes must not become null or disappear",
+      "status": "active",
+      "tests": [
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_sparse_array_hole]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_unsafe_integer",
+      "language": "both",
+      "mutation": "integer outside supported deterministic range",
+      "protected_invariant": "canonical integer domain is bounded and cross-language safe",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_canonical_fail_closed[canonical.reject_unsafe_integer]",
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_unsafe_integer]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_lone_surrogate",
+      "language": "both",
+      "mutation": "insert lone surrogate code point",
+      "protected_invariant": "canonical bytes must be valid UTF-8",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_canonical_fail_closed[canonical.reject_lone_surrogate]",
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_lone_surrogate]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.key_ordering_changed",
+      "language": "both",
+      "mutation": "change object insertion order",
+      "protected_invariant": "object keys are deterministic sorted bytes",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_canonical_key_ordering_and_negative_zero",
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.key_ordering_changed]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.reject_date_object",
+      "language": "typescript",
+      "mutation": "Date object passed to canonical JSON",
+      "protected_invariant": "timestamps must be explicit canonical strings outside hashchain adapters",
+      "status": "active",
+      "tests": [
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.reject_date_object]"
+      ]
+    },
+    {
+      "area": "canonical",
+      "expected": "fail_closed",
+      "id": "canonical.negative_zero_behavior_drift",
+      "language": "both",
+      "mutation": "negative zero formatting changes",
+      "protected_invariant": "negative zero behavior is locked",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_canonical_key_ordering_and_negative_zero",
+        "sdk/typescript/test/fault_injection.test.ts::rejectCases[canonical.negative_zero_behavior_drift]"
+      ]
+    },
+    {
+      "area": "hashchain",
+      "expected": "fail_closed",
+      "id": "hashchain.previous_hash_tampered",
+      "language": "both",
+      "mutation": "mutate previous_hash",
+      "protected_invariant": "chain link must match previous event hash",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_hashchain_fail_closed[hashchain.previous_hash_tampered]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[hashchain.previous_hash_tampered]"
+      ]
+    },
+    {
+      "area": "hashchain",
+      "expected": "fail_closed",
+      "id": "hashchain.event_hash_tampered",
+      "language": "both",
+      "mutation": "mutate event_hash bytes",
+      "protected_invariant": "stored event_hash must equal recomputed canonical event hash",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_hashchain_fail_closed[hashchain.event_hash_tampered]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[hashchain.event_hash_tampered]"
+      ]
+    },
+    {
+      "area": "hashchain",
+      "expected": "fail_closed",
+      "id": "hashchain.payload_tampered_after_chaining",
+      "language": "both",
+      "mutation": "mutate event payload after chaining",
+      "protected_invariant": "payload tamper changes canonical event hash",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_hashchain_fail_closed[hashchain.payload_tampered_after_chaining]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[hashchain.payload_tampered_after_chaining]"
+      ]
+    },
+    {
+      "area": "hashchain",
+      "expected": "fail_closed",
+      "id": "hashchain.reordered_events",
+      "language": "both",
+      "mutation": "swap two events",
+      "protected_invariant": "seq and prev_hash enforce total order",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_hashchain_fail_closed[hashchain.reordered_events]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[hashchain.reordered_events]"
+      ]
+    },
+    {
+      "area": "hashchain",
+      "expected": "fail_closed",
+      "id": "hashchain.missing_chain_link",
+      "language": "both",
+      "mutation": "delete middle event",
+      "protected_invariant": "missing link must break seq or prev_hash",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_hashchain_fail_closed[hashchain.missing_chain_link]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[hashchain.missing_chain_link]"
+      ]
+    },
+    {
+      "area": "hashchain",
+      "expected": "fail_closed",
+      "id": "hashchain.duplicate_chain_index",
+      "language": "both",
+      "mutation": "duplicate an event at another position",
+      "protected_invariant": "seq must match index exactly",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_hashchain_fail_closed[hashchain.duplicate_chain_index]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[hashchain.duplicate_chain_index]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.missing_schema_version",
+      "language": "both",
+      "mutation": "remove payload schema version",
+      "protected_invariant": "payload schemas are independently versioned",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_payload_fail_closed[payload.missing_schema_version]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.missing_schema_version]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.unsupported_schema_version",
+      "language": "both",
+      "mutation": "set payload schema version to 2",
+      "protected_invariant": "unsupported payload versions fail closed",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_payload_fail_closed[payload.unsupported_schema_version]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.unsupported_schema_version]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.unknown_top_level_field",
+      "language": "both",
+      "mutation": "add unknown payload field",
+      "protected_invariant": "additionalProperties=false is mirrored in validators",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_payload_fail_closed[payload.unknown_top_level_field]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.unknown_top_level_field]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.forbidden_field",
+      "language": "both",
+      "mutation": "add forbidden field token",
+      "protected_invariant": "redaction boundary rejects forbidden payload fields",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_payload_fail_closed[payload.forbidden_field]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.forbidden_field]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.null_required_field",
+      "language": "both",
+      "mutation": "set required field to null",
+      "protected_invariant": "missing and null required values are not accepted",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_payload_fail_closed[payload.null_required_field]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.null_required_field]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.invalid_reason_code_format",
+      "language": "both",
+      "mutation": "use lower/dash reason code",
+      "protected_invariant": "reason_code format is uppercase stable token",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_reason_code_fail_closed",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.invalid_reason_code_format]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.unknown_reason_code",
+      "language": "both",
+      "mutation": "use unknown verifier reason code",
+      "protected_invariant": "known verifier reason-code set is frozen",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_reason_code_fail_closed",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.unknown_reason_code]"
+      ]
+    },
+    {
+      "area": "payload",
+      "expected": "fail_closed",
+      "id": "payload.unknown_enum",
+      "language": "both",
+      "mutation": "change lifecycle enum to unsupported value",
+      "protected_invariant": "payload enum values are closed",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_payload_fail_closed[payload.unknown_enum]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[payload.unknown_enum]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.unsupported_proof_type",
+      "language": "both",
+      "mutation": "set unsupported verification method or proof type",
+      "protected_invariant": "unsupported proof metadata must not verify",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.unsupported_proof_type]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.unsupported_proof_type]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.missing_required_metadata",
+      "language": "both",
+      "mutation": "remove chain_metadata.head_hash_hex",
+      "protected_invariant": "required metadata is mandatory",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.missing_required_metadata]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.missing_required_metadata]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.unknown_critical_metadata",
+      "language": "both",
+      "mutation": "add unknown critical top-level metadata",
+      "protected_invariant": "unknown critical metadata must not be ignored",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.unknown_critical_metadata]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.unknown_critical_metadata]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.embedded_report_mismatch",
+      "language": "both",
+      "mutation": "forge embedded verification_report reason",
+      "protected_invariant": "embedded report must match recomputed verification",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.embedded_report_mismatch]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.embedded_report_mismatch]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.chain_head_mismatch",
+      "language": "both",
+      "mutation": "forge chain_metadata head hash",
+      "protected_invariant": "bundle metadata must close over computed chain head",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.chain_head_mismatch]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.chain_head_mismatch]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.dangling_policy_trace_ref",
+      "language": "both",
+      "mutation": "point policy_trace_refs at absent hash",
+      "protected_invariant": "policy trace refs must point into bundle events",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.dangling_policy_trace_ref]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.dangling_policy_trace_ref]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.policy_trace_ref_hash_mismatch",
+      "language": "both",
+      "mutation": "replace policy trace hash with wrong hex value",
+      "protected_invariant": "policy trace refs must match target event hash",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.policy_trace_ref_hash_mismatch]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.policy_trace_ref_hash_mismatch]"
+      ]
+    },
+    {
+      "area": "proof_bundle",
+      "expected": "fail_closed",
+      "id": "proof_bundle.duplicate_policy_trace_ref",
+      "language": "both",
+      "mutation": "duplicate policy_trace_refs entry",
+      "protected_invariant": "policy trace refs are unique",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_proof_bundle_fail_closed[proof_bundle.duplicate_policy_trace_ref]",
+        "sdk/typescript/test/fault_injection.test.ts::cases[proof_bundle.duplicate_policy_trace_ref]"
+      ]
+    },
+    {
+      "area": "settlement",
+      "expected": "fail_closed",
+      "id": "settlement.missing_amount_hash",
+      "language": "both",
+      "mutation": "remove amount_hash when claim binds it",
+      "protected_invariant": "settlement amount hash binding is mandatory when expected",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_settlement_amount_hash_fail_closed[settlement.missing_amount_hash]",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[settlement.missing_amount_hash]"
+      ]
+    },
+    {
+      "area": "settlement",
+      "expected": "fail_closed",
+      "id": "settlement.empty_amount_hash",
+      "language": "both",
+      "mutation": "empty amount_hash",
+      "protected_invariant": "amount_hash must be lowercase 64-hex when present",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_settlement_amount_hash_fail_closed[settlement.empty_amount_hash]",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[settlement.empty_amount_hash]"
+      ]
+    },
+    {
+      "area": "settlement",
+      "expected": "fail_closed",
+      "id": "settlement.wrong_format_amount_hash",
+      "language": "both",
+      "mutation": "non-hex amount_hash",
+      "protected_invariant": "amount_hash format is fixed",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_settlement_amount_hash_fail_closed[settlement.wrong_format_amount_hash]",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[settlement.wrong_format_amount_hash]"
+      ]
+    },
+    {
+      "area": "settlement",
+      "expected": "fail_closed",
+      "id": "settlement.amount_hash_mismatch",
+      "language": "both",
+      "mutation": "amount_hash differs from claim",
+      "protected_invariant": "settlement amount hash must match expected claim",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_settlement_amount_hash_fail_closed[settlement.amount_hash_mismatch]",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[settlement.amount_hash_mismatch]"
+      ]
+    },
+    {
+      "area": "settlement",
+      "expected": "fail_closed",
+      "id": "settlement.accepted_without_precondition",
+      "language": "both",
+      "mutation": "settlement event exists without consumed lease",
+      "protected_invariant": "verify-before-settlement must fail closed",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_settlement_without_precondition_fails_closed",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[settlement.accepted_without_precondition]"
+      ]
+    },
+    {
+      "area": "anchoring",
+      "expected": "fail_closed",
+      "id": "anchoring.empty_anchor_treated_as_success",
+      "language": "both",
+      "mutation": "empty anchor evidence",
+      "protected_invariant": "no anchor evidence is not anchored success",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_anchoring_fail_closed[anchoring.empty_anchor_treated_as_success]",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[anchoring.empty_anchor_treated_as_success]"
+      ]
+    },
+    {
+      "area": "anchoring",
+      "expected": "fail_closed",
+      "id": "anchoring.missing_required_anchor_accepted",
+      "language": "both",
+      "mutation": "required anchor not supplied",
+      "protected_invariant": "anchor-required contexts must not treat absence as success",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_anchoring_fail_closed[anchoring.missing_required_anchor_accepted]",
+        "sdk/typescript/test/anchoring.test.ts::verifyChainWithAnchors[unanchored chain]"
+      ]
+    },
+    {
+      "area": "anchoring",
+      "expected": "fail_closed",
+      "id": "anchoring.malformed_anchor_evidence_accepted",
+      "language": "both",
+      "mutation": "anchor hash points at wrong event bytes",
+      "protected_invariant": "malformed anchor evidence does not verify",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_anchoring_fail_closed[anchoring.malformed_anchor_evidence_accepted]",
+        "sdk/typescript/test/fault_injection.test.ts::amountCases[anchoring.malformed_anchor_evidence_accepted]"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.partial_trailing_line",
+      "language": "python",
+      "mutation": "final record lacks newline",
+      "protected_invariant": "partial tail must not be valid chain continuation",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_jsonl_scan_fail_closed[jsonl.partial_trailing_line]"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.malformed_json_line",
+      "language": "python",
+      "mutation": "invalid JSON row",
+      "protected_invariant": "malformed JSON must fail read_all and be reported by scan",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_jsonl_scan_fail_closed[jsonl.malformed_json_line]"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.invalid_utf8",
+      "language": "python",
+      "mutation": "invalid UTF-8 row",
+      "protected_invariant": "JSONL storage is UTF-8 only",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_jsonl_scan_fail_closed[jsonl.invalid_utf8]"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.non_object_row",
+      "language": "python",
+      "mutation": "JSON array row",
+      "protected_invariant": "JSONL rows must be event objects",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/fault_injection/test_fault_matrix.py::test_fault_matrix_python_jsonl_scan_fail_closed[jsonl.non_object_row]"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.corrupted_middle_line",
+      "language": "python",
+      "mutation": "valid prefix, corrupt middle, valid suffix",
+      "protected_invariant": "valid prefix must not become full success",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/storage/test_jsonl.py::test_malformed_json_middle_line_reports_valid_prefix"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.read_all_succeeds_despite_scan_issue",
+      "language": "python",
+      "mutation": "read_all ignores scan issue",
+      "protected_invariant": "read_all must raise when scan reports an issue",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/storage/test_jsonl.py::test_partial_trailing_line_detected_with_byte_offset"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.export_succeeds_from_corrupt_storage",
+      "language": "python",
+      "mutation": "export polluted bundle from corrupt file",
+      "protected_invariant": "export refuses corrupt storage",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/cli/test_main.py::test_export_refuses_corrupt_jsonl"
+      ]
+    },
+    {
+      "area": "jsonl",
+      "expected": "fail_closed",
+      "id": "jsonl.inspect_hides_corruption",
+      "language": "python",
+      "mutation": "inspect omits storage_corruption",
+      "protected_invariant": "inspect reports storage corruption explicitly",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/cli/test_main.py::test_inspect_partial_jsonl_reports_storage_corruption_json"
+      ]
+    },
+    {
+      "area": "cli",
+      "expected": "fail_closed",
+      "id": "cli.verify_claims_signed_anchored_full_verifier",
+      "language": "python",
+      "mutation": "CLI verify output claims full signed or anchored verification",
+      "protected_invariant": "CLI verify remains chain_report_only",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/test_release_claims.py::test_readme_and_release_notes_declare_verify_scope"
+      ]
+    },
+    {
+      "area": "cli",
+      "expected": "fail_closed",
+      "id": "cli.doctor_overclaims_multi_writer_safe",
+      "language": "python",
+      "mutation": "doctor reports JSONL as multi-writer safe",
+      "protected_invariant": "JSONL concurrency semantics are explicit and limited",
+      "status": "active",
+      "tests": [
+        "sdk/python/tests/cli/test_main.py::test_doctor_command_json"
+      ]
+    },
+    {
+      "area": "typescript_storage",
+      "expected": "fail_closed",
+      "id": "jsonl.typescript_backend_parity",
+      "language": "typescript",
+      "mutation": "TypeScript JSONL backend absent",
+      "protected_invariant": "storage parity must be an explicit roadmap decision, not an implied shipped feature",
+      "reason": "TypeScript has no JSONL backend in v0.0.2-alpha lineage; Python-only storage faults are active.",
+      "review_by": "v0.0.3-alpha",
+      "status": "roadmap",
+      "tests": []
+    }
+  ],
+  "schema_version": "fault_matrix.v1"
+}
