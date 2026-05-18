@@ -1,0 +1,89 @@
+{
+  "phase": "P2.3",
+  "gate": "fault_injection",
+  "status": "PASS",
+  "fault_matrix": "tests/fault_injection/fault_matrix_v1.json",
+  "active_faults": 50,
+  "covered_active_faults": 50,
+  "roadmap_faults": 1,
+  "python_fault_tests": [
+    "sdk/python/tests/fault_injection/test_fault_matrix.py"
+  ],
+  "typescript_fault_tests": [
+    "sdk/typescript/test/fault_injection.test.ts"
+  ],
+  "checker": "scripts/fault/check_fault_matrix.py",
+  "ci_integration": ".github/workflows/invariants.yml#fault-injection",
+  "commands": [
+    {
+      "command": "scripts/check-fault-injection.sh",
+      "result": "PASS, active=50, covered=50, roadmap=1; Python fault tests 40 passed; TypeScript fault tests 39 passed"
+    },
+    {
+      "command": "scripts/check-public-api.sh",
+      "result": "PASS, python=127 symbols, typescript=171 exports, allowlist=130 asymmetries"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS, 774 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS, 490 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS, zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "jq empty docs/validation/p2_fault_injection_gate_20260518.json api/public/*.json",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "violations": [],
+  "safe_claims_unchanged": true,
+  "no_go_claims_unchanged": true,
+  "remaining_p2": [
+    "broader mutation operator generation for selected modules",
+    "public API deprecation policy",
+    "storage compatibility manifest and migration policy",
+    "TypeScript storage backend parity decision",
+    "optional file-locking or database-backed storage adapter"
+  ]
+}
