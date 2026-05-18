@@ -60,3 +60,41 @@ The JSON report includes:
 - `certified_provenance: false`
 - `slsa_level_claimed: null`
 
+
+---
+
+## P3.2 alpha signature / anchor extension flags
+
+Two optional flags request fail-closed alpha verification material
+inspection. Cryptographic verification is NOT performed.
+
+```bash
+# request alpha DSSE signature material inspection (fail-closed)
+python -m attestplane.cli.main verify-proofbundle <path> --verify-signature
+
+# request alpha RFC-3161 anchor material inspection (fail-closed)
+python -m attestplane.cli.main verify-proofbundle <path> --verify-anchor
+
+# both
+python -m attestplane.cli.main verify-proofbundle <path> --verify-signature --verify-anchor
+```
+
+Status semantics for `signature_verification_status` /
+`anchor_verification_status`:
+
+| Status            | Meaning                                                            | Exit |
+|-------------------|--------------------------------------------------------------------|------|
+| `skipped`         | flag not set; extension not exercised                              | 0/1  |
+| `invalid_input`   | flag set but verification material missing or shape invalid       | 2    |
+| `unsupported`    | flag set but declared algorithm / anchor type outside allowlist   | 2    |
+| `not_implemented`| flag set, material present, alpha verifier does not perform crypto | 2    |
+| `passed`          | reserved for follow-up branch with positive cryptographic path     | 0    |
+
+Alpha allowlists (subject to change in follow-up branches):
+
+- signature algorithm allowlist: `{ed25519}`
+- anchor type allowlist: `{rfc3161}`
+
+The verifier never attempts network access under any flag combination.
+See `docs/validation/p3_2_signed_anchored_verification_report.md` for
+the full scope statement and remaining limitations.

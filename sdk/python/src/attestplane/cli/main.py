@@ -90,6 +90,27 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     p_verify_pb.add_argument("bundle", type=Path, help="path to P3.1 ProofBundle verification envelope")
+    p_verify_pb.add_argument(
+        "--verify-signature",
+        dest="verify_signature",
+        action="store_true",
+        help=(
+            "P3.2 alpha extension: request fail-closed DSSE signature material "
+            "inspection. Does NOT perform cryptographic signature verification — "
+            "positive crypto path is deferred to a follow-up branch."
+        ),
+    )
+    p_verify_pb.add_argument(
+        "--verify-anchor",
+        dest="verify_anchor",
+        action="store_true",
+        help=(
+            "P3.2 alpha extension: request fail-closed RFC-3161 anchor material "
+            "inspection. Does NOT perform RFC-3161 token verification, network "
+            "access, or eIDAS qualified TSA selection — positive anchor path is "
+            "deferred to a follow-up branch."
+        ),
+    )
 
     p_inspect = sub.add_parser("inspect", help="summarise a JSONL chain file")
     p_inspect.add_argument("chain", type=Path, help="path to chain.jsonl")
@@ -170,7 +191,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
 def cmd_verify_proofbundle(args: argparse.Namespace) -> int:
     from attestplane.cli.proofbundle_alpha import verify_alpha_proofbundle_file
 
-    payload = verify_alpha_proofbundle_file(args.bundle)
+    payload = verify_alpha_proofbundle_file(
+        args.bundle,
+        verify_signature=getattr(args, "verify_signature", False),
+        verify_anchor=getattr(args, "verify_anchor", False),
+    )
     sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     return int(payload["exit_code"])
 
