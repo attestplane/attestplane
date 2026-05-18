@@ -1,0 +1,83 @@
+{
+  "phase": "P3.1",
+  "gate": "cli_proofbundle_verifier",
+  "status": "PASS",
+  "cli_command": "attestplane verify-proofbundle <bundle.json>",
+  "verification_scope": "proofbundle_alpha_local",
+  "existing_cli_verify_scope": "chain_report_only",
+  "exit_codes": {
+    "0": "valid",
+    "1": "verification_failed",
+    "2": "invalid_input_or_malformed_or_unsupported"
+  },
+  "checks": [
+    "json_parse",
+    "required_fields",
+    "schema_version",
+    "proof_bundle_shape",
+    "hash_chain_recompute",
+    "artifact_hash",
+    "hash_chain_metadata",
+    "obligation_references",
+    "in_toto_shape",
+    "dsse_shape",
+    "storage_compatibility",
+    "provenance_shape"
+  ],
+  "fixtures": [
+    "tests/fixtures/proofbundle/valid_minimal.json",
+    "tests/fixtures/proofbundle/missing_required_field.json",
+    "tests/fixtures/proofbundle/malformed.json",
+    "tests/fixtures/proofbundle/invalid_hash_format.json",
+    "tests/fixtures/proofbundle/tampered_artifact_hash.json",
+    "tests/fixtures/proofbundle/broken_hash_chain.json",
+    "tests/fixtures/proofbundle/unsupported_version.json",
+    "tests/fixtures/proofbundle/missing_dsse_shape.json",
+    "tests/fixtures/proofbundle/missing_storage_compat.json"
+  ],
+  "tests_added": [
+    "sdk/python/tests/cli/test_proofbundle_alpha.py"
+  ],
+  "gate_script": "scripts/check-proofbundle-verifier.sh",
+  "commands": [
+    "scripts/check-proofbundle-verifier.sh",
+    "jq empty docs/validation/p3_1_cli_proofbundle_verifier_report.json",
+    "git diff --check",
+    "sdk/python/.venv/bin/pytest sdk/python/tests/cli/test_proofbundle_alpha.py -q",
+    "sdk/python/.venv/bin/pytest sdk/python/tests/cli/test_main.py sdk/python/tests/cli/test_proofbundle_alpha.py -q",
+    "cd sdk/python && .venv/bin/ruff check src tests",
+    "cd sdk/python && .venv/bin/mypy",
+    "cd sdk/typescript && npm test",
+    "cd sdk/typescript && npm run typecheck",
+    "cd sdk/typescript && npm run lint",
+    "scripts/check-public-api.sh",
+    "scripts/check-storage-compatibility.sh",
+    "scripts/check-release-provenance.sh",
+    "scripts/check-fault-injection.sh",
+    "bash scripts/check-schema-hashes.sh",
+    "bash scripts/check-fixture-hashes.sh",
+    "bash scripts/check-adr-frozen-blocks.sh",
+    "bash scripts/check-policy.sh",
+    "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh"
+  ],
+  "claims": {
+    "production_ready": false,
+    "compliance_ready": false,
+    "certification_claim": false,
+    "signature_verification_performed": false,
+    "anchor_verification_performed": false,
+    "network_access_performed": false,
+    "slsa_l3_claim": false,
+    "certified_provenance": false
+  },
+  "safe_claims_unchanged": true,
+  "no_go_claims_unchanged": true,
+  "remaining_p3_1_limitations": [
+    "No cryptographic signature verification",
+    "No anchor verification",
+    "No network access",
+    "No compliance certification",
+    "P3.1 envelope shape only; arbitrary third-party provenance documents are out of scope"
+  ],
+  "violations": []
+}

@@ -5,6 +5,7 @@
 Subcommands::
 
     verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1
+    verify-proofbundle <file.json> — alpha local ProofBundle verifier, JSON report, exit 0/1/2
     inspect <chain.jsonl>          — print a chain summary, exit 0/1
     export <chain.jsonl> --out OUT — build a proof bundle from a JSONL chain
     doctor                         — environment self-check, exit 0/1
@@ -76,6 +77,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_verify.add_argument("bundle", type=Path, help="path to bundle.json")
     _add_format_flag(p_verify)
+
+    p_verify_pb = sub.add_parser(
+        "verify-proofbundle",
+        help="alpha local ProofBundle/evidence-bundle verifier; JSON report; no signature or anchor verification",
+        description=(
+            "Alpha local ProofBundle verifier. Checks local JSON shape, ProofBundle "
+            "metadata closure, hash-chain recomputation, artifact hash, obligation "
+            "references, in-toto/DSSE shape, storage compatibility metadata, and "
+            "provenance-shape no-go claims. It performs no network access, signature "
+            "verification, anchor verification, or compliance certification."
+        ),
+    )
+    p_verify_pb.add_argument("bundle", type=Path, help="path to P3.1 ProofBundle verification envelope")
 
     p_inspect = sub.add_parser("inspect", help="summarise a JSONL chain file")
     p_inspect.add_argument("chain", type=Path, help="path to chain.jsonl")
@@ -151,6 +165,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
     }
     _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
     return 0 if result.ok else 1
+
+
+def cmd_verify_proofbundle(args: argparse.Namespace) -> int:
+    from attestplane.cli.proofbundle_alpha import verify_alpha_proofbundle_file
+
+    payload = verify_alpha_proofbundle_file(args.bundle)
+    sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    return int(payload["exit_code"])
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -332,6 +354,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 _DISPATCH = {
     "verify": cmd_verify,
+    "verify-proofbundle": cmd_verify_proofbundle,
     "inspect": cmd_inspect,
     "export": cmd_export,
     "doctor": cmd_doctor,
