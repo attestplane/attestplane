@@ -1,0 +1,215 @@
+{
+  "release": "v0.0.2-alpha",
+  "release_gate_status": "GO",
+  "current_branch": "fix/p1-final-release-sweep-20260518",
+  "head": "3b74e2f6314d59ba1c2f0deb97ab495f843d5c3e",
+  "main": "4d1bf9c228f796f7dc7072f8ebc227e27f9d6150",
+  "origin_main": "4d1bf9c228f796f7dc7072f8ebc227e27f9d6150",
+  "main_origin_status": "equal",
+  "branch_ahead_behind_main_before_evidence_commit": {
+    "ahead": 4,
+    "behind": 0
+  },
+  "existing_tags": {
+    "local_v0_0_2_alpha": [],
+    "remote_v0_0_2_alpha": []
+  },
+  "included_commits": [
+    {
+      "short": "8afe7b7",
+      "message": "fix(release): align alpha verifier and compliance claims"
+    },
+    {
+      "short": "b5ed29e",
+      "message": "fix(verifier): close proof bundle and settlement fail-closed gaps"
+    },
+    {
+      "short": "6632397",
+      "message": "fix(conformance): align schemas and canonical edge cases"
+    },
+    {
+      "short": "3b74e2f",
+      "message": "chore(release): complete final alpha hardening sweep"
+    }
+  ],
+  "validation_files": [
+    "docs/validation/full_software_audit_20260518.md",
+    "docs/validation/full_software_audit_20260518.json",
+    "docs/validation/p0_claim_tightening_20260518.md",
+    "docs/validation/p0_claim_tightening_20260518.json",
+    "docs/validation/p1_verifier_closure_20260518.md",
+    "docs/validation/p1_verifier_closure_20260518.json",
+    "docs/validation/p1_schema_canonical_alignment_20260518.md",
+    "docs/validation/p1_schema_canonical_alignment_20260518.json",
+    "docs/validation/p1_final_release_sweep_20260518.md",
+    "docs/validation/p1_final_release_sweep_20260518.json",
+    "docs/validation/public_api_surface_sweep_20260518.md",
+    "docs/validation/public_api_surface_sweep_20260518.json"
+  ],
+  "commands": [
+    {
+      "command": "git status --short --branch",
+      "result": "PASS, clean before gate evidence edits"
+    },
+    {
+      "command": "git rev-parse HEAD",
+      "result": "PASS"
+    },
+    {
+      "command": "git log --oneline --decorate -n 10",
+      "result": "PASS"
+    },
+    {
+      "command": "git branch --show-current",
+      "result": "PASS"
+    },
+    {
+      "command": "git fetch --all --tags --prune",
+      "result": "PASS"
+    },
+    {
+      "command": "git rev-list --left-right --count main...origin/main",
+      "result": "PASS, 0 0"
+    },
+    {
+      "command": "git rev-list --left-right --count main...HEAD",
+      "result": "PASS, 0 4 before evidence commit"
+    },
+    {
+      "command": "git tag -l 'v0.0.2-alpha*'",
+      "result": "PASS, no matches"
+    },
+    {
+      "command": "git ls-remote --tags origin 'v0.0.2-alpha*'",
+      "result": "PASS, no matches"
+    },
+    {
+      "command": "jq empty docs/validation/*.json",
+      "result": "PASS"
+    },
+    {
+      "command": "claim grep over README.md docs sdk .github LICENSE NOTICE SECURITY.md",
+      "result": "PASS, no positive overclaim"
+    },
+    {
+      "command": "sdk/python/.venv/bin/pytest",
+      "result": "PASS, 720 passed"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/ruff check src tests",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/python && .venv/bin/mypy",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm test",
+      "result": "PASS, 451 passed"
+    },
+    {
+      "command": "cd sdk/typescript && npm run typecheck",
+      "result": "PASS"
+    },
+    {
+      "command": "cd sdk/typescript && npm run lint",
+      "result": "PASS, zero warnings"
+    },
+    {
+      "command": "bash scripts/check-schema-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-fixture-hashes.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-adr-frozen-blocks.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash scripts/check-policy.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "test_results": {
+    "python_pytest": "720 passed",
+    "python_ruff": "PASS",
+    "python_mypy": "PASS",
+    "typescript_vitest": "451 passed",
+    "typescript_typecheck": "PASS",
+    "typescript_lint": "PASS, zero warnings",
+    "schema_hashes": "PASS",
+    "fixture_hashes": "PASS",
+    "adr_frozen_blocks": "PASS",
+    "policy_checks": "PASS",
+    "cross_sdk_roundtrip": "PASS, 13 Py/TS byte-identical cases",
+    "json_validation": "PASS",
+    "diff_check": "PASS"
+  },
+  "claim_gate": {
+    "status": "PASS",
+    "safe_claims": [
+      "alpha-grade dual-SDK tamper-evident evidence substrate",
+      "restricted canonicalization and canonical text hashing",
+      "SHA-256 hash-chain primitives",
+      "evidence payload schemas and fail-closed validators",
+      "sidecar signing and anchoring primitives",
+      "read-only verifier predicates",
+      "CLI verify is chain_report_only"
+    ],
+    "no_go_claims": [
+      "production-ready",
+      "production-grade",
+      "pre-beta-ready",
+      "compliance-ready",
+      "EU AI Act compliant",
+      "DORA compliant",
+      "GDPR compliant",
+      "compliance certification",
+      "external certification",
+      "full CLI ProofBundle verifier",
+      "default CLI signed verification",
+      "default CLI anchored verification",
+      "runtime governance",
+      "execution authority",
+      "scheduler",
+      "gateway authority",
+      "AIOS runtime integration"
+    ],
+    "violations": []
+  },
+  "cli_verify_scope": "chain_report_only",
+  "production_ready": false,
+  "compliance_ready": false,
+  "certification_claim": false,
+  "full_cli_proofbundle_verifier": false,
+  "default_signed_verification": false,
+  "default_anchored_verification": false,
+  "release_notes_check": {
+    "status": "PASS after wording correction",
+    "correction": "Limitations now say default CLI anchored verification is absent while preserving opt-in sidecar anchoring primitives."
+  },
+  "package_metadata_check": {
+    "status": "PASS",
+    "python_version": "0.0.2a0",
+    "typescript_version": "0.0.2-alpha.0",
+    "release_blockers": []
+  },
+  "remaining_p2": [
+    "generated public API diff gate",
+    "TypeScript obligation registry and in-toto/DSSE parity decision",
+    "durable storage hardening",
+    "mutation testing",
+    "broader fault-injection gates"
+  ],
+  "verdict": "GO: ready to merge/tag as v0.0.2-alpha after this evidence commit"
+}
