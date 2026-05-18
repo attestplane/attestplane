@@ -1,0 +1,116 @@
+{
+  "release": "v0.0.3-alpha",
+  "phase": "package_version_alignment",
+  "status": "PASS",
+  "python": {
+    "package": "attestplane",
+    "old_version": "0.0.2a0",
+    "new_version": "0.0.3a0",
+    "build": "PASS",
+    "twine_check": "PASS",
+    "artifacts": [
+      "sdk/python/dist/attestplane-0.0.3a0.tar.gz",
+      "sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl"
+    ]
+  },
+  "typescript": {
+    "package": "@attestplane/attestplane",
+    "old_version": "0.0.2-alpha.0",
+    "new_version": "0.0.3-alpha",
+    "npm_ci": "PASS",
+    "lint": "PASS",
+    "test": "PASS",
+    "build": "PASS",
+    "pack_dry_run": "PASS",
+    "pack": "PASS",
+    "artifacts": [
+      "sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz"
+    ]
+  },
+  "modified_files": [
+    "README.md",
+    "docs/integrations/governance_platforms.md",
+    "sdk/python/README.md",
+    "sdk/python/pyproject.toml",
+    "sdk/python/src/attestplane/__init__.py",
+    "sdk/python/src/attestplane/anchoring/http.py",
+    "sdk/python/tests/test_import_surface.py",
+    "sdk/python/tests/test_schemas_v1.py",
+    "sdk/typescript/README.md",
+    "sdk/typescript/package-lock.json",
+    "sdk/typescript/package.json",
+    "sdk/typescript/src/index_version.ts",
+    "docs/validation/v0.0.3_alpha_package_version_alignment_report_20260518.md",
+    "docs/validation/v0.0.3_alpha_package_version_alignment_report_20260518.json"
+  ],
+  "commands": [
+    "grep -RniE \"0\\.0\\.2a0|0\\.0\\.2-alpha\\.0|0\\.0\\.2-alpha|v0\\.0\\.2-alpha\" sdk/python sdk/typescript README* docs 2>/dev/null || true",
+    "grep -RniE \"production-ready|production ready|compliance-ready|compliance ready|certified|certification|SLSA L3|production-grade|guaranteed|GA|stable|audit-proof|legally compliant\" sdk/python sdk/typescript README* docs 2>/dev/null || true",
+    "jq empty docs/validation/*.json api/public/*.json storage/compat/*.json release/artifacts/*.json tests/fault_injection/*.json docs/roadmap/*.json",
+    "git diff --check",
+    "scripts/check-public-api.sh",
+    "bash scripts/check-policy.sh",
+    "scripts/check-storage-compatibility.sh",
+    "scripts/check-release-provenance.sh",
+    "scripts/check-fault-injection.sh",
+    "bash scripts/check-schema-hashes.sh",
+    "bash scripts/check-fixture-hashes.sh",
+    "bash scripts/check-adr-frozen-blocks.sh",
+    "PATH=\"$PWD/sdk/python/.venv/bin:$PATH\" bash scripts/test-cross-sdk-roundtrip.sh",
+    "sdk/python/.venv/bin/pytest",
+    "cd sdk/python && .venv/bin/ruff check src tests",
+    "cd sdk/python && .venv/bin/mypy",
+    "cd sdk/python && .venv/bin/python -m pip install --upgrade build twine",
+    "cd sdk/python && .venv/bin/python -m build",
+    "cd sdk/python && .venv/bin/python -m twine check dist/*",
+    "cd sdk/typescript && npm ci",
+    "cd sdk/typescript && npm run lint",
+    "cd sdk/typescript && npm test --if-present",
+    "cd sdk/typescript && npm run build --if-present",
+    "cd sdk/typescript && npm pack --dry-run",
+    "cd sdk/typescript && npm pack"
+  ],
+  "gate_results": {
+    "python_tests": "PASS: 791 passed",
+    "typescript_tests": "PASS: 502 passed",
+    "ruff": "PASS",
+    "mypy": "PASS",
+    "typescript_lint": "PASS",
+    "typescript_build": "PASS",
+    "public_api": "PASS",
+    "policy": "PASS",
+    "storage_compatibility": "PASS",
+    "release_provenance": "PASS",
+    "fault_injection": "PASS",
+    "schema_hashes": "PASS",
+    "fixture_hashes": "PASS",
+    "adr_frozen_blocks": "PASS",
+    "cross_sdk_roundtrip": "PASS",
+    "json_validation": "PASS",
+    "diff_check": "PASS"
+  },
+  "artifact_content_check": {
+    "python": "PASS: no .env, node_modules, __pycache__, pytest cache, hypothesis cache, or ruff cache entries detected",
+    "typescript": "PASS: no .env, node_modules, __pycache__, pytest cache, hypothesis cache, ruff cache, credential, token, or secret entries detected"
+  },
+  "claim_audit": {
+    "status": "PASS",
+    "old_version_references": "Remaining v0.0.2 references are historical validation, ADR, release-note, compatibility-baseline, or backward-compatibility contexts.",
+    "positive_no_go_claims_added": false
+  },
+  "no_go_confirmed": {
+    "pypi_publish_performed": false,
+    "npm_publish_performed": false,
+    "tag_moved": false,
+    "github_release_modified": false,
+    "github_release_assets_uploaded": false,
+    "production_ready_claim": false,
+    "compliance_ready_claim": false,
+    "certification_claim": false,
+    "slsa_l3_claim": false,
+    "production_grade_supply_chain_claim": false
+  },
+  "safe_claims_unchanged": true,
+  "no_go_claims_unchanged": true,
+  "ready_for_merge_to_main": true
+}

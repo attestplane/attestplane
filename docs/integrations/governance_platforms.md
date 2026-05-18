@@ -157,7 +157,7 @@ from attestplane import (
 substrate = ...  # caller's existing AttestSubstrate instance
 builder = ProofBundleBuilder(
     chain_id="customer-prod-eu-1",
-    producer_runtime="langsmith-via-attestplane-adapter v0.0.2a0",
+    producer_runtime="langsmith-via-attestplane-adapter v0.0.3a0",
 )
 builder.extend(substrate.snapshot())
 bundle = builder.build()
@@ -174,7 +174,7 @@ auditor_export = build_auditor_export(
 ingestion_doc = {
     "ingestion_version": 1,
     "producer": {
-        "substrate_version": "0.0.2a0",
+        "substrate_version": "0.0.3a0",
         "runtime_name": "langsmith",
         "instance_id": "customer-prod-eu-1",
     },

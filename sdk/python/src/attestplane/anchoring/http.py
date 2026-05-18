@@ -80,7 +80,7 @@ class UrllibHttpTransport(HttpTransport):
     ``httpx``) in a subclass.
     """
 
-    def __init__(self, *, user_agent: str = "attestplane/0.0.2-alpha") -> None:
+    def __init__(self, *, user_agent: str = "attestplane/0.0.3-alpha") -> None:
         self._user_agent = user_agent
 
     def submit(self, url: str, request_der: bytes, *, timeout_seconds: float = 30.0) -> bytes:
