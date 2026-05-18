@@ -17,6 +17,7 @@ import { POLICY_CHECK_EVENT, TOOL_CALL_EVENT } from '../src/event_types.js';
 import { chainExtend, genesisHead } from '../src/hashchain.js';
 import { ProofBundleBuilder } from '../src/proof_bundle.js';
 import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
+import { verifyProofBundle } from '../src/verifier.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const VECTORS_PATH = resolve(
@@ -145,5 +146,100 @@ describe('ProofBundle.policy_trace_refs — ADR-0012 P1.2', () => {
     const bundle = builder.build({ now: NOW });
     const refs = bundle.policy_trace_refs as readonly string[];
     expect(new Set(refs).size).toBe(refs.length);
+  });
+
+  it('verifier accepts auto-derived refs', () => {
+    const chain = buildChainFromEventTypes([TOOL_CALL_EVENT, POLICY_CHECK_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'verify-policy', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = builder.build({ now: NOW });
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(true);
+    expect(result.policy_trace_refs_ok).toBe(true);
+  });
+
+  it('verifier rejects dangling refs', () => {
+    const chain = buildChainFromEventTypes([POLICY_CHECK_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'dangling', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = JSON.parse(JSON.stringify(builder.build({ now: NOW }))) as Record<
+      string,
+      unknown
+    >;
+    bundle.policy_trace_refs = ['f'.repeat(64)];
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.policy_trace_refs_reason).toMatch(/dangling/);
+  });
+
+  it('verifier rejects refs to wrong event type', () => {
+    const chain = buildChainFromEventTypes([TOOL_CALL_EVENT, POLICY_CHECK_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'wrong-type', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = JSON.parse(JSON.stringify(builder.build({ now: NOW }))) as Record<
+      string,
+      unknown
+    >;
+    bundle.policy_trace_refs = [bytesToHex((chain[0] as ChainedEvent).event_hash)];
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.policy_trace_refs_reason).toMatch(/non-policy/);
+  });
+
+  it('verifier rejects hash mismatch', () => {
+    const chain = buildChainFromEventTypes([POLICY_CHECK_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'hash-mismatch', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = JSON.parse(JSON.stringify(builder.build({ now: NOW }))) as Record<
+      string,
+      unknown
+    >;
+    bundle.policy_trace_refs = ['a'.repeat(64)];
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.policy_trace_refs_reason).toMatch(/dangling/);
+  });
+
+  it('verifier rejects duplicate refs', () => {
+    const chain = buildChainFromEventTypes([POLICY_CHECK_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'dup-ref', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = JSON.parse(JSON.stringify(builder.build({ now: NOW }))) as Record<
+      string,
+      unknown
+    >;
+    const ref = bytesToHex((chain[0] as ChainedEvent).event_hash);
+    bundle.policy_trace_refs = [ref, ref];
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.policy_trace_refs_reason).toMatch(/duplicate/);
+  });
+
+  it('verifier rejects missing refs when policy events exist', () => {
+    const chain = buildChainFromEventTypes([POLICY_CHECK_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'missing-ref', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = JSON.parse(JSON.stringify(builder.build({ now: NOW }))) as Record<
+      string,
+      unknown
+    >;
+    const { policy_trace_refs: _policyTraceRefs, ...withoutRefs } = bundle;
+    const result = verifyProofBundle(withoutRefs);
+    expect(result.ok).toBe(false);
+    expect(result.policy_trace_refs_reason).toMatch(/missing/);
+  });
+
+  it('verifier rejects empty refs when no policy events exist', () => {
+    const chain = buildChainFromEventTypes([TOOL_CALL_EVENT]);
+    const builder = new ProofBundleBuilder({ chain_id: 'empty-ref', producer_runtime: 'test' });
+    builder.extend(chain);
+    const bundle = JSON.parse(JSON.stringify(builder.build({ now: NOW }))) as Record<
+      string,
+      unknown
+    >;
+    bundle.policy_trace_refs = [];
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.policy_trace_refs_reason).toMatch(/absent, not empty/);
   });
 });

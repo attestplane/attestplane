@@ -79,7 +79,7 @@ def test_readme_and_release_notes_declare_verify_scope() -> None:
     for rel_path in ["README.md", "docs/release-notes/v0.0.2-alpha.draft.md"]:
         text = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
         assert "chain/report-oriented" in text
-        assert "does not perform full ProofBundle" in text
+        assert "not perform full ProofBundle" in text
         assert "signature" in text
         assert "anchor" in text
         assert "compliance certification" in text

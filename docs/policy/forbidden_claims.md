@@ -107,9 +107,10 @@ permitted; [`claims_policy.md`](claims_policy.md) defines enforcement.
   conformance today covers Python and TypeScript only. Rust SDK is M7.
 - **"Full ProofBundle verifier"** / **"complete verifier"** —
   forbidden for the current CLI. The safe phrase is:
-  "`attestplane verify` is chain/report-oriented and does not perform
-  full ProofBundle, signature, anchor, `policy_trace_refs`, or
-  compliance certification verification."
+  "`attestplane verify` is chain/report-oriented with ProofBundle
+  metadata and `policy_trace_refs` closure checks, and does not
+  perform full ProofBundle, signature, anchor, or compliance
+  certification verification."
 - **"Runtime governance"** — forbidden when it implies runtime
   execution authority, scheduling, settlement, grant/revoke, billing,
   or policy enforcement. Attestplane adapters ingest and normalize

@@ -78,8 +78,9 @@ signed-verifier, anchored-verifier, or certification language.
   signing/anchoring primitives, and read-only verifier predicates).
 - "`attestplane verify` is chain/report-oriented" — accurate. The CLI
   replays bundle events and compares the embedded
-  `verification_report` with the recomputed chain result. It does not
-  perform full ProofBundle, signature, anchor, `policy_trace_refs`, or
+  `verification_report` with the recomputed chain result, then fails
+  closed on malformed ProofBundle metadata and `policy_trace_refs`
+  closure. It does not perform full ProofBundle, signature, anchor, or
   compliance certification verification.
 - "**Evidence layer beneath [observability tool]**" — accurate
   framing for the LangSmith / LangFuse / Arize Phoenix / Helicone /

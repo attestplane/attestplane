@@ -321,8 +321,9 @@ describe('verifyChainWithAnchors', () => {
 
   it('empty inputs', () => {
     const result = verifyChainWithAnchors([], []);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
     expect(result.chain_ok).toBe(true);
+    expect(result.verification_status).toBe('not_performed');
     expect(result.anchored_seqs.size).toBe(0);
     expect(result.unanchored_seqs.size).toBe(0);
   });
@@ -331,7 +332,8 @@ describe('verifyChainWithAnchors', () => {
     const chain = buildChain(3);
     const result = verifyChainWithAnchors(chain, []);
     expect(result.chain_ok).toBe(true);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.verification_status).toBe('not_performed');
     expect(result.unanchored_seqs).toEqual(new Set([0, 1, 2]));
   });
 
@@ -339,6 +341,7 @@ describe('verifyChainWithAnchors', () => {
     const chain = buildChain(3);
     const result = verifyChainWithAnchors(chain, [goodAnchor(chain, 2)]);
     expect(result.ok).toBe(true);
+    expect(result.verification_status).toBe('verified');
     expect(result.anchor_results[0]?.valid).toBe(true);
     expect(result.anchor_results[0]?.cert_status).toBe('VALID_UNVERIFIED');
     expect(result.anchored_seqs).toEqual(new Set([2]));
@@ -373,6 +376,7 @@ describe('verifyChainWithAnchors', () => {
     };
     const result = verifyChainWithAnchors(chain, [bad]);
     expect(result.ok).toBe(false);
+    expect(result.verification_status).toBe('failed');
     expect(result.anchor_results[0]?.valid).toBe(false);
     expect(result.anchor_results[0]?.reason).toMatch(/event_hash mismatch/);
   });
@@ -415,5 +419,16 @@ describe('verifyChainWithAnchors', () => {
     const chain = buildChain(1);
     const result = verifyChainWithAnchors(chain, [goodAnchor(chain, 0)]);
     expect(result.anchor_results[0]?.cert_status).toBe('VALID_UNVERIFIED');
+  });
+
+  it('is read-only', () => {
+    const chain = buildChain(2);
+    const anchors = [goodAnchor(chain, 1)];
+    const beforeChain = JSON.stringify(chain);
+    const beforeAnchors = JSON.stringify(anchors);
+    const result = verifyChainWithAnchors(chain, anchors);
+    expect(result.ok).toBe(true);
+    expect(JSON.stringify(chain)).toBe(beforeChain);
+    expect(JSON.stringify(anchors)).toBe(beforeAnchors);
   });
 });

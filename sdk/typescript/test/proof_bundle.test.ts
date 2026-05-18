@@ -126,6 +126,18 @@ describe('verifyProofBundle', () => {
     expect(result.event_count).toBe(3);
     expect(result.agreement).toBe(true);
     expect(result.chain_result.ok).toBe(true);
+    expect(result.metadata_ok).toBe(true);
+    expect(result.policy_trace_refs_ok).toBe(true);
+  });
+
+  it('is read-only', () => {
+    const builder = new ProofBundleBuilder({ chain_id: 'readonly', producer_runtime: 'test' });
+    builder.extend(buildGoodChain(3));
+    const bundle = builder.build();
+    const before = JSON.stringify(bundle);
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(true);
+    expect(JSON.stringify(bundle)).toBe(before);
   });
 
   it('rejects a bad bundle_version', () => {
@@ -137,6 +149,35 @@ describe('verifyProofBundle', () => {
 
   it('rejects a bundle missing required fields', () => {
     expect(() => verifyProofBundle({ bundle_version: 1 })).toThrow(/missing required fields/);
+  });
+
+  it('rejects unknown top-level metadata', () => {
+    const builder = new ProofBundleBuilder({ chain_id: 'unknown', producer_runtime: 'test' });
+    const bundle = builder.build() as unknown as Record<string, unknown>;
+    bundle.proof_type = 'critical-unknown';
+    expect(() => verifyProofBundle(bundle)).toThrow(/unknown top-level/);
+  });
+
+  it('detects head metadata mismatch', () => {
+    const builder = new ProofBundleBuilder({ chain_id: 'head', producer_runtime: 'test' });
+    builder.extend(buildGoodChain(2));
+    const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
+    (bundle.chain_metadata as Record<string, unknown>).head_hash_hex = 'f'.repeat(64);
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.metadata_ok).toBe(false);
+    expect(result.metadata_reason).toMatch(/head_hash_hex/);
+  });
+
+  it('detects report reason mismatch', () => {
+    const builder = new ProofBundleBuilder({ chain_id: 'report', producer_runtime: 'test' });
+    builder.extend(buildGoodChain(2));
+    const bundle = JSON.parse(JSON.stringify(builder.build())) as Record<string, unknown>;
+    (bundle.verification_report as Record<string, unknown>).reason = 'forged';
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.metadata_ok).toBe(false);
+    expect(result.metadata_reason).toMatch(/reason disagrees/);
   });
 
   it('rejects a non-object input', () => {
@@ -157,6 +198,7 @@ describe('verifyProofBundle', () => {
     expect(result.ok).toBe(false);
     expect(result.chain_result.ok).toBe(false);
     expect(result.chain_result.first_bad_index).toBe(1);
+    expect(result.metadata_ok).toBe(false);
   });
 
   it('flags bundle/walk disagreement', () => {

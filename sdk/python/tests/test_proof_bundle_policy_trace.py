@@ -14,6 +14,7 @@ from attestplane.event_types import POLICY_CHECK_EVENT, TOOL_CALL_EVENT
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import ChainHead, EventDraft
+from attestplane.verifier import verify_proof_bundle
 
 _VECTORS_PATH = (
     Path(__file__).resolve().parent
@@ -122,3 +123,80 @@ def test_refs_have_no_duplicates() -> None:
     bundle = builder.build(now=_NOW)
     refs = bundle["policy_trace_refs"]
     assert len(refs) == len(set(refs))
+
+
+def test_verifier_accepts_auto_derived_refs() -> None:
+    chain = _build_chain_from_event_types([TOOL_CALL_EVENT, POLICY_CHECK_EVENT])
+    builder = ProofBundleBuilder(chain_id="verify-policy", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    result = verify_proof_bundle(bundle)
+    assert result.ok is True
+    assert result.policy_trace_refs_ok is True
+
+
+def test_verifier_rejects_dangling_policy_trace_ref() -> None:
+    chain = _build_chain_from_event_types([POLICY_CHECK_EVENT])
+    builder = ProofBundleBuilder(chain_id="dangling", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    bundle["policy_trace_refs"] = ["f" * 64]
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert "dangling" in (result.policy_trace_refs_reason or "")
+
+
+def test_verifier_rejects_policy_trace_ref_to_wrong_event_type() -> None:
+    chain = _build_chain_from_event_types([TOOL_CALL_EVENT, POLICY_CHECK_EVENT])
+    builder = ProofBundleBuilder(chain_id="wrong-type", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    bundle["policy_trace_refs"] = [chain[0].event_hash.hex()]
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert "non-policy" in (result.policy_trace_refs_reason or "")
+
+
+def test_verifier_rejects_policy_trace_ref_hash_mismatch() -> None:
+    chain = _build_chain_from_event_types([POLICY_CHECK_EVENT])
+    builder = ProofBundleBuilder(chain_id="hash-mismatch", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    bundle["policy_trace_refs"] = ["a" * 64]
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert "dangling" in (result.policy_trace_refs_reason or "")
+
+
+def test_verifier_rejects_duplicate_policy_trace_refs() -> None:
+    chain = _build_chain_from_event_types([POLICY_CHECK_EVENT])
+    builder = ProofBundleBuilder(chain_id="dup-ref", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    ref = chain[0].event_hash.hex()
+    bundle["policy_trace_refs"] = [ref, ref]
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert "duplicate" in (result.policy_trace_refs_reason or "")
+
+
+def test_verifier_rejects_missing_policy_trace_refs_when_policy_events_exist() -> None:
+    chain = _build_chain_from_event_types([POLICY_CHECK_EVENT])
+    builder = ProofBundleBuilder(chain_id="missing-ref", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    del bundle["policy_trace_refs"]
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert "missing" in (result.policy_trace_refs_reason or "")
+
+
+def test_verifier_rejects_empty_policy_trace_refs_when_no_policy_events_exist() -> None:
+    chain = _build_chain_from_event_types([TOOL_CALL_EVENT])
+    builder = ProofBundleBuilder(chain_id="empty-ref", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build(now=_NOW)
+    bundle["policy_trace_refs"] = []
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert "absent, not empty" in (result.policy_trace_refs_reason or "")

@@ -17,13 +17,21 @@
 
 import { promises as fs } from 'node:fs';
 
-import { type VerificationResult, verifyChain } from './hashchain.js';
+import { POLICY_CHECK_EVENT } from './event_types.js';
+import {
+  GENESIS_HASH,
+  SCHEMA_VERSION,
+  type VerificationResult,
+  headOf,
+  verifyChain,
+} from './hashchain.js';
 import type {
   ProofBundle,
   SerializedAuditEvent,
   SerializedChainedEvent,
   SerializedSubjectRef,
 } from './proof_bundle.js';
+import { DEFAULT_FORBIDDEN_FIELDS } from './proof_bundle.js';
 import type { AuditEvent, ChainedEvent, SubjectRef } from './types.js';
 
 export class BundleVerificationError extends Error {
@@ -49,6 +57,10 @@ export interface BundleVerificationResult {
   readonly bundle_version: number;
   readonly chain_id: string;
   readonly head_hash_hex: string;
+  readonly metadata_ok: boolean;
+  readonly metadata_reason: string | null;
+  readonly policy_trace_refs_ok: boolean;
+  readonly policy_trace_refs_reason: string | null;
 }
 
 export function shortSummary(result: BundleVerificationResult): string {
@@ -62,7 +74,8 @@ export function shortSummary(result: BundleVerificationResult): string {
   return (
     `FAIL chain_id='${result.chain_id}' events=${result.event_count} ` +
     `first_bad_index=${bad} reason=${JSON.stringify(result.chain_result.reason)} ` +
-    `agreement=${result.agreement}`
+    `agreement=${result.agreement} metadata_reason=${JSON.stringify(result.metadata_reason)} ` +
+    `policy_trace_refs_reason=${JSON.stringify(result.policy_trace_refs_reason)}`
   );
 }
 
@@ -82,6 +95,26 @@ const REQUIRED_CHAIN_METADATA = [
   'head_seq',
   'producer_runtime',
 ] as const;
+const REQUIRED_VERIFICATION_REPORT = [
+  'ok',
+  'first_bad_index',
+  'reason',
+  'verified_at',
+  'verifier_version',
+  'verification_method',
+] as const;
+const ALLOWED_TOP_LEVEL = new Set([
+  ...REQUIRED_TOP_LEVEL,
+  'framework_mappings',
+  'signature',
+  'policy_trace_refs',
+  'signatures',
+]);
+const ALLOWED_VERIFICATION_METHODS = new Set([
+  'canonical-bytes-walk',
+  'canonical-bytes-walk+anchor',
+]);
+const HEX64 = /^[0-9a-f]{64}$/;
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -91,6 +124,12 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   if (!isPlainObject(raw)) {
     throw new BundleSchemaError(
       `bundle must be a JSON object, got ${raw === null ? 'null' : typeof raw}`,
+    );
+  }
+  const unknown = Object.keys(raw).filter((k) => !ALLOWED_TOP_LEVEL.has(k));
+  if (unknown.length > 0) {
+    throw new BundleSchemaError(
+      `bundle contains unknown top-level fields: ${JSON.stringify(unknown.sort())}`,
     );
   }
   const missing = REQUIRED_TOP_LEVEL.filter((k) => !(k in raw));
@@ -118,8 +157,37 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   if (!isPlainObject(raw.verification_report)) {
     throw new BundleSchemaError('verification_report must be a JSON object');
   }
+  const report = raw.verification_report;
+  const missingReport = REQUIRED_VERIFICATION_REPORT.filter((k) => !(k in report));
+  if (missingReport.length > 0) {
+    throw new BundleSchemaError(
+      `verification_report missing required fields: ${JSON.stringify(missingReport)}`,
+    );
+  }
+  const method = report.verification_method;
+  if (!ALLOWED_VERIFICATION_METHODS.has(String(method))) {
+    throw new BundleSchemaError(`unsupported verification_method=${JSON.stringify(method)}`);
+  }
   if (!Array.isArray(raw.forbidden_fields)) {
     throw new BundleSchemaError('forbidden_fields must be an array');
+  }
+  const forbiddenFields = raw.forbidden_fields;
+  if (!forbiddenFields.every((item) => typeof item === 'string' && item.length > 0)) {
+    throw new BundleSchemaError('forbidden_fields must contain non-empty strings');
+  }
+  const missingForbidden = DEFAULT_FORBIDDEN_FIELDS.filter(
+    (term) => !forbiddenFields.includes(term),
+  );
+  if (missingForbidden.length > 0) {
+    throw new BundleSchemaError(
+      `forbidden_fields missing required redaction terms: ${JSON.stringify(missingForbidden)}`,
+    );
+  }
+  if ('framework_mappings' in raw && !Array.isArray(raw.framework_mappings)) {
+    throw new BundleSchemaError('framework_mappings must be an array when present');
+  }
+  if ('policy_trace_refs' in raw && !Array.isArray(raw.policy_trace_refs)) {
+    throw new BundleSchemaError('policy_trace_refs must be an array when present');
   }
 }
 
@@ -197,6 +265,139 @@ function rehydrateEvents(rawEvents: readonly SerializedChainedEvent[]): ChainedE
   return chain;
 }
 
+function bytesToHex(bytes: Uint8Array): string {
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) {
+    out += (bytes[i] as number).toString(16).padStart(2, '0');
+  }
+  return out;
+}
+
+function verifyMetadataClosure(
+  bundle: ProofBundle,
+  events: readonly ChainedEvent[],
+  chainResult: VerificationResult,
+): { ok: boolean; reason: string | null } {
+  const metadata = bundle.chain_metadata;
+  const report = bundle.verification_report;
+  if (metadata.schema_version !== SCHEMA_VERSION) {
+    return {
+      ok: false,
+      reason: `chain_metadata.schema_version=${JSON.stringify(metadata.schema_version)}; this verifier handles ${SCHEMA_VERSION}`,
+    };
+  }
+  if (metadata.genesis_hash_hex !== bytesToHex(GENESIS_HASH)) {
+    return {
+      ok: false,
+      reason: 'chain_metadata.genesis_hash_hex does not match substrate genesis hash',
+    };
+  }
+  if (
+    metadata.evidence_taxonomy_version !== undefined &&
+    metadata.evidence_taxonomy_version !== 1
+  ) {
+    return { ok: false, reason: 'chain_metadata.evidence_taxonomy_version must be 1 when present' };
+  }
+  const head = headOf(events);
+  if (metadata.head_seq !== head.seq) {
+    return {
+      ok: false,
+      reason: `chain_metadata.head_seq=${JSON.stringify(metadata.head_seq)} does not match computed head seq ${head.seq}`,
+    };
+  }
+  if (metadata.head_hash_hex !== bytesToHex(head.event_hash)) {
+    return {
+      ok: false,
+      reason: 'chain_metadata.head_hash_hex does not match computed chain head',
+    };
+  }
+  if (Boolean(report.ok) !== chainResult.ok) {
+    return { ok: false, reason: 'verification_report.ok disagrees with recomputed chain result' };
+  }
+  if (report.first_bad_index !== chainResult.first_bad_index) {
+    return {
+      ok: false,
+      reason: 'verification_report.first_bad_index disagrees with recomputed chain result',
+    };
+  }
+  if (report.reason !== chainResult.reason) {
+    return {
+      ok: false,
+      reason: 'verification_report.reason disagrees with recomputed chain result',
+    };
+  }
+  if (chainResult.ok && (report.first_bad_index !== null || report.reason !== null)) {
+    return {
+      ok: false,
+      reason: 'verification_report carries failure detail while recomputed chain is ok',
+    };
+  }
+  return { ok: true, reason: null };
+}
+
+function verifyPolicyTraceRefs(
+  bundle: ProofBundle,
+  events: readonly ChainedEvent[],
+): { ok: boolean; reason: string | null } {
+  const expected = events
+    .filter((event) => event.event.event_type === POLICY_CHECK_EVENT)
+    .map((event) => bytesToHex(event.event_hash));
+  const hasRefs = bundle.policy_trace_refs !== undefined;
+  if (expected.length === 0) {
+    if (!hasRefs) return { ok: true, reason: null };
+    const refs = bundle.policy_trace_refs as readonly string[];
+    if (refs.length === 0) {
+      return {
+        ok: false,
+        reason: 'policy_trace_refs must be absent, not empty, when no policy_check_event exists',
+      };
+    }
+    return {
+      ok: false,
+      reason: 'policy_trace_refs present but bundle contains no policy_check_event',
+    };
+  }
+  if (!hasRefs) {
+    return {
+      ok: false,
+      reason: 'policy_trace_refs missing while bundle contains policy_check_event',
+    };
+  }
+  const refs = bundle.policy_trace_refs as readonly string[];
+  if (!refs.every((ref) => typeof ref === 'string' && HEX64.test(ref))) {
+    return {
+      ok: false,
+      reason: 'policy_trace_refs must contain only lowercase 64-hex event hashes',
+    };
+  }
+  if (new Set(refs).size !== refs.length) {
+    return { ok: false, reason: 'policy_trace_refs contains duplicate event hashes' };
+  }
+  const eventHashes = new Set(events.map((event) => bytesToHex(event.event_hash)));
+  const dangling = refs.filter((ref) => !eventHashes.has(ref));
+  if (dangling.length > 0) {
+    return {
+      ok: false,
+      reason: `policy_trace_refs contains dangling refs: ${JSON.stringify(dangling)}`,
+    };
+  }
+  const expectedSet = new Set(expected);
+  const wrongType = refs.filter((ref) => eventHashes.has(ref) && !expectedSet.has(ref));
+  if (wrongType.length > 0) {
+    return {
+      ok: false,
+      reason: `policy_trace_refs points at non-policy events: ${JSON.stringify(wrongType)}`,
+    };
+  }
+  if (JSON.stringify(refs) !== JSON.stringify(expected)) {
+    return {
+      ok: false,
+      reason: 'policy_trace_refs does not match chain-seq-ordered policy_check_event hashes',
+    };
+  }
+  return { ok: true, reason: null };
+}
+
 export function verifyProofBundle(raw: unknown): BundleVerificationResult {
   validateShape(raw);
   const bundle = raw;
@@ -204,9 +405,11 @@ export function verifyProofBundle(raw: unknown): BundleVerificationResult {
   const chainResult = verifyChain(events);
   const bundleReportedOk = Boolean(bundle.verification_report.ok);
   const agreement = bundleReportedOk === chainResult.ok;
+  const metadata = verifyMetadataClosure(bundle, events, chainResult);
+  const policyTraceRefs = verifyPolicyTraceRefs(bundle, events);
 
   return {
-    ok: chainResult.ok && agreement,
+    ok: chainResult.ok && agreement && metadata.ok && policyTraceRefs.ok,
     chain_result: chainResult,
     bundle_reported_ok: bundleReportedOk,
     agreement,
@@ -214,6 +417,10 @@ export function verifyProofBundle(raw: unknown): BundleVerificationResult {
     bundle_version: bundle.bundle_version,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
+    metadata_ok: metadata.ok,
+    metadata_reason: metadata.reason,
+    policy_trace_refs_ok: policyTraceRefs.ok,
+    policy_trace_refs_reason: policyTraceRefs.reason,
   };
 }
 

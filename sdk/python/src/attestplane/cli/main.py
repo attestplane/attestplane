@@ -25,10 +25,10 @@ from attestplane import __version__
 
 VERIFY_SCOPE = "chain_report_only"
 VERIFY_SCOPE_NOTICE = (
-    "MODE: chain/report-only. This command replays bundle events and compares the embedded "
-    "verification_report with the recomputed chain result. It does not perform full ProofBundle "
-    "verification, signature verification, anchor verification, policy_trace_refs verification, "
-    "or compliance certification."
+    "MODE: chain/report-oriented, not a full verifier. This command replays bundle events, "
+    "compares the embedded verification_report with the recomputed chain result, and fails "
+    "closed on malformed ProofBundle metadata and policy_trace_refs closure. It does not "
+    "perform signature verification, anchor verification, or compliance certification."
 )
 
 
@@ -36,6 +36,8 @@ def _verify_scope_metadata() -> dict[str, Any]:
     return {
         "verification_scope": VERIFY_SCOPE,
         "full_proof_bundle_verification": False,
+        "proof_bundle_metadata_closure_performed": True,
+        "policy_trace_refs_verification_performed": True,
         "signature_verification_performed": False,
         "anchor_verification_performed": False,
         "compliance_certification": False,
@@ -68,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
         "verify",
         help=(
             "chain/report-oriented proof-bundle check; not full ProofBundle, "
-            "signature, anchor, policy_trace_refs, or compliance verification"
+            "signature, anchor, or compliance verification"
         ),
         description=VERIFY_SCOPE_NOTICE,
     )

@@ -14,11 +14,14 @@ do not mutate, sign, or anchor. Verification is read-only.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from attestplane.hashchain import VerificationResult, verify_chain
+from attestplane.event_types import POLICY_CHECK_EVENT
+from attestplane.hashchain import GENESIS_HASH, SCHEMA_VERSION, VerificationResult, head_of, verify_chain
+from attestplane.proof_bundle import DEFAULT_FORBIDDEN_FIELDS
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
 from attestplane.types import ChainedEvent
 
@@ -62,6 +65,10 @@ class BundleVerificationResult:
     bundle_version: int
     chain_id: str
     head_hash_hex: str
+    metadata_ok: bool
+    metadata_reason: str | None
+    policy_trace_refs_ok: bool
+    policy_trace_refs_reason: str | None
 
     def short_summary(self) -> str:
         if self.ok:
@@ -73,7 +80,8 @@ class BundleVerificationResult:
         return (
             f"FAIL chain_id={self.chain_id!r} events={self.event_count} "
             f"first_bad_index={bad} reason={self.chain_result.reason!r} "
-            f"agreement={self.agreement}"
+            f"agreement={self.agreement} metadata_reason={self.metadata_reason!r} "
+            f"policy_trace_refs_reason={self.policy_trace_refs_reason!r}"
         )
 
 
@@ -88,6 +96,18 @@ _REQUIRED_CHAIN_METADATA = {
     "chain_id", "schema_version", "genesis_hash_hex",
     "head_hash_hex", "head_seq", "producer_runtime",
 }
+_REQUIRED_VERIFICATION_REPORT = {
+    "ok", "first_bad_index", "reason", "verified_at",
+    "verifier_version", "verification_method",
+}
+_ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
+    "framework_mappings",
+    "signature",
+    "policy_trace_refs",
+    "signatures",
+}
+_ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _validate_shape(bundle: Any) -> None:
@@ -100,6 +120,9 @@ def _validate_shape(bundle: Any) -> None:
     """
     if not isinstance(bundle, dict):
         raise BundleSchemaError(f"bundle must be a JSON object, got {type(bundle).__name__}")
+    unknown = set(bundle) - _ALLOWED_TOP_LEVEL
+    if unknown:
+        raise BundleSchemaError(f"bundle contains unknown top-level fields: {sorted(unknown)}")
     missing = _REQUIRED_TOP_LEVEL - set(bundle)
     if missing:
         raise BundleSchemaError(f"bundle missing required fields: {sorted(missing)}")
@@ -119,8 +142,28 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("events must be an array")
     if not isinstance(bundle["verification_report"], dict):
         raise BundleSchemaError("verification_report must be a JSON object")
+    missing_report = _REQUIRED_VERIFICATION_REPORT - set(bundle["verification_report"])
+    if missing_report:
+        raise BundleSchemaError(
+            f"verification_report missing required fields: {sorted(missing_report)}"
+        )
+    method = bundle["verification_report"]["verification_method"]
+    if method not in _ALLOWED_VERIFICATION_METHODS:
+        raise BundleSchemaError(f"unsupported verification_method={method!r}")
     if not isinstance(bundle["forbidden_fields"], list):
         raise BundleSchemaError("forbidden_fields must be an array")
+    forbidden = bundle["forbidden_fields"]
+    if not all(isinstance(item, str) and item for item in forbidden):
+        raise BundleSchemaError("forbidden_fields must contain non-empty strings")
+    missing_forbidden = set(DEFAULT_FORBIDDEN_FIELDS) - set(forbidden)
+    if missing_forbidden:
+        raise BundleSchemaError(
+            f"forbidden_fields missing required redaction terms: {sorted(missing_forbidden)}"
+        )
+    if "framework_mappings" in bundle and not isinstance(bundle["framework_mappings"], list):
+        raise BundleSchemaError("framework_mappings must be an array when present")
+    if "policy_trace_refs" in bundle and not isinstance(bundle["policy_trace_refs"], list):
+        raise BundleSchemaError("policy_trace_refs must be an array when present")
 
 
 def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
@@ -133,6 +176,80 @@ def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
                 f"events[{idx}]: malformed event row: {exc}"
             ) from exc
     return chain
+
+
+def _verify_metadata_closure(
+    bundle: dict[str, Any],
+    events: list[ChainedEvent],
+    chain_result: VerificationResult,
+) -> tuple[bool, str | None]:
+    metadata = bundle["chain_metadata"]
+    report = bundle["verification_report"]
+    if metadata["schema_version"] != SCHEMA_VERSION:
+        return False, (
+            f"chain_metadata.schema_version={metadata['schema_version']!r}; "
+            f"this verifier handles {SCHEMA_VERSION}"
+        )
+    if metadata["genesis_hash_hex"] != GENESIS_HASH.hex():
+        return False, "chain_metadata.genesis_hash_hex does not match substrate genesis hash"
+    if "evidence_taxonomy_version" in metadata and metadata["evidence_taxonomy_version"] != 1:
+        return False, "chain_metadata.evidence_taxonomy_version must be 1 when present"
+
+    head = head_of(events)
+    if metadata["head_seq"] != head.seq:
+        return False, (
+            f"chain_metadata.head_seq={metadata['head_seq']!r} does not match "
+            f"computed head seq {head.seq}"
+        )
+    if metadata["head_hash_hex"] != head.event_hash.hex():
+        return False, "chain_metadata.head_hash_hex does not match computed chain head"
+
+    if bool(report["ok"]) != chain_result.ok:
+        return False, "verification_report.ok disagrees with recomputed chain result"
+    if report["first_bad_index"] != chain_result.first_bad_index:
+        return False, "verification_report.first_bad_index disagrees with recomputed chain result"
+    if report["reason"] != chain_result.reason:
+        return False, "verification_report.reason disagrees with recomputed chain result"
+    if chain_result.ok and (report["first_bad_index"] is not None or report["reason"] is not None):
+        return False, "verification_report carries failure detail while recomputed chain is ok"
+    return True, None
+
+
+def _verify_policy_trace_refs(bundle: dict[str, Any], events: list[ChainedEvent]) -> tuple[bool, str | None]:
+    expected = [
+        event.event_hash.hex()
+        for event in events
+        if event.event.event_type == POLICY_CHECK_EVENT
+    ]
+    present = "policy_trace_refs" in bundle
+    if not expected:
+        if not present:
+            return True, None
+        refs = bundle["policy_trace_refs"]
+        if refs == []:
+            return False, "policy_trace_refs must be absent, not empty, when no policy_check_event exists"
+        return False, "policy_trace_refs present but bundle contains no policy_check_event"
+
+    if not present:
+        return False, "policy_trace_refs missing while bundle contains policy_check_event"
+    refs = bundle["policy_trace_refs"]
+    if not all(isinstance(ref, str) and _HEX64.match(ref) for ref in refs):
+        return False, "policy_trace_refs must contain only lowercase 64-hex event hashes"
+    if len(refs) != len(set(refs)):
+        return False, "policy_trace_refs contains duplicate event hashes"
+    actual_event_hashes = {event.event_hash.hex() for event in events}
+    dangling = [ref for ref in refs if ref not in actual_event_hashes]
+    if dangling:
+        return False, f"policy_trace_refs contains dangling refs: {dangling}"
+    wrong_type = [
+        ref for ref in refs
+        if ref in actual_event_hashes and ref not in expected
+    ]
+    if wrong_type:
+        return False, f"policy_trace_refs points at non-policy events: {wrong_type}"
+    if refs != expected:
+        return False, "policy_trace_refs does not match chain-seq-ordered policy_check_event hashes"
+    return True, None
 
 
 def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
@@ -148,8 +265,10 @@ def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
     chain_result = verify_chain(events)
     bundle_reported_ok = bool(bundle["verification_report"]["ok"])
     agreement = bundle_reported_ok == chain_result.ok
+    metadata_ok, metadata_reason = _verify_metadata_closure(bundle, events, chain_result)
+    policy_ok, policy_reason = _verify_policy_trace_refs(bundle, events)
     return BundleVerificationResult(
-        ok=chain_result.ok and agreement,
+        ok=chain_result.ok and agreement and metadata_ok and policy_ok,
         chain_result=chain_result,
         bundle_reported_ok=bundle_reported_ok,
         agreement=agreement,
@@ -157,6 +276,10 @@ def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
         bundle_version=int(bundle["bundle_version"]),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
+        metadata_ok=metadata_ok,
+        metadata_reason=metadata_reason,
+        policy_trace_refs_ok=policy_ok,
+        policy_trace_refs_reason=policy_reason,
     )
 
 

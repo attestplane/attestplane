@@ -6,8 +6,9 @@ Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 > SDK's [`vectors.json`](../python/tests/conformance/vectors.json) — see
 > [ADR-0002][adr2]. APIs may still change before v0.1.0.
 > The current Python CLI `attestplane verify` path is chain/report-oriented
-> only. It does not perform full ProofBundle, signature, anchor,
-> `policy_trace_refs`, or compliance certification verification.
+> with ProofBundle metadata and `policy_trace_refs` closure checks. It does
+> not perform full ProofBundle, signature, anchor, or compliance
+> certification verification.
 
 See the [project README][project-readme] for background, governance, and
 trademark policy.

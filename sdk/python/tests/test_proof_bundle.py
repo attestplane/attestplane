@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -128,6 +129,48 @@ def test_verify_proof_bundle_accepts_good_bundle() -> None:
     assert result.event_count == 3
     assert result.agreement is True
     assert result.chain_result.ok is True
+    assert result.metadata_ok is True
+    assert result.policy_trace_refs_ok is True
+
+
+def test_verify_proof_bundle_is_read_only() -> None:
+    builder = ProofBundleBuilder(chain_id="readonly", producer_runtime="test")
+    builder.extend(_build_good_chain(3))
+    bundle = builder.build()
+    before = deepcopy(bundle)
+    result = verify_proof_bundle(bundle)
+    assert result.ok is True
+    assert bundle == before
+
+
+def test_verify_proof_bundle_rejects_unknown_top_level_metadata() -> None:
+    builder = ProofBundleBuilder(chain_id="unknown", producer_runtime="test")
+    bundle = builder.build()
+    bundle["proof_type"] = "critical-unknown"
+    with pytest.raises(BundleSchemaError, match="unknown top-level"):
+        verify_proof_bundle(bundle)
+
+
+def test_verify_proof_bundle_detects_head_metadata_mismatch() -> None:
+    builder = ProofBundleBuilder(chain_id="head", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    bundle["chain_metadata"]["head_hash_hex"] = "f" * 64
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert result.metadata_ok is False
+    assert "head_hash_hex" in (result.metadata_reason or "")
+
+
+def test_verify_proof_bundle_detects_report_reason_mismatch() -> None:
+    builder = ProofBundleBuilder(chain_id="report", producer_runtime="test")
+    builder.extend(_build_good_chain(2))
+    bundle = builder.build()
+    bundle["verification_report"]["reason"] = "forged"
+    result = verify_proof_bundle(bundle)
+    assert result.ok is False
+    assert result.metadata_ok is False
+    assert "reason disagrees" in (result.metadata_reason or "")
 
 
 def test_verify_proof_bundle_rejects_bad_bundle_version() -> None:
@@ -155,6 +198,7 @@ def test_verify_proof_bundle_detects_tampered_chain() -> None:
     assert result.ok is False
     assert result.chain_result.ok is False
     assert result.chain_result.first_bad_index == 1
+    assert result.metadata_ok is False
 
 
 def test_verify_proof_bundle_disagreement_flag() -> None:

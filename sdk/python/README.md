@@ -4,9 +4,10 @@ Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 
 > **Status: alpha (v0.0.1).** APIs may change before v0.1.0. The canonical
 > hash format and conformance vectors, however, are frozen — see [ADR-0002][adr2].
-> The current CLI `attestplane verify` path is chain/report-oriented only. It
-> does not perform full ProofBundle, signature, anchor, `policy_trace_refs`, or
-> compliance certification verification.
+> The current CLI `attestplane verify` path is chain/report-oriented with
+> ProofBundle metadata and `policy_trace_refs` closure checks. It does not
+> perform full ProofBundle, signature, anchor, or compliance certification
+> verification.
 
 See the [project README][project-readme] for background, governance, and
 trademark policy. The full design rationale for this SDK lives in [ADR-0002][adr2].

@@ -55,8 +55,8 @@ const VECTORS: VectorsFile = JSON.parse(readFileSync(VECTORS_PATH, 'utf-8')) as 
 
 describe('checkSettlementPrecondition — ADR-0009 § B.3 / P2.3', () => {
   it('vectors file loads', () => {
-    expect(VECTORS.$schema_version).toBe(1);
-    expect(VECTORS.verifier_vectors.length).toBe(8);
+    expect(VECTORS.$schema_version).toBe(2);
+    expect(VECTORS.verifier_vectors.length).toBe(12);
   });
 
   for (const vec of VECTORS.verifier_vectors) {
@@ -100,6 +100,30 @@ describe('checkSettlementPrecondition — ADR-0009 § B.3 / P2.3', () => {
     const r2 = checkSettlementPrecondition(chain, claim);
     expect(r1).toEqual(r2);
     expect(r1.ok).toBe(true);
+  });
+
+  it('is read-only', () => {
+    const chain = [
+      {
+        seq: 0,
+        event_type: 'lease_lifecycle_event',
+        payload: { lifecycle: 'consumed', lease_id_hash: 'a'.repeat(64) },
+      },
+      {
+        seq: 1,
+        event_type: 'settlement_event',
+        payload: { settlement_run_id: 's', amount_hash: 'b'.repeat(64) },
+      },
+    ];
+    const before = JSON.stringify(chain);
+    const claim: SettlementPreconditionClaim = {
+      claim_kind: 'settlement_precondition',
+      lease_id_hash: 'a'.repeat(64),
+      settlement_run_id: 's',
+      expected_settlement_amount_hash: 'b'.repeat(64),
+    };
+    expect(checkSettlementPrecondition(chain, claim).ok).toBe(true);
+    expect(JSON.stringify(chain)).toBe(before);
   });
 
   it('handles malformed chain', () => {

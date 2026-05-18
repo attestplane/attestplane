@@ -1,5 +1,5 @@
 {
-  "$schema_version": 1,
+  "$schema_version": 2,
   "frozen_at": "2026-05-17T12:00:00Z",
   "comment": "ADR-0009 § B.3 + P2.3 settlement_precondition verifier conformance vectors. Py + TS replay identical.",
   "verifier_vectors": [
@@ -98,6 +98,74 @@
         "expected_settlement_amount_hash": "abc4560000000000000000000000000000000000000000000000000000000000"
       },
       "expected": {"ok": false, "reason_contains": "amount_hash_mismatch", "lease_consumed_seq": 0, "settlement_event_seq": 1}
+    },
+    {
+      "name": "amount_hash_missing_when_claim_requires_it",
+      "description": "Claim binds amount hash but matching settlement_event omits amount_hash — fail closed.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-H"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "settlement_run_id": "stmt-H",
+        "expected_settlement_amount_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expected": {"ok": false, "reason_contains": "amount_hash_missing", "lease_consumed_seq": 0, "settlement_event_seq": 1}
+    },
+    {
+      "name": "amount_hash_null_when_claim_requires_it",
+      "description": "Claim binds amount hash but matching settlement_event has null amount_hash — fail closed.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-I", "amount_hash": null}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "settlement_run_id": "stmt-I",
+        "expected_settlement_amount_hash": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expected": {"ok": false, "reason_contains": "amount_hash_missing", "lease_consumed_seq": 0, "settlement_event_seq": 1}
+    },
+    {
+      "name": "amount_hash_empty_when_claim_requires_it",
+      "description": "Claim binds amount hash but matching settlement_event has empty amount_hash — fail closed.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-J", "amount_hash": ""}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "settlement_run_id": "stmt-J",
+        "expected_settlement_amount_hash": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "expected": {"ok": false, "reason_contains": "amount_hash_malformed", "lease_consumed_seq": 0, "settlement_event_seq": 1}
+    },
+    {
+      "name": "amount_hash_wrong_format_when_claim_requires_it",
+      "description": "Claim binds amount hash but matching settlement_event amount_hash is not lowercase 64-hex — fail closed.",
+      "chain": [
+        {"seq": 0, "event_type": "lease_lifecycle_event",
+         "payload": {"lifecycle": "consumed", "lease_id_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}},
+        {"seq": 1, "event_type": "settlement_event",
+         "payload": {"settlement_run_id": "stmt-K", "amount_hash": "not-a-hex-hash"}}
+      ],
+      "claim": {
+        "claim_kind": "settlement_precondition",
+        "lease_id_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "settlement_run_id": "stmt-K",
+        "expected_settlement_amount_hash": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "expected": {"ok": false, "reason_contains": "amount_hash_malformed", "lease_consumed_seq": 0, "settlement_event_seq": 1}
     },
     {
       "name": "unsupported_claim_kind",

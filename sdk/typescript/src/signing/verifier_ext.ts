@@ -466,6 +466,6 @@ export function verifyChainFull(
     signature_results: sigResults,
     signed_segment_count: signedCount,
     first_bad_signature_index: firstBad,
-    ok: anchorResult.ok,
+    ok: anchorResult.chain_ok && anchorResult.anchor_results.every((a) => a.valid),
   };
 }

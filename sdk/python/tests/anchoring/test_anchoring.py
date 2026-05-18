@@ -293,8 +293,9 @@ def _good_anchor(chain: list[ChainedEvent], seq: int) -> AnchorRecord:
 
 def test_verify_empty_inputs() -> None:
     result = verify_chain_with_anchors([], [])
-    assert result.ok is True
+    assert result.ok is False
     assert result.chain_ok is True
+    assert result.verification_status == "not_performed"
     assert result.anchored_seqs == frozenset()
     assert result.unanchored_seqs == frozenset()
 
@@ -303,7 +304,8 @@ def test_verify_unanchored_chain() -> None:
     chain = _build_chain(3)
     result = verify_chain_with_anchors(chain, [])
     assert result.chain_ok is True
-    assert result.ok is True  # no anchors to fail
+    assert result.ok is False
+    assert result.verification_status == "not_performed"
     assert result.unanchored_seqs == frozenset({0, 1, 2})
     assert result.anchored_seqs == frozenset()
 
@@ -313,6 +315,7 @@ def test_verify_chain_with_one_good_anchor() -> None:
     anchors = [_good_anchor(chain, 2)]  # anchor the tip
     result = verify_chain_with_anchors(chain, anchors)
     assert result.ok is True
+    assert result.verification_status == "verified"
     assert result.anchor_results[0].valid is True
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
     assert result.anchor_results[0].ltv_artifacts_present is True
@@ -351,6 +354,7 @@ def test_verify_detects_hash_mismatch() -> None:
     )
     result = verify_chain_with_anchors(chain, [bad])
     assert result.ok is False
+    assert result.verification_status == "failed"
     assert result.anchor_results[0].valid is False
     assert "anchored_event_hash mismatch" in (result.anchor_results[0].reason or "")
 
@@ -426,3 +430,14 @@ def test_v1_cert_status_is_unverified() -> None:
     chain = _build_chain(1)
     result = verify_chain_with_anchors(chain, [_good_anchor(chain, 0)])
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+
+
+def test_verify_chain_with_anchors_is_read_only() -> None:
+    chain = _build_chain(2)
+    anchors = [_good_anchor(chain, 1)]
+    before_chain = list(chain)
+    before_anchors = list(anchors)
+    result = verify_chain_with_anchors(chain, anchors)
+    assert result.ok is True
+    assert chain == before_chain
+    assert anchors == before_anchors

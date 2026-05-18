@@ -23,14 +23,15 @@
 > canonicalization, SHA-256 hash-chain primitives, evidence payload
 > schemas, sidecar signing/anchoring primitives, and read-only verifier
 > predicates. The current CLI `attestplane verify` path is
-> chain/report-oriented and must not be treated as a full ProofBundle,
-> signed, anchored, or compliance certification verifier.
+> chain/report-oriented with ProofBundle metadata and
+> `policy_trace_refs` closure checks. It must not be treated as a full
+> ProofBundle, signed, anchored, or compliance certification verifier.
 
 ---
 
 ## What is Attestplane?
 
-Attestplane is an Apache-2.0 cryptographic evidence substrate for recording AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain. The current alpha includes sidecar signing and anchoring primitives plus proof-bundle export surfaces, but those sidecars are not part of the default CLI verifier path. `attestplane verify` is chain/report-oriented: it replays bundle events and compares the embedded `verification_report` with the recomputed chain result.
+Attestplane is an Apache-2.0 cryptographic evidence substrate for recording AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain. The current alpha includes sidecar signing and anchoring primitives plus proof-bundle export surfaces, but those sidecars are not part of the default CLI verifier path. `attestplane verify` is chain/report-oriented: it replays bundle events, compares the embedded `verification_report` with the recomputed chain result, and fails closed on malformed ProofBundle metadata and `policy_trace_refs` closure.
 
 ### Two sides of one evidence protocol
 
@@ -61,7 +62,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.2-alpha (on `main`, release candidate)** adds:
 
-- Verifier predicates + `attestplane` CLI for chain/report-oriented checks; the CLI does not perform full ProofBundle, signature, anchor, `policy_trace_refs`, or compliance certification verification
+- Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (fsync on every append, 9-verb forbidden gate)
 - RFC-3161 anchoring with FreeTSA / DigiCert / Sigstore Rekor + real OCSP + multi-hop cert chains + eIDAS Trusted List
 - Ed25519 sidecar signing scheme ([ADR-0005](docs/adr/0005-event-signing-scheme.md)) with KeyProvider abstraction + plurality verification
@@ -170,9 +171,9 @@ The first public alpha is live on TestPyPI (sandbox) and npm with the `alpha` di
 The current `attestplane verify` command is deliberately narrow:
 
 - It replays bundle events and checks hash-chain/report agreement.
+- It fails closed on malformed ProofBundle metadata and `policy_trace_refs` closure.
 - It does not perform full ProofBundle verification.
 - It does not verify signatures or anchors.
-- It does not verify `policy_trace_refs` closure.
 - It does not issue compliance certification.
 
 ## Published v0.0.1-alpha status
