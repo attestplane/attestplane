@@ -1119,7 +1119,11 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
         queue_candidates = load_queue(args.queue)
         if args.auto_promote_prepared:
             discovered = discover_prepared_candidates()
-            queue_candidates = merge_prepared_candidates(args.queue, discovered, dry_run=not args.execute)
+            queue_candidates = merge_prepared_candidates(
+                args.queue,
+                discovered,
+                dry_run=not args.execute or args.auto_finalize_next_alpha,
+            )
             print(f"alpha train: auto-promote discovered {len(discovered)} prepared candidates", flush=True)
 
         candidates = unprocessed_candidates(queue_candidates, args.state_file)
