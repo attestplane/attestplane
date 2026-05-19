@@ -557,6 +557,37 @@ def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.
     assert len(calls) == 1
 
 
+def test_process_git_push_queue_limits_to_one_push_per_cycle(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    alpha_release_train.enqueue_git_push_task(state_file, candidate_value, "main", dry_run=False)
+    alpha_release_train.enqueue_git_push_task(state_file, candidate_value, candidate_value.release, dry_run=False)
+
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(
+        alpha_release_train,
+        "attempt_git_push_once",
+        lambda argv, *, dry_run: calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
+    )
+
+    events = alpha_release_train.process_git_push_queue(
+        state_file,
+        dry_run=False,
+        cooldown_seconds=7,
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert events == [{"release": "v0.0.8-alpha", "ref": "main", "status": "done"}]
+    assert calls == [["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]]
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "queued"
+
+
 def test_git_push_skips_when_main_already_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
 

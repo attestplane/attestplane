@@ -620,13 +620,20 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
               FROM git_push_tasks
              WHERE status IN ('queued', 'cooldown')
                AND next_attempt_at_epoch <= ?
-             ORDER BY next_attempt_at_epoch, created_at_epoch
+             ORDER BY
+                CASE stage
+                    WHEN 'main_pushed' THEN 0
+                    WHEN 'tag_pushed' THEN 1
+                    ELSE 2
+                END,
+                next_attempt_at_epoch,
+                created_at_epoch
             """,
             (now,),
         ).fetchall()
         for release, ref, stage, status, attempts, next_attempt_at_epoch in rows:
             candidate = prepared_candidate_from_release(str(release))
-            argv = ["git", "push", "origin", str(ref)]
+            argv = normalize_git_push_argv(["git", "push", "origin", str(ref)])
             try:
                 if git_push_remote_converged(argv):
                     update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
@@ -656,6 +663,7 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
                         "next_attempt_at_epoch": now + cooldown_seconds,
                     }
                 )
+            break
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
     return processed
