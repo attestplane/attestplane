@@ -77,6 +77,11 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
+The next prepared alpha line, **v0.0.4-alpha**, carries the post-tag FreeTSA
+verifier recovery, Article 12 aligned profile documentation, verifier
+independence documentation, and retention/deletion proof design work. It remains
+alpha substrate work and is not a legal compliance certification.
+
 Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate alpha substrate conformance, not production readiness or regulatory compliance.
 
 Attestplane is infrastructure your team owns, operates, and audits independently. The substrate stays in your control plane.
@@ -145,7 +150,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  SDKs                                                         │   │
-│  │  Python (0.0.3a0)   │  TypeScript (0.0.3-alpha)               │   │
+│  │  Python (0.0.4a0)   │  TypeScript (0.0.4-alpha)               │   │
 │  │  FastAPI / Express / NestJS / Django helpers (M5)             │   │
 │  │  Rust crate (M7)                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -176,6 +181,10 @@ with schemas, sidecar primitives, storage, adapters, verifier predicates,
 public API drift gates, storage compatibility policy, and release provenance
 hygiene, but it is not pre-beta, not production-ready, and not compliance-ready.
 
+The `v0.0.4-alpha` release candidate is prepared on `main` for the next alpha
+cut. Until an explicit tag/release/publish step is authorized, the latest
+published package artifacts remain v0.0.3-alpha.
+
 The current `attestplane verify` command is deliberately narrow:
 
 - It replays bundle events and checks hash-chain/report agreement.
@@ -196,7 +205,7 @@ Implemented in the published alpha artifacts:
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
 Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface
-through v0.0.3-alpha; not a production claim):
+through the v0.0.4-alpha release-prep line; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -217,6 +226,14 @@ Not yet implemented:
 | `attestplane==0.0.3a0` | [PyPI](https://pypi.org/project/attestplane/0.0.3a0/) | GitHub OIDC trusted publishing |
 | `@attestplane/attestplane@0.0.3-alpha` | [npm alpha dist-tag](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
 | GitHub Release | [v0.0.3-alpha](https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha) | wheel + sdist + npm tarball + checksums + artifact manifest |
+
+Prepared next alpha artifacts:
+
+| Artifact | Channel | Verify |
+|---|---|---|
+| `attestplane==0.0.4a0` | release candidate on `main`; not published until explicit release authorization | local build + twine check + checksum manifest |
+| `@attestplane/attestplane@0.0.4-alpha` | release candidate on `main`; not published until explicit release authorization | local npm pack + checksum manifest |
+| GitHub Release | `v0.0.4-alpha` not created until explicit release authorization | planned wheel + sdist + npm tarball + checksums + artifact manifest |
 
 ## Quickstart
 
@@ -296,7 +313,7 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 ## Future Compliance Framework Mapping Targets
 
 The table below lists roadmap targets for future compliance mapping. The
-published v0.0.3-alpha artifacts include obligation registry data and
+prepared v0.0.4-alpha artifacts include obligation registry data and
 chain/report-oriented verifier predicates, but they do not ship a full
 ProofBundle, signed, anchored, or compliance certification verifier. All
 entries below carry `implementation_status` values from the locked four-value

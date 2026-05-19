@@ -2,7 +2,7 @@
 
 Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 
-> **Status: alpha (v0.0.3-alpha).** Wire format is byte-locked against the Python
+> **Status: alpha (v0.0.4-alpha).** Wire format is byte-locked against the Python
 > SDK's [`vectors.json`](../python/tests/conformance/vectors.json) — see
 > [ADR-0002][adr2]. APIs may still change before v0.1.0.
 > The current Python CLI `attestplane verify` path is chain/report-oriented
@@ -19,10 +19,10 @@ trademark policy.
 ## Install
 
 ```bash
-# Pin the alpha explicitly; v0.0.3-alpha is on the 'alpha' dist-tag.
+# Pin the alpha explicitly; v0.0.4-alpha is the next prepared alpha version.
 npm install @attestplane/attestplane@alpha
 # or, equivalent:
-npm install @attestplane/attestplane@0.0.3-alpha
+npm install @attestplane/attestplane@0.0.4-alpha
 ```
 
 `npm install @attestplane/attestplane` without a tag also resolves to

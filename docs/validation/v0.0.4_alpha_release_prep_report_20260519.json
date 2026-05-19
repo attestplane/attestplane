@@ -1,0 +1,35 @@
+{
+  "schema": "attestplane_validation_report.v1",
+  "report_id": "v0.0.4_alpha_release_prep_report_20260519",
+  "release": "v0.0.4-alpha",
+  "base_head": "2966d016d74c32738e802cb01c1b6045a8844355",
+  "status": "release_prep_ready",
+  "artifacts": {
+    "manifest": "release/artifacts/v0.0.4-alpha/artifact-manifest.json",
+    "checksums": "release/artifacts/v0.0.4-alpha/checksums.sha256",
+    "upload_plan": "release/artifacts/v0.0.4-alpha/upload-plan.md",
+    "release_notes": "docs/release-notes/v0.0.4-alpha.draft.md"
+  },
+  "validation": {
+    "python_build": "passed",
+    "twine_check": "passed",
+    "typescript_build": "passed",
+    "typescript_tests": "passed",
+    "npm_pack": "passed",
+    "release_asset_prep_gate": "passed",
+    "claim_scan": "passed",
+    "json_validation": "passed",
+    "git_diff_check": "passed"
+  },
+  "explicit_non_actions": {
+    "tag": "not created",
+    "github_release_write": "not performed",
+    "pypi_publish": "not performed",
+    "npm_publish": "not performed",
+    "deploy": "not performed",
+    "workflow_dispatch": "not performed",
+    "npm_latest_dist_tag_changed": false,
+    "secrets_printed": false
+  },
+  "final_verdict": "v0.0.4_alpha_release_prep_ready"
+}

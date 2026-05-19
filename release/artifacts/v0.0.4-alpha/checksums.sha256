@@ -1,0 +1,16 @@
+# AP-EVD/1.0 v0.0.4-alpha release-candidate asset checksums (SHA-256)
+#
+# Generated from a local release-prep build on 2026-05-19. These checksums are
+# for the next alpha candidate only. They do not replace or move the frozen
+# v0.0.3-alpha tag, GitHub Release assets, PyPI artifact, or npm artifact.
+#
+# Explicit non-actions for this checksum file:
+# - tag: not created
+# - GitHub Release write: not performed
+# - PyPI publish: not performed
+# - npm publish: not performed
+# - deploy: not performed
+# - workflow_dispatch: not performed
+7a27b66149a72afc8e673ca4e1dcec430dcd618240ba6b6b3986a1c32197fd5c  sdk/python/dist/attestplane-0.0.4a0-py3-none-any.whl
+285317484f9816830bea6eceef4b74c638316527a06cfbf4d45ac8dc2635a7e2  sdk/python/dist/attestplane-0.0.4a0.tar.gz
+0434c4a5300450b4c5b94bd6f1a4724dec81649a870e9d24c1ced77fb62bda5f  sdk/typescript/attestplane-attestplane-0.0.4-alpha.tgz

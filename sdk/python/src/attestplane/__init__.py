@@ -175,7 +175,7 @@ from attestplane.verifier import (
     verify_proof_bundle_file,
 )
 
-__version__ = "0.0.3a0"
+__version__ = "0.0.4a0"
 
 __all__ = [
     "ALL_EVENT_TYPES_V1",
