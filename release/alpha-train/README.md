@@ -113,6 +113,27 @@ release-prep files, and then hands the candidate to the existing release train.
 It still does not bypass gates, force-push, rewrite tags, move npm `latest`, or
 treat advisory output as authority.
 
+The preferred tmux entrypoint for that mode is:
+
+```bash
+scripts/release/start_alpha_train_full_auto.sh
+```
+
+The wrapper starts the `attestplane-alpha-train` tmux session with
+`--full-auto-alpha`, refuses to start if another train session is running, and
+refuses to start while `release/alpha-train/STOP` exists. The Python shortcut
+expands to:
+
+```bash
+python scripts/release/alpha_release_train.py --full-auto-alpha
+```
+
+`--full-auto-alpha` is intentionally explicit and local-only. It means:
+`--pipeline --continuous --auto-promote-prepared --auto-finalize-next-alpha
+--execute --max-count 1 --max-releases-per-day 0 --max-prepares-per-day 0`.
+It still stops fail-closed on release-prep, gate, tag, GitHub Release, PyPI,
+npm, or registry verification failure.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.

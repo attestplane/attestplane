@@ -138,6 +138,26 @@ the same candidate execution stage. It remains fail-closed and still does not
 force-push, rewrite tags, move npm `latest`, or treat Opus advisory output as
 authority.
 
+The preferred operational entrypoint is the tmux wrapper:
+
+```bash
+scripts/release/start_alpha_train_full_auto.sh
+```
+
+That wrapper starts the `attestplane-alpha-train` session using:
+
+```bash
+python scripts/release/alpha_release_train.py --full-auto-alpha
+```
+
+`--full-auto-alpha` expands to the same explicit full-auto local mode:
+`--pipeline --continuous --auto-promote-prepared --auto-finalize-next-alpha
+--execute --max-count 1 --max-releases-per-day 0 --max-prepares-per-day 0`.
+It exists to avoid accidentally launching the older queue-only watcher, which
+can stay healthy while making no release progress when the queue is empty.
+The wrapper refuses to start if the tmux session is already running or if
+`release/alpha-train/STOP` exists.
+
 The runner performs:
 
 - optional Opus advisory issue planning when `--plan-next-alpha` is passed,

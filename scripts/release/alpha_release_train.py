@@ -32,6 +32,8 @@ DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_PREPARED_DIR = ROOT / "release" / "alpha-train" / "prepared"
 DEFAULT_MAX_RELEASES_PER_DAY = 1
 DEFAULT_MAX_PREPARES_PER_DAY = 1
+FULL_AUTO_MAX_RELEASES_PER_DAY = 0
+FULL_AUTO_MAX_PREPARES_PER_DAY = 0
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -1168,7 +1170,7 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
         time.sleep(args.poll_seconds)
 
 
-def main() -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", type=Path, default=DEFAULT_QUEUE)
     parser.add_argument("--execute", action="store_true", help="Perform mutations. Default is dry-run.")
@@ -1176,6 +1178,15 @@ def main() -> int:
     parser.add_argument("--plan-next-alpha", action="store_true", help="Call Opus advisory to draft next-alpha issues first.")
     parser.add_argument("--pipeline", action="store_true", help="Run the linked advisory-plan then finite release-queue pipeline.")
     parser.add_argument("--continuous", action="store_true", help="Continuously watch the queue until manually stopped.")
+    parser.add_argument(
+        "--full-auto-alpha",
+        action="store_true",
+        help=(
+            "Shortcut for the explicit local full-auto alpha train: --pipeline --continuous "
+            "--auto-promote-prepared --auto-finalize-next-alpha --execute --max-count 1 "
+            "--max-releases-per-day 0 --max-prepares-per-day 0."
+        ),
+    )
     parser.add_argument(
         "--auto-promote-prepared",
         action="store_true",
@@ -1202,7 +1213,16 @@ def main() -> int:
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
     parser.add_argument("--prepared-dir", type=Path, default=DEFAULT_PREPARED_DIR)
     parser.add_argument("--state-file", type=Path, default=DEFAULT_STATE_FILE)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.full_auto_alpha:
+        args.pipeline = True
+        args.continuous = True
+        args.auto_promote_prepared = True
+        args.auto_finalize_next_alpha = True
+        args.execute = True
+        args.max_count = 1
+        args.max_releases_per_day = FULL_AUTO_MAX_RELEASES_PER_DAY
+        args.max_prepares_per_day = FULL_AUTO_MAX_PREPARES_PER_DAY
     if args.max_count < 1:
         raise SystemExit("--max-count must be >= 1; unbounded release loops are intentionally unsupported")
     if args.poll_seconds < 1:
@@ -1213,6 +1233,11 @@ def main() -> int:
         raise SystemExit("--max-releases-per-day must be >= 0")
     if args.max_prepares_per_day < 0:
         raise SystemExit("--max-prepares-per-day must be >= 0")
+    return args
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     if args.continuous:
         return run_continuous_pipeline(args)
 

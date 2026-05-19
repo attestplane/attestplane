@@ -226,3 +226,22 @@ def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.M
     assert manifest["status"] == "draft_unverified_not_queued"
     assert manifest["explicit_non_actions"]["package_version_bump"] == "not performed"
     assert "not release-ready" in (prepared_dir / "READY").read_text(encoding="utf-8")
+
+
+def test_full_auto_alpha_sets_safe_explicit_release_train_flags() -> None:
+    args = alpha_release_train.parse_args(["--full-auto-alpha"])
+
+    assert args.pipeline is True
+    assert args.continuous is True
+    assert args.auto_promote_prepared is True
+    assert args.auto_finalize_next_alpha is True
+    assert args.execute is True
+    assert args.max_count == 1
+    assert args.max_releases_per_day == 0
+    assert args.max_prepares_per_day == 0
+
+
+def test_full_auto_alpha_keeps_stop_file_guard() -> None:
+    args = alpha_release_train.parse_args(["--full-auto-alpha"])
+
+    assert args.stop_file == alpha_release_train.DEFAULT_STOP_FILE
