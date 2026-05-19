@@ -365,7 +365,7 @@ def test_git_push_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) ->
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
@@ -385,7 +385,7 @@ def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> 
         raise alpha_release_train.subprocess.CalledProcessError(128, argv)
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     with pytest.raises(alpha_release_train.subprocess.CalledProcessError):
@@ -394,7 +394,7 @@ def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> 
     assert len(calls) == alpha_release_train.REMOTE_PUSH_ATTEMPTS
 
 
-def test_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_git_push_timeouts_fail_fast(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
     expected = ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]
 
@@ -408,14 +408,13 @@ def test_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
-    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+    with pytest.raises(alpha_release_train.subprocess.TimeoutExpired):
+        alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
 
-    assert result.returncode == 0
-    assert len(calls) == 2
-    assert calls == [expected, expected]
+    assert calls == [expected]
 
 
 def test_git_push_failure_reason_classifies_network_errors() -> None:
@@ -435,6 +434,33 @@ def test_git_push_failure_reason_classifies_timeouts() -> None:
     )
 
     assert alpha_release_train.classify_git_push_failure(exc) == "git_push_timeout"
+
+
+def test_git_push_cooldown_seconds_are_reason_aware() -> None:
+    assert (
+        alpha_release_train.git_push_cooldown_seconds_for_failure(
+            "git_push_timeout",
+            attempts=1,
+            default_seconds=alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+        )
+        > alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS
+    )
+    assert (
+        alpha_release_train.git_push_cooldown_seconds_for_failure(
+            "git_push_network_unavailable",
+            attempts=1,
+            default_seconds=alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+        )
+        > alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS
+    )
+    assert (
+        alpha_release_train.git_push_cooldown_seconds_for_failure(
+            "git_push_rejected",
+            attempts=1,
+            default_seconds=alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+        )
+        < alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS
+    )
 
 
 def test_ensure_main_pushed_enqueues_task_without_blocking(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -568,7 +594,7 @@ def test_process_git_push_queue_limits_to_one_push_per_cycle(
 
     calls: list[list[str]] = []
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
     monkeypatch.setattr(
         alpha_release_train,
         "attempt_git_push_once",
@@ -586,6 +612,51 @@ def test_process_git_push_queue_limits_to_one_push_per_cycle(
     assert calls == [["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]]
     assert [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]["status"] == "done"
     assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "queued"
+
+
+def test_process_git_push_queue_uses_longer_cooldown_for_network_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    monkeypatch.setattr(alpha_release_train.time, "time", lambda: 1_000_000)
+    alpha_release_train.enqueue_git_push_task(state_file, candidate_value, "main", dry_run=False)
+
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, "git_push_network_unavailable"))
+    monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("attempt_git_push_once should not run")))
+
+    events = alpha_release_train.process_git_push_queue(
+        state_file,
+        dry_run=False,
+        cooldown_seconds=alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    task = [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]
+
+    assert events[0]["reason"] == "git_push_network_unavailable"
+    assert events[0]["cooldown_seconds"] > alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS
+    assert task["status"] == "cooldown"
+    assert task["attempts"] == 1
+    assert task["next_attempt_at_epoch"] > 1_000_000
+
+
+def test_run_git_push_network_probe_short_circuits_before_real_push(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, "git_push_network_unavailable"))
+    monkeypatch.setattr(
+        alpha_release_train,
+        "attempt_git_push_once",
+        lambda argv, *, dry_run: calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
+    )
+
+    with pytest.raises(alpha_release_train.subprocess.CalledProcessError) as excinfo:
+        alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+
+    assert "preflight git remote probe failed: git_push_network_unavailable" in str(excinfo.value.stderr)
+    assert calls == []
 
 
 def test_git_push_skips_when_main_already_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:

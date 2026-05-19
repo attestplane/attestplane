@@ -152,9 +152,20 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
         return subprocess.CompletedProcess(argv, 0, "", "")
-    if git_push_remote_converged(argv):
+    converged, preflight_reason = git_push_remote_status(argv)
+    if converged:
         print("git push remote state already converged; skipping push", flush=True)
         return subprocess.CompletedProcess(argv, 0, "", "")
+    if preflight_reason is not None:
+        print(
+            f"git push preflight classified as {preflight_reason}; deferring retry to queued cooldown",
+            flush=True,
+        )
+        raise subprocess.CalledProcessError(
+            128,
+            argv,
+            stderr=f"preflight git remote probe failed: {preflight_reason}",
+        )
     last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None
     for attempt in range(1, REMOTE_PUSH_ATTEMPTS + 1):
         try:
@@ -164,6 +175,18 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
             if git_push_remote_converged(argv):
                 print("git push remote state already converged; continuing after failed or timed-out local push", flush=True)
                 return subprocess.CompletedProcess(argv, 0, "", "")
+            failure_reason = classify_git_push_failure(exc)
+            if failure_reason in {
+                "git_push_timeout",
+                "git_push_network_unavailable",
+                "git_push_auth_or_repo_unavailable",
+                "git_push_rejected",
+            }:
+                print(
+                    f"git push classified as {failure_reason}; deferring retry to queued cooldown",
+                    flush=True,
+                )
+                break
             if attempt == REMOTE_PUSH_ATTEMPTS:
                 break
             print(
@@ -250,9 +273,17 @@ def git_push_failure_text(exc: BaseException) -> str:
 
 
 def classify_git_push_failure(exc: BaseException) -> str:
+    text = git_push_failure_text(exc)
+    if "git_push_timeout" in text:
+        return "git_push_timeout"
+    if "git_push_network_unavailable" in text:
+        return "git_push_network_unavailable"
+    if "git_push_auth_or_repo_unavailable" in text:
+        return "git_push_auth_or_repo_unavailable"
+    if "git_push_rejected" in text:
+        return "git_push_rejected"
     if isinstance(exc, subprocess.TimeoutExpired):
         return "git_push_timeout"
-    text = git_push_failure_text(exc)
     if any(
         phrase in text
         for phrase in (
@@ -260,6 +291,8 @@ def classify_git_push_failure(exc: BaseException) -> str:
             "failed to connect to github.com",
             "couldn't connect to server",
             "connection timed out",
+            "operation timed out",
+            "timed out",
             "recv failure",
             "could not resolve host",
             "network is unreachable",
@@ -289,6 +322,19 @@ def classify_git_push_failure(exc: BaseException) -> str:
     ):
         return "git_push_rejected"
     return f"git_push_{type(exc).__name__.lower()}"
+
+
+def git_push_cooldown_seconds_for_failure(failure_reason: str, *, attempts: int, default_seconds: int) -> int:
+    attempt_number = max(1, attempts)
+    if failure_reason == "git_push_timeout":
+        return max(default_seconds, min(3600, 900 * attempt_number))
+    if failure_reason == "git_push_network_unavailable":
+        return max(default_seconds, min(3600, 600 * attempt_number))
+    if failure_reason == "git_push_auth_or_repo_unavailable":
+        return max(default_seconds, 3600)
+    if failure_reason == "git_push_rejected":
+        return max(60, min(default_seconds, 60 * attempt_number))
+    return default_seconds
 
 
 def local_tag_points_at_head(release: str) -> bool:
@@ -321,9 +367,13 @@ def local_tag_points_at_head(release: str) -> bool:
 
 
 def git_push_remote_converged(argv: list[str]) -> bool:
+    return git_push_remote_status(argv)[0]
+
+
+def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
     argv = normalize_git_push_argv(argv)
     if len(argv) != 6 or argv[:4] != ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "push"] or argv[4] != "origin":
-        return False
+        return False, None
     ref = argv[5]
     try:
         if ref == "main":
@@ -333,15 +383,15 @@ def git_push_remote_converged(argv: list[str]) -> bool:
             )
             local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
             if local_tracking_head == local_head:
-                return True
+                return True, None
             remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
-            return bool(remote_head) and remote_head.split()[0] == local_head
+            return bool(remote_head) and remote_head.split()[0] == local_head, None
         if re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref):
             remote_tag = capture(["git", "ls-remote", "origin", f"refs/tags/{ref}"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
-            return bool(remote_tag)
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-    return False
+            return bool(remote_tag), None
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        return False, classify_git_push_failure(exc)
+    return False, None
 
 
 def capture(argv: list[str], *, timeout: int | None = None) -> str:
@@ -635,15 +685,48 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
             candidate = prepared_candidate_from_release(str(release))
             argv = normalize_git_push_argv(["git", "push", "origin", str(ref)])
             try:
-                if git_push_remote_converged(argv):
+                converged, preflight_reason = git_push_remote_status(argv)
+                if converged:
                     update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
                     processed.append({"release": str(release), "ref": str(ref), "status": "done", "observed": True})
                     continue
+                if preflight_reason is not None:
+                    cooldown = git_push_cooldown_seconds_for_failure(
+                        preflight_reason,
+                        attempts=int(attempts) + 1,
+                        default_seconds=cooldown_seconds,
+                    )
+                    update_git_push_task(
+                        path,
+                        candidate,
+                        str(ref),
+                        status="cooldown",
+                        last_error=preflight_reason,
+                        attempts_delta=1,
+                        next_attempt_at_epoch=now + cooldown,
+                        dry_run=False,
+                    )
+                    processed.append(
+                        {
+                            "release": str(release),
+                            "ref": str(ref),
+                            "status": "cooldown",
+                            "reason": preflight_reason,
+                            "cooldown_seconds": cooldown,
+                            "next_attempt_at_epoch": now + cooldown,
+                        }
+                    )
+                    break
                 attempt_git_push_once(argv, dry_run=False)
                 update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
                 processed.append({"release": str(release), "ref": str(ref), "status": "done"})
             except Exception as exc:
                 failure_reason = classify_git_push_failure(exc)
+                cooldown = git_push_cooldown_seconds_for_failure(
+                    failure_reason,
+                    attempts=int(attempts) + 1,
+                    default_seconds=cooldown_seconds,
+                )
                 update_git_push_task(
                     path,
                     candidate,
@@ -651,7 +734,7 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
                     status="cooldown",
                     last_error=failure_reason,
                     attempts_delta=1,
-                    next_attempt_at_epoch=now + cooldown_seconds,
+                    next_attempt_at_epoch=now + cooldown,
                     dry_run=False,
                 )
                 processed.append(
@@ -660,7 +743,8 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
                         "ref": str(ref),
                         "status": "cooldown",
                         "reason": failure_reason,
-                        "next_attempt_at_epoch": now + cooldown_seconds,
+                        "cooldown_seconds": cooldown,
+                        "next_attempt_at_epoch": now + cooldown,
                     }
                 )
             break
