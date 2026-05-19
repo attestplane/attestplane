@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
 import time
+import urllib.parse
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -28,6 +30,8 @@ DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
 DEFAULT_STATE_FILE = DEFAULT_REPORTS_DIR / "continuous-state.json"
 PACKAGE_NPM = "@attestplane/attestplane"
 PACKAGE_PYPI = "attestplane"
+LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql"
+SENTRY_API_BASE_URL = "https://sentry.io/api/0"
 
 
 def generated_at() -> tuple[int, str]:
@@ -96,10 +100,13 @@ def collect_sqlite_stage_facts(release: str, state_path: Path) -> dict[str, Any]
         return {"available": False, "state_db": str(db_path), "stages": {}, "status": None}
     with sqlite3.connect(db_path) as db:
         state = db.execute("SELECT status FROM release_state WHERE release = ?", (release,)).fetchone()
-        stages = db.execute(
-            "SELECT stage, status, detail FROM release_stages WHERE release = ? ORDER BY stage",
-            (release,),
-        ).fetchall()
+        try:
+            stages = db.execute(
+                "SELECT stage, status, detail FROM release_stages WHERE release = ? ORDER BY stage",
+                (release,),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            stages = []
     return {
         "available": True,
         "state_db": str(db_path),
@@ -188,6 +195,127 @@ def collect_coderabbit_facts() -> dict[str, Any]:
     }
 
 
+def linear_api_token() -> str | None:
+    return os.getenv("LINEAR_API_KEY") or os.getenv("LINEAR_ACCESS_TOKEN")
+
+
+def collect_linear_facts() -> dict[str, Any]:
+    token = linear_api_token()
+    if not token:
+        return {
+            "available": False,
+            "configured": False,
+            "advisory_only": True,
+            "permission_granted": False,
+            "workspace_observed": False,
+            "workspace_name": None,
+            "viewer_observed": False,
+            "limitations": ["linear_api_token_missing"],
+        }
+
+    body = json.dumps({"query": "query { viewer { id name } organization { id name } }"}).encode("utf-8")
+    request = urllib.request.Request(
+        LINEAR_GRAPHQL_URL,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = parse_json_output(response.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        return {
+            "available": True,
+            "configured": True,
+            "advisory_only": True,
+            "permission_granted": False,
+            "workspace_observed": False,
+            "workspace_name": None,
+            "viewer_observed": False,
+            "limitations": [type(exc).__name__],
+        }
+
+    data = payload.get("data") if isinstance(payload, dict) else None
+    organization = data.get("organization") if isinstance(data, dict) else None
+    viewer = data.get("viewer") if isinstance(data, dict) else None
+    return {
+        "available": True,
+        "configured": True,
+        "advisory_only": True,
+        "permission_granted": False,
+        "workspace_observed": bool(isinstance(organization, dict)),
+        "workspace_name": organization.get("name") if isinstance(organization, dict) else None,
+        "viewer_observed": bool(isinstance(viewer, dict)),
+        "limitations": [] if isinstance(data, dict) else ["linear_api_response_unavailable"],
+    }
+
+
+def sentry_api_credentials() -> dict[str, str | None]:
+    return {
+        "auth_token": os.getenv("SENTRY_AUTH_TOKEN"),
+        "organization": os.getenv("SENTRY_ORG"),
+        "project": os.getenv("SENTRY_PROJECT"),
+        "base_url": os.getenv("SENTRY_API_BASE_URL", SENTRY_API_BASE_URL),
+    }
+
+
+def collect_sentry_facts() -> dict[str, Any]:
+    credentials = sentry_api_credentials()
+    auth_token = credentials["auth_token"]
+    organization = credentials["organization"]
+    project = credentials["project"]
+    base_url = str(credentials["base_url"]).rstrip("/")
+    if not auth_token or not organization:
+        return {
+            "available": False,
+            "configured": False,
+            "advisory_only": True,
+            "permission_granted": False,
+            "organization_observed": False,
+            "project_observed": False,
+            "unresolved_issue_count": None,
+            "limitations": ["sentry_api_credentials_missing"],
+        }
+
+    url = f"{base_url}/organizations/{urllib.parse.quote(organization)}/issues/"
+    query = {"query": "is:unresolved", "statsPeriod": "14d", "per_page": "5"}
+    if project:
+        query["project"] = project
+    request = urllib.request.Request(
+        f"{url}?{urllib.parse.urlencode(query)}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            payload = parse_json_output(response.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        return {
+            "available": True,
+            "configured": True,
+            "advisory_only": True,
+            "permission_granted": False,
+            "organization_observed": True,
+            "project_observed": bool(project),
+            "unresolved_issue_count": None,
+            "limitations": [type(exc).__name__],
+        }
+
+    issues = payload if isinstance(payload, list) else []
+    return {
+        "available": True,
+        "configured": True,
+        "advisory_only": True,
+        "permission_granted": False,
+        "organization_observed": True,
+        "project_observed": bool(project),
+        "unresolved_issue_count": len(issues),
+        "limitations": [] if isinstance(payload, list) else ["sentry_issue_feed_unavailable"],
+    }
+
+
 def collect_codex_security_facts() -> dict[str, Any]:
     checks = [
         "gitleaks detect --source . --no-git --redact",
@@ -221,6 +349,8 @@ def build_status_payload(release: str, *, state_path: Path) -> dict[str, Any]:
         "state": collect_sqlite_stage_facts(release, state_path),
         "github": collect_github_facts(release),
         "registries": collect_registry_facts(release),
+        "linear": collect_linear_facts(),
+        "sentry": collect_sentry_facts(),
         "coderabbit": collect_coderabbit_facts(),
         "codex_security": collect_codex_security_facts(),
         "documents": {
@@ -288,11 +418,22 @@ def markdown_report(payload: dict[str, Any]) -> str:
         lines.append("- No SQLite stage rows observed.")
     lines.extend(
         [
-            "",
-            "## Advisory Surfaces",
-            "",
-            f"- CodeRabbit available: `{payload['coderabbit'].get('available')}`",
-            f"- CodeRabbit advisory-only: `{payload['coderabbit'].get('advisory_only')}`",
+        "",
+        "## Workflow Surfaces",
+        "",
+        f"- Linear available: `{payload['linear'].get('available')}`",
+        f"- Linear configured: `{payload['linear'].get('configured')}`",
+        f"- Linear workspace observed: `{payload['linear'].get('workspace_observed')}`",
+        f"- Linear viewer observed: `{payload['linear'].get('viewer_observed')}`",
+        f"- Sentry available: `{payload['sentry'].get('available')}`",
+        f"- Sentry configured: `{payload['sentry'].get('configured')}`",
+        f"- Sentry organization observed: `{payload['sentry'].get('organization_observed')}`",
+        f"- Sentry unresolved issues observed: `{payload['sentry'].get('unresolved_issue_count')}`",
+        "",
+        "## Advisory Surfaces",
+        "",
+        f"- CodeRabbit available: `{payload['coderabbit'].get('available')}`",
+        f"- CodeRabbit advisory-only: `{payload['coderabbit'].get('advisory_only')}`",
             f"- Codex Security advisory-only: `{payload['codex_security'].get('advisory_only')}`",
             "",
             "## Explicit Non-Actions",

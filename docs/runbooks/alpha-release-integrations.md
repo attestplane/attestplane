@@ -9,6 +9,8 @@ This is an observability layer. It is not an authority layer.
 
 | Surface | Role | Authority |
 | --- | --- | --- |
+| Linear | Record optional issue-train status for release bugs, blockers, and version decisions | Non-authoritative |
+| Sentry | Record optional runtime failure source facts for regressions and exception tracking | Non-authoritative |
 | GitHub | Read branch, tag, GitHub Release, assets, and recent workflow facts | Non-authoritative |
 | CodeRabbit | Record CLI/auth availability for optional advisory review | Advisory-only |
 | Codex Security | Inventory local security scan surfaces such as gitleaks and verifier gates | Advisory-only |
@@ -46,6 +48,8 @@ The JSON schema is `attestplane_alpha_integration_status.v1`.
 
 The packet records:
 
+- Linear workspace/availability facts,
+- Sentry workspace/availability facts,
 - local and remote `main` convergence,
 - remote tag observation,
 - GitHub Release observation,

@@ -232,11 +232,11 @@ installability, but it does not change the alpha/pre-GA claim boundary.
 
 The local alpha train also writes a post-release integration evidence packet
 under `release/alpha-train/reports/`. It reads GitHub Release/workflow facts,
-PyPI/npm registry facts, CodeRabbit advisory availability, and local Codex
-Security check surfaces, then emits JSON plus Markdown for human review. These
-integration reports are non-authoritative: they do not approve publish, create
-tags or releases, dispatch workflows, move npm dist-tags, or grant compliance
-claims. See
+PyPI/npm registry facts, Linear issue-flow facts, Sentry failure-source facts,
+CodeRabbit advisory availability, and local Codex Security check surfaces, then
+emits JSON plus Markdown for human review. These integration reports are
+non-authoritative: they do not approve publish, create tags or releases,
+dispatch workflows, move npm dist-tags, or grant compliance claims. See
 [`docs/runbooks/alpha-release-integrations.md`](docs/runbooks/alpha-release-integrations.md).
 
 ## Quickstart
