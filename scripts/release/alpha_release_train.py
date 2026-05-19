@@ -34,6 +34,7 @@ DEFAULT_MAX_RELEASES_PER_DAY = 1
 DEFAULT_MAX_PREPARES_PER_DAY = 1
 FULL_AUTO_MAX_RELEASES_PER_DAY = 0
 FULL_AUTO_MAX_PREPARES_PER_DAY = 0
+REMOTE_PROBE_TIMEOUT_SECONDS = 45
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -92,8 +93,8 @@ def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) ->
     return subprocess.run(argv, cwd=ROOT, env=env, text=True, check=True)
 
 
-def capture(argv: list[str]) -> str:
-    return subprocess.check_output(argv, cwd=ROOT, text=True).strip()
+def capture(argv: list[str], *, timeout: int | None = None) -> str:
+    return subprocess.check_output(argv, cwd=ROOT, text=True, timeout=timeout).strip()
 
 
 def sha256_file(path: Path) -> str:
@@ -558,14 +559,18 @@ def alpha_release_exists(release: str) -> bool:
     )
     if local_tag.returncode == 0:
         return True
-    remote_tag = subprocess.run(
-        ["git", "ls-remote", "--exit-code", "--tags", "origin", release],
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
+    try:
+        remote_tag = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "--tags", "origin", release],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"remote tag check timed out for {release}") from exc
     return remote_tag.returncode == 0
 
 
@@ -637,25 +642,33 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate) -> None:
     if local_tag.returncode == 0:
         raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
 
-    remote_tag = subprocess.run(
-        ["git", "ls-remote", "--exit-code", "--tags", "origin", candidate.release],
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
+    try:
+        remote_tag = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "--tags", "origin", candidate.release],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"remote tag preflight timed out for {candidate.release}") from exc
     if remote_tag.returncode == 0:
         raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
 
-    release_view = subprocess.run(
-        ["gh", "release", "view", candidate.release, "--json", "tagName"],
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
+    try:
+        release_view = subprocess.run(
+            ["gh", "release", "view", candidate.release, "--json", "tagName"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"GitHub Release preflight timed out for {candidate.release}") from exc
     if release_view.returncode == 0:
         raise RuntimeError(f"GitHub Release already exists; refusing duplicate release: {candidate.release}")
 
@@ -799,9 +812,10 @@ def latest_open_issues() -> str:
                 "20",
                 "--json",
                 "number,title,labels",
-            ]
+            ],
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         return "[]"
 
 

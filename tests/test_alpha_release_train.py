@@ -277,3 +277,16 @@ def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: py
     assert candidate is not None
     assert candidate.release == "v0.0.8-alpha"
     assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
+
+
+def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(*args: object, **kwargs: object) -> object:
+        argv = args[0]
+        if isinstance(argv, list) and argv[:4] == ["git", "rev-parse", "-q", "--verify"]:
+            return alpha_release_train.subprocess.CompletedProcess(argv, 1, "", "")
+        raise alpha_release_train.subprocess.TimeoutExpired(cmd=argv, timeout=45)
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="remote tag check timed out"):
+        alpha_release_train.alpha_release_exists("v0.0.8-alpha")
