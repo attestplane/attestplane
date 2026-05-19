@@ -214,6 +214,16 @@ The runner performs:
 - npm alpha-tag publishing workflow,
 - registry verification.
 
+After a candidate reaches `registry_verified`, the runner writes an
+integration evidence packet through
+`scripts/release/alpha_train_integrations.py`. That packet reads GitHub,
+registry, CodeRabbit availability, and local Codex Security surface facts, then
+generates JSON plus Markdown reports under `release/alpha-train/reports/`.
+Those reports are for observation and human review only; they do not authorize
+publish, tag, release, workflow dispatch, or npm dist-tag movement.
+
+See [Alpha Release Integration Evidence](alpha-release-integrations.md).
+
 ## Stop Conditions
 
 The train stops on:

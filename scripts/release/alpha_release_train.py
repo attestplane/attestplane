@@ -2149,6 +2149,25 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                     mark_processing(args.state_file, candidate, dry_run=not args.execute)
                     run_candidate(candidate, dry_run=not args.execute, state_path=args.state_file)
                     mark_processed(args.state_file, candidate, dry_run=not args.execute)
+                    if args.execute:
+                        try:
+                            from scripts.release.alpha_train_integrations import write_alpha_integration_reports
+
+                            json_report, md_report = write_alpha_integration_reports(
+                                candidate.release,
+                                reports_dir=args.reports_dir,
+                                state_path=args.state_file,
+                            )
+                            print(
+                                "alpha train: integration evidence written: "
+                                f"{display_path(json_report)}, {display_path(md_report)}",
+                                flush=True,
+                            )
+                        except Exception as exc:  # pragma: no cover - observe-only integration guard.
+                            print(
+                                f"alpha train: integration evidence limitation: {type(exc).__name__}",
+                                flush=True,
+                            )
                 except Exception as exc:
                     if args.execute and is_git_push_error(exc):
                         mark_cooldown(args.state_file, candidate, reason=type(exc).__name__, dry_run=False)
