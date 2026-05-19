@@ -113,6 +113,14 @@ from attestplane.replay_verifier import (
     ReplayVerificationResult,
     verify_replay_manifest,
 )
+from attestplane.retention import (
+    RETENTION_PROOF_SCHEMA_VERSION,
+    RetentionProofVerificationResult,
+    build_deletion_proof,
+    build_retention_marker,
+    validate_retention_proof,
+    verify_retention_proofs,
+)
 from attestplane.settlement_verifier import (
     SettlementPreconditionClaim,
     SettlementVerificationResult,
@@ -174,8 +182,15 @@ from attestplane.verifier import (
     verify_proof_bundle,
     verify_proof_bundle_file,
 )
+from attestplane.verify_errors import (
+    ALL_VERIFY_ERROR_CODES_V1,
+    VERIFY_ERROR_DESCRIPTIONS,
+    VERIFY_ERROR_SCHEMA_VERSION,
+    VerifyErrorCode,
+    is_known_verify_error_code,
+)
 
-__version__ = "0.0.4a0"
+__version__ = "0.0.5a0"
 
 __all__ = [
     "ALL_EVENT_TYPES_V1",
@@ -240,10 +255,17 @@ __all__ = [
     "SettlementPreconditionClaim",
     "SettlementVerificationResult",
     "ALL_REASON_CODES_V1",
+    "ALL_VERIFY_ERROR_CODES_V1",
     "REASON_CODE_DESCRIPTIONS",
     "REASON_CODE_SCHEMA_VERSION",
+    "RETENTION_PROOF_SCHEMA_VERSION",
     "ReasonCodeV1",
+    "RetentionProofVerificationResult",
+    "VERIFY_ERROR_DESCRIPTIONS",
+    "VERIFY_ERROR_SCHEMA_VERSION",
+    "VerifyErrorCode",
     "is_known_reason_code",
+    "is_known_verify_error_code",
     "reason_code_matches_format",
     "MockTSAProvider",
     "MultiTSAProvider",
@@ -268,6 +290,8 @@ __all__ = [
     "genesis_head",
     "hash_event",
     "build_auditor_export",
+    "build_deletion_proof",
+    "build_retention_marker",
     "bundle_to_dsse_envelope",
     "bundle_to_in_toto_statement",
     "canonicalize_text",
@@ -283,7 +307,9 @@ __all__ = [
     "validate_lease_lifecycle_event_payload",
     "validate_policy_check_event_payload",
     "validate_replay_event_payload",
+    "validate_retention_proof",
     "verify_replay_manifest",
+    "verify_retention_proofs",
     "check_settlement_precondition",
     "replay_fixture",
     "verify_chain",

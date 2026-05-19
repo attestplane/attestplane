@@ -12,9 +12,9 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
-release_version="${RELEASE_VERSION:-v0.0.4-alpha}"
-python_version="${PYTHON_VERSION:-0.0.4a0}"
-npm_version="${NPM_VERSION:-0.0.4-alpha}"
+release_version="${RELEASE_VERSION:-v0.0.5-alpha}"
+python_version="${PYTHON_VERSION:-0.0.5a0}"
+npm_version="${NPM_VERSION:-0.0.5-alpha}"
 py="${PYTHON:-sdk/python/.venv/bin/python}"
 
 manifest="release/artifacts/${release_version}/artifact-manifest.json"

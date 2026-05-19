@@ -1,0 +1,121 @@
+{
+  "alpha_scope": {
+    "deterministic_cli_json": true,
+    "retention_deletion_proofs": true,
+    "stable_verify_error_taxonomy": true,
+    "threat_model_and_non_goals": true,
+    "tsa_provider_interface_boundary": true,
+    "verifier_conformance_corpus": true
+  },
+  "artifacts": [
+    {
+      "kind": "python-wheel",
+      "package": "attestplane",
+      "path": "sdk/python/dist/attestplane-0.0.5a0-py3-none-any.whl",
+      "sha256": "e304abb1e43b663d143641c7b02fa7f0b633d67e6b5d442b8a29e80245067db9",
+      "size_bytes": 161844,
+      "validation": {
+        "build": "python -m build",
+        "published": false,
+        "twine_check": "passed"
+      },
+      "version": "0.0.5a0"
+    },
+    {
+      "kind": "python-sdist",
+      "package": "attestplane",
+      "path": "sdk/python/dist/attestplane-0.0.5a0.tar.gz",
+      "sha256": "afe5782b2971322ee43f993bfeba7aa72d9b520db63bbcab8aa5b0d38ae02baf",
+      "size_bytes": 220289,
+      "validation": {
+        "build": "python -m build",
+        "published": false,
+        "twine_check": "passed"
+      },
+      "version": "0.0.5a0"
+    },
+    {
+      "kind": "npm-tarball",
+      "package": "@attestplane/attestplane",
+      "path": "sdk/typescript/attestplane-attestplane-0.0.5-alpha.tgz",
+      "sha256": "90120e1b66083a166a27f915d5a562061d8784f147ff4b4632cb51263392b19d",
+      "size_bytes": 118180,
+      "validation": {
+        "build": "npm run build",
+        "npm_pack": "passed",
+        "published": false,
+        "tests": "passed"
+      },
+      "version": "0.0.5-alpha"
+    },
+    {
+      "kind": "sbom",
+      "package": "attestplane",
+      "path": "release/artifacts/v0.0.5-alpha/attestplane-python-sbom.cdx.json",
+      "sha256": "8850651b840f552afde748dc81d969ac4c1a8ed720ca7dd705a7e3dcd3b3fcfd",
+      "size_bytes": 90635,
+      "validation": {
+        "format": "CycloneDX JSON",
+        "published": false,
+        "tool": "cyclonedx-py"
+      },
+      "version": "0.0.5a0"
+    },
+    {
+      "kind": "sbom",
+      "package": "attestplane",
+      "path": "release/artifacts/v0.0.5-alpha/attestplane-python-sbom.cdx.xml",
+      "sha256": "a2aa7f70f3efaa87ffddc80d797b1143b4a09adc7f7c83bc1e6b4cce05ad3e0f",
+      "size_bytes": 95349,
+      "validation": {
+        "format": "CycloneDX XML",
+        "published": false,
+        "tool": "cyclonedx-py"
+      },
+      "version": "0.0.5a0"
+    },
+    {
+      "kind": "sbom",
+      "package": "@attestplane/attestplane",
+      "path": "release/artifacts/v0.0.5-alpha/attestplane-typescript-sbom.cdx.json",
+      "sha256": "57163e10b0ea2346d7f0abfe3dfe39cf5620d2ef8e6afbe46537b4bcc8989690",
+      "size_bytes": 79683,
+      "validation": {
+        "format": "CycloneDX JSON",
+        "published": false,
+        "tool": "npm sbom"
+      },
+      "version": "0.0.5-alpha"
+    }
+  ],
+  "checksums_file": "release/artifacts/v0.0.5-alpha/checksums.sha256",
+  "explicit_non_actions": {
+    "deploy": "not performed",
+    "github_release_write": "not performed",
+    "npm_latest_dist_tag_changed": false,
+    "npm_publish": "not performed",
+    "pypi_publish": "not performed",
+    "secrets_printed": false,
+    "tag": "not created",
+    "workflow_dispatch": "not performed"
+  },
+  "explicit_non_claims": {
+    "compliance_ready": false,
+    "eu_ai_act_conformity_assessment": false,
+    "full_legal_retention_or_deletion_compliance": false,
+    "gdpr_compliance_certification": false,
+    "production_ready": false,
+    "regulatory_certification": false
+  },
+  "github_release_url": "https://github.com/attestplane/attestplane/releases/tag/v0.0.5-alpha",
+  "release": "v0.0.5-alpha",
+  "release_notes_file": "docs/release-notes/v0.0.5-alpha.draft.md",
+  "schema": "attestplane_release_asset_prep_manifest.v1",
+  "source_state": {
+    "base_commit": "a83bbe97800ed5fa22ca179cb0e479c364d2e61b",
+    "build_context": "local release-prep working tree before v0.0.5-alpha tag",
+    "frozen_prior_release": "v0.0.4-alpha",
+    "prior_release_tag_moved": false
+  },
+  "upload_plan_file": "release/artifacts/v0.0.5-alpha/upload-plan.md"
+}

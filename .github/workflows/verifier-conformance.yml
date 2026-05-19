@@ -1,0 +1,53 @@
+name: verifier-conformance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sdk/python/**"
+      - "sdk/typescript/**"
+      - ".github/workflows/verifier-conformance.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "sdk/python/**"
+      - "sdk/typescript/**"
+      - ".github/workflows/verifier-conformance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verifier-conformance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  python-and-typescript:
+    name: Python and TypeScript verifier conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22"
+
+      - name: Python verifier conformance
+        working-directory: sdk/python
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install -e '.[dev]'
+          .venv/bin/pytest tests/conformance/test_verifier_conformance.py -q
+
+      - name: TypeScript verifier conformance
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm test -- --run test/verifier_conformance.test.ts

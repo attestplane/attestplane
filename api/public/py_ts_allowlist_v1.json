@@ -249,6 +249,22 @@
       "typescript": true
     },
     {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural retention proof types; Python exposes runtime validators and dataclass result shapes.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "RetentionAction",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "TypeScript exports structural retention proof types; Python exposes runtime validators and dataclass result shapes.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "RetentionProof",
+      "typescript": true
+    },
+    {
       "classification": "roadmap",
       "python": true,
       "reason": "Python adapter event class is public; TypeScript uses structural adapter inputs in v0.0.2-alpha.",
@@ -457,11 +473,27 @@
       "typescript": true
     },
     {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "buildDeletionProof",
+      "typescript": true
+    },
+    {
       "classification": "experimental",
       "python": false,
       "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
       "review_by": "v0.0.3-alpha",
       "symbol": "buildPerEventPayload",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "buildRetentionMarker",
       "typescript": true
     },
     {
@@ -478,6 +510,22 @@
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
       "symbol": "build_auditor_export",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "build_deletion_proof",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "build_retention_marker",
       "typescript": false
     },
     {
@@ -658,6 +706,14 @@
     },
     {
       "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "isKnownVerifyErrorCode",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
       "python": true,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
@@ -670,6 +726,14 @@
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
       "symbol": "is_known_v1_event_type",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "is_known_verify_error_code",
       "typescript": false
     },
     {
@@ -969,6 +1033,14 @@
       "typescript": true
     },
     {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "validateRetentionProof",
+      "typescript": true
+    },
+    {
       "classification": "experimental",
       "python": false,
       "reason": "TypeScript signing helper/export surface is alpha and tracked separately from Python naming.",
@@ -998,6 +1070,14 @@
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
       "symbol": "validate_replay_event_payload",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "validate_retention_proof",
       "typescript": false
     },
     {
@@ -1057,6 +1137,14 @@
       "typescript": true
     },
     {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "verifyRetentionProofs",
+      "typescript": true
+    },
+    {
       "classification": "experimental",
       "python": false,
       "reason": "TypeScript anchoring helper/type surface is alpha and tracked separately from Python naming.",
@@ -1102,6 +1190,14 @@
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
       "symbol": "verify_replay_manifest",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.5-alpha",
+      "symbol": "verify_retention_proofs",
       "typescript": false
     }
   ],

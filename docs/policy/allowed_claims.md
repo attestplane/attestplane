@@ -155,6 +155,12 @@ high-assurance supply-chain certification language.
   publishing, artifact checksums, release manifests, SBOM generation, CodeQL,
   OSV, OSSF Scorecard, and reproducible-build gates. It must not be shortened
   into certification, SLSA-level, or production security language.
+- "Stable verifier error codes" is accurate for the `VERIFY_*` v1 taxonomy.
+  The codes classify verifier outcomes; they do not certify legal compliance.
+- "Commit-then-redact retention/deletion proof markers" is accurate for
+  `retention_proofs` shape and event-reference checks. It must not be phrased
+  as GDPR compliance, legal sufficiency, or proof of deletion from external
+  processors.
 
 ### Issue and limitation status
 

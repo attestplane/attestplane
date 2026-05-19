@@ -31,6 +31,7 @@ from typing import Any, Final, Literal
 
 from attestplane.hashchain import SCHEMA_VERSION as _CHAIN_SCHEMA_VERSION
 from attestplane.hashchain import head_of, verify_chain
+from attestplane.retention import validate_retention_proof
 from attestplane.storage.jsonl import _serialize_event as _serialize_chained_event
 from attestplane.types import ChainedEvent
 
@@ -179,6 +180,12 @@ class ProofBundleBuilder:
     empty; populated via T5 of the ADR-0005 plan. Typed as ``list[Any]``
     to avoid pulling in the ``[signing]`` extras transitively when only
     chain bundles are needed."""
+    retention_proofs: list[dict[str, Any]] = field(default_factory=list)
+    """Optional ADR-0015 commit-then-redact proof markers.
+
+    These markers are strictly additive. They prove shape and references only;
+    they do not claim GDPR compliance or legal sufficiency.
+    """
 
     def extend(self, events: list[ChainedEvent]) -> None:
         self.events.extend(events)
@@ -212,6 +219,16 @@ class ProofBundleBuilder:
                     f"{type(r).__name__}"
                 )
         self.signatures.extend(records)
+
+    def extend_retention_proofs(self, records: list[dict[str, Any]]) -> None:
+        """Add commit-then-redact proof markers.
+
+        The verifier later checks that marker hashes reference events present in
+        the bundle. This method validates marker shape before serialization.
+        """
+        for record in records:
+            validate_retention_proof(record)
+        self.retention_proofs.extend(records)
 
     def build(self, *, now: datetime | None = None) -> dict[str, Any]:
         """Produce the bundle dict.
@@ -283,6 +300,11 @@ class ProofBundleBuilder:
             **(
                 {"signatures": [_serialize_signature_record(r) for r in self.signatures]}
                 if self.signatures
+                else {}
+            ),
+            **(
+                {"retention_proofs": list(self.retention_proofs)}
+                if self.retention_proofs
                 else {}
             ),
         }

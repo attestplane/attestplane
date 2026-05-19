@@ -1,0 +1,25 @@
+{
+  "cases": [
+    {
+      "case_id": "valid_minimal",
+      "expected_error_code": "VERIFY_OK",
+      "expected_ok": true
+    },
+    {
+      "case_id": "tampered_event_hash",
+      "expected_error_code": "VERIFY_CHAIN_RECOMPUTE_FAILED",
+      "expected_ok": false
+    },
+    {
+      "case_id": "dangling_policy_trace_ref",
+      "expected_error_code": "VERIFY_POLICY_TRACE_REFS_FAILED",
+      "expected_ok": false
+    },
+    {
+      "case_id": "forged_deletion_proof",
+      "expected_error_code": "VERIFY_RETENTION_PROOF_FAILED",
+      "expected_ok": false
+    }
+  ],
+  "schema_version": "attestplane.verifier_conformance.v1"
+}

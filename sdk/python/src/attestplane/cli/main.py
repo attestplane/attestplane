@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from attestplane import __version__
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 
 VERIFY_SCOPE = "chain_report_only"
 VERIFY_SCOPE_NOTICE = (
@@ -156,14 +157,26 @@ def cmd_verify(args: argparse.Namespace) -> int:
         result = verify_proof_bundle_file(args.bundle)
     except BundleSchemaError as exc:
         _emit(
-            {"ok": False, "error": "schema", "detail": str(exc), **_verify_scope_metadata()},
+            {
+                "ok": False,
+                "error": "schema",
+                "error_code": VERIFY_SCHEMA_ERROR,
+                "detail": str(exc),
+                **_verify_scope_metadata(),
+            },
             args.json_output,
             human=f"FAIL: schema error in {args.bundle}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
     except BundleVerificationError as exc:
         _emit(
-            {"ok": False, "error": "io", "detail": str(exc), **_verify_scope_metadata()},
+            {
+                "ok": False,
+                "error": "io",
+                "error_code": VERIFY_IO_ERROR,
+                "detail": str(exc),
+                **_verify_scope_metadata(),
+            },
             args.json_output,
             human=f"FAIL: cannot read {args.bundle}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
@@ -182,6 +195,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
             "reason": result.chain_result.reason,
         },
         "bundle_reported_ok": result.bundle_reported_ok,
+        "error_code": result.error_code,
+        "retention_proofs_ok": result.retention_proofs_ok,
+        "retention_proofs_reason": result.retention_proofs_reason,
         **_verify_scope_metadata(),
     }
     _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")

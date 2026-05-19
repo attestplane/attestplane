@@ -20,6 +20,14 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "ALL_VERIFY_ERROR_CODES_V1",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "ANCHOR_SCHEMA_VERSION",
       "notes": "",
       "source": "src/anchoring.ts",
@@ -716,6 +724,14 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "RETENTION_PROOF_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "ROUTING_EVENT",
       "notes": "",
       "source": "src/event_types.ts",
@@ -783,6 +799,30 @@
       "name": "ReplayVerificationResult",
       "notes": "",
       "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "RetentionAction",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "RetentionProof",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "RetentionProofVerificationResult",
+      "notes": "",
+      "source": "src/retention.ts",
       "stability": "alpha_public"
     },
     {
@@ -1052,6 +1092,22 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "VERIFY_ERROR_DESCRIPTIONS",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_ERROR_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "VERSION",
       "notes": "",
       "source": "src/index_version.ts",
@@ -1100,6 +1156,14 @@
     {
       "documented": false,
       "kind": "type",
+      "name": "VerifyErrorCode",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
       "name": "VerifyTimestampOptions",
       "notes": "",
       "source": "src/rfc3161.ts",
@@ -1124,9 +1188,25 @@
     {
       "documented": false,
       "kind": "function",
+      "name": "buildDeletionProof",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
       "name": "buildPerEventPayload",
       "notes": "",
       "source": "src/signing/signer.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "buildRetentionMarker",
+      "notes": "",
+      "source": "src/retention.ts",
       "stability": "alpha_public"
     },
     {
@@ -1247,6 +1327,14 @@
       "name": "isKnownV1EventType",
       "notes": "",
       "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "isKnownVerifyErrorCode",
+      "notes": "",
+      "source": "src/verify_errors.ts",
       "stability": "alpha_public"
     },
     {
@@ -1476,6 +1564,14 @@
     {
       "documented": false,
       "kind": "function",
+      "name": "validateRetentionProof",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
       "name": "validateSignatureRecord",
       "notes": "",
       "source": "src/signing/base.ts",
@@ -1535,6 +1631,14 @@
       "name": "verifyReplayManifest",
       "notes": "",
       "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyRetentionProofs",
+      "notes": "",
+      "source": "src/retention.ts",
       "stability": "alpha_public"
     },
     {

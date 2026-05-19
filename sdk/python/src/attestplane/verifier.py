@@ -22,8 +22,17 @@ from typing import Any
 from attestplane.event_types import POLICY_CHECK_EVENT
 from attestplane.hashchain import GENESIS_HASH, SCHEMA_VERSION, VerificationResult, head_of, verify_chain
 from attestplane.proof_bundle import DEFAULT_FORBIDDEN_FIELDS
+from attestplane.retention import verify_retention_proofs
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
 from attestplane.types import ChainedEvent
+from attestplane.verify_errors import (
+    VERIFY_CHAIN_RECOMPUTE_FAILED,
+    VERIFY_METADATA_CLOSURE_FAILED,
+    VERIFY_OK,
+    VERIFY_POLICY_TRACE_REFS_FAILED,
+    VERIFY_RETENTION_PROOF_FAILED,
+    VerifyErrorCode,
+)
 
 
 class BundleVerificationError(Exception):
@@ -69,6 +78,9 @@ class BundleVerificationResult:
     metadata_reason: str | None
     policy_trace_refs_ok: bool
     policy_trace_refs_reason: str | None
+    retention_proofs_ok: bool
+    retention_proofs_reason: str | None
+    error_code: VerifyErrorCode
 
     def short_summary(self) -> str:
         if self.ok:
@@ -81,7 +93,9 @@ class BundleVerificationResult:
             f"FAIL chain_id={self.chain_id!r} events={self.event_count} "
             f"first_bad_index={bad} reason={self.chain_result.reason!r} "
             f"agreement={self.agreement} metadata_reason={self.metadata_reason!r} "
-            f"policy_trace_refs_reason={self.policy_trace_refs_reason!r}"
+            f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
+            f"retention_proofs_reason={self.retention_proofs_reason!r} "
+            f"error_code={self.error_code}"
         )
 
 
@@ -105,6 +119,7 @@ _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
     "signature",
     "policy_trace_refs",
     "signatures",
+    "retention_proofs",
 }
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -164,6 +179,8 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("framework_mappings must be an array when present")
     if "policy_trace_refs" in bundle and not isinstance(bundle["policy_trace_refs"], list):
         raise BundleSchemaError("policy_trace_refs must be an array when present")
+    if "retention_proofs" in bundle and not isinstance(bundle["retention_proofs"], list):
+        raise BundleSchemaError("retention_proofs must be an array when present")
 
 
 def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
@@ -267,8 +284,21 @@ def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
     agreement = bundle_reported_ok == chain_result.ok
     metadata_ok, metadata_reason = _verify_metadata_closure(bundle, events, chain_result)
     policy_ok, policy_reason = _verify_policy_trace_refs(bundle, events)
+    retention_result = verify_retention_proofs(
+        bundle.get("retention_proofs"),
+        {event.event_hash.hex() for event in events},
+    )
+    error_code: VerifyErrorCode = VERIFY_OK
+    if not chain_result.ok or not agreement:
+        error_code = VERIFY_CHAIN_RECOMPUTE_FAILED
+    elif not metadata_ok:
+        error_code = VERIFY_METADATA_CLOSURE_FAILED
+    elif not policy_ok:
+        error_code = VERIFY_POLICY_TRACE_REFS_FAILED
+    elif not retention_result.ok:
+        error_code = VERIFY_RETENTION_PROOF_FAILED
     return BundleVerificationResult(
-        ok=chain_result.ok and agreement and metadata_ok and policy_ok,
+        ok=chain_result.ok and agreement and metadata_ok and policy_ok and retention_result.ok,
         chain_result=chain_result,
         bundle_reported_ok=bundle_reported_ok,
         agreement=agreement,
@@ -280,6 +310,9 @@ def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
         metadata_reason=metadata_reason,
         policy_trace_refs_ok=policy_ok,
         policy_trace_refs_reason=policy_reason,
+        retention_proofs_ok=retention_result.ok,
+        retention_proofs_reason=retention_result.reason,
+        error_code=error_code,
     )
 
 

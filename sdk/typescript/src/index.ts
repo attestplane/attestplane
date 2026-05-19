@@ -101,6 +101,23 @@ export {
   type ReasonCodeV1,
 } from './reason_codes.js';
 export {
+  ALL_VERIFY_ERROR_CODES_V1,
+  VERIFY_ERROR_DESCRIPTIONS,
+  VERIFY_ERROR_SCHEMA_VERSION,
+  isKnownVerifyErrorCode,
+  type VerifyErrorCode,
+} from './verify_errors.js';
+export {
+  RETENTION_PROOF_SCHEMA_VERSION,
+  buildDeletionProof,
+  buildRetentionMarker,
+  validateRetentionProof,
+  verifyRetentionProofs,
+  type RetentionAction,
+  type RetentionProof,
+  type RetentionProofVerificationResult,
+} from './retention.js';
+export {
   ALL_EVENT_TYPES_V1,
   BUDGET_EVENT,
   EVAL_EVENT,

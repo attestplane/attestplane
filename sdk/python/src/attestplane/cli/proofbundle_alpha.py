@@ -23,6 +23,17 @@ from attestplane.canonical import CanonicalizationError, canonicalize
 from attestplane.intoto import DSSE_PAYLOAD_TYPE, PREDICATE_TYPE_V1, STATEMENT_TYPE
 from attestplane.obligations import load_all_registries
 from attestplane.verifier import BundleSchemaError, verify_proof_bundle
+from attestplane.verify_errors import (
+    VERIFY_ARTIFACT_HASH_FAILED,
+    VERIFY_CHAIN_RECOMPUTE_FAILED,
+    VERIFY_EXTENSION_FAILED,
+    VERIFY_EXTENSION_INVALID_INPUT,
+    VERIFY_EXTENSION_UNSUPPORTED,
+    VERIFY_OK,
+    VERIFY_REQUIRED_FIELDS_MISSING,
+    VERIFY_SCHEMA_ERROR,
+    VerifyErrorCode,
+)
 
 ALPHA_ENVELOPE_SCHEMA_VERSION = 1
 VERIFICATION_SCOPE = "proofbundle_alpha_local"
@@ -836,11 +847,13 @@ def _report(
     failed = [check for check in checks if check.status == "fail"]
     invalid = any(check.failure_kind == "invalid_input" for check in failed)
     exit_code = 2 if invalid else 1 if failed else 0
+    error_code = _alpha_error_code(failed)
     sig_perf = signature_status == "passed"
     anc_perf = anchor_status == "passed"
     return {
         "ok": exit_code == 0,
         "exit_code": exit_code,
+        "error_code": error_code,
         "verification_scope": VERIFICATION_SCOPE,
         "input_path": str(path),
         "checks": [check.as_json() for check in checks],
@@ -900,6 +913,27 @@ def _report(
             "or compliance certification."
         ),
     }
+
+
+def _alpha_error_code(failed: list[AlphaCheck]) -> VerifyErrorCode:
+    if not failed:
+        return VERIFY_OK
+    first = failed[0]
+    if first.failure_kind == "invalid_input":
+        if first.name == "required_fields":
+            return VERIFY_REQUIRED_FIELDS_MISSING
+        if first.name in {"signature_verification", "anchor_verification"}:
+            if first.detail and "unsupported" in first.detail:
+                return VERIFY_EXTENSION_UNSUPPORTED
+            return VERIFY_EXTENSION_INVALID_INPUT
+        return VERIFY_SCHEMA_ERROR
+    if first.name == "artifact_hash":
+        return VERIFY_ARTIFACT_HASH_FAILED
+    if first.name == "hash_chain_recompute":
+        return VERIFY_CHAIN_RECOMPUTE_FAILED
+    if first.name in {"signature_verification", "anchor_verification"}:
+        return VERIFY_EXTENSION_FAILED
+    return VERIFY_CHAIN_RECOMPUTE_FAILED
 
 
 __all__ = [

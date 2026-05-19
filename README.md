@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
-[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.0.3a0-blue)](https://pypi.org/project/attestplane/0.0.3a0/)
+[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.0.5a0-blue)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
@@ -60,7 +60,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.3-alpha (GitHub prerelease)** builds on the v0.0.2-alpha substrate release and adds:
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.0.5-alpha** builds on the earlier alpha substrate releases and adds:
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (newline-terminated records, optional fsync,
@@ -77,10 +77,7 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
-The next prepared alpha line, **v0.0.4-alpha**, carries the post-tag FreeTSA
-verifier recovery, Article 12 aligned profile documentation, verifier
-independence documentation, and retention/deletion proof design work. It remains
-alpha substrate work and is not a legal compliance certification.
+The next alpha line, **v0.0.5-alpha**, tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains alpha substrate work and is not a legal compliance certification.
 
 Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate alpha substrate conformance, not production readiness or regulatory compliance.
 
@@ -150,7 +147,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  SDKs                                                         │   │
-│  │  Python (0.0.4a0)   │  TypeScript (0.0.4-alpha)               │   │
+│  │  Python (0.0.5a0)   │  TypeScript (0.0.5-alpha)               │   │
 │  │  FastAPI / Express / NestJS / Django helpers (M5)             │   │
 │  │  Rust crate (M7)                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -174,21 +171,21 @@ Integration with each partner does **not** imply endorsement by the partner. The
 ## Current release posture: public alpha
 
 The public alpha line is live as a GitHub prerelease and as package artifacts:
-Python `attestplane==0.0.3a0` is published to PyPI, and
-`@attestplane/attestplane@0.0.3-alpha` is published to npm under the
+Python `attestplane==0.0.5a0` is published to PyPI, and
+`@attestplane/attestplane@0.0.5-alpha` is published to npm under the
 `alpha` dist-tag. This line is alpha-grade substrate work: it expands the core
 with schemas, sidecar primitives, storage, adapters, verifier predicates,
 public API drift gates, storage compatibility policy, and release provenance
 hygiene, but it is not pre-beta, not production-ready, and not compliance-ready.
 
-The `v0.0.4-alpha` release candidate is prepared on `main` for the next alpha
-cut. Until an explicit tag/release/publish step is authorized, the latest
-published package artifacts remain v0.0.3-alpha.
+The `v0.0.5-alpha` line tightens verifier conformance and release evidence. The package and release registry surfaces remain the source of truth.
 
 The current `attestplane verify` command is deliberately narrow:
 
 - It replays bundle events and checks hash-chain/report agreement.
 - It fails closed on malformed ProofBundle metadata and `policy_trace_refs` closure.
+- It emits stable `VERIFY_*` error codes in JSON output.
+- It verifies optional `retention_proofs` marker shape and event-hash references.
 - It does not perform full ProofBundle verification.
 - It does not verify signatures or anchors.
 - It does not issue compliance certification.
@@ -205,7 +202,7 @@ Implemented in the published alpha artifacts:
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
 Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface
-through the v0.0.4-alpha release-prep line; not a production claim):
+through the v0.0.5-alpha release-prep line; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -213,6 +210,8 @@ through the v0.0.4-alpha release-prep line; not a production claim):
 - `GenericRuntimeAdapter` ABC (Python + TypeScript): runtime evidence ingestion/normalization only; it is not runtime execution authority
 - Compliance obligation registry (EU AI Act Article 12 + DORA Article 8): machine-readable framework mappings with locked `implementation_status` enum per the claim-safety triad
 - Negative conformance vectors: five frozen broken-chain fixtures pinning gates A2 and A3
+- Stable verifier error taxonomy and retention/deletion proof marker checks
+  (`v0.0.5-alpha`), still under alpha/non-certification boundaries
 
 Not yet implemented:
 
@@ -223,17 +222,12 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.0.3a0` | [PyPI](https://pypi.org/project/attestplane/0.0.3a0/) | GitHub OIDC trusted publishing |
-| `@attestplane/attestplane@0.0.3-alpha` | [npm alpha dist-tag](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| GitHub Release | [v0.0.3-alpha](https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha) | wheel + sdist + npm tarball + checksums + artifact manifest |
+| `attestplane==0.0.5a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `@attestplane/attestplane@0.0.5-alpha` | [npm alpha dist-tag](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
+| GitHub Release | `v0.0.5-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
-Prepared next alpha artifacts:
-
-| Artifact | Channel | Verify |
-|---|---|---|
-| `attestplane==0.0.4a0` | release candidate on `main`; not published until explicit release authorization | local build + twine check + checksum manifest |
-| `@attestplane/attestplane@0.0.4-alpha` | release candidate on `main`; not published until explicit release authorization | local npm pack + checksum manifest |
-| GitHub Release | `v0.0.4-alpha` not created until explicit release authorization | planned wheel + sdist + npm tarball + checksums + artifact manifest |
+`latest` npm distribution remains intentionally separate from the `alpha`
+dist-tag unless a maintainer explicitly moves it.
 
 ## Quickstart
 
@@ -242,7 +236,7 @@ What works today, end-to-end.
 ### Python
 
 ```bash
-pip install attestplane==0.0.3a0
+pip install attestplane==0.0.5a0
 ```
 
 ```python
@@ -313,7 +307,7 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 ## Future Compliance Framework Mapping Targets
 
 The table below lists roadmap targets for future compliance mapping. The
-prepared v0.0.4-alpha artifacts include obligation registry data and
+prepared v0.0.5-alpha artifacts include obligation registry data and
 chain/report-oriented verifier predicates, but they do not ship a full
 ProofBundle, signed, anchored, or compliance certification verifier. All
 entries below carry `implementation_status` values from the locked four-value
@@ -383,8 +377,12 @@ If you are an EU-regulated entity (DORA, BaFin, NIS2 scope) evaluating Attestpla
 | [CHANGELOG.md](CHANGELOG.md) | Release history and supply-chain hashes |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records |
 | [docs/architecture/ATTESTATION_GATES.md](docs/architecture/ATTESTATION_GATES.md) | Five substrate-level gates A1–A5 (pre-merge / nightly / release-blocker) |
+| [docs/non-goals.md](docs/non-goals.md) | Alpha non-goals and forbidden over-claims |
+| [docs/errors.md](docs/errors.md) | Stable verifier error taxonomy |
 | [docs/spec/aia-12-aligned-profile.md](docs/spec/aia-12-aligned-profile.md) | Alpha AIA-12 aligned evidence profile; not a legal conclusion |
 | [docs/architecture/verifier_independence.md](docs/architecture/verifier_independence.md) | Independent verifier trust model for exported evidence |
+| [docs/architecture/tsa-provider-interface.md](docs/architecture/tsa-provider-interface.md) | TSA provider abstraction boundary; not a new trust root |
+| [docs/security/threat-model-v0.0.5-alpha.md](docs/security/threat-model-v0.0.5-alpha.md) | v0.0.5-alpha threat model snapshot |
 | [docs/spec/evidence-event-taxonomy-v1.md](docs/spec/evidence-event-taxonomy-v1.md) | The v1 evidence event taxonomy (twelve types) |
 | [docs/policy/](docs/policy/forbidden_claims.md) | Public-facing claim policy (forbidden / allowed / enforcement) |
 

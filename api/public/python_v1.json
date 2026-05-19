@@ -24,6 +24,14 @@
       "documented": false,
       "kind": "constant",
       "module": "attestplane",
+      "name": "ALL_VERIFY_ERROR_CODES_V1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
       "name": "ANCHOR_SCHEMA_VERSION",
       "notes": "",
       "stability": "alpha_public"
@@ -512,6 +520,14 @@
       "documented": false,
       "kind": "constant",
       "module": "attestplane",
+      "name": "RETENTION_PROOF_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
       "name": "ROUTING_EVENT",
       "notes": "",
       "stability": "alpha_public"
@@ -569,6 +585,14 @@
       "kind": "class",
       "module": "attestplane",
       "name": "ReplayVerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "RetentionProofVerificationResult",
       "notes": "",
       "stability": "alpha_public"
     },
@@ -758,9 +782,33 @@
     },
     {
       "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_ERROR_DESCRIPTIONS",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_ERROR_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
       "kind": "class",
       "module": "attestplane",
       "name": "VerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "VerifyErrorCode",
       "notes": "",
       "stability": "alpha_public"
     },
@@ -785,6 +833,22 @@
       "kind": "function",
       "module": "attestplane",
       "name": "build_auditor_export",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "build_deletion_proof",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "build_retention_marker",
       "notes": "",
       "stability": "alpha_public"
     },
@@ -888,6 +952,14 @@
       "documented": false,
       "kind": "function",
       "module": "attestplane",
+      "name": "is_known_verify_error_code",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
       "name": "load_all_registries",
       "notes": "",
       "stability": "alpha_public"
@@ -984,6 +1056,14 @@
       "documented": false,
       "kind": "function",
       "module": "attestplane",
+      "name": "validate_retention_proof",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
       "name": "verify_chain",
       "notes": "",
       "stability": "alpha_public"
@@ -1017,6 +1097,14 @@
       "kind": "function",
       "module": "attestplane",
       "name": "verify_replay_manifest",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_retention_proofs",
       "notes": "",
       "stability": "alpha_public"
     }

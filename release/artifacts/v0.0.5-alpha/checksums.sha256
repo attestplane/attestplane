@@ -1,0 +1,19 @@
+# AP-EVD/1.0 v0.0.5-alpha release-candidate asset checksums (SHA-256)
+#
+# Generated from a local release-prep build on 2026-05-19. These checksums are
+# for the next alpha candidate only. They do not replace or move the frozen
+# v0.0.4-alpha tag, GitHub Release assets, PyPI artifact, or npm artifact.
+#
+# Explicit non-actions for this checksum file:
+# - tag: not created
+# - GitHub Release write: not performed
+# - PyPI publish: not performed
+# - npm publish: not performed
+# - deploy: not performed
+# - workflow_dispatch: not performed
+e304abb1e43b663d143641c7b02fa7f0b633d67e6b5d442b8a29e80245067db9  sdk/python/dist/attestplane-0.0.5a0-py3-none-any.whl
+afe5782b2971322ee43f993bfeba7aa72d9b520db63bbcab8aa5b0d38ae02baf  sdk/python/dist/attestplane-0.0.5a0.tar.gz
+90120e1b66083a166a27f915d5a562061d8784f147ff4b4632cb51263392b19d  sdk/typescript/attestplane-attestplane-0.0.5-alpha.tgz
+8850651b840f552afde748dc81d969ac4c1a8ed720ca7dd705a7e3dcd3b3fcfd  release/artifacts/v0.0.5-alpha/attestplane-python-sbom.cdx.json
+a2aa7f70f3efaa87ffddc80d797b1143b4a09adc7f7c83bc1e6b4cce05ad3e0f  release/artifacts/v0.0.5-alpha/attestplane-python-sbom.cdx.xml
+57163e10b0ea2346d7f0abfe3dfe39cf5620d2ef8e6afbe46537b4bcc8989690  release/artifacts/v0.0.5-alpha/attestplane-typescript-sbom.cdx.json

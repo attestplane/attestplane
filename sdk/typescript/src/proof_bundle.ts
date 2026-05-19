@@ -13,6 +13,7 @@
 
 import { SCHEMA_VERSION, headOf, verifyChain } from './hashchain.js';
 import { VERSION as _SDK_VERSION } from './index_version.js';
+import { type RetentionProof, validateRetentionProof } from './retention.js';
 import {
   SIGNATURE_SCHEMA_VERSION,
   type SignatureRecord,
@@ -92,6 +93,11 @@ export interface ProofBundle {
    * v0.0.1-alpha bundles).
    */
   readonly signatures?: readonly SerializedSignatureRecord[];
+  /**
+   * Additive ADR-0015 commit-then-redact proof markers. Verifiers check marker
+   * shape and references only; they do not claim GDPR compliance.
+   */
+  readonly retention_proofs?: readonly RetentionProof[];
 }
 
 /**
@@ -291,6 +297,7 @@ export class ProofBundleBuilder {
   private readonly _events: ChainedEvent[] = [];
   private readonly _framework_mappings: FrameworkMapping[] = [];
   private readonly _signatures: SignatureRecord[] = [];
+  private readonly _retention_proofs: RetentionProof[] = [];
 
   constructor(input: ProofBundleBuilderInput) {
     this._chain_id = input.chain_id;
@@ -330,6 +337,13 @@ export class ProofBundleBuilder {
         );
       }
       this._signatures.push(r);
+    }
+  }
+
+  extendRetentionProofs(records: readonly RetentionProof[]): void {
+    for (const r of records) {
+      validateRetentionProof(r as unknown as Record<string, unknown>);
+      this._retention_proofs.push(r);
     }
   }
 
@@ -373,6 +387,9 @@ export class ProofBundleBuilder {
       })(),
       ...(this._signatures.length > 0
         ? { signatures: this._signatures.map(serializeSignatureRecord) }
+        : {}),
+      ...(this._retention_proofs.length > 0
+        ? { retention_proofs: [...this._retention_proofs] }
         : {}),
     };
     return bundle;

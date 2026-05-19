@@ -32,7 +32,16 @@ import type {
   SerializedSubjectRef,
 } from './proof_bundle.js';
 import { DEFAULT_FORBIDDEN_FIELDS } from './proof_bundle.js';
+import { verifyRetentionProofs } from './retention.js';
 import type { AuditEvent, ChainedEvent, SubjectRef } from './types.js';
+import {
+  VERIFY_CHAIN_RECOMPUTE_FAILED,
+  VERIFY_METADATA_CLOSURE_FAILED,
+  VERIFY_OK,
+  VERIFY_POLICY_TRACE_REFS_FAILED,
+  VERIFY_RETENTION_PROOF_FAILED,
+  type VerifyErrorCode,
+} from './verify_errors.js';
 
 export class BundleVerificationError extends Error {
   constructor(message: string) {
@@ -61,6 +70,9 @@ export interface BundleVerificationResult {
   readonly metadata_reason: string | null;
   readonly policy_trace_refs_ok: boolean;
   readonly policy_trace_refs_reason: string | null;
+  readonly retention_proofs_ok: boolean;
+  readonly retention_proofs_reason: string | null;
+  readonly error_code: VerifyErrorCode;
 }
 
 export function shortSummary(result: BundleVerificationResult): string {
@@ -75,7 +87,9 @@ export function shortSummary(result: BundleVerificationResult): string {
     `FAIL chain_id='${result.chain_id}' events=${result.event_count} ` +
     `first_bad_index=${bad} reason=${JSON.stringify(result.chain_result.reason)} ` +
     `agreement=${result.agreement} metadata_reason=${JSON.stringify(result.metadata_reason)} ` +
-    `policy_trace_refs_reason=${JSON.stringify(result.policy_trace_refs_reason)}`
+    `policy_trace_refs_reason=${JSON.stringify(result.policy_trace_refs_reason)} ` +
+    `retention_proofs_reason=${JSON.stringify(result.retention_proofs_reason)} ` +
+    `error_code=${result.error_code}`
   );
 }
 
@@ -109,6 +123,7 @@ const ALLOWED_TOP_LEVEL = new Set([
   'signature',
   'policy_trace_refs',
   'signatures',
+  'retention_proofs',
 ]);
 const ALLOWED_VERIFICATION_METHODS = new Set([
   'canonical-bytes-walk',
@@ -188,6 +203,9 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   }
   if ('policy_trace_refs' in raw && !Array.isArray(raw.policy_trace_refs)) {
     throw new BundleSchemaError('policy_trace_refs must be an array when present');
+  }
+  if ('retention_proofs' in raw && !Array.isArray(raw.retention_proofs)) {
+    throw new BundleSchemaError('retention_proofs must be an array when present');
   }
 }
 
@@ -407,9 +425,23 @@ export function verifyProofBundle(raw: unknown): BundleVerificationResult {
   const agreement = bundleReportedOk === chainResult.ok;
   const metadata = verifyMetadataClosure(bundle, events, chainResult);
   const policyTraceRefs = verifyPolicyTraceRefs(bundle, events);
+  const retentionProofs = verifyRetentionProofs(
+    bundle.retention_proofs,
+    new Set(events.map((event) => bytesToHex(event.event_hash))),
+  );
+  let errorCode: VerifyErrorCode = VERIFY_OK;
+  if (!chainResult.ok || !agreement) {
+    errorCode = VERIFY_CHAIN_RECOMPUTE_FAILED;
+  } else if (!metadata.ok) {
+    errorCode = VERIFY_METADATA_CLOSURE_FAILED;
+  } else if (!policyTraceRefs.ok) {
+    errorCode = VERIFY_POLICY_TRACE_REFS_FAILED;
+  } else if (!retentionProofs.ok) {
+    errorCode = VERIFY_RETENTION_PROOF_FAILED;
+  }
 
   return {
-    ok: chainResult.ok && agreement && metadata.ok && policyTraceRefs.ok,
+    ok: chainResult.ok && agreement && metadata.ok && policyTraceRefs.ok && retentionProofs.ok,
     chain_result: chainResult,
     bundle_reported_ok: bundleReportedOk,
     agreement,
@@ -421,6 +453,9 @@ export function verifyProofBundle(raw: unknown): BundleVerificationResult {
     metadata_reason: metadata.reason,
     policy_trace_refs_ok: policyTraceRefs.ok,
     policy_trace_refs_reason: policyTraceRefs.reason,
+    retention_proofs_ok: retentionProofs.ok,
+    retention_proofs_reason: retentionProofs.reason,
+    error_code: errorCode,
   };
 }
 
