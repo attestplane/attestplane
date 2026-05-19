@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.attestplane.local-codex-runner</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOUR_USER/dev/attestplane/scripts/local_codex_runner/run_once.sh</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USER/Library/Logs/attestplane-codex-runner.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USER/Library/Logs/attestplane-codex-runner.err.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
+
