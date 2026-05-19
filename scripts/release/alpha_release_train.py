@@ -1256,7 +1256,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.continuous:
-        return run_continuous_pipeline(args)
+        try:
+            return run_continuous_pipeline(args)
+        except Exception as exc:
+            if args.execute:
+                request_stop(args.stop_file, f"fail-closed continuous pipeline: {type(exc).__name__}")
+            raise
 
     advisory_plan = None
     should_plan = args.plan_next_alpha or args.pipeline

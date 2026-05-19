@@ -290,3 +290,17 @@ def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> N
 
     with pytest.raises(RuntimeError, match="remote tag check timed out"):
         alpha_release_train.alpha_release_exists("v0.0.8-alpha")
+
+
+def test_continuous_unhandled_exception_writes_stop_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    stop_file = tmp_path / "STOP"
+
+    def fail_continuous(args: object) -> int:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(alpha_release_train, "run_continuous_pipeline", fail_continuous)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        alpha_release_train.main(["--continuous", "--execute", "--stop-file", str(stop_file)])
+
+    assert "fail-closed continuous pipeline: RuntimeError" in stop_file.read_text(encoding="utf-8")
