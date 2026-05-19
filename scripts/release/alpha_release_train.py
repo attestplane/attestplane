@@ -290,6 +290,242 @@ def write_draft_candidate_bundle(candidate: AlphaCandidate, *, advisory_plan: Pa
     return prepared_dir
 
 
+def update_python_version(version: str) -> None:
+    path = ROOT / "sdk" / "python" / "pyproject.toml"
+    text = path.read_text(encoding="utf-8")
+    updated = re.sub(r'(?m)^version = "[^"]+"$', f'version = "{version}"', text, count=1)
+    if updated == text:
+        raise RuntimeError(f"could not update Python version in {path}")
+    path.write_text(updated, encoding="utf-8")
+
+
+def update_npm_version(version: str) -> None:
+    path = ROOT / "sdk" / "typescript" / "package.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["version"] = version
+    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+
+
+def write_release_notes(candidate: AlphaCandidate, advisory_plan: Path | None) -> None:
+    path = ROOT / candidate.release_notes
+    path.parent.mkdir(parents=True, exist_ok=True)
+    advisory_ref = display_path(advisory_plan) if advisory_plan else "not available"
+    path.write_text(
+        "\n".join(
+            [
+                f"# {candidate.release}",
+                "",
+                f"`{candidate.release}` is an automated alpha release prepared by the local alpha train.",
+                "",
+                "## Highlights",
+                "",
+                "- Cuts the current Attestplane SDK and verifier surface as an alpha package release.",
+                "- Preserves deterministic verifier, release-artifact, and claim-safety boundaries.",
+                "- Records advisory planning as non-authoritative release-train evidence.",
+                "",
+                "## Advisory Planning Reference",
+                "",
+                f"- Advisory plan: `{advisory_ref}`",
+                "- Advisory output is not release authorization.",
+                "",
+                "## Explicit Boundaries",
+                "",
+                "This release does not claim:",
+                "",
+                "- EU AI Act compliance,",
+                "- GDPR compliance,",
+                "- legal certification,",
+                "- production readiness,",
+                "- certified provenance,",
+                "- SLSA L3,",
+                "- production-grade supply-chain security, or",
+                "- long-term archival trust guarantees.",
+                "",
+                "## Expected Assets",
+                "",
+                f"- `sdk/python/dist/attestplane-{candidate.python_version}-py3-none-any.whl`",
+                f"- `sdk/python/dist/attestplane-{candidate.python_version}.tar.gz`",
+                f"- `sdk/typescript/attestplane-attestplane-{candidate.npm_version}.tgz`",
+                f"- `{candidate.checksums}`",
+                f"- `{candidate.manifest}`",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def artifact_entry(kind: str, package: str, version: str, path: str) -> dict[str, Any]:
+    artifact_path = ROOT / path
+    return {
+        "kind": kind,
+        "package": package,
+        "path": path,
+        "sha256": sha256_file(artifact_path),
+        "size_bytes": artifact_path.stat().st_size,
+        "validation": {"published": False},
+        "version": version,
+    }
+
+
+def build_release_artifacts(candidate: AlphaCandidate) -> None:
+    run(
+        [
+            "bash",
+            "-lc",
+            "cd sdk/python && rm -rf dist build && .venv/bin/python -m build >/dev/null && .venv/bin/python -m twine check dist/*",
+        ],
+        dry_run=False,
+    )
+    run(
+        [
+            "bash",
+            "-lc",
+            "cd sdk/typescript && find . -maxdepth 1 -name '*.tgz' -delete && npm ci --silent >/dev/null && npm run build --silent >/dev/null && npm test --silent >/dev/null && npm pack --silent >/dev/null",
+        ],
+        dry_run=False,
+    )
+    for path in (
+        f"sdk/python/dist/attestplane-{candidate.python_version}-py3-none-any.whl",
+        f"sdk/python/dist/attestplane-{candidate.python_version}.tar.gz",
+        f"sdk/typescript/attestplane-attestplane-{candidate.npm_version}.tgz",
+    ):
+        if not (ROOT / path).is_file():
+            raise FileNotFoundError(f"release artifact build did not create {path}")
+
+
+def write_release_metadata(candidate: AlphaCandidate) -> None:
+    release_dir = ROOT / "release" / "artifacts" / candidate.release
+    release_dir.mkdir(parents=True, exist_ok=True)
+    artifacts = [
+        artifact_entry(
+            "python-wheel",
+            "attestplane",
+            candidate.python_version,
+            f"sdk/python/dist/attestplane-{candidate.python_version}-py3-none-any.whl",
+        ),
+        artifact_entry(
+            "python-sdist",
+            "attestplane",
+            candidate.python_version,
+            f"sdk/python/dist/attestplane-{candidate.python_version}.tar.gz",
+        ),
+        artifact_entry(
+            "npm-tarball",
+            "@attestplane/attestplane",
+            candidate.npm_version,
+            f"sdk/typescript/attestplane-attestplane-{candidate.npm_version}.tgz",
+        ),
+    ]
+    manifest = {
+        "artifacts": artifacts,
+        "checksums_file": candidate.checksums,
+        "explicit_non_actions": {
+            "deploy": "not performed",
+            "force_push": "not performed",
+            "npm_latest_change": "not performed",
+            "release_publish": "not performed during prep",
+            "workflow_dispatch": "not performed during prep",
+        },
+        "explicit_non_claims": {
+            "certified_provenance": False,
+            "compliance_certification": False,
+            "production_ready": False,
+            "slsa_l3": False,
+        },
+        "release": candidate.release,
+        "release_notes_file": candidate.release_notes,
+        "schema": "attestplane_release_artifact_manifest.v1",
+        "source_state": {
+            "prepared_by": "alpha_release_train_auto_release_prep",
+            "target_commit": capture(["git", "rev-parse", "HEAD"]),
+        },
+        "upload_plan_file": f"release/artifacts/{candidate.release}/upload-plan.md",
+    }
+    (ROOT / candidate.manifest).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    checksum_lines = [f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts]
+    (ROOT / candidate.checksums).write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+    (release_dir / "upload-plan.md").write_text(
+        "\n".join(
+            [
+                f"# {candidate.release} Release-Asset Upload Plan",
+                "",
+                "This plan documents artifacts prepared by the local alpha release train.",
+                "",
+                "## Prepared Files",
+                "",
+                "```text",
+                *[artifact["path"] for artifact in artifacts],
+                candidate.checksums,
+                candidate.manifest,
+                "```",
+                "",
+                "## Release Commands",
+                "",
+                "```bash",
+                f"git tag -a {candidate.release} -m \"{candidate.release}\"",
+                f"git push origin {candidate.release}",
+                f"gh release create {candidate.release} --prerelease --title \"{candidate.release}\" --notes-file {candidate.release_notes} ...",
+                "gh workflow run publish-python.yml -f target=pypi --ref main",
+                "gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main",
+                "```",
+                "",
+                "## Explicit Non-Actions in Release Prep",
+                "",
+                "- Force push: not performed.",
+                "- npm `latest` dist-tag change: not performed.",
+                "- Deploy: not performed.",
+                "- Workflow dispatch: not performed during prep.",
+                "",
+                "## Claim Boundary",
+                "",
+                "This alpha candidate does not claim production readiness, legal certification,",
+                "GDPR compliance, EU AI Act compliance, certified provenance, or SLSA L3.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def commit_release_prep(candidate: AlphaCandidate) -> None:
+    files = [
+        "sdk/python/pyproject.toml",
+        "sdk/typescript/package.json",
+        candidate.release_notes,
+        candidate.manifest,
+        candidate.checksums,
+        f"release/artifacts/{candidate.release}/upload-plan.md",
+    ]
+    run(["git", "add", *files], dry_run=False)
+    run(["git", "commit", "-s", "-m", f"chore(release): prepare {candidate.release}"], dry_run=False)
+
+
+def finalize_next_alpha(*, advisory_plan: Path | None) -> AlphaCandidate | None:
+    assert_clean_tree()
+    release = next_alpha_release()
+    if alpha_release_exists(release):
+        print(f"alpha train: next release already exists; not finalizing {release}")
+        return None
+    candidate = prepared_candidate_from_release(release)
+    update_python_version(candidate.python_version)
+    update_npm_version(candidate.npm_version)
+    write_release_notes(candidate, advisory_plan)
+    run(["git", "diff", "--check"], dry_run=False)
+    build_release_artifacts(candidate)
+    write_release_metadata(candidate)
+    env = {
+        **os.environ,
+        "RELEASE_VERSION": candidate.release,
+        "PYTHON_VERSION": candidate.python_version,
+        "NPM_VERSION": candidate.npm_version,
+    }
+    run(["scripts/check-release-assets-prep.sh"], dry_run=False, env=env)
+    commit_release_prep(candidate)
+    print(f"alpha train: finalized release-prep candidate {candidate.release}")
+    return candidate
+
+
 def auto_prepare_next_alpha(*, advisory_plan: Path | None, prepared_root: Path, dry_run: bool) -> AlphaCandidate | None:
     if not dry_run:
         assert_clean_tree()
@@ -870,7 +1106,20 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
         candidates = unprocessed_candidates(queue_candidates, args.state_file)
         if (
             not candidates
+            and args.auto_finalize_next_alpha
+            and args.execute
+            and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
+        ):
+            finalized = finalize_next_alpha(advisory_plan=advisory_plan)
+            if finalized is not None:
+                mark_prepared(args.state_file, finalized, dry_run=False)
+                candidates = [finalized]
+                print(f"alpha train: auto-finalized {finalized.release}; entering release train", flush=True)
+
+        if (
+            not candidates
             and args.auto_prepare_next_alpha
+            and not args.auto_finalize_next_alpha
             and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
         ):
             prepared = auto_prepare_next_alpha(
@@ -936,6 +1185,11 @@ def main() -> int:
         "--auto-prepare-next-alpha",
         action="store_true",
         help="When the queue is empty, prepare the next local alpha candidate from deterministic repo state.",
+    )
+    parser.add_argument(
+        "--auto-finalize-next-alpha",
+        action="store_true",
+        help="When the queue is empty, build and commit the next release-ready alpha candidate, then release it.",
     )
     parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
     parser.add_argument("--plan-interval-seconds", type=int, default=3600, help="Minimum seconds between Opus advisory planning calls in continuous mode.")

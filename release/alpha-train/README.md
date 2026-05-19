@@ -93,6 +93,26 @@ source commit, and leaves `queue.json` unchanged. It does not bump package
 versions, build publishable artifacts, create tags, dispatch workflows, or
 publish. A release still requires the normal release-prep artifacts and gates.
 
+The fully automated local release-prep form is:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --auto-promote-prepared \
+  --auto-finalize-next-alpha \
+  --execute \
+  --max-count 1 \
+  --max-releases-per-day 0
+```
+
+When the queue is empty, `--auto-finalize-next-alpha` bumps the local Python and
+TypeScript alpha versions, writes release notes, builds local artifacts, writes
+manifest/checksum/upload-plan files, runs the release-prep gate, commits the
+release-prep files, and then hands the candidate to the existing release train.
+It still does not bypass gates, force-push, rewrite tags, move npm `latest`, or
+treat advisory output as authority.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.

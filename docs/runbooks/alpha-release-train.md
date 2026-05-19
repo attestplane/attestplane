@@ -117,11 +117,34 @@ does not build publishable artifacts, does not commit, does not tag, does not
 dispatch workflows, and does not publish. The normal queue remains the only
 release input.
 
+For a fully automated local release-prep loop:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --auto-promote-prepared \
+  --auto-finalize-next-alpha \
+  --execute \
+  --max-count 1 \
+  --max-releases-per-day 0
+```
+
+This mode turns the next alpha into a release-ready candidate before invoking
+the existing train: it bumps local package versions, writes release notes,
+builds Python/npm artifacts, writes manifest/checksum/upload-plan files, runs
+the release-prep gate, commits the release-prep files, and then releases via
+the same candidate execution stage. It remains fail-closed and still does not
+force-push, rewrite tags, move npm `latest`, or treat Opus advisory output as
+authority.
+
 The runner performs:
 
 - optional Opus advisory issue planning when `--plan-next-alpha` is passed,
 - optional local draft candidate bundle creation when
   `--auto-prepare-next-alpha` is passed,
+- optional release-ready candidate preparation when
+  `--auto-finalize-next-alpha` is passed,
 - clean working tree check,
 - Python full tests, ruff, mypy,
 - TypeScript tests, typecheck, lint,
