@@ -193,3 +193,36 @@ def test_request_stop_writes_reason(tmp_path: Path) -> None:
 
 def test_daily_release_count_defaults_to_zero(tmp_path: Path) -> None:
     assert alpha_release_train.daily_release_count(tmp_path / "missing-state.json") == 0
+
+
+def test_next_alpha_release_from_notes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.0.9-alpha.draft.md").write_text("# v0.0.9-alpha\n", encoding="utf-8")
+    (docs / "v0.0.10-alpha.draft.md").write_text("# v0.0.10-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    assert alpha_release_train.next_alpha_release() == "v0.0.11-alpha"
+
+
+def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    monkeypatch.setattr(alpha_release_train, "capture", lambda argv: "abc123")
+    candidate = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+        }
+    )
+
+    prepared_dir = alpha_release_train.write_draft_candidate_bundle(
+        candidate,
+        advisory_plan=None,
+        prepared_root=tmp_path / "prepared",
+    )
+
+    manifest = json.loads((prepared_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema"] == "attestplane_alpha_prepared_candidate_draft.v1"
+    assert manifest["status"] == "draft_unverified_not_queued"
+    assert manifest["explicit_non_actions"]["package_version_bump"] == "not performed"
+    assert "not release-ready" in (prepared_dir / "READY").read_text(encoding="utf-8")

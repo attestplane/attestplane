@@ -97,9 +97,31 @@ default execution cap is one alpha per UTC day; `--max-releases-per-day 0`
 means unlimited daily cadence and should only be used for an explicitly
 accepted release window.
 
+If the train should make progress when no candidate exists, add the local draft
+prepare stage:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --auto-promote-prepared \
+  --auto-prepare-next-alpha \
+  --execute \
+  --max-count 1
+```
+
+This stage writes `release/alpha-train/prepared/<release>-<commit>/` with a
+draft manifest, draft notes, checksums, and a `READY` marker that explicitly
+says the bundle is not release-ready. It does not modify package versions,
+does not build publishable artifacts, does not commit, does not tag, does not
+dispatch workflows, and does not publish. The normal queue remains the only
+release input.
+
 The runner performs:
 
 - optional Opus advisory issue planning when `--plan-next-alpha` is passed,
+- optional local draft candidate bundle creation when
+  `--auto-prepare-next-alpha` is passed,
 - clean working tree check,
 - Python full tests, ruff, mypy,
 - TypeScript tests, typecheck, lint,

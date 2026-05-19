@@ -74,6 +74,25 @@ continuous execution cap is one alpha per UTC day; use
 `--max-releases-per-day 0` only after explicitly accepting unlimited daily
 release cadence.
 
+To avoid healthy empty loops, the train can also write a local draft candidate
+bundle when no release-ready artifacts exist:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --auto-promote-prepared \
+  --auto-prepare-next-alpha \
+  --execute \
+  --max-count 1
+```
+
+`--auto-prepare-next-alpha` is intentionally conservative. It writes a draft
+bundle under `release/alpha-train/prepared/`, records the advisory reference and
+source commit, and leaves `queue.json` unchanged. It does not bump package
+versions, build publishable artifacts, create tags, dispatch workflows, or
+publish. A release still requires the normal release-prep artifacts and gates.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.

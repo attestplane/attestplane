@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import time
 import urllib.request
@@ -28,7 +29,9 @@ DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
 DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
 DEFAULT_STATE_FILE = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.json"
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
+DEFAULT_PREPARED_DIR = ROOT / "release" / "alpha-train" / "prepared"
 DEFAULT_MAX_RELEASES_PER_DAY = 1
+DEFAULT_MAX_PREPARES_PER_DAY = 1
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -91,6 +94,14 @@ def capture(argv: list[str]) -> str:
     return subprocess.check_output(argv, cwd=ROOT, text=True).strip()
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def load_queue(path: Path) -> list[AlphaCandidate]:
     if not path.exists():
         raise FileNotFoundError(f"alpha queue not found: {path}")
@@ -142,6 +153,29 @@ def alpha_npm_version(release: str) -> str:
     return release.removeprefix("v")
 
 
+def parse_alpha_release(release: str) -> tuple[int, int, int]:
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)-alpha", release)
+    if not match:
+        raise ValueError(f"invalid alpha release: {release}")
+    return tuple(int(part) for part in match.groups())
+
+
+def latest_alpha_release_from_notes() -> str:
+    releases = [
+        path.name.removesuffix(".draft.md")
+        for path in (ROOT / "docs" / "release-notes").glob("v*-alpha.draft.md")
+        if re.fullmatch(r"v\d+\.\d+\.\d+-alpha", path.name.removesuffix(".draft.md"))
+    ]
+    if not releases:
+        return "v0.0.0-alpha"
+    return sorted(releases, key=parse_alpha_release)[-1]
+
+
+def next_alpha_release() -> str:
+    major, minor, patch = parse_alpha_release(latest_alpha_release_from_notes())
+    return f"v{major}.{minor}.{patch + 1}-alpha"
+
+
 def prepared_candidate_from_release(release: str) -> AlphaCandidate:
     return AlphaCandidate.from_json(
         {
@@ -156,6 +190,120 @@ def prepared_candidate_from_release(release: str) -> AlphaCandidate:
             "create_github_release": True,
         }
     )
+
+
+def draft_candidate_id(candidate: AlphaCandidate) -> str:
+    return f"{candidate.release}-{capture(['git', 'rev-parse', '--short=12', 'HEAD'])}"
+
+
+def write_draft_release_notes(candidate: AlphaCandidate, advisory_plan: Path | None, prepared_dir: Path) -> Path:
+    path = prepared_dir / "NOTES.draft.md"
+    advisory_ref = display_path(advisory_plan) if advisory_plan else "not available"
+    path.write_text(
+        "\n".join(
+            [
+                f"# {candidate.release}",
+                "",
+                f"`{candidate.release}` is a draft alpha candidate prepared by the local alpha train.",
+                "",
+                "## Highlights",
+                "",
+                "- Draft only; not queued for release and not authorized for publication.",
+                "- Carries forward the current Attestplane SDK and verifier surface as candidate planning context.",
+                "- Preserves deterministic verifier, release-artifact, and claim-safety boundaries.",
+                "- Records advisory planning as non-authoritative release-train evidence.",
+                "",
+                "## Advisory Planning Reference",
+                "",
+                f"- Advisory plan: `{advisory_ref}`",
+                "- Advisory output is not release authorization.",
+                "",
+                "## Explicit Boundaries",
+                "",
+                "This release does not claim:",
+                "",
+                "- EU AI Act compliance,",
+                "- GDPR compliance,",
+                "- legal certification,",
+                "- production readiness,",
+                "- certified provenance,",
+                "- SLSA L3,",
+                "- production-grade supply-chain security, or",
+                "- long-term archival trust guarantees.",
+                "",
+                "## Expected Assets",
+                "",
+                f"- `sdk/python/dist/attestplane-{candidate.python_version}-py3-none-any.whl`",
+                f"- `sdk/python/dist/attestplane-{candidate.python_version}.tar.gz`",
+                f"- `sdk/typescript/attestplane-attestplane-{candidate.npm_version}.tgz`",
+                "- Release artifacts must still be prepared by the release prep gate before publication.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def write_draft_candidate_bundle(candidate: AlphaCandidate, *, advisory_plan: Path | None, prepared_root: Path) -> Path:
+    candidate_id = draft_candidate_id(candidate)
+    prepared_dir = prepared_root / candidate_id
+    prepared_dir.mkdir(parents=True, exist_ok=True)
+    notes = write_draft_release_notes(candidate, advisory_plan, prepared_dir)
+    manifest_path = prepared_dir / "manifest.json"
+    manifest = {
+        "advisory_plan": str(display_path(advisory_plan)) if advisory_plan else None,
+        "candidate_id": candidate_id,
+        "candidate_release": candidate.release,
+        "explicit_non_actions": {
+            "deploy": "not performed",
+            "force_push": "not performed",
+            "npm_latest_change": "not performed",
+            "package_version_bump": "not performed",
+            "release_publish": "not performed",
+            "workflow_dispatch": "not performed",
+        },
+        "explicit_non_claims": {
+            "certified_provenance": False,
+            "compliance_certification": False,
+            "production_ready": False,
+            "slsa_l3": False,
+        },
+        "notes": str(notes.relative_to(prepared_dir)),
+        "schema": "attestplane_alpha_prepared_candidate_draft.v1",
+        "source_state": {
+            "prepared_by": "alpha_release_train_auto_prepare",
+            "target_commit": capture(["git", "rev-parse", "HEAD"]),
+        },
+        "status": "draft_unverified_not_queued",
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    checksums = prepared_dir / "SHA256SUMS"
+    checksums.write_text(
+        f"{sha256_file(notes)}  NOTES.draft.md\n{sha256_file(manifest_path)}  manifest.json\n",
+        encoding="utf-8",
+    )
+    (prepared_dir / "READY").write_text(
+        "draft only: not release-ready, not queued, not authorized for publish\n",
+        encoding="utf-8",
+    )
+    return prepared_dir
+
+
+def auto_prepare_next_alpha(*, advisory_plan: Path | None, prepared_root: Path, dry_run: bool) -> AlphaCandidate | None:
+    if not dry_run:
+        assert_clean_tree()
+    release = next_alpha_release()
+    if alpha_release_exists(release):
+        print(f"alpha train: next release already exists; not preparing {release}")
+        return None
+    candidate = prepared_candidate_from_release(release)
+    if dry_run:
+        print(f"DRY-RUN: would prepare draft candidate {candidate.release}")
+        return candidate
+    prepared_dir = write_draft_candidate_bundle(candidate, advisory_plan=advisory_plan, prepared_root=prepared_root)
+    print(f"alpha train: prepared draft candidate bundle {display_path(prepared_dir)}")
+    return candidate
 
 
 def alpha_release_exists(release: str) -> bool:
@@ -642,6 +790,21 @@ def mark_processed(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> N
     save_continuous_state(path, state)
 
 
+def mark_prepared(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> None:
+    if dry_run:
+        return
+    state = load_continuous_state(path)
+    prepared = set(str(item) for item in state.get("prepared_releases", []))
+    prepared.add(candidate.release)
+    state["prepared_releases"] = sorted(prepared)
+    prepares_by_day = dict(state.get("prepare_count_by_day", {}))
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    prepares_by_day[day] = int(prepares_by_day.get(day, 0)) + 1
+    state["prepare_count_by_day"] = prepares_by_day
+    state["updated_at_epoch"] = int(time.time())
+    save_continuous_state(path, state)
+
+
 def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -> list[AlphaCandidate]:
     state = load_continuous_state(state_path)
     processed = set(str(item) for item in state.get("processed_releases", []))
@@ -655,6 +818,15 @@ def daily_release_count(state_path: Path) -> int:
         raise ValueError(f"continuous state release_count_by_day is malformed: {state_path}")
     day = time.strftime("%Y-%m-%d", time.gmtime())
     return int(releases_by_day.get(day, 0))
+
+
+def daily_prepare_count(state_path: Path) -> int:
+    state = load_continuous_state(state_path)
+    prepares_by_day = state.get("prepare_count_by_day", {})
+    if not isinstance(prepares_by_day, dict):
+        raise ValueError(f"continuous state prepare_count_by_day is malformed: {state_path}")
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    return int(prepares_by_day.get(day, 0))
 
 
 def stop_requested(path: Path) -> bool:
@@ -696,6 +868,20 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             print(f"alpha train: auto-promote discovered {len(discovered)} prepared candidates", flush=True)
 
         candidates = unprocessed_candidates(queue_candidates, args.state_file)
+        if (
+            not candidates
+            and args.auto_prepare_next_alpha
+            and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
+        ):
+            prepared = auto_prepare_next_alpha(
+                advisory_plan=advisory_plan,
+                prepared_root=args.prepared_dir,
+                dry_run=not args.execute,
+            )
+            if prepared is not None:
+                mark_prepared(args.state_file, prepared, dry_run=not args.execute)
+                print(f"alpha train: auto-prepared draft {prepared.release}; release queue unchanged", flush=True)
+
         if args.execute and args.max_releases_per_day and daily_release_count(args.state_file) >= args.max_releases_per_day:
             print(
                 f"alpha train: max releases per UTC day reached ({args.max_releases_per_day}); sleeping {args.poll_seconds}s",
@@ -746,14 +932,21 @@ def main() -> int:
         action="store_true",
         help="Continuously add fully prepared local alpha artifacts to the queue. Advisory text is never promoted.",
     )
+    parser.add_argument(
+        "--auto-prepare-next-alpha",
+        action="store_true",
+        help="When the queue is empty, prepare the next local alpha candidate from deterministic repo state.",
+    )
     parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
     parser.add_argument("--plan-interval-seconds", type=int, default=3600, help="Minimum seconds between Opus advisory planning calls in continuous mode.")
     parser.add_argument("--poll-seconds", type=int, default=300, help="Seconds to sleep between continuous queue checks.")
     parser.add_argument("--idle-exit-after", type=int, default=0, help="Testing helper: exit continuous mode after N cycles. 0 means never.")
     parser.add_argument("--max-releases-per-day", type=int, default=DEFAULT_MAX_RELEASES_PER_DAY, help="UTC daily release cap in continuous execute mode. 0 means unlimited.")
+    parser.add_argument("--max-prepares-per-day", type=int, default=DEFAULT_MAX_PREPARES_PER_DAY, help="UTC daily auto-prepare cap in continuous execute mode. 0 means unlimited.")
     parser.add_argument("--stop-file", type=Path, default=DEFAULT_STOP_FILE, help="If this file exists, continuous mode exits before starting the next cycle.")
     parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
+    parser.add_argument("--prepared-dir", type=Path, default=DEFAULT_PREPARED_DIR)
     parser.add_argument("--state-file", type=Path, default=DEFAULT_STATE_FILE)
     args = parser.parse_args()
     if args.max_count < 1:
@@ -764,6 +957,8 @@ def main() -> int:
         raise SystemExit("--plan-interval-seconds must be >= 1")
     if args.max_releases_per_day < 0:
         raise SystemExit("--max-releases-per-day must be >= 0")
+    if args.max_prepares_per_day < 0:
+        raise SystemExit("--max-prepares-per-day must be >= 0")
     if args.continuous:
         return run_continuous_pipeline(args)
 
