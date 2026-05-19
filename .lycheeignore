@@ -17,3 +17,9 @@ docs/runbooks/.*
 # npmjs.org). Whitelisting because lychee otherwise treats anti-bot rejection
 # as a broken link.
 https://www\.npmjs\.com/.*
+
+# slsa.dev/spec — referenced from docs for SLSA L3 framing. The site
+# occasionally times out on GitHub-hosted runners (observed
+# 2026-05-19 at 05:23 UTC). The links are real and stable; whitelisting
+# transient-timeout-prone external standards URLs.
+https://slsa\.dev/.*
