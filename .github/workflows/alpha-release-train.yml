@@ -1,0 +1,45 @@
+name: alpha-release-train
+
+on:
+  workflow_dispatch:
+    inputs:
+      queue_path:
+        description: "Finite alpha train queue path"
+        required: true
+        default: "release/alpha-train/queue.json"
+      max_count:
+        description: "Maximum candidates to release"
+        required: true
+        default: "1"
+      execute:
+        description: "Execute release mutations"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-release-train-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-train:
+    name: Validate finite alpha release train
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Validate queue in dry-run mode
+        run: |
+          python scripts/release/alpha_release_train.py \
+            --queue "${{ inputs.queue_path }}" \
+            --max-count "${{ inputs.max_count }}"
+      - name: Refuse execute in CI wrapper
+        if: ${{ inputs.execute == true }}
+        run: |
+          echo "::error::alpha-release-train workflow is validation-only; execute locally to preserve registry verification and release review"
+          exit 1

@@ -1,0 +1,16 @@
+{
+  "schema": "attestplane_alpha_release_train_queue.v1",
+  "candidates": [
+    {
+      "release": "v0.0.6-alpha",
+      "python_version": "0.0.6a0",
+      "npm_version": "0.0.6-alpha",
+      "release_notes": "docs/release-notes/v0.0.6-alpha.draft.md",
+      "manifest": "release/artifacts/v0.0.6-alpha/artifact-manifest.json",
+      "checksums": "release/artifacts/v0.0.6-alpha/checksums.sha256",
+      "create_github_release": true,
+      "publish_python": true,
+      "publish_npm": true
+    }
+  ]
+}
