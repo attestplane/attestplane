@@ -56,6 +56,9 @@ EXTERNAL_STAGES = (
     "registry_verified",
 )
 
+ACTIVE_RELEASE_STATUSES = {"prepared", "processing"}
+TERMINAL_RELEASE_STATUSES = {"released", "retired", "failed"}
+
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
     "git tag",
@@ -266,6 +269,8 @@ def upsert_release_state(db: sqlite3.Connection, candidate: AlphaCandidate, stat
     current = release_status(db, candidate.release)
     if current == "released" and status != "released":
         return
+    if current == "retired" and status in {"prepared", "processing"}:
+        return
     db.execute(
         """
         INSERT INTO release_state(release, python_version, npm_version, status, updated_at_epoch)
@@ -347,8 +352,9 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
         stage_rows = db.execute(
             "SELECT release, stage, status FROM release_stages ORDER BY release, stage"
         ).fetchall()
-    prepared = sorted(str(release) for release, status in rows if status in {"prepared", "processing", "released"})
+    prepared = sorted(str(release) for release, status in rows if status in ACTIVE_RELEASE_STATUSES)
     processed = sorted(str(release) for release, status in rows if status == "released")
+    retired = sorted(str(release) for release, status in rows if status == "retired")
     prepare_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "prepared"}
     release_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "released"}
     return {
@@ -357,6 +363,7 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
         "state_db": str(db_path),
         "prepared_releases": prepared,
         "processed_releases": processed,
+        "retired_releases": retired,
         "prepare_count_by_day": prepare_count_by_day,
         "release_count_by_day": release_count_by_day,
         "release_stages": {
@@ -1719,12 +1726,34 @@ def write_pipeline_report(
     candidates: list[AlphaCandidate],
     executed: bool,
     reports_dir: Path,
+    state_path: Path | None = None,
+    retired_prepared: list[dict[str, str]] | None = None,
 ) -> Path:
     reports_dir.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    generated_at = int(time.time())
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime(generated_at))
     report = reports_dir / f"alpha-pipeline-{stamp}.json"
+    stage_summary: dict[str, dict[str, str]] = {}
+    state_db = str(state_db_path(state_path)) if state_path is not None else None
+    if state_path is not None and state_db_path(state_path).exists():
+        state = load_continuous_state(state_path)
+        raw_stages = state.get("release_stages", {})
+        if isinstance(raw_stages, dict):
+            stage_summary = {
+                str(release): {str(stage): str(status) for stage, status in stages.items()}
+                for release, stages in raw_stages.items()
+                if isinstance(stages, dict)
+            }
     payload = {
         "schema": "attestplane_alpha_release_pipeline_report.v1",
+        "generated_at_epoch": generated_at,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(generated_at)),
+        "executed": executed,
+        "candidate_releases": [candidate.release for candidate in candidates],
+        "state_backend": "sqlite" if state_path is not None else None,
+        "state_db": state_db,
+        "retired_prepared_releases": retired_prepared or [],
+        "release_stage_summary": stage_summary,
         "stages": [
             {
                 "name": "opus_issue_planning",
@@ -1897,6 +1926,71 @@ def mark_failed(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: 
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
+def retire_prepared(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool) -> None:
+    if dry_run:
+        return
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        status = release_status(db, candidate.release)
+        if status not in ACTIVE_RELEASE_STATUSES:
+            return
+        upsert_release_state(db, candidate, "retired", now)
+        append_state_event(db, candidate.release, "retired", {"reason": reason}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def known_released_alpha_floor(state_path: Path) -> str:
+    state = load_continuous_state(state_path)
+    candidates = [
+        release
+        for release in state.get("processed_releases", [])
+        if isinstance(release, str) and re.fullmatch(r"v\d+\.\d+\.\d+-alpha", release)
+    ]
+    notes_latest = latest_alpha_release_from_notes()
+    candidates.append(notes_latest)
+    return sorted(set(candidates), key=parse_alpha_release)[-1]
+
+
+def retire_obsolete_prepared_releases(
+    state_path: Path,
+    *,
+    active_candidates: list[AlphaCandidate],
+    dry_run: bool,
+) -> list[dict[str, str]]:
+    """Retire stale prepared rows that can no longer be valid release work.
+
+    This is intentionally conservative: active queue/discovered candidates are
+    never retired, and only prepared/processing rows are considered. A prepared
+    row older than the latest released/known alpha cannot be safely promoted by
+    the continuous train because it would move package versions backwards.
+    """
+    state = load_continuous_state(state_path)
+    active = {candidate.release for candidate in active_candidates}
+    latest_known = known_released_alpha_floor(state_path)
+    retired: list[dict[str, str]] = []
+    for release in state.get("prepared_releases", []):
+        if not isinstance(release, str) or release in active:
+            continue
+        try:
+            is_older_than_latest = compare_alpha_releases(release, latest_known) < 0
+        except ValueError:
+            continue
+        if alpha_release_exists(release):
+            reason = "release_already_exists"
+        elif is_older_than_latest:
+            reason = f"older_than_latest_alpha:{latest_known}"
+        else:
+            continue
+        candidate = prepared_candidate_from_release(release)
+        retire_prepared(state_path, candidate, reason=reason, dry_run=dry_run)
+        if not dry_run:
+            retired.append({"release": release, "reason": reason})
+    return retired
+
+
 def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -> list[AlphaCandidate]:
     state = load_continuous_state(state_path)
     processed = set(str(item) for item in state.get("processed_releases", []))
@@ -1964,6 +2058,16 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             print(f"alpha train: auto-promote discovered {len(discovered)} prepared candidates", flush=True)
 
         candidates = unprocessed_candidates(queue_candidates, args.state_file)
+        retired_prepared = retire_obsolete_prepared_releases(
+            args.state_file,
+            active_candidates=[*queue_candidates, *candidates],
+            dry_run=not args.execute,
+        )
+        for item in retired_prepared:
+            print(
+                f"alpha train: retired stale prepared {item['release']} ({item['reason']})",
+                flush=True,
+            )
         if (
             not candidates
             and args.auto_finalize_next_alpha
@@ -2013,6 +2117,8 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                 candidates=candidates[: args.max_count],
                 executed=bool(candidates),
                 reports_dir=args.reports_dir,
+                state_path=args.state_file,
+                retired_prepared=retired_prepared,
             )
             print(f"alpha pipeline report written: {display_path(report)}")
 
@@ -2169,6 +2275,7 @@ def main(argv: list[str] | None = None) -> int:
             candidates=candidates[: args.max_count],
             executed=bool(candidates),
             reports_dir=args.reports_dir,
+            state_path=args.state_file,
         )
         print(f"alpha pipeline report written: {display_path(report)}")
     if not candidates:

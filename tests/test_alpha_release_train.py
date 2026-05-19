@@ -106,17 +106,27 @@ def test_advisory_planning_failure_writes_limitation(monkeypatch: pytest.MonkeyP
 def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
     plan = tmp_path / "next-alpha.md"
     plan.write_text("STATUS: ADVISORY\n", encoding="utf-8")
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    alpha_release_train.mark_stage(state_file, candidate_value, "registry_verified", "done")
     report = alpha_release_train.write_pipeline_report(
         advisory_plan=plan,
         queue=tmp_path / "queue.json",
-        candidates=[],
-        executed=False,
+        candidates=[candidate_value],
+        executed=True,
         reports_dir=tmp_path,
+        state_path=state_file,
+        retired_prepared=[{"release": "v0.0.7-alpha", "reason": "older_than_latest_alpha:v0.0.8-alpha"}],
     )
     payload = json.loads(report.read_text(encoding="utf-8"))
     assert payload["schema"] == "attestplane_alpha_release_pipeline_report.v1"
+    assert payload["executed"] is True
+    assert payload["candidate_releases"] == ["v0.0.8-alpha"]
+    assert payload["state_backend"] == "sqlite"
+    assert payload["retired_prepared_releases"][0]["release"] == "v0.0.7-alpha"
+    assert payload["release_stage_summary"]["v0.0.8-alpha"]["registry_verified"] == "done"
     assert payload["stages"][0]["authority"] == "advisory_only"
-    assert payload["stages"][1]["candidate_count"] == 0
+    assert payload["stages"][1]["candidate_count"] == 1
     assert payload["explicit_non_claims"]["opus_authorized_publish"] is False
     assert payload["explicit_non_claims"]["unbounded_loop_without_queue"] is False
 
@@ -182,9 +192,93 @@ def test_sqlite_state_can_import_legacy_json(tmp_path: Path) -> None:
     state = alpha_release_train.load_continuous_state(state_file)
 
     assert state["state_backend"] == "sqlite"
-    assert state["prepared_releases"] == ["v0.0.7-alpha", "v0.0.8-alpha"]
+    assert state["prepared_releases"] == ["v0.0.7-alpha"]
     assert state["processed_releases"] == ["v0.0.8-alpha"]
     assert (tmp_path / "state.sqlite").is_file()
+
+
+def test_retire_obsolete_prepared_release_marks_stale_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    stale = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.7-alpha"))
+    released = alpha_release_train.AlphaCandidate.from_json(candidate("v0.1.3-alpha"))
+
+    alpha_release_train.mark_prepared(state_file, stale, dry_run=False)
+    alpha_release_train.mark_processed(state_file, released, dry_run=False)
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
+
+    retired = alpha_release_train.retire_obsolete_prepared_releases(
+        state_file,
+        active_candidates=[],
+        dry_run=False,
+    )
+    state = alpha_release_train.load_continuous_state(state_file)
+
+    assert retired == [{"release": "v0.0.7-alpha", "reason": "older_than_latest_alpha:v0.1.3-alpha"}]
+    assert "v0.0.7-alpha" not in state["prepared_releases"]
+    assert state["retired_releases"] == ["v0.0.7-alpha"]
+
+
+def test_retire_obsolete_prepared_keeps_active_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    stale = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.7-alpha"))
+
+    alpha_release_train.mark_prepared(state_file, stale, dry_run=False)
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: True)
+
+    retired = alpha_release_train.retire_obsolete_prepared_releases(
+        state_file,
+        active_candidates=[stale],
+        dry_run=False,
+    )
+
+    assert retired == []
+    assert alpha_release_train.load_continuous_state(state_file)["prepared_releases"] == ["v0.0.7-alpha"]
+
+
+def test_retire_obsolete_prepared_dry_run_does_not_report_actual_retirement(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    stale = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.7-alpha"))
+    released = alpha_release_train.AlphaCandidate.from_json(candidate("v0.1.3-alpha"))
+
+    alpha_release_train.mark_prepared(state_file, stale, dry_run=False)
+    alpha_release_train.mark_processed(state_file, released, dry_run=False)
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
+
+    retired = alpha_release_train.retire_obsolete_prepared_releases(
+        state_file,
+        active_candidates=[],
+        dry_run=True,
+    )
+
+    assert retired == []
+    assert alpha_release_train.load_continuous_state(state_file)["prepared_releases"] == ["v0.0.7-alpha"]
+
+
+def test_retire_obsolete_prepared_handles_empty_release_floor(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.0.0-alpha")
+
+    assert alpha_release_train.retire_obsolete_prepared_releases(
+        state_file,
+        active_candidates=[],
+        dry_run=True,
+    ) == []
 
 
 def test_auto_promote_merge_is_dry_run_safe(tmp_path: Path) -> None:
