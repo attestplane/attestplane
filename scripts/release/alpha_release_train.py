@@ -39,6 +39,7 @@ REMOTE_PROBE_ATTEMPTS = 3
 REMOTE_PUSH_ATTEMPTS = 3
 REMOTE_PUSH_RETRY_SECONDS = 10
 REMOTE_PUSH_TIMEOUT_SECONDS = 120
+CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS = 300
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 
@@ -132,6 +133,11 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
             time.sleep(REMOTE_PUSH_RETRY_SECONDS)
     assert last_error is not None
     raise last_error
+
+
+def is_git_push_error(exc: BaseException) -> bool:
+    cmd = getattr(exc, "cmd", None)
+    return isinstance(cmd, list) and len(cmd) >= 3 and cmd[:3] == ["git", "push", "origin"]
 
 
 def git_push_remote_converged(argv: list[str]) -> bool:
@@ -1608,12 +1614,21 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             )
             print(f"alpha pipeline report written: {display_path(report)}")
 
+        remote_push_cooldown = False
         if candidates:
             for candidate in candidates[: args.max_count]:
                 try:
                     run_candidate(candidate, dry_run=not args.execute)
                     mark_processed(args.state_file, candidate, dry_run=not args.execute)
                 except Exception as exc:
+                    if args.execute and is_git_push_error(exc):
+                        print(
+                            f"alpha train: remote git push unavailable for {candidate.release}; "
+                            f"cooling down {args.remote_push_cooldown_seconds}s before retrying the same candidate",
+                            flush=True,
+                        )
+                        remote_push_cooldown = True
+                        break
                     if args.execute:
                         request_stop(args.stop_file, f"fail-closed after {candidate.release}: {type(exc).__name__}")
                     raise
@@ -1625,6 +1640,9 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
         if args.idle_exit_after and cycles >= args.idle_exit_after:
             print("alpha train: idle-exit limit reached")
             return 0
+        if remote_push_cooldown:
+            time.sleep(args.remote_push_cooldown_seconds)
+            continue
         time.sleep(args.poll_seconds)
 
 
@@ -1663,6 +1681,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
     parser.add_argument("--plan-interval-seconds", type=int, default=3600, help="Minimum seconds between Opus advisory planning calls in continuous mode.")
     parser.add_argument("--poll-seconds", type=int, default=300, help="Seconds to sleep between continuous queue checks.")
+    parser.add_argument(
+        "--remote-push-cooldown-seconds",
+        type=int,
+        default=CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+        help="Seconds to wait before retrying the same continuous candidate after exhausted git push network failures.",
+    )
     parser.add_argument("--idle-exit-after", type=int, default=0, help="Testing helper: exit continuous mode after N cycles. 0 means never.")
     parser.add_argument("--max-releases-per-day", type=int, default=DEFAULT_MAX_RELEASES_PER_DAY, help="UTC daily release cap in continuous execute mode. 0 means unlimited.")
     parser.add_argument("--max-prepares-per-day", type=int, default=DEFAULT_MAX_PREPARES_PER_DAY, help="UTC daily auto-prepare cap in continuous execute mode. 0 means unlimited.")
@@ -1689,6 +1713,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         raise SystemExit("--max-count must be >= 1; unbounded release loops are intentionally unsupported")
     if args.poll_seconds < 1:
         raise SystemExit("--poll-seconds must be >= 1")
+    if args.remote_push_cooldown_seconds < 1:
+        raise SystemExit("--remote-push-cooldown-seconds must be >= 1")
     if args.plan_interval_seconds < 1:
         raise SystemExit("--plan-interval-seconds must be >= 1")
     if args.max_releases_per_day < 0:

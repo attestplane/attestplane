@@ -559,6 +559,48 @@ def test_full_auto_alpha_keeps_stop_file_guard() -> None:
     assert args.stop_file == alpha_release_train.DEFAULT_STOP_FILE
 
 
+def test_continuous_remote_push_failure_cooldowns_without_stop(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    queue = write_queue(tmp_path, [candidate("v0.0.8-alpha")])
+    stop_file = tmp_path / "STOP"
+    state_file = tmp_path / "state.json"
+    calls: list[str] = []
+    sleeps: list[int] = []
+
+    def fail_remote_push(candidate: alpha_release_train.AlphaCandidate, *, dry_run: bool) -> None:
+        calls.append(candidate.release)
+        raise alpha_release_train.subprocess.CalledProcessError(128, ["git", "push", "origin", "main"])
+
+    monkeypatch.setattr(alpha_release_train, "run_candidate", fail_remote_push)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: sleeps.append(seconds))
+
+    args = alpha_release_train.parse_args(
+        [
+            "--continuous",
+            "--execute",
+            "--queue",
+            str(queue),
+            "--state-file",
+            str(state_file),
+            "--stop-file",
+            str(stop_file),
+            "--idle-exit-after",
+            "2",
+            "--remote-push-cooldown-seconds",
+            "7",
+        ]
+    )
+
+    assert alpha_release_train.run_continuous_pipeline(args) == 0
+
+    assert calls == ["v0.0.8-alpha", "v0.0.8-alpha"]
+    assert sleeps == [7]
+    assert not stop_file.exists()
+    assert alpha_release_train.load_continuous_state(state_file)["processed_releases"] == []
+
+
 def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
     observed_envs: list[dict[str, str]] = []
 
