@@ -140,6 +140,15 @@ def is_git_push_error(exc: BaseException) -> bool:
     return isinstance(cmd, list) and len(cmd) >= 3 and cmd[:3] == ["git", "push", "origin"]
 
 
+def local_tag_points_at_head(release: str) -> bool:
+    try:
+        tag_commit = capture(["git", "rev-list", "-n", "1", release], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+        head_commit = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return tag_commit == head_commit
+
+
 def git_push_remote_converged(argv: list[str]) -> bool:
     if len(argv) != 4 or argv[:3] != ["git", "push", "origin"]:
         return False
@@ -885,7 +894,10 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate) -> None:
         check=False,
     )
     if local_tag.returncode == 0:
-        raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
+        if local_tag_points_at_head(candidate.release):
+            print(f"local tag already exists at HEAD; treating as interrupted tag-push recovery: {candidate.release}")
+        else:
+            raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
 
     if remote_tag_exists(candidate.release):
         raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
@@ -922,7 +934,10 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
 
 
 def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool) -> None:
-    run(["git", "tag", "-a", candidate.release, "-m", candidate.release], dry_run=dry_run)
+    if local_tag_points_at_head(candidate.release):
+        print(f"local tag already exists at HEAD; skipping local tag creation: {candidate.release}", flush=True)
+    else:
+        run(["git", "tag", "-a", candidate.release, "-m", candidate.release], dry_run=dry_run)
     run_git_push(["git", "push", "origin", candidate.release], dry_run=dry_run)
     if candidate.create_github_release:
         assets = [

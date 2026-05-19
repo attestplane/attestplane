@@ -601,6 +601,28 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
     assert alpha_release_train.load_continuous_state(state_file)["processed_releases"] == []
 
 
+def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands: list[list[str]] = []
+    pushes: list[list[str]] = []
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+            "create_github_release": False,
+        }
+    )
+
+    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: True)
+    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+    monkeypatch.setattr(alpha_release_train, "run_git_push", lambda argv, *, dry_run: pushes.append(argv))
+
+    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False)
+
+    assert ["git", "tag", "-a", "v0.0.8-alpha", "-m", "v0.0.8-alpha"] not in commands
+    assert pushes == [["git", "push", "origin", "v0.0.8-alpha"]]
+
+
 def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
     observed_envs: list[dict[str, str]] = []
 
