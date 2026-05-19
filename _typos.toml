@@ -15,6 +15,8 @@ mis = "mis"
 # `anc` is the variable-name shortform for "anchor" in the P3.2 verifier
 # (anc_status, anc_summary, anc_check, anc_perf). Not "and" misspelled.
 anc = "anc"
+# `certifi` is the real Python trust-store package name and appears in generated SBOMs.
+certifi = "certifi"
 
 [default.extend-identifiers]
 # BaFin = Bundesanstalt fur Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority).
