@@ -532,8 +532,51 @@ def test_release_prep_commit_includes_python_lockfile(monkeypatch: pytest.Monkey
 
     assert "sdk/python/uv.lock" in staged
     assert "sdk/python/src/attestplane/__init__.py" in staged
+    assert "sdk/python/tests/test_import_surface.py" in staged
     assert "sdk/typescript/src/index_version.ts" in staged
     assert "README.md" in staged
+
+
+def test_sync_version_state_updates_import_surface_version(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "sdk" / "python" / "src" / "attestplane").mkdir(parents=True)
+    (tmp_path / "sdk" / "python" / "tests").mkdir(parents=True)
+    (tmp_path / "sdk" / "typescript" / "src").mkdir(parents=True)
+    (tmp_path / "sdk" / "python" / "pyproject.toml").write_text(
+        'version = "0.1.0a0"\n"Development Status :: 3 - Alpha"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "sdk" / "python" / "src" / "attestplane" / "__init__.py").write_text(
+        '__version__ = "0.1.0a0"\n',
+        encoding="utf-8",
+    )
+    import_surface = tmp_path / "sdk" / "python" / "tests" / "test_import_surface.py"
+    import_surface.write_text(
+        'def test_import_attestplane_smoke() -> None:\n'
+        '    assert attestplane.__version__ == "0.1.0a0"\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "sdk" / "typescript" / "package.json").write_text('{"version": "0.1.0-alpha"}\n', encoding="utf-8")
+    (tmp_path / "sdk" / "typescript" / "package-lock.json").write_text(
+        '{"version": "0.1.0-alpha", "packages": {"": {"version": "0.1.0-alpha"}}}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "sdk" / "typescript" / "src" / "index_version.ts").write_text(
+        "export const VERSION = '0.1.0-alpha';\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "README.md").write_text("README placeholder\n", encoding="utf-8")
+    candidate = alpha_release_train.prepared_candidate_from_release("v0.1.1-alpha")
+
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    monkeypatch.setattr(alpha_release_train, "sync_python_lockfile", lambda: None)
+    monkeypatch.setattr(alpha_release_train, "update_readme_release_state", lambda candidate: None)
+
+    alpha_release_train.sync_version_state(candidate)
+
+    assert 'attestplane.__version__ == "0.1.1a0"' in import_surface.read_text(encoding="utf-8")
 
 
 def test_parse_args_accepts_explicit_next_alpha_release() -> None:

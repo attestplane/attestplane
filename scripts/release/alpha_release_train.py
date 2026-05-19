@@ -394,6 +394,20 @@ def update_python_runtime_version(version: str) -> None:
     path.write_text(updated, encoding="utf-8")
 
 
+def update_python_import_surface_test_version(version: str) -> None:
+    path = ROOT / "sdk" / "python" / "tests" / "test_import_surface.py"
+    text = path.read_text(encoding="utf-8")
+    updated = re.sub(
+        r'(?m)^    assert attestplane\.__version__ == "[^"]+"$',
+        f'    assert attestplane.__version__ == "{version}"',
+        text,
+        count=1,
+    )
+    if updated == text:
+        raise RuntimeError(f"could not update Python import-surface test version in {path}")
+    path.write_text(updated, encoding="utf-8")
+
+
 def sync_python_lockfile() -> None:
     run(["bash", "-lc", "cd sdk/python && uv lock"], dry_run=False)
 
@@ -464,6 +478,7 @@ def update_readme_release_state(candidate: AlphaCandidate) -> None:
 def sync_version_state(candidate: AlphaCandidate) -> None:
     update_python_version(candidate.python_version)
     update_python_runtime_version(candidate.python_version)
+    update_python_import_surface_test_version(candidate.python_version)
     sync_python_lockfile()
     update_npm_version(candidate.npm_version)
     update_npm_runtime_version(candidate.npm_version)
@@ -662,6 +677,7 @@ def commit_release_prep(candidate: AlphaCandidate) -> None:
         "sdk/python/pyproject.toml",
         "sdk/python/uv.lock",
         "sdk/python/src/attestplane/__init__.py",
+        "sdk/python/tests/test_import_surface.py",
         "sdk/typescript/package.json",
         "sdk/typescript/package-lock.json",
         "sdk/typescript/src/index_version.ts",
