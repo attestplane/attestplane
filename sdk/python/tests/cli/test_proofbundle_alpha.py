@@ -172,21 +172,26 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             "unsupported",
             "unsupported_algorithm",
         ),
+        # P3.4: real crypto now runs. Tampered fixture has placeholder PEM-less
+        # public_keys[] block → "missing_keyid_or_pem" invalid_input.
         (
             "tampered_dsse_signature.json",
             ("--verify-signature",),
             2,
             "signature_verification_status",
-            "not_implemented",
-            "alpha_cryptographic_verification_not_implemented",
+            "invalid_input",
+            "missing_keyid_or_pem",
         ),
+        # signature_shape_valid_but_not_requested has empty dsse_envelope.signatures[].
+        # With --verify-signature the algorithm allowlist check passes (ed25519),
+        # then the empty-signatures branch trips → missing_material.
         (
             "signature_shape_valid_but_not_requested.json",
             ("--verify-signature",),
             2,
             "signature_verification_status",
-            "not_implemented",
-            "alpha_cryptographic_verification_not_implemented",
+            "invalid_input",
+            "missing_material",
         ),
         # --verify-anchor paths
         (
@@ -205,29 +210,34 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             "unsupported",
             "unsupported_anchor_type",
         ),
+        # P3.4: real anchor verify now runs. P3.2 fixtures predate the
+        # trust_roots_der_b64 schema field, so they trip missing_trust_roots
+        # invalid_input before reaching the cryptographic verify path.
+        # Positive crypto path is exercised in
+        # test_p3_4_anchor_verify_passes_with_real_test_tsa below.
         (
             "expired_tsa_timestamp.json",
             ("--verify-anchor",),
             2,
             "anchor_verification_status",
-            "not_implemented",
-            "alpha_anchor_verification_not_implemented",
+            "invalid_input",
+            "missing_trust_roots",
         ),
         (
             "invalid_anchor_chain.json",
             ("--verify-anchor",),
             2,
             "anchor_verification_status",
-            "not_implemented",
-            "alpha_anchor_verification_not_implemented",
+            "invalid_input",
+            "missing_trust_roots",
         ),
         (
             "anchor_shape_valid_but_not_requested.json",
             ("--verify-anchor",),
             2,
             "anchor_verification_status",
-            "not_implemented",
-            "alpha_anchor_verification_not_implemented",
+            "invalid_input",
+            "missing_trust_roots",
         ),
     ],
 )
@@ -289,3 +299,222 @@ def test_p3_2_no_go_claims_present_in_every_report(
         "not production-grade supply-chain security",
     ):
         assert token in no_go
+
+
+# ----- P3.4 positive crypto wiring -----------------------------------------
+
+
+def _build_positive_signature_bundle(tmp_path):  # type: ignore[no-untyped-def]
+    """Build a ProofBundle envelope JSON with a real ed25519 DSSE signature.
+
+    Generates a test-only ed25519 keypair, signs the DSSE PAE bytes derived
+    from the existing valid_minimal.json's in-toto Statement, embeds the
+    public key in PEM + the signature in base64 inside the envelope, and
+    writes the result to ``tmp_path / positive.json``. Returns the path.
+    """
+    import base64
+    import json
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from attestplane.intoto import DSSE_PAYLOAD_TYPE, dsse_pae
+
+    base = json.loads((FIXTURE_DIR / "valid_minimal.json").read_text(encoding="utf-8"))
+    envelope = base["dsse_envelope"]
+    payload_bytes = base64.standard_b64decode(envelope["payload"])
+    pae = dsse_pae(DSSE_PAYLOAD_TYPE, payload_bytes)
+
+    sk = Ed25519PrivateKey.generate()
+    pk = sk.public_key()
+    pem = pk.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode("ascii")
+    sig = sk.sign(pae)
+    sig_b64 = base64.standard_b64encode(sig).decode("ascii")
+
+    base["signature_material"] = {
+        "algorithm": "ed25519",
+        "key_provider": "test-only-fixture-runtime",
+        "public_keys": [
+            {
+                "keyid": "test-ed25519-key-01",
+                "algorithm": "ed25519",
+                "public_key_pem": pem,
+                "note": "test-only ed25519 public key generated at test runtime",
+            }
+        ],
+        "alpha_no_go_claims": {
+            "cryptographic_verification_performed": True,
+            "production_key_lifecycle": False,
+        },
+    }
+    envelope["signatures"] = [
+        {
+            "keyid": "test-ed25519-key-01",
+            "algorithm": "ed25519",
+            "sig": sig_b64,
+        }
+    ]
+
+    out = tmp_path / "positive_signature.json"
+    out.write_text(json.dumps(base, ensure_ascii=False) + "\n", encoding="utf-8")
+    return out, sk, sig_b64, envelope
+
+
+def test_p3_4_verify_signature_real_dsse_passes(
+    tmp_path,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Positive: real ed25519 DSSE signature verifies; status=passed, exit 0."""
+    path, _sk, _sig, _envelope = _build_positive_signature_bundle(tmp_path)
+    rc = main(["verify-proofbundle", str(path), "--verify-signature"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["ok"] is True
+    assert payload["signature_verification_status"] == "passed"
+    assert payload["signature_verification_performed"] is True
+    assert payload["signature_verification_summary"]["verified_signature_count"] == 1
+    assert payload["signature_verification_claims"]["cryptographic_verification_performed"] is True
+    # Honest no-go claims preserved even on positive crypto.
+    assert payload["compliance_certification"] is False
+    assert payload["certified_provenance"] is False
+
+
+def test_p3_4_verify_signature_tampered_signature_fails(
+    tmp_path,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Tampering the DSSE signature bytes produces verification_failed (exit 1)."""
+    import base64
+    import json as json_mod
+
+    path, _sk, _sig, _envelope = _build_positive_signature_bundle(tmp_path)
+    bundle = json_mod.loads(path.read_text(encoding="utf-8"))
+    # Flip 1 bit of the signature (keep payload intact so all earlier checks
+    # pass and we genuinely reach the cryptographic verify step).
+    sig_b64 = bundle["dsse_envelope"]["signatures"][0]["sig"]
+    sig_bytes = bytearray(base64.standard_b64decode(sig_b64))
+    sig_bytes[-1] ^= 0x01
+    bundle["dsse_envelope"]["signatures"][0]["sig"] = base64.standard_b64encode(
+        bytes(sig_bytes),
+    ).decode("ascii")
+    path.write_text(json_mod.dumps(bundle, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    rc = main(["verify-proofbundle", str(path), "--verify-signature"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert payload["ok"] is False
+    assert payload["signature_verification_status"] == "failed"
+    assert payload["signature_verification_performed"] is False
+    assert payload["signature_verification_summary"]["reason"] == "signature_does_not_verify"
+
+
+def _build_positive_anchor_bundle(tmp_path):  # type: ignore[no-untyped-def]
+    """Build a ProofBundle envelope JSON with a real RFC-3161 token anchor.
+
+    Uses the in-tree TestTSAAuthority to issue a real, byte-valid timestamp
+    response over the ProofBundle chain head hash. The trust root is the
+    authority's own self-signed root cert.
+    """
+    import base64
+    import json
+    from datetime import UTC, datetime
+
+    from attestplane.anchoring.testing import TestTSAAuthority
+
+    base = json.loads((FIXTURE_DIR / "valid_minimal.json").read_text(encoding="utf-8"))
+    head_hex = base["hash_chain"]["head_hash_hex"]
+    digest = bytes.fromhex(head_hex)
+
+    # Use current wall-clock time so the leaf-cert not_before window covers
+    # `datetime.now(UTC)` (the default verification_time inside
+    # verify_timestamp_token). Otherwise a fixed future "now" produces a
+    # leaf cert that is not-yet-valid at verify time and the verifier
+    # correctly rejects it.
+    now = datetime.now(UTC)
+    authority = TestTSAAuthority(now=now)
+    materials = authority.materials()
+    token_der = authority.sign_timestamp_response(digest, gen_time=now, serial_number=1)
+
+    base["anchor_records"] = [
+        {
+            "anchor_type": "rfc3161",
+            "anchored_event_hash_hex": head_hex,
+            "anchored_seq": 0,
+            "issued_at_claimed": now.isoformat(),
+            "tsa_provider_id": "test.tsa:Attestplane Test TSA — Positive",
+            "tsa_token_b64": base64.standard_b64encode(token_der).decode("ascii"),
+            "tsa_cert_chain_b64": [
+                base64.standard_b64encode(materials.leaf_cert_der).decode("ascii"),
+                base64.standard_b64encode(materials.root_cert_der).decode("ascii"),
+            ],
+            "trust_roots_der_b64": [
+                base64.standard_b64encode(materials.root_cert_der).decode("ascii"),
+            ],
+            "alpha_no_go_claims": {
+                "rfc3161_token_verification_performed": True,
+                "legal_timestamp_attestation": False,
+                "long_term_archival_trust": False,
+            },
+        }
+    ]
+
+    out = tmp_path / "positive_anchor.json"
+    out.write_text(json.dumps(base, ensure_ascii=False) + "\n", encoding="utf-8")
+    return out
+
+
+def test_p3_4_verify_anchor_real_rfc3161_passes(
+    tmp_path,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Positive: real RFC-3161 anchor verifies against TestTSA root; exit 0."""
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+    path = _build_positive_anchor_bundle(tmp_path)
+    rc = main(["verify-proofbundle", str(path), "--verify-anchor"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["ok"] is True
+    assert payload["anchor_verification_status"] == "passed"
+    assert payload["anchor_verification_performed"] is True
+    assert payload["anchor_verification_summary"]["verified_anchor_count"] == 1
+    assert payload["anchor_verification_claims"]["anchor_verification_performed"] is True
+    assert payload["anchor_verification_claims"]["network_access_attempted"] is False
+    # No-go claims preserved.
+    assert payload["anchor_verification_claims"]["legal_timestamp_attestation"] is False
+    assert payload["anchor_verification_claims"]["long_term_archival_trust"] is False
+
+
+def test_p3_4_verify_anchor_wrong_trust_root_fails(
+    tmp_path,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Anchor signed by authority A but verified against root of authority B fails."""
+    import base64
+    import json as json_mod
+    from datetime import UTC, datetime
+
+    from attestplane.anchoring.testing import TestTSAAuthority
+
+    path = _build_positive_anchor_bundle(tmp_path)
+    # Replace trust_roots_der_b64 with a different authority's root.
+    bundle = json_mod.loads(path.read_text(encoding="utf-8"))
+    other_authority = TestTSAAuthority(
+        now=datetime.now(UTC),
+        common_name="Other Authority",
+    )
+    bundle["anchor_records"][0]["trust_roots_der_b64"] = [
+        base64.standard_b64encode(other_authority.materials().root_cert_der).decode("ascii"),
+    ]
+    path.write_text(json_mod.dumps(bundle, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    rc = main(["verify-proofbundle", str(path), "--verify-anchor"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert payload["ok"] is False
+    assert payload["anchor_verification_status"] == "failed"
+    assert payload["anchor_verification_performed"] is False
+    assert payload["anchor_verification_summary"]["reason"] == "rfc3161_verify_failed"

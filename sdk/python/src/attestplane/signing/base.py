@@ -97,7 +97,7 @@ class SigningMaterial:
     it, and the private key bytes never leave this layer.
     """
 
-    private_key: Ed25519PrivateKey
+    private_key: Ed25519PrivateKey  # gitleaks:allow false positive: object reference only
     signing_cert_chain: tuple[bytes, ...] = ()
 
     @property

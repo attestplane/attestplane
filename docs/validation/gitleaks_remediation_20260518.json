@@ -1,0 +1,110 @@
+{
+  "branch": "fix/security-gitleaks-redaction-20260518",
+  "head_before": "dd6f782",
+  "head_after_remediation_before_commit": "dd6f782",
+  "target_repo": "/Users/macworkers/Projects/attestplane",
+  "findings_before": 4,
+  "findings_after": 0,
+  "modified_files": [
+    "sdk/python/src/attestplane/anchoring/sigstore.py",
+    "sdk/python/src/attestplane/signing/base.py",
+    "sdk/python/tests/adapters/test_langsmith.py",
+    "sdk/typescript/test/adapters/langsmith.test.ts",
+    "docs/validation/gitleaks_remediation_20260518.json",
+    "docs/validation/gitleaks_remediation_20260518.md"
+  ],
+  "classification_per_finding": [
+    {
+      "rule": "generic-api-key",
+      "file": "sdk/python/tests/adapters/test_langsmith.py",
+      "line": 58,
+      "classification": "test_fixture_or_placeholder",
+      "action_taken": "Replaced fixture value with explicit REDACTED_FOR_TEST placeholder and renamed local variable to avoid secret-like assignment shape.",
+      "rotation_required": false,
+      "history_cleanup_required": false
+    },
+    {
+      "rule": "generic-api-key",
+      "file": "sdk/python/src/attestplane/signing/base.py",
+      "line": 100,
+      "classification": "false_positive",
+      "action_taken": "Added narrow inline gitleaks allow marker to a typed Ed25519PrivateKey object reference; no serialized key material is present.",
+      "rotation_required": false,
+      "history_cleanup_required": false
+    },
+    {
+      "rule": "generic-api-key",
+      "file": "sdk/python/src/attestplane/anchoring/sigstore.py",
+      "line": 112,
+      "classification": "false_positive",
+      "action_taken": "Added narrow inline gitleaks allow marker to an optional Ed25519PrivateKey object parameter; no serialized key material is present.",
+      "rotation_required": false,
+      "history_cleanup_required": false
+    },
+    {
+      "rule": "generic-api-key",
+      "file": "sdk/typescript/test/adapters/langsmith.test.ts",
+      "line": 62,
+      "classification": "test_fixture_or_placeholder",
+      "action_taken": "Replaced fixture value with explicit REDACTED_FOR_TEST placeholder and renamed local variable to avoid secret-like assignment shape.",
+      "rotation_required": false,
+      "history_cleanup_required": false
+    }
+  ],
+  "rotation_required": false,
+  "history_cleanup_required": false,
+  "tests_run": [
+    {
+      "command": "gitleaks detect --source . --no-git --redact --report-format json --report-path /tmp/attestplane-gitleaks/after-inline-redacted.json",
+      "result": "passed",
+      "findings_after": 0
+    },
+    {
+      "command": "sdk/python/.venv/bin/python -m pytest sdk/python/tests/adapters/test_langsmith.py sdk/python/tests/signing/test_base.py sdk/python/tests/anchoring/test_sigstore.py -q",
+      "result": "passed",
+      "summary": "59 passed"
+    },
+    {
+      "command": "npm test -- test/adapters/langsmith.test.ts",
+      "working_directory": "sdk/typescript",
+      "result": "passed",
+      "summary": "16 passed"
+    },
+    {
+      "command": "python scripts/automation/run_l0_automation_dry_run.py --dry-run --target-root /Users/macworkers/Projects/attestplane --output-root .",
+      "working_directory": "/Users/macworkers/Documents/Codex/2026-05-18/codex-desktop-codex-desktop-1-2",
+      "result": "passed"
+    },
+    {
+      "command": "python scripts/automation/run_l0_automation_dry_run.py --target-root /Users/macworkers/Projects/attestplane --output-root .",
+      "working_directory": "/Users/macworkers/Documents/Codex/2026-05-18/codex-desktop-codex-desktop-1-2",
+      "result": "passed"
+    },
+    {
+      "command": "pytest tests/test_memory_import.py tests/test_l0_automation_dry_run.py -q",
+      "working_directory": "/Users/macworkers/Documents/Codex/2026-05-18/codex-desktop-codex-desktop-1-2",
+      "result": "passed",
+      "summary": "15 passed"
+    }
+  ],
+  "gitleaks_result": {
+    "clean": true,
+    "findings_before": 4,
+    "findings_after": 0,
+    "redacted_report_path": "/tmp/attestplane-gitleaks/after-inline-redacted.json"
+  },
+  "l0_dry_run_result": {
+    "status": "passed",
+    "release_go_no_go": "GO_DRY_RUN_ONLY",
+    "gitleaks": "ok",
+    "gitleaks_findings": 0,
+    "jit_review_status": "timeout",
+    "jit_degraded_mode": true,
+    "jit_fallback": "local_static_review"
+  },
+  "remaining_risk": [
+    "Inline gitleaks allow markers suppress two false positives on typed in-memory Ed25519PrivateKey object references only.",
+    "No secret rotation or git history cleanup was performed because no real secret value was identified in the current findings."
+  ],
+  "go_no_go": "GO_DRY_RUN_ONLY for release gate evidence; local commit allowed"
+}
