@@ -38,6 +38,7 @@ REMOTE_PROBE_TIMEOUT_SECONDS = 15
 REMOTE_PROBE_ATTEMPTS = 3
 REMOTE_PUSH_ATTEMPTS = 3
 REMOTE_PUSH_RETRY_SECONDS = 10
+REMOTE_PUSH_TIMEOUT_SECONDS = 120
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 
@@ -100,16 +101,26 @@ def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) ->
 
 def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProcess[str]:
     """Retry idempotent git push commands without retrying non-idempotent release actions."""
-    last_error: subprocess.CalledProcessError | None = None
+    print("+ " + " ".join(argv), flush=True)
+    if dry_run:
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None
     for attempt in range(1, REMOTE_PUSH_ATTEMPTS + 1):
         try:
-            return run(argv, dry_run=dry_run)
-        except subprocess.CalledProcessError as exc:
+            return subprocess.run(
+                argv,
+                cwd=ROOT,
+                text=True,
+                timeout=REMOTE_PUSH_TIMEOUT_SECONDS,
+                check=True,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             last_error = exc
             if attempt == REMOTE_PUSH_ATTEMPTS:
                 break
             print(
-                f"git push attempt {attempt}/{REMOTE_PUSH_ATTEMPTS} failed; retrying in {REMOTE_PUSH_RETRY_SECONDS}s",
+                f"git push attempt {attempt}/{REMOTE_PUSH_ATTEMPTS} failed or timed out; "
+                f"retrying in {REMOTE_PUSH_RETRY_SECONDS}s",
                 flush=True,
             )
             time.sleep(REMOTE_PUSH_RETRY_SECONDS)
