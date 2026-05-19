@@ -271,6 +271,7 @@ def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: py
     monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
     monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
     monkeypatch.setattr(alpha_release_train, "update_python_version", lambda version: None)
+    monkeypatch.setattr(alpha_release_train, "sync_python_lockfile", lambda: None)
     monkeypatch.setattr(alpha_release_train, "update_npm_version", lambda version: None)
     monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: None)
     monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: None)
@@ -294,6 +295,40 @@ def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: py
     assert candidate is not None
     assert candidate.release == "v0.0.8-alpha"
     assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
+
+
+def test_finalize_next_alpha_syncs_python_lock_before_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    monkeypatch.setattr(alpha_release_train, "assert_clean_tree", lambda: calls.append("clean"))
+    monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
+    monkeypatch.setattr(alpha_release_train, "update_python_version", lambda version: calls.append("pyproject"))
+    monkeypatch.setattr(alpha_release_train, "sync_python_lockfile", lambda: calls.append("uv-lock"))
+    monkeypatch.setattr(alpha_release_train, "update_npm_version", lambda version: calls.append("npm"))
+    monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: calls.append("notes"))
+    monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: calls.append("artifacts"))
+    monkeypatch.setattr(alpha_release_train, "write_release_metadata", lambda candidate: calls.append("metadata"))
+    monkeypatch.setattr(alpha_release_train, "commit_release_prep", lambda candidate: calls.append("commit"))
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        if argv == ["git", "diff", "--check"]:
+            calls.append("diff-check")
+        elif argv == ["scripts/check-release-assets-prep.sh"]:
+            calls.append("prep-gate")
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+
+    alpha_release_train.finalize_next_alpha(advisory_plan=None)
+
+    assert calls.index("pyproject") < calls.index("uv-lock") < calls.index("commit")
+    assert calls.index("uv-lock") < calls.index("artifacts")
 
 
 def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:

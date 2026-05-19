@@ -345,6 +345,10 @@ def update_python_version(version: str) -> None:
     path.write_text(updated, encoding="utf-8")
 
 
+def sync_python_lockfile() -> None:
+    run(["bash", "-lc", "cd sdk/python && uv lock"], dry_run=False)
+
+
 def update_npm_version(version: str) -> None:
     path = ROOT / "sdk" / "typescript" / "package.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -558,6 +562,7 @@ def finalize_next_alpha(*, advisory_plan: Path | None) -> AlphaCandidate | None:
         return None
     candidate = prepared_candidate_from_release(release)
     update_python_version(candidate.python_version)
+    sync_python_lockfile()
     update_npm_version(candidate.npm_version)
     write_release_notes(candidate, advisory_plan)
     run(["git", "diff", "--check"], dry_run=False)
