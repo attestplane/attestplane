@@ -53,8 +53,9 @@ SELECTED_VERSION: v0.2.0-alpha
 The deterministic train then validates the selected version. It must be an
 alpha SemVer tag, greater than the latest release note, and still in major
 version `0`. The advisory is not authorization to publish, tag, merge, create
-a release, or change npm dist-tags. Missing or invalid selected versions fail
-closed.
+a release, or change npm dist-tags. If the advisory omits `SELECTED_VERSION`,
+the train falls back to the deterministic release number and records the
+limitation; invalid selected versions still fail closed.
 
 ## Advisory Planning First
 

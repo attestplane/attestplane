@@ -2170,7 +2170,12 @@ def resolve_opus_decided_alpha_release(
         return deterministic_release, None
     selected = selected_version_from_advisory(advisory)
     if selected is None:
-        raise ValueError(f"Opus version advisory did not include SELECTED_VERSION: {advisory}")
+        print(
+            "alpha train: Opus version advisory omitted SELECTED_VERSION; "
+            f"using deterministic release {deterministic_release}",
+            flush=True,
+        )
+        return deterministic_release, advisory
     validate_opus_selected_alpha_version(selected, latest=latest_alpha_release_from_notes())
     return selected, advisory
 

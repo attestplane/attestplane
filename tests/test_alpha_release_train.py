@@ -703,6 +703,26 @@ def test_opus_can_select_milestone_alpha_version(monkeypatch: pytest.MonkeyPatch
     assert "SELECTED_VERSION: v0.2.0-alpha" in advisory.read_text(encoding="utf-8")
 
 
+def test_opus_version_decision_missing_selected_version_falls_back_to_deterministic_release(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "verdict: appropriate\n")
+
+    selected, advisory = alpha_release_train.resolve_opus_decided_alpha_release(
+        release_override=None,
+        dry_run=False,
+        timeout_seconds=1,
+        proposals_dir=tmp_path / "proposals",
+    )
+
+    assert selected == "v0.2.0-alpha"
+    assert advisory is not None
+
+
 def test_opus_version_decision_rejects_non_alpha_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
