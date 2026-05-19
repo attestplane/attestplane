@@ -222,6 +222,7 @@ def test_git_push_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) ->
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
@@ -241,6 +242,7 @@ def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> 
         raise alpha_release_train.subprocess.CalledProcessError(128, argv)
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     with pytest.raises(alpha_release_train.subprocess.CalledProcessError):
@@ -262,12 +264,63 @@ def test_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
 
     assert result.returncode == 0
     assert len(calls) == 2
+
+
+def test_git_push_timeout_continues_when_main_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(
+        argv: list[str],
+        **kwargs: object,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        raise alpha_release_train.subprocess.TimeoutExpired(argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+
+    def fake_capture(argv: list[str], timeout: int | None = None) -> str:
+        if argv == ["git", "ls-remote", "origin", "refs/heads/main"]:
+            return "abc123\trefs/heads/main"
+        if argv == ["git", "rev-parse", "HEAD"]:
+            return "abc123"
+        raise AssertionError(argv)
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+
+    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+
+    assert result.returncode == 0
+    assert len(calls) == 1
+
+
+def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(
+        argv: list[str],
+        **kwargs: object,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        raise alpha_release_train.subprocess.TimeoutExpired(argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+
+    def fake_capture(argv: list[str], timeout: int | None = None) -> str:
+        if argv == ["git", "ls-remote", "origin", "refs/tags/v0.1.1-alpha"]:
+            return "abc123\trefs/tags/v0.1.1-alpha"
+        raise AssertionError(argv)
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+
+    result = alpha_release_train.run_git_push(["git", "push", "origin", "v0.1.1-alpha"], dry_run=False)
+
+    assert result.returncode == 0
+    assert len(calls) == 1
 
 
 def test_daily_release_count_defaults_to_zero(tmp_path: Path) -> None:

@@ -116,6 +116,9 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
             )
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             last_error = exc
+            if git_push_remote_converged(argv):
+                print("git push remote state already converged; continuing after failed or timed-out local push", flush=True)
+                return subprocess.CompletedProcess(argv, 0, "", "")
             if attempt == REMOTE_PUSH_ATTEMPTS:
                 break
             print(
@@ -126,6 +129,23 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
             time.sleep(REMOTE_PUSH_RETRY_SECONDS)
     assert last_error is not None
     raise last_error
+
+
+def git_push_remote_converged(argv: list[str]) -> bool:
+    if len(argv) != 4 or argv[:3] != ["git", "push", "origin"]:
+        return False
+    ref = argv[3]
+    try:
+        if ref == "main":
+            remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            return bool(remote_head) and remote_head.split()[0] == local_head
+        if re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref):
+            remote_tag = capture(["git", "ls-remote", "origin", f"refs/tags/{ref}"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            return bool(remote_tag)
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return False
 
 
 def capture(argv: list[str], *, timeout: int | None = None) -> str:
