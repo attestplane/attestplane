@@ -1,0 +1,66 @@
+{
+  "schema_version": "attestplane.validation.nightly_anchor_issue.v1",
+  "generated_at": "2026-05-19T07:57:25Z",
+  "issue": {
+    "number": 11,
+    "url": "https://github.com/attestplane/attestplane/issues/11",
+    "title": "[nightly-anchor] A5 FreeTSA live verification FAILED 2026-05-19"
+  },
+  "failed_run": {
+    "url": "https://github.com/attestplane/attestplane/actions/runs/26076696174",
+    "head_sha": "7cb6e23db750fb838698a4bd0026fd501fa7d49c",
+    "failure_step": "Submit anchor request and verify",
+    "failure_classification": "substrate_verifier_algorithm_support_gap",
+    "redacted_failure_message": "TSA ECDSA signature does not verify against leaf cert"
+  },
+  "diagnosis": {
+    "freetsa_unreachable": false,
+    "tsa_side_outage": false,
+    "malformed_der_observed": false,
+    "message_imprint_hash_algorithm": "sha256",
+    "cms_signer_info_digest_algorithm": "sha512",
+    "cms_signature_algorithm": "sha512_ecdsa",
+    "root_cause": "The live FreeTSA TimeStampResp used SHA-512 ECDSA for the CMS SignerInfo signed_attrs signature while Attestplane required the anchored messageImprint to be SHA-256 and incorrectly hard-coded SHA-256 for the CMS signature verification step."
+  },
+  "fix": {
+    "files": [
+      "sdk/python/src/attestplane/anchoring/rfc3161.py",
+      "sdk/python/src/attestplane/anchoring/testing.py",
+      "sdk/python/tests/anchoring/test_rfc3161.py",
+      "sdk/typescript/src/rfc3161.ts",
+      "sdk/typescript/test/rfc3161.test.ts"
+    ],
+    "summary": "Keep Attestplane chain-head messageImprint restricted to SHA-256, but verify CMS signed_attrs with an explicit allowlist of sha256, sha384, and sha512 according to SignerInfo digest/signature algorithms. Python and TypeScript now select the signer certificate via SignerInfo.sid instead of certificate order and validate signed_attrs content_type/message_digest plus TSA ExtendedKeyUsage.",
+    "deterministic_regressions_added": [
+      "sdk/python/tests/anchoring/test_rfc3161.py::test_ec_leaf_with_sha512_cms_signer_digest_round_trips",
+      "sdk/typescript/test/rfc3161.test.ts::RFC-3161 CMS signer digest parity"
+    ]
+  },
+  "local_live_probe_after_fix": {
+    "provider": "freetsa.org",
+    "status": "ok",
+    "cert_status": "VALID",
+    "reason": null
+  },
+  "advisory_review": {
+    "provider": "Claude Opus via ask_opus.sh",
+    "status": "completed",
+    "summary": "Confirmed the algorithm split direction and required fail-closed hardening for signer certificate selection, signed_attrs validation, TSA EKU validation, and explicit algorithm allowlists."
+  },
+  "claim_safety": {
+    "default_cli_verify_scope": "chain_report_only",
+    "full_proof_bundle_verification_claimed": false,
+    "default_signed_verification_claimed": false,
+    "default_anchored_verification_claimed": false,
+    "compliance_certification_claimed": false
+  },
+  "explicit_non_actions": {
+    "tag": "not performed",
+    "release": "not performed",
+    "publish": "not performed",
+    "deploy": "not performed",
+    "workflow_dispatch": "not performed",
+    "secrets_printed": false
+  },
+  "final_status": "nightly_anchor_issue_11_diagnosed_with_local_fix"
+}

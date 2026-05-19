@@ -5,20 +5,20 @@
  * (TypeScript port of `sdk/python/src/attestplane/anchoring/rfc3161.py`).
  *
  * Built on `src/der.ts` (hand-rolled DER reader) + Node's stdlib
- * `crypto.verify` for RSA-PKCS1v15-SHA256. No additional npm
+ * `crypto.verify` for RSA/ECDSA CMS signatures. No additional npm
  * dependencies — the TypeScript SDK keeps the same lean dep tree as
  * v0.0.1-alpha while gaining real signature verification.
  *
  * The parser handles the specific structures defined in RFC-3161,
  * RFC-5652 (CMS SignedData), and the X.509 subset needed to extract
- * the RSA public key from a leaf cert's SubjectPublicKeyInfo.
+ * the public key from a leaf cert's SubjectPublicKeyInfo.
  *
  * Cross-language conformance: TS reproduces Python's
  * parse_timestamp_response semantics byte-for-byte. The
  * anchor_vectors.json fixtures verify in both languages.
  */
 
-import { type KeyObject, createPublicKey, createVerify } from 'node:crypto';
+import { type KeyObject, createHash, createPublicKey, createVerify } from 'node:crypto';
 
 import { AnchorVerificationError } from './anchoring.js';
 import {
@@ -38,6 +38,18 @@ import {
 // Well-known OIDs used in the structures we parse.
 const OID_SIGNED_DATA = '1.2.840.113549.1.7.2';
 const OID_TST_INFO = '1.2.840.113549.1.9.16.1.4';
+const OID_CONTENT_TYPE_ATTR = '1.2.840.113549.1.9.3';
+const OID_MESSAGE_DIGEST_ATTR = '1.2.840.113549.1.9.4';
+const OID_SHA256 = '2.16.840.1.101.3.4.2.1';
+const OID_SHA384 = '2.16.840.1.101.3.4.2.2';
+const OID_SHA512 = '2.16.840.1.101.3.4.2.3';
+const OID_RSA_PKCS1 = '1.2.840.113549.1.1.1';
+const OID_SHA256_RSA = '1.2.840.113549.1.1.11';
+const OID_SHA384_RSA = '1.2.840.113549.1.1.12';
+const OID_SHA512_RSA = '1.2.840.113549.1.1.13';
+const OID_SHA256_ECDSA = '1.2.840.10045.4.3.2';
+const OID_SHA384_ECDSA = '1.2.840.10045.4.3.3';
+const OID_SHA512_ECDSA = '1.2.840.10045.4.3.4';
 
 /** Subset of TSTInfo + SignerInfo extracted from a TimeStampResp. */
 export interface ParsedTimestampTs {
@@ -174,7 +186,7 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   const messageImprintFields = readSequence(messageImprintSeq);
   // MessageImprint ::= SEQUENCE { hashAlgorithm AlgorithmIdentifier, hashedMessage OCTET STRING }
   const hashAlgOid = readOid(readSequence(messageImprintFields[0] as DerTlv)[0] as DerTlv);
-  const hashAlgorithm = hashAlgOid === '2.16.840.1.101.3.4.2.1' ? 'sha256' : hashAlgOid;
+  const hashAlgorithm = digestAlgorithmName(hashAlgOid) ?? hashAlgOid;
   const hashedMessage = readOctetString(messageImprintFields[1] as DerTlv);
   const serialNumber = readInteger(tstFields[3] as DerTlv);
   const genTime = readGeneralizedTime(tstFields[4] as DerTlv);
@@ -202,11 +214,11 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   if (certsField === null) {
     throw new AnchorVerificationError('SignedData has no certificates');
   }
-  const certs = readSequence(certsField);
-  if (certs.length === 0) {
+  const certTlvs = readSequence(certsField);
+  if (certTlvs.length === 0) {
     throw new AnchorVerificationError('certificates set is empty');
   }
-  const leafCertDer = tlvDer(certs[0] as DerTlv);
+  const certsDer = certTlvs.map((cert) => tlvDer(cert));
 
   // Find signerInfos SET (last SET in signedDataItems).
   let signerInfosField: DerTlv | null = null;
@@ -233,11 +245,13 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   let digestAlgo: DerTlv | null = null;
   let signatureAlgo: DerTlv | null = null;
   let signatureField: DerTlv | null = null;
+  let signerSid: DerTlv | null = null;
   let sawSid = false;
   for (let i = 0; i < siFields.length; i++) {
     const f = siFields[i] as DerTlv;
     if (i === 0) continue; // version
     if (!sawSid) {
+      signerSid = f;
       sawSid = true;
       continue; // sid
     }
@@ -271,6 +285,18 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   const signature = readOctetString(signatureField);
   const digestAlgorithmOid = readOid(readSequence(digestAlgo)[0] as DerTlv);
   const signatureAlgorithmOid = readOid(readSequence(signatureAlgo)[0] as DerTlv);
+  const digestAlgorithm = digestAlgorithmName(digestAlgorithmOid);
+  if (digestAlgorithm === null) {
+    throw new AnchorVerificationError(
+      `unsupported SignerInfo digest algorithm: ${digestAlgorithmOid}`,
+    );
+  }
+  validateSignedAttrs(signedAttrsDer, tstInfoDer, digestAlgorithm);
+  if (signerSid === null) {
+    throw new AnchorVerificationError('SignerInfo missing sid');
+  }
+  const { issuerDer, serialNumber: signerSerialNumber } = parseIssuerAndSerialSignerId(signerSid);
+  const leafCertDer = selectSignerCertificate(certsDer, issuerDer, signerSerialNumber);
 
   return {
     policyOid,
@@ -287,10 +313,95 @@ export function parseTimestampResponse(responseDer: Uint8Array): ParsedTimestamp
   };
 }
 
+function digestAlgorithmName(oid: string): 'sha256' | 'sha384' | 'sha512' | null {
+  if (oid === OID_SHA256) return 'sha256';
+  if (oid === OID_SHA384) return 'sha384';
+  if (oid === OID_SHA512) return 'sha512';
+  return null;
+}
+
+function hashBytes(data: Uint8Array, algorithm: 'sha256' | 'sha384' | 'sha512'): Uint8Array {
+  return new Uint8Array(createHash(algorithm).update(Buffer.from(data)).digest());
+}
+
+function parseIssuerAndSerialSignerId(sid: DerTlv): {
+  readonly issuerDer: Uint8Array;
+  readonly serialNumber: bigint;
+} {
+  if (sid.tag !== 0x30) {
+    throw new AnchorVerificationError('SignerInfo.sid subjectKeyIdentifier is not supported');
+  }
+  const sidFields = readSequence(sid);
+  if (sidFields.length < 2) {
+    throw new AnchorVerificationError('SignerInfo.sid issuerAndSerialNumber is incomplete');
+  }
+  return {
+    issuerDer: tlvDer(sidFields[0] as DerTlv),
+    serialNumber: readInteger(sidFields[1] as DerTlv),
+  };
+}
+
+function validateSignedAttrs(
+  signedAttrsDer: Uint8Array,
+  tstInfoDer: Uint8Array,
+  digestAlgorithm: 'sha256' | 'sha384' | 'sha512',
+): void {
+  const attrsSet = readTlv(signedAttrsDer, 0);
+  if (attrsSet.tag !== 0x31) {
+    throw new AnchorVerificationError(
+      `SignerInfo signed_attrs signature input is not a SET: 0x${attrsSet.tag.toString(16)}`,
+    );
+  }
+  const attrs = readSequence(attrsSet);
+  let contentTypeOk = false;
+  let messageDigestOk = false;
+  const expectedDigest = hashBytes(tstInfoDer, digestAlgorithm);
+
+  for (const attr of attrs) {
+    if (attr.tag !== 0x30) continue;
+    const attrFields = readSequence(attr);
+    if (attrFields.length < 2) continue;
+    const attrOid = readOid(attrFields[0] as DerTlv);
+    const valuesSet = attrFields[1] as DerTlv;
+    const values = readSequence(valuesSet);
+    if (values.length === 0) continue;
+
+    if (attrOid === OID_CONTENT_TYPE_ATTR) {
+      contentTypeOk = readOid(values[0] as DerTlv) === OID_TST_INFO;
+      continue;
+    }
+    if (attrOid === OID_MESSAGE_DIGEST_ATTR) {
+      messageDigestOk = bytesEqual(readOctetString(values[0] as DerTlv), expectedDigest);
+    }
+  }
+
+  if (!contentTypeOk) {
+    throw new AnchorVerificationError('SignerInfo signed_attrs content_type is not tst_info');
+  }
+  if (!messageDigestOk) {
+    throw new AnchorVerificationError('SignerInfo signed_attrs message_digest mismatch');
+  }
+}
+
+function selectSignerCertificate(
+  certsDer: readonly Uint8Array[],
+  issuerDer: Uint8Array,
+  serialNumber: bigint,
+): Uint8Array {
+  for (const der of certsDer) {
+    const cert = parseCertificate(der);
+    if (cert.serialNumber === serialNumber && bytesEqual(cert.issuerDer, issuerDer)) {
+      return der;
+    }
+  }
+  throw new AnchorVerificationError('SignerInfo signer certificate not found by issuer+serial');
+}
+
 // ----- X.509 helpers --------------------------------------------------------
 
 interface ParsedCertificate {
   readonly der: Uint8Array;
+  readonly serialNumber: bigint;
   readonly subjectDer: Uint8Array;
   readonly issuerDer: Uint8Array;
   readonly notBefore: Date;
@@ -302,6 +413,8 @@ interface ParsedCertificate {
   readonly signature: Uint8Array;
   /** Whether BasicConstraints.cA is true. */
   readonly isCa: boolean;
+  readonly tsaEkuCritical: boolean;
+  readonly hasTsaEku: boolean;
 }
 
 function readUtcOrGeneralizedTime(tlv: DerTlv): Date {
@@ -349,6 +462,7 @@ function parseCertificate(der: Uint8Array): ParsedCertificate {
   if ((tbsFields[cursor] as DerTlv).tag === 0xa0) {
     cursor += 1;
   }
+  const serialNumber = readInteger(tbsFields[cursor] as DerTlv);
   cursor += 1; // serialNumber
   cursor += 1; // signature AlgorithmIdentifier
   const issuerDer = tlvDer(tbsFields[cursor] as DerTlv);
@@ -376,6 +490,8 @@ function parseCertificate(der: Uint8Array): ParsedCertificate {
 
   // BasicConstraints CA flag: walk extensions if present.
   let isCa = false;
+  let tsaEkuCritical = false;
+  let hasTsaEku = false;
   while (cursor < tbsFields.length) {
     const f = tbsFields[cursor] as DerTlv;
     cursor += 1;
@@ -386,16 +502,30 @@ function parseCertificate(der: Uint8Array): ParsedCertificate {
       // Each ext: SEQUENCE { extnID OID, critical BOOLEAN OPT, extnValue OCTET STRING }
       const extFields = readSequence(ext);
       const oid = readOid(extFields[0] as DerTlv);
-      if (oid !== '2.5.29.19') continue; // basicConstraints
-      // extnValue is the last OCTET STRING.
+      const critical =
+        extFields.length >= 3 &&
+        (extFields[1] as DerTlv).tag === 0x01 &&
+        ((extFields[1] as DerTlv).buffer[(extFields[1] as DerTlv).valueStart] as number) !== 0;
       const valueBytes = readOctetString(extFields[extFields.length - 1] as DerTlv);
+      if (oid === '2.5.29.19') {
+        // basicConstraints
+        const bcSeq = readTlv(valueBytes, 0);
+        const bcFields = readSequence(bcSeq);
+        if (bcFields.length > 0) {
+          const cTlv = bcFields[0] as DerTlv;
+          if (cTlv.tag === 0x01) {
+            // BOOLEAN: cA. Non-zero value = true.
+            isCa = (cTlv.buffer[cTlv.valueStart] as number) !== 0;
+          }
+        }
+        continue;
+      }
+      if (oid !== '2.5.29.37') continue; // extendedKeyUsage
       const bcSeq = readTlv(valueBytes, 0);
-      const bcFields = readSequence(bcSeq);
-      if (bcFields.length > 0) {
-        const cTlv = bcFields[0] as DerTlv;
-        if (cTlv.tag === 0x01) {
-          // BOOLEAN: cA. Non-zero value = true.
-          isCa = (cTlv.buffer[cTlv.valueStart] as number) !== 0;
+      for (const eku of readSequence(bcSeq)) {
+        if (readOid(eku) === '1.3.6.1.5.5.7.3.8') {
+          hasTsaEku = true;
+          tsaEkuCritical = critical;
         }
       }
     }
@@ -407,6 +537,7 @@ function parseCertificate(der: Uint8Array): ParsedCertificate {
 
   return {
     der,
+    serialNumber,
     subjectDer,
     issuerDer,
     notBefore,
@@ -416,6 +547,8 @@ function parseCertificate(der: Uint8Array): ParsedCertificate {
     signatureAlgorithmOid,
     signature: sigBytes,
     isCa,
+    tsaEkuCritical,
+    hasTsaEku,
   };
 }
 
@@ -427,11 +560,59 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-function verifyRsaSha256(publicKey: KeyObject, data: Uint8Array, signature: Uint8Array): boolean {
-  const v = createVerify('RSA-SHA256');
+function verifyAllowedSignature(
+  publicKey: KeyObject,
+  data: Uint8Array,
+  signature: Uint8Array,
+  signatureAlgorithmOid: string,
+  digestAlgorithm: 'sha256' | 'sha384' | 'sha512',
+): boolean {
+  const nodeAlgorithm = verificationAlgorithm(publicKey, signatureAlgorithmOid, digestAlgorithm);
+  const v = createVerify(nodeAlgorithm);
   v.update(Buffer.from(data));
   v.end();
   return v.verify(publicKey, Buffer.from(signature));
+}
+
+function verificationAlgorithm(
+  publicKey: KeyObject,
+  signatureAlgorithmOid: string,
+  digestAlgorithm: 'sha256' | 'sha384' | 'sha512',
+): string {
+  const digestUpper = digestAlgorithm.toUpperCase();
+  if (
+    publicKey.asymmetricKeyType === 'rsa' &&
+    (signatureAlgorithmOid === OID_RSA_PKCS1 ||
+      signatureAlgorithmOid === OID_SHA256_RSA ||
+      signatureAlgorithmOid === OID_SHA384_RSA ||
+      signatureAlgorithmOid === OID_SHA512_RSA)
+  ) {
+    const expectedDigest =
+      signatureAlgorithmOid === OID_SHA256_RSA
+        ? 'sha256'
+        : signatureAlgorithmOid === OID_SHA384_RSA
+          ? 'sha384'
+          : signatureAlgorithmOid === OID_SHA512_RSA
+            ? 'sha512'
+            : digestAlgorithm;
+    if (expectedDigest !== digestAlgorithm) {
+      throw new AnchorVerificationError(
+        `signature algorithm digest ${expectedDigest} does not match digest algorithm ${digestAlgorithm}`,
+      );
+    }
+    return `RSA-${digestUpper}`;
+  }
+  if (
+    publicKey.asymmetricKeyType === 'ec' &&
+    ((signatureAlgorithmOid === OID_SHA256_ECDSA && digestAlgorithm === 'sha256') ||
+      (signatureAlgorithmOid === OID_SHA384_ECDSA && digestAlgorithm === 'sha384') ||
+      (signatureAlgorithmOid === OID_SHA512_ECDSA && digestAlgorithm === 'sha512'))
+  ) {
+    return digestUpper;
+  }
+  throw new AnchorVerificationError(
+    `unsupported signature algorithm/key combination: oid=${signatureAlgorithmOid}, digest=${digestAlgorithm}, key=${publicKey.asymmetricKeyType ?? 'unknown'}`,
+  );
 }
 
 // ----- Public verification API ----------------------------------------------
@@ -488,10 +669,27 @@ export function verifyTimestampToken(
       `leaf cert is not valid DER: ${exc instanceof Error ? exc.message : String(exc)}`,
     );
   }
+  if (!leaf.hasTsaEku || !leaf.tsaEkuCritical) {
+    throw new AnchorVerificationError('leaf cert EKU does not include critical timeStamping');
+  }
 
   // Verify the TSA signature over signedAttrs using the leaf cert's
   // public key.
-  if (!verifyRsaSha256(leaf.publicKey, parsed.signedAttrsDer, parsed.signature)) {
+  const signerDigest = digestAlgorithmName(parsed.digestAlgorithmOid);
+  if (signerDigest === null) {
+    throw new AnchorVerificationError(
+      `unsupported SignerInfo digest algorithm: ${parsed.digestAlgorithmOid}`,
+    );
+  }
+  if (
+    !verifyAllowedSignature(
+      leaf.publicKey,
+      parsed.signedAttrsDer,
+      parsed.signature,
+      parsed.signatureAlgorithmOid,
+      signerDigest,
+    )
+  ) {
     throw new AnchorVerificationError('TSA signature does not verify against leaf cert');
   }
 
@@ -586,9 +784,33 @@ function verifyLink(child: ParsedCertificate, issuer: ParsedCertificate, when: D
       `verification_time exceeds issuer cert not_after ${issuer.notAfter.toISOString()}`,
     );
   }
-  if (!verifyRsaSha256(issuer.publicKey, child.tbsBytes, child.signature)) {
+  const certDigest = certSignatureDigest(child.signatureAlgorithmOid);
+  if (
+    !verifyAllowedSignature(
+      issuer.publicKey,
+      child.tbsBytes,
+      child.signature,
+      child.signatureAlgorithmOid,
+      certDigest,
+    )
+  ) {
     throw new AnchorVerificationError('cert signature does not verify against issuer');
   }
+}
+
+function certSignatureDigest(signatureAlgorithmOid: string): 'sha256' | 'sha384' | 'sha512' {
+  if (signatureAlgorithmOid === OID_SHA256_RSA || signatureAlgorithmOid === OID_SHA256_ECDSA) {
+    return 'sha256';
+  }
+  if (signatureAlgorithmOid === OID_SHA384_RSA || signatureAlgorithmOid === OID_SHA384_ECDSA) {
+    return 'sha384';
+  }
+  if (signatureAlgorithmOid === OID_SHA512_RSA || signatureAlgorithmOid === OID_SHA512_ECDSA) {
+    return 'sha512';
+  }
+  throw new AnchorVerificationError(
+    `unsupported cert signature algorithm: ${signatureAlgorithmOid}`,
+  );
 }
 
 function bytesToHexString(b: Uint8Array): string {

@@ -101,6 +101,32 @@ describe('Python-generated anchor_vectors.json → TypeScript verifier', () => {
   });
 });
 
+describe('RFC-3161 CMS signer digest parity', () => {
+  const ecSha512Fixture = {
+    expectedDigestHex: '9bbc71993bd29a4857f08baa1c1e7699b2b50b051e3457eb33feee8b10b011cf',
+    rootCertB64:
+      'MIIC+jCCAeKgAwIBAgIUQWQ4VLv/O8e6i0nnuMp0iILwUkEwDQYJKoZIhvcNAQELBQAwIzEhMB8GA1UEAwwYQXR0ZXN0cGxhbmUgVGVzdCBSb290IENBMB4XDTI2MDUxNzEyMDAwMFoXDTM2MDUxNDEyMDAwMFowIzEhMB8GA1UEAwwYQXR0ZXN0cGxhbmUgVGVzdCBSb290IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsJk03sV7VMgsI+GMA/8XzxAsRfgKJpsVoxHm087nw4Lsz1CisOc05k45XypvkVNW/nD7UetpVnGadEHKOYMs6ZXIOvhJeTZV+PzcMct3QFm7wxhbC86bV6olHuNHSj9vRJzC+kEdCi9Xvd+VyeIL4qNP39yOMK63pV/9DOLwlzrrTxJQ9tQGgaZKTFF71LuJjGe3Pi4SjAXgoA3RwCcP23/TqqcfmvpU0GqxS6DKTNM9wJqZ7bEfH/u7B/2JJ5ZBvBtFW78xHwVROHyDS9bXyZZWRmfpMXj5/2mmiGWVJI0BdE7NWXELL1dWJLC3rnvUxTSnbYf1S30B2HkJljU/gwIDAQABoyYwJDASBgNVHRMBAf8ECDAGAQH/AgEBMA4GA1UdDwEB/wQEAwIBhjANBgkqhkiG9w0BAQsFAAOCAQEAFCXPunKipZ3AYlhfYxNPmLiZ6z3CixInnJfVtQr4yVADCqmQQ3v8V/NQCnkJsLgEIHXJcii8dgpKa6GzmYujZBTRCEmao1puuWhMGhJMc8EB6xdhW1T2G7q731fa7Pm/1qn4BWVfm4Sq3rELmtrJVZyvv/GjmfjUSqfpTHVLZGDvhjBrBRcEVYDvoZaGgHKmQfyC14ppUqEtb7Eo8GNEA+Hsr1P4aFofHhwgRFWHQMvBpxh8mh6KUEbHsEtpIPh7Fwxr4guCrJMHpNBLlwBmW+Rgawm5eLmHugBsQKaaDroB4PXpFRXe1UWnSWvDU3BBlSmBAozZFHKLhSVyhwLQSg==',
+    tokenB64:
+      'MIIEFDADAgEAMIIECwYJKoZIhvcNAQcCoIID/DCCA/gCAQMxDzANBglghkgBZQMEAgMFADBjBgsqhkiG9w0BCRABBKBUBFIwUAIBAQYEKgMEBTAxMA0GCWCGSAFlAwQCAQUABCCbvHGZO9KaSFfwi6ocHnaZsrULBR40V+sz/u6LELARzwIBTRgPMjAyNjA1MTcxMjAwMDBaoIICQTCCAj0wggEloAMCAQICFGKVoXwSwdOwCqEI2Vgd6OTLrBL8MA0GCSqGSIb3DQEBCwUAMCMxITAfBgNVBAMMGEF0dGVzdHBsYW5lIFRlc3QgUm9vdCBDQTAeFw0yNjA1MTcxMjAwMDBaFw0yNzA1MTcxMjAwMDBaMB8xHTAbBgNVBAMMFEF0dGVzdHBsYW5lIFRlc3QgVFNBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx6ZjWJiAWXpgsqMS8t7eNlVMSE6VDD9hc3hlmFPAl/gXsHG3uJ8d5BsNBRreFKbcN4tESH4TuLtpqROt5igXlqM4MDYwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCBsAwFgYDVR0lAQH/BAwwCgYIKwYBBQUHAwgwDQYJKoZIhvcNAQELBQADggEBAJToRE7AlPySLKU38Wz9EjgFFknO7sQtpcAQ7CqcSv5dqX+jTI2/7K96SJx4ks2Z0Bi2bBLs1Y13xSyj/rRlWXL7yNG74XrIGnykaOVlJnYML7jhsE3nr/NvXwTL1c3TW0/lFHb0gYdvpLdowVP03KMggpmiHRDKLCfDZBOmac6n/nkcMEPcx0UQSv7QO7IQ3Qm2V02EW0ieEqapcW+AoINoqHLSLNj/yCqKu1IhrAG3CP9PA0amHCAnmw/+cm1391S8WYxwwBbHSKbkb3xCgHnazoywb9ZP5Dhie4LkUwm2ssler8SGta3bNzTK1Ds5n90BymRr0BO1Sd4GlPkXiRQxggE2MIIBMgIBATA7MCMxITAfBgNVBAMMGEF0dGVzdHBsYW5lIFRlc3QgUm9vdCBDQQIUYpWhfBLB07AKoQjZWB3o5MusEvwwDQYJYIZIAWUDBAIDBQCggYswGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMBwGCSqGSIb3DQEJBTEPFw0yNjA1MTcxMjAwMDBaME8GCSqGSIb3DQEJBDFCBECkyoviChXTCEokM5CB6zbJTWW083cp4kaUKkDvSCETKkiFipncUdxPxFPN24Y+e5dFR1eijUa5jr/yyxYRpfzIMAoGCCqGSM49BAMEBEcwRQIgS7ZhZfirm2zFTUeeJSw2Lpj/3Y2e9jDJaOPdLQtE3mECIQCzG/S1xDud2pZ1EzDvs3fTbOROCZvQLn5TfcEk9yTnzw==',
+  };
+
+  it('verifies EC leaf tokens whose CMS signed_attrs use SHA-512 ECDSA', () => {
+    const parsed = parseTimestampResponse(decode(ecSha512Fixture.tokenB64));
+    const expectedDigest = hexToBytes(ecSha512Fixture.expectedDigestHex);
+
+    expect(parsed.hashAlgorithm).toBe('sha256');
+    expect(parsed.digestAlgorithmOid).toBe('2.16.840.1.101.3.4.2.3');
+    expect(parsed.signatureAlgorithmOid).toBe('1.2.840.10045.4.3.4');
+    expect(Buffer.from(parsed.messageImprint).equals(Buffer.from(expectedDigest))).toBe(true);
+
+    verifyTimestampToken(parsed, {
+      expectedDigest,
+      trustRootsDer: [decode(ecSha512Fixture.rootCertB64)],
+      verificationTime: new Date('2026-05-17T12:00:00Z'),
+    });
+  });
+});
+
 describe('RFC-3161 parser rejection paths', () => {
   it('rejects empty input', () => {
     expect(() => parseTimestampResponse(new Uint8Array(0))).toThrow(AnchorVerificationError);

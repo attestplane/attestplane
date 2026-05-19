@@ -1,0 +1,92 @@
+{
+  "project_name": "Attestplane",
+  "description": "Apache-2.0 cryptographic evidence substrate for AI agent action attestations",
+  "default_adapter": "codex_cli",
+  "control_repo": ".",
+  "target_repo": ".",
+  "adapters": {
+    "codex_cli": {
+      "enabled": true,
+      "command": "codex"
+    },
+    "claude_code_cli": {
+      "enabled": false,
+      "command": "claude"
+    }
+  },
+  "workflows": {
+    "release_readiness": true,
+    "security_audit": true,
+    "patch_review": true,
+    "commit_gate": true
+  },
+  "workers": {
+    "claude_code": {
+      "enabled": true,
+      "command": "claude",
+      "subscription_preferred": true,
+      "scrub_api_key_env": true,
+      "allow_api_key_auth": false,
+      "default_model": "opus",
+      "default_timeout_seconds": 120,
+      "bare": false,
+      "output_format": "json",
+      "advisory_only": true,
+      "usage": {
+        "programmatic_usage": true,
+        "agent_sdk_credit_applicable": true,
+        "agent_sdk_credit_effective_date": "2026-06-15",
+        "monthly_budget_soft_limit_runs": null,
+        "warn_on_programmatic_usage": true,
+        "concurrency_limit": 1,
+        "rate_limit_conservative": true
+      },
+      "usage_policy": {
+        "max_parallel_invocations": 1,
+        "cooldown_seconds": 60,
+        "max_daily_advisory_runs": 10,
+        "warn_on_heavy_usage": true,
+        "require_human_ack_for_high_volume": true,
+        "rate_limit_conservative": true
+      }
+    }
+  },
+  "policy": {
+    "dry_run_default": true,
+    "external_write_requires_approval": true,
+    "release_actions_prohibited_by_default": true,
+    "push_prohibited_by_default": true,
+    "merge_prohibited_by_default": true,
+    "tag_prohibited_by_default": true
+  },
+  "evidence_dir": "docs/validation",
+  "approvals": {
+    "level_2_requires_user_approval": true,
+    "level_3_requires_explicit_scoped_approval": true,
+    "level_4_prohibited_by_default": true
+  },
+  "command_allowlist": [
+    "git status",
+    "git log",
+    "git diff",
+    "gh issue view",
+    "gh run view",
+    "gh run list",
+    "python -m pytest",
+    "npm test",
+    "ruff check",
+    "gitleaks detect"
+  ],
+  "command_denylist": [
+    "git push --force",
+    "git merge",
+    "git tag",
+    "gh release create",
+    "gh release edit",
+    "gh release upload",
+    "gh workflow run",
+    "npm publish",
+    "twine upload",
+    "deploy"
+  ]
+}

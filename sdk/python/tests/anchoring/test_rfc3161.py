@@ -328,6 +328,35 @@ def test_authority_with_ec_leaf_round_trips() -> None:
     )  # must not raise
 
 
+def test_ec_leaf_with_sha512_cms_signer_digest_round_trips() -> None:
+    """FreeTSA can sign CMS signed_attrs with SHA-512 ECDSA.
+
+    The timestamped Attestplane chain-head digest remains SHA-256 in
+    TSTInfo.messageImprint; the CMS SignerInfo digest/signature
+    algorithm is independent and must be honored by the verifier.
+    """
+    authority = TestTSAAuthority(now=_NOW, leaf_key_type="ec")
+    digest = hashlib.sha256(b"ec-leaf-sha512-signer-digest").digest()
+    der = authority.sign_timestamp_response(
+        digest,
+        gen_time=_NOW,
+        serial_number=1,
+        signer_digest_algorithm="sha512",
+    )
+    parsed = parse_timestamp_response(der)
+    assert parsed.hash_algorithm == "sha256"
+    assert parsed.digest_algorithm_oid == "sha512"
+    assert parsed.signature_algorithm_oid == "sha512_ecdsa"
+    assert parsed.message_imprint == digest
+    materials = authority.materials()
+    verify_timestamp_token(
+        parsed,
+        expected_digest=digest,
+        trust_roots_der=[materials.root_cert_der],
+        verification_time=_NOW,
+    )  # must not raise
+
+
 def test_ec_leaf_signature_tamper_fails_closed() -> None:
     """Tampering the ECDSA signature byte must surface as fail-closed."""
     authority = TestTSAAuthority(now=_NOW, leaf_key_type="ec")

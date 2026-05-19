@@ -20,7 +20,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Final
+from hashlib import sha256, sha384, sha512
+from typing import Any, Final
 
 try:
     from asn1crypto import algos, cms, tsp  # noqa: F401  (conditional import — try/except guard)
@@ -31,6 +32,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric import ec, padding
     from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+    from cryptography.x509.oid import ExtendedKeyUsageOID
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
         "attestplane.anchoring.rfc3161 requires the 'anchor' extras. "
@@ -122,20 +124,15 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
     except KeyError:
         nonce = None
 
-    # Extract the leaf cert.
+    # Extract the signer cert. SignedData certificates are not required
+    # to be signer-first; select by SignerInfo.sid instead of trusting
+    # certs[0].
     try:
         certs = signed_data["certificates"]
     except KeyError:
         certs = None
     if certs is None or len(certs) == 0:
         raise AnchorVerificationError("signed_data has no certificates")
-    cert_choice = certs[0]
-    leaf_asn1 = cert_choice.chosen if hasattr(cert_choice, "chosen") else cert_choice
-    if not isinstance(leaf_asn1, asn1_x509.Certificate):
-        raise AnchorVerificationError(
-            f"first certificate is not a Certificate: {type(leaf_asn1).__name__}"
-        )
-    leaf_cert_der = leaf_asn1.dump()
 
     # Extract the signer info — there must be exactly one.
     signer_infos = signed_data["signer_infos"]
@@ -144,6 +141,8 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
             f"expected exactly one SignerInfo, got {len(signer_infos)}"
         )
     signer_info: cms.SignerInfo = signer_infos[0]
+    leaf_asn1 = _select_signer_cert(certs, signer_info)
+    leaf_cert_der = leaf_asn1.dump()
 
     signed_attrs = signer_info["signed_attrs"]
     if signed_attrs is None or len(signed_attrs) == 0:
@@ -160,6 +159,11 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
     signature = bytes(signer_info["signature"].native)
     digest_algo_oid = signer_info["digest_algorithm"]["algorithm"].native
     sig_algo_oid = signer_info["signature_algorithm"]["algorithm"].native
+    _validate_signed_attrs(
+        signed_attrs,
+        tst_info_der=tst_info_der,
+        digest_algorithm=digest_algo_oid,
+    )
 
     return ParsedTimestamp(
         policy_oid=tst_info["policy"].native or "",
@@ -231,35 +235,39 @@ def verify_timestamp_token(
         leaf = x509.load_der_x509_certificate(parsed.leaf_cert_der)
     except Exception as exc:
         raise AnchorVerificationError(f"leaf cert is not valid DER: {exc}") from exc
+    _validate_tsa_eku(leaf)
 
     public_key = leaf.public_key()
+    signature_hash = _cms_signature_hash(parsed)
     if isinstance(public_key, RSAPublicKey):
         try:
             public_key.verify(
                 parsed.signature,
                 parsed.signed_attrs_der,
                 padding.PKCS1v15(),
-                hashes.SHA256(),
+                signature_hash,
             )
         except InvalidSignature as exc:
             raise AnchorVerificationError(
-                "TSA RSA signature does not verify against leaf cert"
+                f"TSA RSA signature does not verify against leaf cert "
+                f"using {parsed.digest_algorithm_oid}"
             ) from exc
     elif isinstance(public_key, EllipticCurvePublicKey):
         # ECDSA leaf path: required to verify tokens from TSAs that issued
         # an EC-curve leaf cert (e.g. FreeTSA after their 2026 cert
-        # rotation). The SignerInfo digest algorithm stays SHA-256
-        # (verified above on messageImprint), and the signature payload
-        # is the same DER-encoded signed_attrs.
+        # rotation). The TSTInfo messageImprint remains SHA-256 for the
+        # anchored digest, but CMS SignerInfo may use SHA-384/SHA-512
+        # for the signed_attrs signature.
         try:
             public_key.verify(
                 parsed.signature,
                 parsed.signed_attrs_der,
-                ec.ECDSA(hashes.SHA256()),
+                ec.ECDSA(signature_hash),
             )
         except InvalidSignature as exc:
             raise AnchorVerificationError(
-                "TSA ECDSA signature does not verify against leaf cert"
+                f"TSA ECDSA signature does not verify against leaf cert "
+                f"using {parsed.digest_algorithm_oid}"
             ) from exc
     else:
         raise AnchorVerificationError(
@@ -349,6 +357,124 @@ def verify_timestamp_token(
         f"chain depth exceeded max_chain_depth={max_chain_depth} without "
         "reaching a configured trust root"
     )
+
+
+def _cms_signature_hash(parsed: ParsedTimestamp) -> hashes.HashAlgorithm:
+    """Return the hash algorithm used for CMS signed_attrs verification.
+
+    The RFC-3161 messageImprint is intentionally restricted to SHA-256
+    for Attestplane chain heads. That is independent from the CMS
+    SignerInfo digest used by a TSA to sign the signed attributes; live
+    TSAs may rotate from sha256_ecdsa to sha512_ecdsa without changing
+    the anchored digest algorithm.
+    """
+    digest_name = parsed.digest_algorithm_oid
+    signature_name = parsed.signature_algorithm_oid
+    if digest_name == "sha256":
+        signature_hash: hashes.HashAlgorithm = hashes.SHA256()
+    elif digest_name == "sha384":
+        signature_hash = hashes.SHA384()
+    elif digest_name == "sha512":
+        signature_hash = hashes.SHA512()
+    else:
+        raise AnchorVerificationError(
+            f"unsupported CMS SignerInfo digest algorithm: {digest_name}"
+        )
+    expected_pairs = {
+        "sha256": {"rsassa_pkcs1v15", "sha256_rsa", "sha256_ecdsa"},
+        "sha384": {"rsassa_pkcs1v15", "sha384_rsa", "sha384_ecdsa"},
+        "sha512": {"rsassa_pkcs1v15", "sha512_rsa", "sha512_ecdsa"},
+    }
+    if signature_name not in expected_pairs[digest_name]:
+        raise AnchorVerificationError(
+            f"unsupported CMS signature/digest algorithm pair: "
+            f"{signature_name}/{digest_name}"
+        )
+    return signature_hash
+
+
+def _hash_bytes(data: bytes, algorithm: str) -> bytes:
+    if algorithm == "sha256":
+        return sha256(data).digest()
+    if algorithm == "sha384":
+        return sha384(data).digest()
+    if algorithm == "sha512":
+        return sha512(data).digest()
+    raise AnchorVerificationError(
+        f"unsupported CMS SignerInfo digest algorithm: {algorithm}"
+    )
+
+
+def _select_signer_cert(certs: Any, signer_info: cms.SignerInfo) -> asn1_x509.Certificate:
+    sid = signer_info["sid"]
+    if sid.name != "issuer_and_serial_number":
+        raise AnchorVerificationError(
+            f"unsupported SignerInfo sid type: {sid.name}"
+        )
+    issuer_and_serial = sid.chosen
+    expected_issuer_der = issuer_and_serial["issuer"].dump()
+    expected_serial = int(issuer_and_serial["serial_number"].native)
+    for cert_choice in certs:
+        candidate = cert_choice.chosen if hasattr(cert_choice, "chosen") else cert_choice
+        if not isinstance(candidate, asn1_x509.Certificate):
+            continue
+        if (
+            candidate.issuer.dump() == expected_issuer_der
+            and int(candidate.serial_number) == expected_serial
+        ):
+            return candidate
+    raise AnchorVerificationError("SignerInfo sid does not match any certificate")
+
+
+def _validate_signed_attrs(
+    signed_attrs: cms.CMSAttributes,
+    *,
+    tst_info_der: bytes,
+    digest_algorithm: str,
+) -> None:
+    content_type_seen = False
+    message_digest_seen = False
+    expected_digest = _hash_bytes(tst_info_der, digest_algorithm)
+    for attr in signed_attrs:
+        attr_type = attr["type"].native
+        values = attr["values"]
+        if attr_type == "content_type":
+            if len(values) != 1 or values[0].native != ID_CT_TST_INFO_OID:
+                raise AnchorVerificationError(
+                    "SignerInfo signed_attrs content_type is not tst_info"
+                )
+            content_type_seen = True
+        elif attr_type == "message_digest":
+            if len(values) != 1 or bytes(values[0].native) != expected_digest:
+                raise AnchorVerificationError(
+                    "SignerInfo signed_attrs message_digest does not match TSTInfo"
+                )
+            message_digest_seen = True
+    if not content_type_seen:
+        raise AnchorVerificationError(
+            "SignerInfo signed_attrs missing content_type"
+        )
+    if not message_digest_seen:
+        raise AnchorVerificationError(
+            "SignerInfo signed_attrs missing message_digest"
+        )
+
+
+def _validate_tsa_eku(cert: x509.Certificate) -> None:
+    try:
+        eku = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
+    except x509.ExtensionNotFound as exc:
+        raise AnchorVerificationError(
+            "TSA signer cert missing ExtendedKeyUsage"
+        ) from exc
+    if not eku.critical:
+        raise AnchorVerificationError(
+            "TSA signer cert ExtendedKeyUsage must be critical"
+        )
+    if ExtendedKeyUsageOID.TIME_STAMPING not in eku.value:
+        raise AnchorVerificationError(
+            "TSA signer cert ExtendedKeyUsage missing timeStamping"
+        )
 
 
 def _find_issuer(

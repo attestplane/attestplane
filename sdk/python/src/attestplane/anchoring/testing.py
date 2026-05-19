@@ -175,24 +175,32 @@ class TestTSAAuthority:
         gen_time: datetime,
         serial_number: int = 1,
         nonce: bytes | None = None,
+        signer_digest_algorithm: Literal["sha256", "sha384", "sha512"] = "sha256",
     ) -> bytes:
         """Build a real RFC-3161 ``TimeStampResp`` DER blob.
 
         The response contains a ``TimeStampToken`` (CMS SignedData) whose
         ``eContentType`` is ``id-ct-TSTInfo``. The token is signed by the
-        leaf cert's private key. The signature is real RSA-PKCS1v15 with
-        SHA-256.
+        leaf cert's private key. The signature is real RSA-PKCS1v15 or
+        ECDSA with the selected CMS signer digest. The TSTInfo
+        messageImprint remains SHA-256 because Attestplane anchors
+        SHA-256 chain heads.
 
         :param request_digest: 32-byte SHA-256 digest from the
             substrate.
         :param gen_time: the genTime to embed in the TSTInfo.
         :param serial_number: TSA-assigned serial; must be unique.
         :param nonce: optional nonce echoed from the request.
+        :param signer_digest_algorithm: CMS SignerInfo digest used to
+            sign ``signed_attrs``. Live TSAs may use SHA-512 while the
+            messageImprint remains SHA-256.
         """
         if len(request_digest) != 32:
             raise ValueError("request_digest must be 32 bytes (SHA-256)")
         if gen_time.tzinfo is None or gen_time.utcoffset() != UTC.utcoffset(None):
             raise ValueError("gen_time must be UTC-aware")
+        if signer_digest_algorithm not in {"sha256", "sha384", "sha512"}:
+            raise ValueError("unsupported signer_digest_algorithm")
 
         tst_info = tsp.TSTInfo({
             "version": "v1",
@@ -218,7 +226,7 @@ class TestTSAAuthority:
             }),
             cms.CMSAttribute({
                 "type": "message_digest",
-                "values": [_sha256(tst_info_der)],
+                "values": [_digest(tst_info_der, signer_digest_algorithm)],
             }),
             cms.CMSAttribute({
                 "type": "signing_time",
@@ -233,18 +241,19 @@ class TestTSAAuthority:
         # this via SignedAttributes' DER serialisation:
         signed_bytes = bytearray(signed_attrs_der)
         signed_bytes[0] = 0x31  # SET tag (asn1crypto sometimes emits IMPLICIT)
+        signer_hash = _hash_algorithm(signer_digest_algorithm)
 
         if isinstance(self._leaf_key, EllipticCurvePrivateKey):
             signature = self._leaf_key.sign(
                 bytes(signed_bytes),
-                ec.ECDSA(hashes.SHA256()),
+                ec.ECDSA(signer_hash),
             )
-            sig_alg_name = "sha256_ecdsa"
+            sig_alg_name = f"{signer_digest_algorithm}_ecdsa"
         else:
             signature = self._leaf_key.sign(
                 bytes(signed_bytes),
                 padding.PKCS1v15(),
-                hashes.SHA256(),
+                signer_hash,
             )
             sig_alg_name = "rsassa_pkcs1v15"
 
@@ -256,7 +265,7 @@ class TestTSAAuthority:
                     "serial_number": leaf_asn1.serial_number,
                 }),
             }),
-            "digest_algorithm": algos.DigestAlgorithm({"algorithm": "sha256"}),
+            "digest_algorithm": algos.DigestAlgorithm({"algorithm": signer_digest_algorithm}),
             "signed_attrs": signed_attrs,
             "signature_algorithm": algos.SignedDigestAlgorithm({
                 "algorithm": sig_alg_name,
@@ -266,7 +275,7 @@ class TestTSAAuthority:
 
         signed_data = cms.SignedData({
             "version": "v3",
-            "digest_algorithms": [algos.DigestAlgorithm({"algorithm": "sha256"})],
+            "digest_algorithms": [algos.DigestAlgorithm({"algorithm": signer_digest_algorithm})],
             "encap_content_info": cms.EncapsulatedContentInfo({
                 "content_type": "tst_info",
                 "content": core.ParsableOctetString(tst_info_der),
@@ -537,6 +546,30 @@ def _sha256(data: bytes) -> bytes:
     from hashlib import sha256
     digest: bytes = sha256(data).digest()
     return digest
+
+
+def _digest(data: bytes, algorithm: str) -> bytes:
+    from hashlib import sha256, sha384, sha512
+    if algorithm == "sha256":
+        digest: bytes = sha256(data).digest()
+        return digest
+    if algorithm == "sha384":
+        digest = sha384(data).digest()
+        return digest
+    if algorithm == "sha512":
+        digest = sha512(data).digest()
+        return digest
+    raise ValueError(f"unsupported digest algorithm: {algorithm}")
+
+
+def _hash_algorithm(algorithm: str) -> hashes.HashAlgorithm:
+    if algorithm == "sha256":
+        return hashes.SHA256()
+    if algorithm == "sha384":
+        return hashes.SHA384()
+    if algorithm == "sha512":
+        return hashes.SHA512()
+    raise ValueError(f"unsupported digest algorithm: {algorithm}")
 
 
 def _sha1(data: bytes) -> bytes:
