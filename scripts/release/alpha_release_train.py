@@ -35,6 +35,8 @@ DEFAULT_MAX_PREPARES_PER_DAY = 1
 FULL_AUTO_MAX_RELEASES_PER_DAY = 0
 FULL_AUTO_MAX_PREPARES_PER_DAY = 0
 REMOTE_PROBE_TIMEOUT_SECONDS = 45
+REGISTRY_VERIFY_ATTEMPTS = 10
+REGISTRY_VERIFY_POLL_SECONDS = 15
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -780,20 +782,37 @@ def verify_registries(candidate: AlphaCandidate, *, dry_run: bool) -> None:
     if dry_run:
         print(f"DRY-RUN: would verify PyPI {candidate.python_version} and npm {candidate.npm_version}")
         return
-    with urllib.request.urlopen("https://pypi.org/pypi/attestplane/json", timeout=30) as handle:
-        pypi = json.load(handle)
-    if candidate.python_version not in pypi.get("releases", {}):
-        raise RuntimeError(f"PyPI version missing after publish: {candidate.python_version}")
-    tag_field = "dist" + "-tags"
-    npm = json.loads(
-        capture(["npm", "view", f"@attestplane/attestplane@{candidate.npm_version}", "version", tag_field, "--json"])
-    )
-    if npm.get("version") != candidate.npm_version:
-        raise RuntimeError(f"npm version mismatch after publish: {npm!r}")
-    if npm.get(tag_field, {}).get("alpha") != candidate.npm_version:
-        raise RuntimeError(f"npm alpha tag did not move to {candidate.npm_version}")
-    if npm.get(tag_field, {}).get("latest") == candidate.npm_version:
-        raise RuntimeError("npm latest tag unexpectedly points at alpha candidate")
+    last_error = "registry verification did not run"
+    for attempt in range(1, REGISTRY_VERIFY_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen("https://pypi.org/pypi/attestplane/json", timeout=30) as handle:
+                pypi = json.load(handle)
+            if candidate.python_version not in pypi.get("releases", {}):
+                raise RuntimeError(f"PyPI version missing after publish: {candidate.python_version}")
+            tag_field = "dist" + "-tags"
+            npm = json.loads(
+                capture(
+                    ["npm", "view", f"@attestplane/attestplane@{candidate.npm_version}", "version", tag_field, "--json"],
+                    timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+                )
+            )
+            if npm.get("version") != candidate.npm_version:
+                raise RuntimeError(f"npm version mismatch after publish: {npm!r}")
+            if npm.get(tag_field, {}).get("alpha") != candidate.npm_version:
+                raise RuntimeError(f"npm alpha tag did not move to {candidate.npm_version}")
+            if npm.get(tag_field, {}).get("latest") == candidate.npm_version:
+                raise RuntimeError("npm latest tag unexpectedly points at alpha candidate")
+            return
+        except Exception as exc:
+            last_error = str(exc)
+            if attempt == REGISTRY_VERIFY_ATTEMPTS:
+                break
+            print(
+                f"registry verification attempt {attempt}/{REGISTRY_VERIFY_ATTEMPTS} pending: {last_error}",
+                flush=True,
+            )
+            time.sleep(REGISTRY_VERIFY_POLL_SECONDS)
+    raise RuntimeError(last_error)
 
 
 def latest_alpha_release_notes() -> list[str]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
 from pathlib import Path
@@ -347,3 +348,38 @@ def test_continuous_unhandled_exception_writes_stop_file(monkeypatch: pytest.Mon
         alpha_release_train.main(["--continuous", "--execute", "--stop-file", str(stop_file)])
 
     assert "fail-closed continuous pipeline: RuntimeError" in stop_file.read_text(encoding="utf-8")
+
+
+def test_registry_verification_retries_for_propagation(monkeypatch: pytest.MonkeyPatch) -> None:
+    candidate = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+        }
+    )
+    pypi_payloads = [
+        {"releases": {}},
+        {"releases": {"0.0.8a0": []}},
+    ]
+
+    class FakeResponse(io.StringIO):
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
+        return FakeResponse(json.dumps(pypi_payloads.pop(0)))
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        return json.dumps({"version": "0.0.8-alpha", "dist-tags": {"alpha": "0.0.8-alpha", "latest": "0.0.1-alpha.1"}})
+
+    monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
+
+    alpha_release_train.verify_registries(candidate, dry_run=False)
+
+    assert pypi_payloads == []
