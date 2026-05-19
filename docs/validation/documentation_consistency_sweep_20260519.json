@@ -1,0 +1,56 @@
+{
+  "schema": "attestplane.validation.documentation_consistency_sweep.v1",
+  "generated_at": "2026-05-19T16:40:00+08:00",
+  "repo": {
+    "branch": "main",
+    "head_before_sweep": "b6a0f0a59a24c83b4e5ab16200616ce13b4b84b9",
+    "origin_main_before_sweep": "b6a0f0a59a24c83b4e5ab16200616ce13b4b84b9"
+  },
+  "scope": [
+    "README current release posture",
+    "allowed public-alpha claims",
+    "v0.0.3-alpha release note status",
+    "historical validation evidence consistency"
+  ],
+  "updates": [
+    {
+      "path": "README.md",
+      "summary": "Aligned current release posture, install commands, published artifact table, roadmap wording, architecture diagram versions, and citation example with the published v0.0.3-alpha public alpha state."
+    },
+    {
+      "path": "sdk/python/README.md",
+      "summary": "Pinned the install command to the current PyPI pre-release so pip does not miss the alpha package."
+    },
+    {
+      "path": "docs/policy/allowed_claims.md",
+      "summary": "Added v0.0.3-alpha allowed-claims section with published artifact, verifier-scope, FreeTSA recovery, and issue #7 limitation wording."
+    },
+    {
+      "path": "docs/release-notes/v0.0.3-alpha.draft.md",
+      "summary": "Changed candidate wording to published alpha prerelease and added post-release FreeTSA recovery note without redefining the frozen tag."
+    }
+  ],
+  "consistency_rules": {
+    "historical_validation_reports": "preserved_as_point_in_time_evidence",
+    "current_reader_docs": "updated_to_current_public_alpha_state",
+    "claim_safety": "no_production_compliance_certification_slsa_l3_or_full_verifier_claim_added",
+    "release_boundary": "v0.0.3-alpha_tag_and_release_assets_not_modified"
+  },
+  "current_public_state": {
+    "python_package": "attestplane==0.0.3a0 on PyPI as a pre-release",
+    "typescript_package": "@attestplane/attestplane@0.0.3-alpha on npm alpha dist-tag",
+    "github_release": "v0.0.3-alpha prerelease with 5 assets",
+    "default_cli_verifier": "chain_report_oriented_only",
+    "open_issue": "#7 remains open as a design question",
+    "closed_issue": "#11 closed after live nightly-anchor recovery"
+  },
+  "explicit_non_actions": {
+    "tag": "not_performed",
+    "release_write": "not_performed",
+    "publish": "not_performed",
+    "deploy": "not_performed",
+    "workflow_dispatch": "not_performed",
+    "secrets_printed": false
+  },
+  "verdict": "documentation_consistency_ready_for_validation"
+}

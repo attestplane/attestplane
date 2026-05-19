@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
-[![PyPI (TestPyPI)](https://img.shields.io/badge/TestPyPI-attestplane%200.0.1-blue)](https://test.pypi.org/project/attestplane/0.0.1/)
+[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.0.3a0-blue)](https://pypi.org/project/attestplane/0.0.3a0/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
@@ -145,7 +145,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  SDKs                                                         │   │
-│  │  Python (v0.0.1 ✓)  │  TypeScript (v0.0.1 ✓)                  │   │
+│  │  Python (0.0.3a0)   │  TypeScript (0.0.3-alpha)               │   │
 │  │  FastAPI / Express / NestJS / Django helpers (M5)             │   │
 │  │  Rust crate (M7)                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -168,7 +168,14 @@ Integration with each partner does **not** imply endorsement by the partner. The
 
 ## Current release posture: public alpha
 
-The public alpha line is live as a GitHub prerelease. The current package-facing version alignment prepares `0.0.3a0` for PyPI and `0.0.3-alpha` for npm. This line is alpha-grade substrate work: it expands the core with schemas, sidecar primitives, storage, adapters, verifier predicates, public API drift gates, storage compatibility policy, and release provenance hygiene, but it is not pre-beta, not production-ready, and not compliance-ready.
+The public alpha line is live as a GitHub prerelease and as package artifacts:
+Python `attestplane==0.0.3a0` is published to PyPI, and
+`@attestplane/attestplane@0.0.3-alpha` is published to npm under the
+`alpha` dist-tag. This line is alpha-grade substrate work: it expands the core
+with schemas, sidecar primitives, storage, adapters, verifier predicates,
+public API drift gates, storage compatibility policy, and release provenance
+hygiene, but it is not pre-beta, not production-ready, and not
+compliance-ready.
 
 The current `attestplane verify` command is deliberately narrow:
 
@@ -178,9 +185,9 @@ The current `attestplane verify` command is deliberately narrow:
 - It does not verify signatures or anchors.
 - It does not issue compliance certification.
 
-## Published v0.0.1-alpha status
+## Published alpha status
 
-Implemented in v0.0.1-alpha published artifacts:
+Implemented in the published alpha artifacts:
 
 - Python SDK
 - TypeScript SDK
@@ -189,7 +196,8 @@ Implemented in v0.0.1-alpha published artifacts:
 - cross-language conformance vectors
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
-Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface through v0.0.3-alpha; not a production claim):
+Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface
+through v0.0.3-alpha; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -201,14 +209,15 @@ Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface throug
 Not yet implemented:
 
 - additional obligation registries (NIS2 Article 21, GDPR Article 30, ISO 42001, NIST AI RMF)
-- AIOS / LangGraph / OpenAI / Claude / Codex / MCP adapters
+- AIOS / LangGraph / OpenAI / Claude / Codex / MCP runtime integrations beyond
+  the shipped generic adapter/conformance substrate
 - production / enterprise / cloud features
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.0.1` | [TestPyPI](https://test.pypi.org/project/attestplane/0.0.1/) | OIDC trusted publishing |
-| `@attestplane/attestplane@0.0.1` | [npm](https://www.npmjs.com/package/@attestplane/attestplane) | Sigstore provenance: [logIndex=1556001175](https://search.sigstore.dev/?logIndex=1556001175) |
-| GitHub Release | [v0.0.1-alpha](https://github.com/attestplane/attestplane/releases/tag/v0.0.1-alpha) | wheel + sdist + npm tarball + CycloneDX SBOM (JSON + XML) |
+| `attestplane==0.0.3a0` | [PyPI](https://pypi.org/project/attestplane/0.0.3a0/) | GitHub OIDC trusted publishing |
+| `@attestplane/attestplane@0.0.3-alpha` | [npm alpha dist-tag](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
+| GitHub Release | [v0.0.3-alpha](https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha) | wheel + sdist + npm tarball + checksums + artifact manifest |
 
 ## Quickstart
 
@@ -217,9 +226,7 @@ What works today, end-to-end.
 ### Python
 
 ```bash
-pip install --index-url https://test.pypi.org/simple/ \
-            --extra-index-url https://pypi.org/simple/ \
-            attestplane==0.0.1
+pip install attestplane==0.0.3a0
 ```
 
 ```python
@@ -279,21 +286,23 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 
 | Surface | Target |
 |---|---|
-| RFC-3161 TSA anchoring | v0.1, M5 — [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md) |
-| Production PyPI publication | M5 |
+| Full CLI ProofBundle, signed, and anchored verification | v0.1+ |
 | FastAPI / Express / NestJS / Django helpers | M5 |
 | Rust SDK (`cargo add attestplane`) | M7 |
 | Auditor JSON API + framework-mapping endpoint | M5 + M6 |
-| Event signing (Ed25519 per-substrate keypair) | M7 — anticipated ADR-0005 |
-| Sigstore / Rekor as redundant anchor | M6 — anticipated ADR-0006 |
-| Durable storage + multi-writer concurrency | M6 — anticipated storage-backend ADR |
-| Attestplane CLI | M5 |
+| Production storage and multi-writer concurrency | M6+ |
 
 ---
 
 ## Future Compliance Framework Mapping Targets
 
-The table below lists roadmap targets for future compliance mapping. v0.0.1-alpha published artifacts do not ship a verifier or proof bundle schema; the obligation registry for EU AI Act Article 12 and DORA Article 8 is merged on `main` and ships in v0.1 / M5 with the verifier. All entries below carry `implementation_status` values from the locked four-value enum (`mapping_target` / `designed_toward` / `field_supported` / `verified_in_test`) per [`docs/policy/`](docs/policy/forbidden_claims.md).
+The table below lists roadmap targets for future compliance mapping. The
+published v0.0.3-alpha artifacts include obligation registry data and
+chain/report-oriented verifier predicates, but they do not ship a full
+ProofBundle, signed, anchored, or compliance certification verifier. All
+entries below carry `implementation_status` values from the locked four-value
+enum (`mapping_target` / `designed_toward` / `field_supported` /
+`verified_in_test`) per [`docs/policy/`](docs/policy/forbidden_claims.md).
 
 | Framework | Relevant controls | Current substrate status |
 |---|---|---|
@@ -312,12 +321,14 @@ The table below lists roadmap targets for future compliance mapping. v0.0.1-alph
 
 | Milestone | Target | Scope |
 |---|---|---|
-| **M5 — v0.1.0 alpha hardening** | 2026-08-15 | Self-hosted OSS substrate · SHA-256 chain (v0.0.1 ✓) · RFC-3161 anchoring implementation · FastAPI/Express helpers · initial framework mapping · CycloneDX SBOM (v0.0.1 ✓) · CLI |
+| **M5 — v0.1.0 alpha hardening** | 2026-08-15 | Self-hosted OSS substrate · full CLI ProofBundle verification · FastAPI/Express helpers · expanded framework mapping · production-storage design review |
 | **M6 — Cloud preview** | 2026-09 | Attestplane Cloud hosted TSA + Sigstore Rekor mirror + framework auto-update · free for EU deployments · Design Partner Program launch |
 | **M7 — Client-side DP aggregation** | 2026-Q4 | Client-side differential privacy SDK (Rust + TypeScript + Python) · ε-configurable Laplace noise · regulator dashboard preview · customer attestation data never leaves customer control plane |
 | **M8 — Paid tier** | 2027-Q1+ | Pro / Team / Enterprise paid tiers · SSO/SCIM/RBAC · SLA · first FTE hire |
 
-Current status: **pre-M5 alpha** — community velocity stage. Contributions, issue reports, and deployment feedback are the project's most valuable input right now.
+Current status: **public alpha** — community velocity stage. Contributions,
+issue reports, and deployment feedback are the project's most valuable input
+right now.
 
 ---
 
@@ -376,9 +387,9 @@ If you use Attestplane in academic work, a published audit report, or a regulato
   year         = {2026},
   url          = {https://github.com/attestplane/attestplane},
   license      = {Apache-2.0},
-  version      = {0.0.1-alpha},
-  note         = {Pre-M5 alpha; substrate core only. Cite the specific
-                  release tag (e.g. v0.0.1-alpha) for reproducibility.
+  version      = {0.0.3-alpha},
+  note         = {Public alpha; substrate core only. Cite the specific
+                  release tag (e.g. v0.0.3-alpha) for reproducibility.
                   Framework mappings cover EU AI Act Articles 12--17,
                   NIST AI RMF, ISO/IEC 42001, SOC 2, DORA Article 8,
                   CRA 2027 (mapping endpoint planned for M5).}

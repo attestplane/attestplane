@@ -122,6 +122,51 @@ signed-verifier, anchored-verifier, or certification language.
 - "**Translates LangSmith / LangFuse runs into Attestplane evidence
   events**" — accurate descriptive phrasing.
 
+## v0.0.3-alpha (published public alpha as of 2026-05-19)
+
+These claims are safe to use for the current public alpha line. None of these
+claims permits production use, compliance readiness, broad verifier
+completeness, signed-verifier, anchored-verifier, certification language, SLSA
+L3 language, or production-grade supply-chain language.
+
+### Published artifacts
+
+- Python package `attestplane==0.0.3a0` is published to PyPI as a pre-release.
+- TypeScript package `@attestplane/attestplane@0.0.3-alpha` is published to
+  npm under the `alpha` dist-tag. The npm `latest` dist-tag remains separate.
+- GitHub Release `v0.0.3-alpha` is a prerelease and carries five release
+  assets: Python wheel, Python sdist, npm tarball, checksums, and artifact
+  manifest.
+- The `v0.0.3-alpha` tag is frozen; later documentation and validation reports
+  on `main` do not move or redefine that release.
+
+### Runtime and verifier scope
+
+- "`attestplane verify` is chain/report-oriented" remains accurate. It replays
+  bundle events, compares the embedded `verification_report` with the
+  recomputed chain result, and fails closed on malformed ProofBundle metadata
+  and `policy_trace_refs` closure.
+- "RFC-3161 anchoring sidecar primitives" is accurate for the sidecar provider
+  and verification code paths. Public material must still state that the
+  default CLI verifier does not perform anchored verification.
+- "FreeTSA SHA-512 ECDSA timestamp verification is supported" is accurate
+  after the 2026-05-19 recovery fix and live `nightly-anchor` verification.
+- "Release provenance hygiene" is accurate for npm provenance, PyPI trusted
+  publishing, artifact checksums, release manifests, SBOM generation, CodeQL,
+  OSV, OSSF Scorecard, and reproducible-build gates. It must not be shortened
+  to "SLSA L3", "certified provenance", or "production-grade supply-chain".
+
+### Issue and limitation status
+
+- Closed nightly FreeTSA failures (#9 and #11) may be described as diagnosed
+  and recovered. They should not be described as proof that every external TSA
+  outage is impossible.
+- Issue #7 remains an open design question. Public language may describe the
+  current conservative stance: AIA-12-aligned substrate mapping, not EU AI Act
+  compliance certification; verifier independence via OSS deterministic
+  verifiers, not a closed API trust root; and GDPR retention/deletion handling
+  as deployer policy with minimization and redaction commitments.
+
 ## Implementation-status phrasing rule
 
 When a claim references an obligation registry entry under

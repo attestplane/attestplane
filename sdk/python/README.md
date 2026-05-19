@@ -18,7 +18,7 @@ trademark policy. The full design rationale for this SDK lives in [ADR-0002][adr
 ## Install
 
 ```bash
-pip install attestplane
+pip install attestplane==0.0.3a0
 ```
 
 Requires Python ≥ 3.11.
