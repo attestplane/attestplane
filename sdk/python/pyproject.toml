@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "attestplane"
-version = "0.0.11a0"
+version = "0.1.0a0"
 description = "Apache-2.0 attestation and audit substrate for AI agent evidence chains."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -24,7 +24,7 @@ keywords = [
     "transparency",
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Legal Industry",
     "License :: OSI Approved :: Apache Software License",

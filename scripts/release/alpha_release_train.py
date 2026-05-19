@@ -222,6 +222,13 @@ def next_alpha_release() -> str:
     return f"v{major}.{minor}.{patch + 1}-alpha"
 
 
+def resolve_next_alpha_release(release_override: str | None = None) -> str:
+    if release_override is None:
+        return next_alpha_release()
+    parse_alpha_release(release_override)
+    return release_override
+
+
 def prepared_candidate_from_release(release: str) -> AlphaCandidate:
     return AlphaCandidate.from_json(
         {
@@ -340,8 +347,21 @@ def update_python_version(version: str) -> None:
     path = ROOT / "sdk" / "python" / "pyproject.toml"
     text = path.read_text(encoding="utf-8")
     updated = re.sub(r'(?m)^version = "[^"]+"$', f'version = "{version}"', text, count=1)
+    updated = updated.replace(
+        '"Development Status :: 2 - Pre-Alpha"',
+        '"Development Status :: 3 - Alpha"',
+    )
     if updated == text:
         raise RuntimeError(f"could not update Python version in {path}")
+    path.write_text(updated, encoding="utf-8")
+
+
+def update_python_runtime_version(version: str) -> None:
+    path = ROOT / "sdk" / "python" / "src" / "attestplane" / "__init__.py"
+    text = path.read_text(encoding="utf-8")
+    updated = re.sub(r'(?m)^__version__ = "[^"]+"$', f'__version__ = "{version}"', text, count=1)
+    if updated == text:
+        raise RuntimeError(f"could not update Python runtime version in {path}")
     path.write_text(updated, encoding="utf-8")
 
 
@@ -354,6 +374,71 @@ def update_npm_version(version: str) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["version"] = version
     path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    lock_path = ROOT / "sdk" / "typescript" / "package-lock.json"
+    if lock_path.exists():
+        lock_payload = json.loads(lock_path.read_text(encoding="utf-8"))
+        lock_payload["version"] = version
+        packages = lock_payload.get("packages")
+        if isinstance(packages, dict) and isinstance(packages.get(""), dict):
+            packages[""]["version"] = version
+        lock_path.write_text(json.dumps(lock_payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+
+
+def update_npm_runtime_version(version: str) -> None:
+    path = ROOT / "sdk" / "typescript" / "src" / "index_version.ts"
+    text = path.read_text(encoding="utf-8")
+    updated = re.sub(r"(?m)^export const VERSION = '[^']+';$", f"export const VERSION = '{version}';", text, count=1)
+    if updated == text:
+        raise RuntimeError(f"could not update TypeScript runtime version in {path}")
+    path.write_text(updated, encoding="utf-8")
+
+
+def update_readme_release_state(candidate: AlphaCandidate) -> None:
+    path = ROOT / "README.md"
+    text = path.read_text(encoding="utf-8")
+    replacements = [
+        (r"PyPI-attestplane%20[0-9.]+a0-blue", f"PyPI-attestplane%20{candidate.python_version}-blue"),
+        (r"\*\*v0\.0\.5-alpha\*\* builds on", f"**{candidate.release}** builds on"),
+        (r"The next alpha line, \*\*v0\.0\.5-alpha\*\*,", f"The current alpha line, **{candidate.release}**,"),
+        (
+            r"Python \(0\.0\.5a0\)\s+\│  TypeScript \(0\.0\.5-alpha\)",
+            f"Python ({candidate.python_version})   │  TypeScript ({candidate.npm_version})",
+        ),
+        (
+            r"Python `attestplane==[^`]+` is published to PyPI, and\n`@attestplane/attestplane@[^`]+` is published to npm",
+            f"Python `attestplane=={candidate.python_version}` is published to PyPI, and\n`@attestplane/attestplane@{candidate.npm_version}` is published to npm",
+        ),
+        (r"The `v0\.0\.5-alpha` line tightens", f"The `{candidate.release}` line tightens"),
+        (r"through the v0\.0\.5-alpha release-prep line", f"through the {candidate.release} release-prep line"),
+        (
+            r"\(`v0\.0\.5-alpha`\), still under alpha/non-certification boundaries",
+            f"(`{candidate.release}`), still under alpha/non-certification boundaries",
+        ),
+        (r"`attestplane==[^`]+` \| \[PyPI\]", f"`attestplane=={candidate.python_version}` | [PyPI]"),
+        (
+            r"`@attestplane/attestplane@[^`]+` \| \[npm alpha/latest dist-tags\]",
+            f"`@attestplane/attestplane@{candidate.npm_version}` | [npm alpha/latest dist-tags]",
+        ),
+        (r"GitHub Release \| `v[0-9.]+-alpha`", f"GitHub Release | `{candidate.release}`"),
+        (r"pip install attestplane==[0-9.]+a0", f"pip install attestplane=={candidate.python_version}"),
+        (r"prepared v0\.0\.5-alpha artifacts include", f"prepared {candidate.release} artifacts include"),
+        (r"\*\*M5 — v0\.1\.0 alpha hardening\*\*", "**M5 — v0.1.x alpha hardening**"),
+    ]
+    updated = text
+    for pattern, replacement in replacements:
+        updated = re.sub(pattern, replacement, updated, count=1)
+    if updated == text:
+        raise RuntimeError(f"could not update README release state in {path}")
+    path.write_text(updated, encoding="utf-8")
+
+
+def sync_version_state(candidate: AlphaCandidate) -> None:
+    update_python_version(candidate.python_version)
+    update_python_runtime_version(candidate.python_version)
+    sync_python_lockfile()
+    update_npm_version(candidate.npm_version)
+    update_npm_runtime_version(candidate.npm_version)
+    update_readme_release_state(candidate)
 
 
 def write_release_notes(candidate: AlphaCandidate, advisory_plan: Path | None) -> None:
@@ -544,9 +629,13 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
 
 def commit_release_prep(candidate: AlphaCandidate) -> None:
     files = [
+        "README.md",
         "sdk/python/pyproject.toml",
         "sdk/python/uv.lock",
+        "sdk/python/src/attestplane/__init__.py",
         "sdk/typescript/package.json",
+        "sdk/typescript/package-lock.json",
+        "sdk/typescript/src/index_version.ts",
         candidate.release_notes,
         candidate.manifest,
         candidate.checksums,
@@ -556,16 +645,14 @@ def commit_release_prep(candidate: AlphaCandidate) -> None:
     run(["git", "commit", "-s", "-m", f"chore(release): prepare {candidate.release}"], dry_run=False)
 
 
-def finalize_next_alpha(*, advisory_plan: Path | None) -> AlphaCandidate | None:
+def finalize_next_alpha(*, advisory_plan: Path | None, release_override: str | None = None) -> AlphaCandidate | None:
     assert_clean_tree()
-    release = next_alpha_release()
+    release = resolve_next_alpha_release(release_override)
     if alpha_release_exists(release):
         print(f"alpha train: next release already exists; not finalizing {release}")
         return None
     candidate = prepared_candidate_from_release(release)
-    update_python_version(candidate.python_version)
-    sync_python_lockfile()
-    update_npm_version(candidate.npm_version)
+    sync_version_state(candidate)
     write_release_notes(candidate, advisory_plan)
     run(["git", "diff", "--check"], dry_run=False)
     build_release_artifacts(candidate)
@@ -583,10 +670,16 @@ def finalize_next_alpha(*, advisory_plan: Path | None) -> AlphaCandidate | None:
     return candidate
 
 
-def auto_prepare_next_alpha(*, advisory_plan: Path | None, prepared_root: Path, dry_run: bool) -> AlphaCandidate | None:
+def auto_prepare_next_alpha(
+    *,
+    advisory_plan: Path | None,
+    prepared_root: Path,
+    dry_run: bool,
+    release_override: str | None = None,
+) -> AlphaCandidate | None:
     if not dry_run:
         assert_clean_tree()
-    release = next_alpha_release()
+    release = resolve_next_alpha_release(release_override)
     if alpha_release_exists(release):
         print(f"alpha train: next release already exists; not preparing {release}")
         return None
@@ -1203,7 +1296,7 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             and args.execute
             and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
         ):
-            finalized = finalize_next_alpha(advisory_plan=advisory_plan)
+            finalized = finalize_next_alpha(advisory_plan=advisory_plan, release_override=args.next_alpha_release)
             if finalized is not None:
                 mark_prepared(args.state_file, finalized, dry_run=False)
                 candidates = [finalized]
@@ -1219,6 +1312,7 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                 advisory_plan=advisory_plan,
                 prepared_root=args.prepared_dir,
                 dry_run=not args.execute,
+                release_override=args.next_alpha_release,
             )
             if prepared is not None:
                 mark_prepared(args.state_file, prepared, dry_run=not args.execute)
@@ -1299,6 +1393,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--idle-exit-after", type=int, default=0, help="Testing helper: exit continuous mode after N cycles. 0 means never.")
     parser.add_argument("--max-releases-per-day", type=int, default=DEFAULT_MAX_RELEASES_PER_DAY, help="UTC daily release cap in continuous execute mode. 0 means unlimited.")
     parser.add_argument("--max-prepares-per-day", type=int, default=DEFAULT_MAX_PREPARES_PER_DAY, help="UTC daily auto-prepare cap in continuous execute mode. 0 means unlimited.")
+    parser.add_argument(
+        "--next-alpha-release",
+        help="Explicit next alpha release, e.g. v0.1.0-alpha. Defaults to patch-incrementing the latest release note.",
+    )
     parser.add_argument("--stop-file", type=Path, default=DEFAULT_STOP_FILE, help="If this file exists, continuous mode exits before starting the next cycle.")
     parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
@@ -1324,6 +1422,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         raise SystemExit("--max-releases-per-day must be >= 0")
     if args.max_prepares_per_day < 0:
         raise SystemExit("--max-prepares-per-day must be >= 0")
+    if args.next_alpha_release is not None:
+        try:
+            parse_alpha_release(args.next_alpha_release)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
     return args
 
 

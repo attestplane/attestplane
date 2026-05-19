@@ -3,38 +3,38 @@
     {
       "kind": "python-wheel",
       "package": "attestplane",
-      "path": "sdk/python/dist/attestplane-0.0.11a0-py3-none-any.whl",
-      "sha256": "9de0d40f8fe3620845171d57feb235b060ecdd7893f5b1d6ee65c0b9b45f5a87",
-      "size_bytes": 161851,
+      "path": "sdk/python/dist/attestplane-0.1.0a0-py3-none-any.whl",
+      "sha256": "0e77d3e8e5426a8e71660193a4649df5bfcb85e871d4c1665e2f4d5876b50156",
+      "size_bytes": 161840,
       "validation": {
         "published": false
       },
-      "version": "0.0.11a0"
+      "version": "0.1.0a0"
     },
     {
       "kind": "python-sdist",
       "package": "attestplane",
-      "path": "sdk/python/dist/attestplane-0.0.11a0.tar.gz",
-      "sha256": "5c40002fbd476e0ea9ac2e7303c4e934bc886b28bdcd8a01ae6ab3d83c2a0d1d",
-      "size_bytes": 220276,
+      "path": "sdk/python/dist/attestplane-0.1.0a0.tar.gz",
+      "sha256": "edb1db0688c09a26434f813539808afcbd0260a747363504c5469120f1d91bb0",
+      "size_bytes": 220292,
       "validation": {
         "published": false
       },
-      "version": "0.0.11a0"
+      "version": "0.1.0a0"
     },
     {
       "kind": "npm-tarball",
       "package": "@attestplane/attestplane",
-      "path": "sdk/typescript/attestplane-attestplane-0.0.11-alpha.tgz",
-      "sha256": "50d1aff5d0b48d97d1f07aa9f56283bf9bc075990d23fbc93ee3409ca5c611d1",
-      "size_bytes": 118820,
+      "path": "sdk/typescript/attestplane-attestplane-0.1.0-alpha.tgz",
+      "sha256": "230d875226b92fb4e246dba19b90f01288fc2c89f353f78824c5e9990221b078",
+      "size_bytes": 118182,
       "validation": {
         "published": false
       },
-      "version": "0.0.11-alpha"
+      "version": "0.1.0-alpha"
     }
   ],
-  "checksums_file": "release/artifacts/v0.0.11-alpha/checksums.sha256",
+  "checksums_file": "release/artifacts/v0.1.0-alpha/checksums.sha256",
   "explicit_non_actions": {
     "deploy": "not performed",
     "force_push": "not performed",
@@ -48,12 +48,12 @@
     "production_ready": false,
     "slsa_l3": false
   },
-  "release": "v0.0.11-alpha",
-  "release_notes_file": "docs/release-notes/v0.0.11-alpha.draft.md",
+  "release": "v0.1.0-alpha",
+  "release_notes_file": "docs/release-notes/v0.1.0-alpha.draft.md",
   "schema": "attestplane_release_artifact_manifest.v1",
   "source_state": {
     "prepared_by": "alpha_release_train_auto_release_prep",
-    "target_commit": "32124bd8418257c882544aff24ebcc1d3b10cb7b"
+    "target_commit": "f5e826ca070860965b5cb4ddb67f284f56e3818d"
   },
-  "upload_plan_file": "release/artifacts/v0.0.11-alpha/upload-plan.md"
+  "upload_plan_file": "release/artifacts/v0.1.0-alpha/upload-plan.md"
 }

@@ -221,6 +221,12 @@ def test_next_alpha_release_from_notes(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert alpha_release_train.next_alpha_release() == "v0.0.11-alpha"
 
 
+def test_explicit_next_alpha_release_override_is_validated() -> None:
+    assert alpha_release_train.resolve_next_alpha_release("v0.1.0-alpha") == "v0.1.0-alpha"
+    with pytest.raises(ValueError, match="invalid alpha release"):
+        alpha_release_train.resolve_next_alpha_release("0.1.0-alpha")
+
+
 def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
     monkeypatch.setattr(alpha_release_train, "capture", lambda argv: "abc123")
@@ -270,9 +276,7 @@ def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: py
     monkeypatch.setattr(alpha_release_train, "assert_clean_tree", lambda: None)
     monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
     monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
-    monkeypatch.setattr(alpha_release_train, "update_python_version", lambda version: None)
-    monkeypatch.setattr(alpha_release_train, "sync_python_lockfile", lambda: None)
-    monkeypatch.setattr(alpha_release_train, "update_npm_version", lambda version: None)
+    monkeypatch.setattr(alpha_release_train, "sync_version_state", lambda candidate: None)
     monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: None)
     monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: None)
     monkeypatch.setattr(alpha_release_train, "write_release_metadata", lambda candidate: None)
@@ -303,9 +307,7 @@ def test_finalize_next_alpha_syncs_python_lock_before_commit(monkeypatch: pytest
     monkeypatch.setattr(alpha_release_train, "assert_clean_tree", lambda: calls.append("clean"))
     monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
     monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
-    monkeypatch.setattr(alpha_release_train, "update_python_version", lambda version: calls.append("pyproject"))
-    monkeypatch.setattr(alpha_release_train, "sync_python_lockfile", lambda: calls.append("uv-lock"))
-    monkeypatch.setattr(alpha_release_train, "update_npm_version", lambda version: calls.append("npm"))
+    monkeypatch.setattr(alpha_release_train, "sync_version_state", lambda candidate: calls.extend(["pyproject", "runtime", "uv-lock", "npm", "readme"]))
     monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: calls.append("notes"))
     monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: calls.append("artifacts"))
     monkeypatch.setattr(alpha_release_train, "write_release_metadata", lambda candidate: calls.append("metadata"))
@@ -377,6 +379,15 @@ def test_release_prep_commit_includes_python_lockfile(monkeypatch: pytest.Monkey
     alpha_release_train.commit_release_prep(candidate)
 
     assert "sdk/python/uv.lock" in staged
+    assert "sdk/python/src/attestplane/__init__.py" in staged
+    assert "sdk/typescript/src/index_version.ts" in staged
+    assert "README.md" in staged
+
+
+def test_parse_args_accepts_explicit_next_alpha_release() -> None:
+    args = alpha_release_train.parse_args(["--next-alpha-release", "v0.1.0-alpha"])
+
+    assert args.next_alpha_release == "v0.1.0-alpha"
 
 
 def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,26 +1,26 @@
-# v0.0.11-alpha Release-Asset Upload Plan
+# v0.1.0-alpha Release-Asset Upload Plan
 
 This plan documents artifacts prepared by the local alpha release train.
 
 ## Prepared Files
 
 ```text
-sdk/python/dist/attestplane-0.0.11a0-py3-none-any.whl
-sdk/python/dist/attestplane-0.0.11a0.tar.gz
-sdk/typescript/attestplane-attestplane-0.0.11-alpha.tgz
-release/artifacts/v0.0.11-alpha/checksums.sha256
-release/artifacts/v0.0.11-alpha/artifact-manifest.json
+sdk/python/dist/attestplane-0.1.0a0-py3-none-any.whl
+sdk/python/dist/attestplane-0.1.0a0.tar.gz
+sdk/typescript/attestplane-attestplane-0.1.0-alpha.tgz
+release/artifacts/v0.1.0-alpha/checksums.sha256
+release/artifacts/v0.1.0-alpha/artifact-manifest.json
 ```
 
 ## Release Commands
 
 ```bash
-git tag -a v0.0.11-alpha -m "v0.0.11-alpha"
-git push origin v0.0.11-alpha
-gh release create v0.0.11-alpha --prerelease --title "v0.0.11-alpha" --notes-file docs/release-notes/v0.0.11-alpha.draft.md ...
+git tag -a v0.1.0-alpha -m "v0.1.0-alpha"
+git push origin v0.1.0-alpha
+gh release create v0.1.0-alpha --prerelease --title "v0.1.0-alpha" --notes-file docs/release-notes/v0.1.0-alpha.draft.md ...
 gh workflow run publish-python.yml -f target=pypi --ref main
 gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main
-gh workflow run manage-npm.yml -f action=dist-tag-set-latest-to-version -f version=0.0.11-alpha --ref main
+gh workflow run manage-npm.yml -f action=dist-tag-set-latest-to-version -f version=0.1.0-alpha --ref main
 ```
 
 ## Explicit Non-Actions in Release Prep
