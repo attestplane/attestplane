@@ -583,7 +583,7 @@ def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.
     assert len(calls) == 1
 
 
-def test_process_git_push_queue_limits_to_one_push_per_cycle(
+def test_process_git_push_queue_allows_two_pushes_per_cycle_when_ready(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -608,10 +608,16 @@ def test_process_git_push_queue_limits_to_one_push_per_cycle(
     )
 
     state = alpha_release_train.load_continuous_state(state_file)
-    assert events == [{"release": "v0.0.8-alpha", "ref": "main", "status": "done"}]
-    assert calls == [["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]]
+    assert events == [
+        {"release": "v0.0.8-alpha", "ref": "main", "status": "done"},
+        {"release": "v0.0.8-alpha", "ref": "v0.0.8-alpha", "status": "done"},
+    ]
+    assert calls == [
+        ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"],
+        ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "v0.0.8-alpha"],
+    ]
     assert [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]["status"] == "done"
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "queued"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
 
 
 def test_process_git_push_queue_uses_longer_cooldown_for_network_failures(

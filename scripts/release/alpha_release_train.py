@@ -56,6 +56,7 @@ REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 PUBLISH_WORKFLOW_ATTEMPTS = 2
 PUBLISH_WORKFLOW_RETRY_SECONDS = 15
+MAX_GIT_PUSH_TASKS_PER_CYCLE = 2
 
 EXTERNAL_STAGES = (
     "local_gates_passed",
@@ -656,7 +657,13 @@ def update_git_push_task(
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
-def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) -> list[dict[str, Any]]:
+def process_git_push_queue(
+    path: Path,
+    *,
+    dry_run: bool,
+    cooldown_seconds: int,
+    max_pushes_per_cycle: int = MAX_GIT_PUSH_TASKS_PER_CYCLE,
+) -> list[dict[str, Any]]:
     if dry_run:
         return []
     db_path = state_db_path(path)
@@ -681,7 +688,10 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
             """,
             (now,),
         ).fetchall()
+        processed_count = 0
         for release, ref, stage, status, attempts, next_attempt_at_epoch in rows:
+            if processed_count >= max_pushes_per_cycle:
+                break
             candidate = prepared_candidate_from_release(str(release))
             argv = normalize_git_push_argv(["git", "push", "origin", str(ref)])
             try:
@@ -689,6 +699,7 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
                 if converged:
                     update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
                     processed.append({"release": str(release), "ref": str(ref), "status": "done", "observed": True})
+                    processed_count += 1
                     continue
                 if preflight_reason is not None:
                     cooldown = git_push_cooldown_seconds_for_failure(
@@ -716,10 +727,12 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
                             "next_attempt_at_epoch": now + cooldown,
                         }
                     )
+                    processed_count += 1
                     break
                 attempt_git_push_once(argv, dry_run=False)
                 update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
                 processed.append({"release": str(release), "ref": str(ref), "status": "done"})
+                processed_count += 1
             except Exception as exc:
                 failure_reason = classify_git_push_failure(exc)
                 cooldown = git_push_cooldown_seconds_for_failure(
@@ -747,7 +760,8 @@ def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) 
                         "next_attempt_at_epoch": now + cooldown,
                     }
                 )
-            break
+                processed_count += 1
+                break
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
     return processed
