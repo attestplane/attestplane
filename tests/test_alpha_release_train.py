@@ -295,6 +295,33 @@ def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: py
     assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
 
 
+def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed_envs: list[dict[str, str]] = []
+    candidate = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+        }
+    )
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        if argv == ["scripts/check-release-assets-prep.sh"] and env is not None:
+            observed_envs.append(env)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+
+    alpha_release_train.run_local_gates(candidate, dry_run=False)
+
+    assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
+
+
 def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(*args: object, **kwargs: object) -> object:
         argv = args[0]

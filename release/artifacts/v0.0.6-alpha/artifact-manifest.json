@@ -26,8 +26,8 @@
       "kind": "npm-tarball",
       "package": "@attestplane/attestplane",
       "path": "sdk/typescript/attestplane-attestplane-0.0.6-alpha.tgz",
-      "sha256": "736b4e136eac2d33942bd28c45014570ee1cc6851b99d932cf38e4d79d525789",
-      "size_bytes": 118180,
+      "sha256": "d31864775a82c19af7c1843ce503d9cee8a564e1d877b6ee8ea3504a5f504ff5",
+      "size_bytes": 118819,
       "validation": {
         "published": false
       },
@@ -53,7 +53,7 @@
   "schema": "attestplane_release_artifact_manifest.v1",
   "source_state": {
     "prepared_by": "alpha_release_train_auto_release_prep",
-    "target_commit": "dcb57642a6e99a866b6b912407900c73df48430f"
+    "target_commit": "c2f63c79f63a0a1d6709080ad7699c41947a09a6"
   },
   "upload_plan_file": "release/artifacts/v0.0.6-alpha/upload-plan.md"
 }

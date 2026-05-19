@@ -680,6 +680,7 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
         "PYTHON_VERSION": candidate.python_version,
         "NPM_VERSION": candidate.npm_version,
     }
+    prebuilt_env = {**env, "ATTESTPLANE_RELEASE_ASSETS_PREBUILT": "1"}
     run(["bash", "-lc", "cd sdk/python && uv run pytest -q && uv run ruff check src tests && uv run mypy"], dry_run=dry_run)
     run(["bash", "-lc", "cd sdk/typescript && npm test --silent && npm run typecheck --silent && npm run lint --silent"], dry_run=dry_run)
     for command in (
@@ -691,7 +692,8 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
         ["gitleaks", "detect", "--source", ".", "--no-git", "--redact"],
         ["git", "diff", "--check"],
     ):
-        run(command, dry_run=dry_run, env=env)
+        command_env = prebuilt_env if command == ["scripts/check-release-assets-prep.sh"] else env
+        run(command, dry_run=dry_run, env=command_env)
 
 
 def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool) -> None:
