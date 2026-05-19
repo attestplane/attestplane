@@ -1,0 +1,75 @@
+{
+  "schema_version": "attestplane.validation.design_response.v1",
+  "generated_at": "2026-05-19T08:19:20Z",
+  "issue": {
+    "number": 7,
+    "url": "https://github.com/attestplane/attestplane/issues/7",
+    "title": "Design question: EU AI Act Article 12 specific surface, audit substrate verifier independence, retention + deletion proof handling"
+  },
+  "advisory_review": {
+    "provider": "Claude Opus via ask_opus.sh",
+    "status": "completed",
+    "authoritative": false,
+    "summary": "Recommended a conservative aligned-profile stance: Article 12 alignment without certification claims, OSS verifier as the independent trust root, APIs as convenience only, and GDPR handling via PII minimization plus commit-then-redact."
+  },
+  "design_stance": {
+    "eu_ai_act_article_12": {
+      "claim": "AIA-12 aligned profile, not certified compliance",
+      "surface": [
+        "role-bound event fields for provider/deployer/operator/human reviewer where applicable",
+        "system and model version references",
+        "decision, intervention, exception, and drift event categories",
+        "continuity checkpoints and optional external timestamp anchoring",
+        "offline-readable regulator/auditor export profile"
+      ],
+      "non_claims": [
+        "does not claim EU AI Act certification",
+        "does not claim notified-body review",
+        "does not claim complete high-risk-system compliance"
+      ]
+    },
+    "verifier_independence": {
+      "trust_root": "open-source deterministic verifier and versioned schemas",
+      "api_role": "convenience index and retrieval layer only",
+      "red_line": "verification must not require trusting an Attestplane-hosted production API",
+      "offline_expectation": "auditor can verify a complete export without network access to Attestplane services"
+    },
+    "retention_and_deletion": {
+      "default": "PII minimization before ingest; avoid writing raw PII into append-only evidence",
+      "recommended_pattern": "commit-then-redact: hash commitments remain in the audit chain while deletable sidecar content can be destroyed and redaction events recorded",
+      "out_of_scope_alpha": [
+        "cryptographic shredding for large media objects",
+        "training-data erasure guarantees",
+        "legal determination of GDPR Article 17 sufficiency"
+      ],
+      "non_claims": [
+        "does not claim GDPR compliance",
+        "does not claim right-to-erasure automation",
+        "does not claim legal sufficiency without controller-specific review"
+      ]
+    }
+  },
+  "recommended_next_work": [
+    "Add an AIA-12 aligned profile document with explicit non-certification wording.",
+    "Add verifier-independence documentation that separates OSS verifier trust from API convenience.",
+    "Add a retention/deletion proof ADR covering PII minimization and commit-then-redact.",
+    "Keep issue #7 open until the owner confirms the public-facing answer and desired implementation scope."
+  ],
+  "claim_safety": {
+    "production_ready_claimed": false,
+    "compliance_certification_claimed": false,
+    "gdpr_compliance_claimed": false,
+    "eu_ai_act_compliance_claimed": false,
+    "auditor_api_trust_required_claimed": false
+  },
+  "explicit_non_actions": {
+    "implementation": "not performed",
+    "tag": "not performed",
+    "release": "not performed",
+    "publish": "not performed",
+    "deploy": "not performed",
+    "workflow_dispatch": "not performed for issue #7",
+    "secrets_printed": false
+  },
+  "final_status": "issue_7_design_response_recorded"
+}

@@ -75,6 +75,24 @@ After the fix, a local FreeTSA probe returned:
 {"status": "ok", "cert_status": "VALID", "reason": null}
 ```
 
+## Remote Live Probe
+
+After commit
+`0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1`, the live
+`nightly-anchor` workflow was manually dispatched for the same code
+path:
+
+- Run:
+  <https://github.com/attestplane/attestplane/actions/runs/26085036796>
+- Event: `workflow_dispatch`
+- Conclusion: `success`
+- Reported anchor result: `cert_status=VALID`, `ok=true`,
+  `chain_ok=true`, `anchored_seqs=[0]`
+
+Issue
+[#11](https://github.com/attestplane/attestplane/issues/11)
+was closed after this remote live verification passed.
+
 ## Claim Safety
 
 No claim was expanded:

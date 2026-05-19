@@ -1,0 +1,116 @@
+{
+  "schema_version": "attestplane.validation.current_state_gap_sweep.v1",
+  "generated_at": "2026-05-19T08:19:20Z",
+  "repo": {
+    "branch": "main",
+    "head": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1",
+    "origin_main": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1"
+  },
+  "github_actions": {
+    "push_ci_for_head": {
+      "head": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1",
+      "status": "all_observed_push_workflows_success",
+      "workflows": [
+        "ci",
+        "sdk-python",
+        "sdk-typescript",
+        "cross-sdk-roundtrip",
+        "invariants",
+        "codeql",
+        "reproducible-build",
+        "ossf-scorecard",
+        "osv-scanner",
+        "sbom"
+      ]
+    },
+    "nightly_anchor_manual_verification": {
+      "run_id": 26085036796,
+      "url": "https://github.com/attestplane/attestplane/actions/runs/26085036796",
+      "conclusion": "success",
+      "head": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1",
+      "cert_status": "VALID"
+    }
+  },
+  "open_issues": [
+    {
+      "number": 7,
+      "title": "Design question: EU AI Act Article 12 specific surface, audit substrate verifier independence, retention + deletion proof handling",
+      "status": "open_owner_confirmation_needed",
+      "response_recorded": true,
+      "comment_url": "https://github.com/attestplane/attestplane/issues/7#issuecomment-4485790505"
+    }
+  ],
+  "closed_this_pass": [
+    {
+      "number": 11,
+      "title": "[nightly-anchor] A5 FreeTSA live verification FAILED 2026-05-19",
+      "close_reason": "completed",
+      "fix_commit": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1",
+      "remote_verification_run": "https://github.com/attestplane/attestplane/actions/runs/26085036796"
+    }
+  ],
+  "package_registry_state": {
+    "pypi": {
+      "available_versions_with_prereleases": ["0.0.3a0"],
+      "default_pip_index_without_pre": "no matching stable distribution",
+      "note": "0.0.3a0 is a pre-release and requires --pre or exact version selection."
+    },
+    "testpypi": {
+      "available_versions_with_prereleases": ["0.0.1", "0.0.3a0"]
+    },
+    "npm": {
+      "latest": "0.0.1-alpha.1",
+      "alpha": "0.0.3-alpha",
+      "current_version_query": "0.0.1-alpha.1"
+    },
+    "github_release": {
+      "tag": "v0.0.3-alpha",
+      "is_prerelease": true,
+      "asset_count": 5,
+      "tag_moved": false
+    }
+  },
+  "remaining_tasks": [
+    {
+      "priority": "P0",
+      "task": "Owner-confirm issue #7 public stance before implementing AIA-12 profile or GDPR deletion-proof language.",
+      "status": "open"
+    },
+    {
+      "priority": "P1",
+      "task": "Create AIA-12 aligned profile document with explicit non-certification wording.",
+      "status": "planned"
+    },
+    {
+      "priority": "P1",
+      "task": "Document verifier independence: OSS verifier and versioned schemas are trust root; API is convenience only.",
+      "status": "planned"
+    },
+    {
+      "priority": "P1",
+      "task": "Draft retention/deletion proof ADR for PII minimization plus commit-then-redact.",
+      "status": "planned"
+    },
+    {
+      "priority": "P1",
+      "task": "Prepare next-version release artifact workflow if a new alpha should include the FreeTSA verifier fix.",
+      "status": "blocked_on_release_decision"
+    }
+  ],
+  "claim_safety": {
+    "production_ready_claimed": false,
+    "compliance_certification_claimed": false,
+    "eu_ai_act_compliance_claimed": false,
+    "gdpr_compliance_claimed": false,
+    "release_or_publish_performed": false
+  },
+  "explicit_non_actions": {
+    "tag": "not performed",
+    "release": "not performed",
+    "publish": "not performed",
+    "deploy": "not performed",
+    "workflow_dispatch": "performed only for nightly-anchor verification run 26085036796",
+    "secrets_printed": false
+  },
+  "final_status": "current_state_gap_sweep_recorded"
+}

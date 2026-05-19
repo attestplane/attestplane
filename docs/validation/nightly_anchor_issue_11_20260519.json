@@ -42,6 +42,19 @@
     "cert_status": "VALID",
     "reason": null
   },
+  "remote_live_probe_after_fix": {
+    "workflow": "nightly-anchor",
+    "event": "workflow_dispatch",
+    "run_id": 26085036796,
+    "run_url": "https://github.com/attestplane/attestplane/actions/runs/26085036796",
+    "head_sha": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1",
+    "conclusion": "success",
+    "cert_status": "VALID",
+    "ok": true,
+    "chain_ok": true,
+    "anchored_seqs": [0],
+    "issue_11_closed": true
+  },
   "advisory_review": {
     "provider": "Claude Opus via ask_opus.sh",
     "status": "completed",
