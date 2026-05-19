@@ -39,6 +39,13 @@ Git tag v0.1.0-alpha -> PyPI 0.1.0a0 -> npm 0.1.0-alpha
 The train treats these as SemVer segments, not decimal numbers. `0.1.10-alpha`
 is the tenth patch alpha in the `0.1` band; it is not `0.110`.
 
+When the train is about to create a milestone alpha with patch `0`, it calls
+Opus for a version-number evaluation advisory. That advisory is written under
+`release/alpha-train/proposals/version-evaluation-*.md` with
+`SCOPE: VERSION_NUMBER_EVALUATION_ONLY`. It can explain whether the milestone
+numbering is clear and claim-safe, but it cannot authorize publishing or
+override the deterministic cadence above.
+
 ## Queue
 
 The first step for the next alpha cycle is advisory planning:

@@ -243,6 +243,44 @@ def test_explicit_next_alpha_release_override_is_validated() -> None:
         alpha_release_train.resolve_next_alpha_release("0.1.0-alpha")
 
 
+def test_milestone_alpha_requires_version_evaluation() -> None:
+    assert alpha_release_train.requires_version_evaluation("v0.1.0-alpha") is True
+    assert alpha_release_train.requires_version_evaluation("v0.2.0-alpha") is True
+    assert alpha_release_train.requires_version_evaluation("v0.1.1-alpha") is False
+    assert alpha_release_train.requires_version_evaluation("v0.1.10-alpha") is False
+
+
+def test_version_evaluation_advisory_is_non_authoritative(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "Version number looks appropriate.")
+
+    output = alpha_release_train.plan_alpha_version_evaluation(
+        release="v0.1.0-alpha",
+        dry_run=False,
+        timeout_seconds=1,
+        proposals_dir=tmp_path,
+    )
+
+    assert output is not None
+    assert output.name.startswith("version-evaluation-")
+    text = output.read_text(encoding="utf-8")
+    assert "STATUS: ADVISORY" in text
+    assert "AUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH" in text
+    assert "SCOPE: VERSION_NUMBER_EVALUATION_ONLY" in text
+    assert "Version number looks appropriate." in text
+
+
+def test_non_milestone_version_evaluation_is_skipped(tmp_path: Path) -> None:
+    output = alpha_release_train.plan_alpha_version_evaluation(
+        release="v0.1.1-alpha",
+        dry_run=False,
+        timeout_seconds=1,
+        proposals_dir=tmp_path,
+    )
+
+    assert output is None
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
     monkeypatch.setattr(alpha_release_train, "capture", lambda argv: "abc123")

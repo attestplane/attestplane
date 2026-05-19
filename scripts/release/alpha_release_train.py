@@ -647,13 +647,27 @@ def commit_release_prep(candidate: AlphaCandidate) -> None:
     run(["git", "commit", "-s", "-m", f"chore(release): prepare {candidate.release}"], dry_run=False)
 
 
-def finalize_next_alpha(*, advisory_plan: Path | None, release_override: str | None = None) -> AlphaCandidate | None:
+def finalize_next_alpha(
+    *,
+    advisory_plan: Path | None,
+    release_override: str | None = None,
+    advisor_timeout: int = 120,
+    proposals_dir: Path = DEFAULT_PROPOSALS_DIR,
+) -> AlphaCandidate | None:
     assert_clean_tree()
     release = resolve_next_alpha_release(release_override)
     if alpha_release_exists(release):
         print(f"alpha train: next release already exists; not finalizing {release}")
         return None
     candidate = prepared_candidate_from_release(release)
+    version_evaluation = plan_alpha_version_evaluation(
+        release=candidate.release,
+        dry_run=False,
+        timeout_seconds=advisor_timeout,
+        proposals_dir=proposals_dir,
+    )
+    if version_evaluation is not None:
+        advisory_plan = version_evaluation
     sync_version_state(candidate)
     write_release_notes(candidate, advisory_plan)
     run(["git", "diff", "--check"], dry_run=False)
@@ -678,6 +692,8 @@ def auto_prepare_next_alpha(
     prepared_root: Path,
     dry_run: bool,
     release_override: str | None = None,
+    advisor_timeout: int = 120,
+    proposals_dir: Path = DEFAULT_PROPOSALS_DIR,
 ) -> AlphaCandidate | None:
     if not dry_run:
         assert_clean_tree()
@@ -689,6 +705,14 @@ def auto_prepare_next_alpha(
     if dry_run:
         print(f"DRY-RUN: would prepare draft candidate {candidate.release}")
         return candidate
+    version_evaluation = plan_alpha_version_evaluation(
+        release=candidate.release,
+        dry_run=False,
+        timeout_seconds=advisor_timeout,
+        proposals_dir=proposals_dir,
+    )
+    if version_evaluation is not None:
+        advisory_plan = version_evaluation
     prepared_dir = write_draft_candidate_bundle(candidate, advisory_plan=advisory_plan, prepared_root=prepared_root)
     print(f"alpha train: prepared draft candidate bundle {display_path(prepared_dir)}")
     return candidate
@@ -1024,7 +1048,7 @@ def strip_forbidden_advisory_commands(text: str) -> tuple[str, list[str]]:
     return "\n".join(kept).strip() + "\n", removed
 
 
-def advisory_header(prompt: str, removed_lines: list[str]) -> str:
+def advisory_header(prompt: str, removed_lines: list[str], *, scope: str = "ISSUE_PLANNING_ONLY") -> str:
     prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
     return "\n".join(
         [
@@ -1032,7 +1056,7 @@ def advisory_header(prompt: str, removed_lines: list[str]) -> str:
             "",
             "STATUS: ADVISORY",
             "AUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH",
-            "SCOPE: ISSUE_PLANNING_ONLY",
+            f"SCOPE: {scope}",
             f"PROMPT_SHA256: {prompt_hash}",
             f"REMOVED_FORBIDDEN_COMMAND_LINES: {len(removed_lines)}",
             "",
@@ -1043,13 +1067,20 @@ def advisory_header(prompt: str, removed_lines: list[str]) -> str:
     )
 
 
-def write_advisory_plan(raw_output: str, *, prompt: str, proposals_dir: Path) -> Path:
+def write_advisory_plan(
+    raw_output: str,
+    *,
+    prompt: str,
+    proposals_dir: Path,
+    filename_prefix: str = "next-alpha",
+    scope: str = "ISSUE_PLANNING_ONLY",
+) -> Path:
     cleaned, removed = strip_forbidden_advisory_commands(raw_output)
     proposals_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
-    output = proposals_dir / f"next-alpha-{stamp}.md"
+    output = proposals_dir / f"{filename_prefix}-{stamp}.md"
     tmp = output.with_suffix(".tmp")
-    tmp.write_text(advisory_header(prompt, removed) + cleaned, encoding="utf-8")
+    tmp.write_text(advisory_header(prompt, removed, scope=scope) + cleaned, encoding="utf-8")
     tmp.replace(output)
     return output
 
@@ -1111,6 +1142,116 @@ def plan_next_alpha_issues(*, dry_run: bool, timeout_seconds: int, proposals_dir
     except ValueError:
         display = output
     print(f"alpha advisory issue plan written: {display}")
+    return output
+
+
+def requires_version_evaluation(release: str) -> bool:
+    major, minor, patch = parse_alpha_release(release)
+    return patch == 0 and (major > 0 or minor > 0)
+
+
+def build_alpha_version_evaluation_prompt(release: str) -> str:
+    previous = latest_alpha_release_from_notes()
+    return "\n".join(
+        [
+            "Evaluate the proposed Attestplane alpha version number.",
+            "",
+            "Hard boundaries:",
+            "- Advisory only.",
+            "- Do not authorize publishing, tagging, releasing, merging, or closing issues.",
+            "- Do not propose production/compliance/certification claims.",
+            "- Do not change the deterministic release runner's version number by yourself.",
+            "- Treat the version as SemVer segments, not decimal notation.",
+            "",
+            "Version cadence rule:",
+            "- Ten patch alphas roll into one minor milestone alpha.",
+            "- Example: v0.0.1-alpha ... v0.0.10-alpha -> v0.1.0-alpha.",
+            "- Example: v0.1.1-alpha ... v0.1.10-alpha -> v0.2.0-alpha.",
+            "",
+            f"Latest alpha release note: {previous}",
+            f"Proposed milestone alpha release: {release}",
+            "",
+            "Return Markdown with:",
+            "- verdict: appropriate / caution / not_recommended",
+            "- rationale",
+            "- user-facing version explanation",
+            "- claim-safety risks",
+            "- explicit non-goals",
+        ]
+    )
+
+
+def plan_alpha_version_evaluation(
+    *,
+    release: str,
+    dry_run: bool,
+    timeout_seconds: int,
+    proposals_dir: Path,
+) -> Path | None:
+    if not requires_version_evaluation(release):
+        return None
+    prompt = build_alpha_version_evaluation_prompt(release)
+    if dry_run:
+        print(f"DRY-RUN: would call ask_opus.sh architect for alpha version evaluation {release}")
+        return None
+    fake = os.environ.get("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE")
+    if fake is not None:
+        raw_output = fake
+    else:
+        try:
+            completed = subprocess.run(
+                ["ask_opus.sh", "architect", prompt],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            raw_output = "\n".join(
+                [
+                    "Opus version advisory unavailable.",
+                    "",
+                    "status: timeout",
+                    f"timeout_seconds: {timeout_seconds}",
+                    "limitation: version evaluation skipped; deterministic release numbering remains authoritative.",
+                ]
+            )
+        except FileNotFoundError:
+            raw_output = "\n".join(
+                [
+                    "Opus version advisory unavailable.",
+                    "",
+                    "status: command_unavailable",
+                    "limitation: ask_opus.sh not found; deterministic release numbering remains authoritative.",
+                ]
+            )
+        else:
+            if completed.returncode == 0:
+                raw_output = completed.stdout
+            else:
+                raw_output = "\n".join(
+                    [
+                        "Opus version advisory unavailable.",
+                        "",
+                        "status: failed",
+                        f"returncode: {completed.returncode}",
+                        "limitation: version evaluation skipped; deterministic release numbering remains authoritative.",
+                    ]
+                )
+    output = write_advisory_plan(
+        raw_output,
+        prompt=prompt,
+        proposals_dir=proposals_dir,
+        filename_prefix="version-evaluation",
+        scope="VERSION_NUMBER_EVALUATION_ONLY",
+    )
+    try:
+        display = output.relative_to(ROOT)
+    except ValueError:
+        display = output
+    print(f"alpha version evaluation advisory written: {display}")
     return output
 
 
@@ -1298,7 +1439,12 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             and args.execute
             and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
         ):
-            finalized = finalize_next_alpha(advisory_plan=advisory_plan, release_override=args.next_alpha_release)
+            finalized = finalize_next_alpha(
+                advisory_plan=advisory_plan,
+                release_override=args.next_alpha_release,
+                advisor_timeout=args.advisor_timeout,
+                proposals_dir=args.proposals_dir,
+            )
             if finalized is not None:
                 mark_prepared(args.state_file, finalized, dry_run=False)
                 candidates = [finalized]
@@ -1315,6 +1461,8 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                 prepared_root=args.prepared_dir,
                 dry_run=not args.execute,
                 release_override=args.next_alpha_release,
+                advisor_timeout=args.advisor_timeout,
+                proposals_dir=args.proposals_dir,
             )
             if prepared is not None:
                 mark_prepared(args.state_file, prepared, dry_run=not args.execute)

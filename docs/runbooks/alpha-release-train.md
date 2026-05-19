@@ -40,6 +40,12 @@ Git tag v0.1.0-alpha -> PyPI 0.1.0a0 -> npm 0.1.0-alpha
 These are SemVer segments, not decimal notation. After `v0.1.10-alpha`, the
 next default release is `v0.2.0-alpha`, not `v0.1.11-alpha`.
 
+Every milestone alpha with patch `0` triggers an Opus version-number advisory.
+The advisory is written as `release/alpha-train/proposals/version-evaluation-*.md`
+with `SCOPE: VERSION_NUMBER_EVALUATION_ONLY`. It is evidence for human review
+and release notes, not authorization to publish, tag, merge, or change npm
+dist-tags. The deterministic train remains the source of the version number.
+
 ## Advisory Planning First
 
 ```bash
