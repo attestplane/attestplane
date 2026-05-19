@@ -174,8 +174,7 @@ Python `attestplane==0.0.3a0` is published to PyPI, and
 `alpha` dist-tag. This line is alpha-grade substrate work: it expands the core
 with schemas, sidecar primitives, storage, adapters, verifier predicates,
 public API drift gates, storage compatibility policy, and release provenance
-hygiene, but it is not pre-beta, not production-ready, and not
-compliance-ready.
+hygiene, but it is not pre-beta, not production-ready, and not compliance-ready.
 
 The current `attestplane verify` command is deliberately narrow:
 

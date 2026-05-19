@@ -126,8 +126,8 @@ signed-verifier, anchored-verifier, or certification language.
 
 These claims are safe to use for the current public alpha line. None of these
 claims permits production use, compliance readiness, broad verifier
-completeness, signed-verifier, anchored-verifier, certification language, SLSA
-L3 language, or production-grade supply-chain language.
+completeness, signed-verifier, anchored-verifier, certification language, or
+high-assurance supply-chain certification language.
 
 ### Published artifacts
 
@@ -154,7 +154,7 @@ L3 language, or production-grade supply-chain language.
 - "Release provenance hygiene" is accurate for npm provenance, PyPI trusted
   publishing, artifact checksums, release manifests, SBOM generation, CodeQL,
   OSV, OSSF Scorecard, and reproducible-build gates. It must not be shortened
-  to "SLSA L3", "certified provenance", or "production-grade supply-chain".
+  into certification, SLSA-level, or production security language.
 
 ### Issue and limitation status
 
