@@ -161,11 +161,12 @@ high-assurance supply-chain certification language.
 - Closed nightly FreeTSA failures (#9 and #11) may be described as diagnosed
   and recovered. They should not be described as proof that every external TSA
   outage is impossible.
-- Issue #7 remains an open design question. Public language may describe the
-  current conservative stance: AIA-12-aligned substrate mapping, not EU AI Act
+- Issue #7 is resolved by the AIA-12 aligned profile, verifier independence
+  model, and commit-then-redact ADR. Public language may describe the
+  conservative stance: AIA-12-aligned substrate mapping, not EU AI Act
   compliance certification; verifier independence via OSS deterministic
-  verifiers, not a closed API trust root; and GDPR retention/deletion handling
-  as deployer policy with minimization and redaction commitments.
+  verifiers, not a closed API trust root; and retention/deletion handling as
+  deployer policy with minimization and redaction commitments.
 
 ## Implementation-status phrasing rule
 

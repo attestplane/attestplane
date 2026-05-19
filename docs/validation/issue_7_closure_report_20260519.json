@@ -1,0 +1,57 @@
+{
+  "schema": "attestplane.validation.issue_7_closure_report.v1",
+  "generated_at": "2026-05-19T16:55:00+08:00",
+  "issue": {
+    "number": 7,
+    "title": "Design question: EU AI Act Article 12 specific surface, audit substrate verifier independence, retention + deletion proof handling",
+    "status_before_closure": "open"
+  },
+  "baseline": {
+    "branch": "main",
+    "head_before_changes": "fb0f0f524fe9bf4de21f35924abf097ae6a3d713",
+    "origin_main_before_changes": "fb0f0f524fe9bf4de21f35924abf097ae6a3d713"
+  },
+  "deliverables": [
+    {
+      "path": "docs/spec/aia-12-aligned-profile.md",
+      "purpose": "Defines Article 12 aligned evidence profile without claiming legal compliance."
+    },
+    {
+      "path": "docs/architecture/verifier_independence.md",
+      "purpose": "Defines OSS deterministic verifier and versioned schemas as the trust root instead of a hosted API."
+    },
+    {
+      "path": "docs/adr/0015-retention-deletion-proof-profile.md",
+      "purpose": "Adopts commit-then-redact retention evidence profile while preserving append-only chain integrity."
+    },
+    {
+      "path": "docs/roadmap/next_alpha_release_plan_20260519.md",
+      "purpose": "Plans how to include post-v0.0.3-alpha fixes in a future alpha without moving the frozen tag."
+    },
+    {
+      "path": "README.md",
+      "purpose": "Links the new AIA-12 profile and verifier independence documents from the governance and legal document table."
+    },
+    {
+      "path": "docs/policy/allowed_claims.md",
+      "purpose": "Updates issue #7 status language from open design question to resolved-by-docs stance."
+    }
+  ],
+  "claim_safety": {
+    "eu_ai_act_compliance_claimed": false,
+    "gdpr_compliance_claimed": false,
+    "legal_certification_claimed": false,
+    "production_readiness_claimed": false,
+    "hosted_api_required_for_truth": false,
+    "v0_0_3_alpha_tag_moved": false
+  },
+  "explicit_non_actions": {
+    "tag": "not_performed",
+    "release_write": "not_performed",
+    "publish": "not_performed",
+    "deploy": "not_performed",
+    "workflow_dispatch": "not_performed",
+    "secrets_printed": false
+  },
+  "verdict": "issue_7_ready_to_close_after_validation"
+}

@@ -54,7 +54,15 @@ A copy of the template lives at [0000-template.md](0000-template.md).
 | [0002](0002-substrate-data-model-and-hash-chain-v0.md) | Substrate core data model and hash chain (v0.0.1) | Accepted |
 | [0003](0003-tsa-rfc-3161-anchoring.md) | Time-Stamp Authority anchoring (RFC 3161) for the audit chain | Accepted |
 | [0004](0004-aios-to-attestplane-boundary.md) | AIOS-to-Attestplane scope boundary (substrate vs. execution plane) | Accepted |
-| [0008](0008-evidence-event-taxonomy-v1.md) | Evidence event taxonomy v1 — twelve event types | Accepted |
+| [0005](0005-event-signing-scheme.md) | Event signing scheme | Accepted |
 | [0006](0006-sigstore-rekor-redundant-anchor.md) | Sigstore Rekor as a redundant transparency-log anchor | Accepted |
+| [0008](0008-evidence-event-taxonomy-v1.md) | Evidence event taxonomy v1 — twelve event types | Accepted |
+| [0009](0009-aios-absorption-boundary.md) | AIOS absorption boundary | Accepted |
+| [0010](0010-verification-reason-codes.md) | Verification reason codes | Accepted |
+| [0011](0011-canonical-text-v1.md) | Canonical TEXT v1 | Accepted |
+| [0012](0012-proof-bundle-policy-trace-refs.md) | ProofBundle policy trace refs | Accepted |
+| [0013](0013-generic-runtime-adapter-abc.md) | Generic runtime adapter ABC | Accepted |
+| [0014](0014-adapter-conformance-fixture-pinning.md) | Adapter conformance fixture pinning | Accepted |
+| [0015](0015-retention-deletion-proof-profile.md) | Commit-then-redact retention evidence profile | Accepted |
 
 New ADRs append to this table in the same PR that introduces the ADR file.

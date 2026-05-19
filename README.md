@@ -366,6 +366,8 @@ If you are an EU-regulated entity (DORA, BaFin, NIS2 scope) evaluating Attestpla
 | [CHANGELOG.md](CHANGELOG.md) | Release history and supply-chain hashes |
 | [docs/adr/](docs/adr/README.md) | Architecture Decision Records |
 | [docs/architecture/ATTESTATION_GATES.md](docs/architecture/ATTESTATION_GATES.md) | Five substrate-level gates A1–A5 (pre-merge / nightly / release-blocker) |
+| [docs/spec/aia-12-aligned-profile.md](docs/spec/aia-12-aligned-profile.md) | Alpha AIA-12 aligned evidence profile; not a legal conclusion |
+| [docs/architecture/verifier_independence.md](docs/architecture/verifier_independence.md) | Independent verifier trust model for exported evidence |
 | [docs/spec/evidence-event-taxonomy-v1.md](docs/spec/evidence-event-taxonomy-v1.md) | The v1 evidence event taxonomy (twelve types) |
 | [docs/policy/](docs/policy/forbidden_claims.md) | Public-facing claim policy (forbidden / allowed / enforcement) |
 
