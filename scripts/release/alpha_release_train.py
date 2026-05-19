@@ -57,6 +57,8 @@ REGISTRY_VERIFY_POLL_SECONDS = 15
 PUBLISH_WORKFLOW_ATTEMPTS = 2
 PUBLISH_WORKFLOW_RETRY_SECONDS = 15
 MAX_GIT_PUSH_TASKS_PER_CYCLE: int | None = None
+PYPI_PROJECT = "attestplane"
+PYPI_SIMPLE_INDEX_URL = f"https://pypi.org/simple/{PYPI_PROJECT}/"
 
 EXTERNAL_STAGES = (
     "local_gates_passed",
@@ -1656,9 +1658,17 @@ def gh_release_exists(release: str) -> bool:
 
 
 def pypi_version_exists(python_version: str) -> bool:
-    with urllib.request.urlopen("https://pypi.org/pypi/attestplane/json", timeout=30) as handle:
+    with urllib.request.urlopen(f"https://pypi.org/pypi/{PYPI_PROJECT}/json", timeout=30) as handle:
         pypi = json.load(handle)
-    return python_version in pypi.get("releases", {})
+    if python_version in pypi.get("releases", {}):
+        return True
+    with urllib.request.urlopen(PYPI_SIMPLE_INDEX_URL, timeout=30) as handle:
+        raw = handle.read()
+    if isinstance(raw, bytes):
+        html = raw.decode("utf-8", "replace")
+    else:
+        html = raw
+    return python_version in html
 
 
 def npm_package_info(npm_version: str) -> dict[str, Any]:

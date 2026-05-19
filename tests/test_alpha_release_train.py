@@ -1272,7 +1272,11 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
     )
     pypi_payloads = [
         {"releases": {}},
-        {"releases": {"0.0.8a0": []}},
+        {"releases": {}},
+    ]
+    simple_index_payloads = [
+        "<html><body></body></html>",
+        "<html><body><a href='/packages/attestplane-0.0.8a0-py3-none-any.whl'>attestplane-0.0.8a0</a></body></html>",
     ]
 
     class FakeResponse(io.StringIO):
@@ -1283,7 +1287,10 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
             return None
 
     def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
-        return FakeResponse(json.dumps(pypi_payloads.pop(0)))
+        url = str(args[0])
+        if url.endswith("/json"):
+            return FakeResponse(json.dumps(pypi_payloads.pop(0)))
+        return FakeResponse(simple_index_payloads.pop(0))
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
         return json.dumps({"version": "0.0.8-alpha", "dist-tags": {"alpha": "0.0.8-alpha", "latest": "0.0.8-alpha"}})
@@ -1295,6 +1302,35 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
     alpha_release_train.verify_registries(candidate, dry_run=False)
 
     assert pypi_payloads == []
+    assert simple_index_payloads == []
+
+
+def test_pypi_version_exists_falls_back_to_simple_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen_urls: list[str] = []
+
+    class FakeResponse(io.StringIO):
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
+        url = str(args[0])
+        seen_urls.append(url)
+        if url.endswith("/json"):
+            return FakeResponse(json.dumps({"releases": {}}))
+        return FakeResponse(
+            "<html><body><a href='/packages/attestplane-0.0.8a0-py3-none-any.whl'>attestplane-0.0.8a0</a></body></html>"
+        )
+
+    monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
+
+    assert alpha_release_train.pypi_version_exists("0.0.8a0") is True
+    assert seen_urls == [
+        "https://pypi.org/pypi/attestplane/json",
+        "https://pypi.org/simple/attestplane/",
+    ]
 
 
 def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pytest.MonkeyPatch) -> None:
