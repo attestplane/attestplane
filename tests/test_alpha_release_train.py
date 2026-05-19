@@ -610,7 +610,12 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
     calls: list[str] = []
     sleeps: list[int] = []
 
-    def fail_remote_push(candidate: alpha_release_train.AlphaCandidate, *, dry_run: bool) -> None:
+    def fail_remote_push(
+        candidate: alpha_release_train.AlphaCandidate,
+        *,
+        dry_run: bool,
+        state_path: Path | None = None,
+    ) -> None:
         calls.append(candidate.release)
         raise alpha_release_train.subprocess.CalledProcessError(128, ["git", "push", "origin", "main"])
 
@@ -655,6 +660,7 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
     )
 
     monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: True)
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
     monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
     monkeypatch.setattr(alpha_release_train, "run_git_push", lambda argv, *, dry_run: pushes.append(argv))
 
@@ -662,6 +668,47 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
 
     assert ["git", "tag", "-a", "v0.0.8-alpha", "-m", "v0.0.8-alpha"] not in commands
     assert pushes == [["git", "push", "origin", "v0.0.8-alpha"]]
+
+
+def test_external_stage_ledger_skips_completed_publish_steps(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+        }
+    )
+    commands: list[list[str]] = []
+
+    alpha_release_train.mark_stage(state_file, candidate_value, "pypi_published", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "npm_published", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "dist_tag_synced", "done")
+    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+
+    alpha_release_train.publish_platforms(candidate_value, dry_run=False, state_path=state_file)
+
+    assert commands == []
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert state["release_stages"]["v0.0.8-alpha"]["pypi_published"] == "done"
+    assert state["release_stages"]["v0.0.8-alpha"]["npm_published"] == "done"
+    assert state["release_stages"]["v0.0.8-alpha"]["dist_tag_synced"] == "done"
+
+
+def test_registry_verified_stage_is_idempotent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+
+    alpha_release_train.mark_stage(state_file, candidate_value, "registry_verified", "done")
+    monkeypatch.setattr(alpha_release_train, "pypi_version_exists", lambda version: (_ for _ in ()).throw(AssertionError))
+
+    alpha_release_train.verify_registries(candidate_value, dry_run=False, state_path=state_file)
 
 
 def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:

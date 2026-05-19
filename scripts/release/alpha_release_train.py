@@ -45,6 +45,17 @@ CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS = 300
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 
+EXTERNAL_STAGES = (
+    "local_gates_passed",
+    "main_pushed",
+    "tag_pushed",
+    "gh_release_created",
+    "pypi_published",
+    "npm_published",
+    "dist_tag_synced",
+    "registry_verified",
+)
+
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
     "git tag",
@@ -222,6 +233,18 @@ def init_state_db(db_path: Path) -> None:
         )
         db.execute(
             """
+            CREATE TABLE IF NOT EXISTS release_stages (
+                release TEXT NOT NULL,
+                stage TEXT NOT NULL,
+                status TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                updated_at_epoch INTEGER NOT NULL,
+                PRIMARY KEY (release, stage)
+            )
+            """
+        )
+        db.execute(
+            """
             CREATE TABLE IF NOT EXISTS state_meta (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
@@ -275,11 +298,55 @@ def append_state_event(db: sqlite3.Connection, release: str | None, event: str, 
     )
 
 
+def stage_status(db: sqlite3.Connection, release: str, stage: str) -> str | None:
+    row = db.execute("SELECT status FROM release_stages WHERE release = ? AND stage = ?", (release, stage)).fetchone()
+    return str(row[0]) if row else None
+
+
+def mark_stage(path: Path | None, candidate: AlphaCandidate, stage: str, status: str, detail: dict[str, Any] | None = None) -> None:
+    if path is None:
+        return
+    if stage not in EXTERNAL_STAGES:
+        raise ValueError(f"unknown alpha train stage: {stage}")
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        db.execute(
+            """
+            INSERT INTO release_stages(release, stage, status, detail, updated_at_epoch)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(release, stage) DO UPDATE SET
+                status = excluded.status,
+                detail = excluded.detail,
+                updated_at_epoch = excluded.updated_at_epoch
+            """,
+            (candidate.release, stage, status, json.dumps(detail or {}, sort_keys=True), now),
+        )
+        append_state_event(db, candidate.release, f"stage_{status}", {"stage": stage, **(detail or {})}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def stage_done(path: Path | None, candidate: AlphaCandidate, stage: str) -> bool:
+    if path is None:
+        return False
+    db_path = state_db_path(path)
+    if not db_path.exists():
+        return False
+    init_state_db(db_path)
+    with sqlite3.connect(db_path) as db:
+        return stage_status(db, candidate.release, stage) == "done"
+
+
 def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
     init_state_db(db_path)
     with sqlite3.connect(db_path) as db:
         rows = db.execute("SELECT release, status FROM release_state ORDER BY release").fetchall()
         counts = db.execute("SELECT day, kind, count FROM daily_counts ORDER BY day, kind").fetchall()
+        stage_rows = db.execute(
+            "SELECT release, stage, status FROM release_stages ORDER BY release, stage"
+        ).fetchall()
     prepared = sorted(str(release) for release, status in rows if status in {"prepared", "processing", "released"})
     processed = sorted(str(release) for release, status in rows if status == "released")
     prepare_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "prepared"}
@@ -292,6 +359,10 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
         "processed_releases": processed,
         "prepare_count_by_day": prepare_count_by_day,
         "release_count_by_day": release_count_by_day,
+        "release_stages": {
+            str(release): {str(stage): str(status) for rel, stage, status in stage_rows if rel == release}
+            for release in sorted({row[0] for row in stage_rows})
+        },
         "updated_at_epoch": int(time.time()),
     }
 
@@ -1020,7 +1091,7 @@ def assert_clean_tree() -> None:
         raise RuntimeError("working tree must be clean before alpha train execution")
 
 
-def preflight_public_release_surfaces(candidate: AlphaCandidate) -> None:
+def preflight_public_release_surfaces(candidate: AlphaCandidate, state_path: Path | None = None) -> None:
     local_tag = subprocess.run(
         ["git", "rev-parse", "-q", "--verify", f"refs/tags/{candidate.release}"],
         cwd=ROOT,
@@ -1036,14 +1107,18 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate) -> None:
             raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
 
     if remote_tag_exists(candidate.release):
-        raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
+        if local_tag_points_at_head(candidate.release) or stage_done(state_path, candidate, "tag_pushed"):
+            mark_stage(state_path, candidate, "tag_pushed", "done", {"observed": True})
+            print(f"remote tag already exists; treating as interrupted tag-push recovery: {candidate.release}")
+        else:
+            raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
 
-    release_view = remote_probe(
-        ["gh", "release", "view", candidate.release, "--json", "tagName"],
-        timeout_error=f"GitHub Release preflight timed out for {candidate.release}",
-    )
-    if release_view.returncode == 0:
-        raise RuntimeError(f"GitHub Release already exists; refusing duplicate release: {candidate.release}")
+    if gh_release_exists(candidate.release):
+        if local_tag_points_at_head(candidate.release) or stage_done(state_path, candidate, "gh_release_created"):
+            mark_stage(state_path, candidate, "gh_release_created", "done", {"observed": True})
+            print(f"GitHub Release already exists; treating as interrupted release-create recovery: {candidate.release}")
+        else:
+            raise RuntimeError(f"GitHub Release already exists; refusing duplicate release: {candidate.release}")
 
 
 def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
@@ -1069,13 +1144,97 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
         run(command, dry_run=dry_run, env=command_env)
 
 
-def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool) -> None:
+def ensure_local_gates(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None) -> None:
+    if stage_done(state_path, candidate, "local_gates_passed"):
+        print(f"stage local_gates_passed already done; skipping gates: {candidate.release}", flush=True)
+        return
+    run_local_gates(candidate, dry_run=dry_run)
+    mark_stage(state_path, candidate, "local_gates_passed", "done")
+
+
+def ensure_main_pushed(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None) -> None:
+    if stage_done(state_path, candidate, "main_pushed"):
+        print(f"stage main_pushed already done; skipping main push: {candidate.release}", flush=True)
+        return
+    argv = ["git", "push", "origin", "main"]
+    if not dry_run and git_push_remote_converged(argv):
+        mark_stage(state_path, candidate, "main_pushed", "done", {"observed": True})
+        print(f"stage main_pushed observed done; skipping main push: {candidate.release}", flush=True)
+        return
+    run_git_push(argv, dry_run=dry_run)
+    mark_stage(state_path, candidate, "main_pushed", "done")
+
+
+def gh_release_exists(release: str) -> bool:
+    release_view = remote_probe(
+        ["gh", "release", "view", release, "--json", "tagName"],
+        timeout_error=f"GitHub Release check timed out for {release}",
+    )
+    return release_view.returncode == 0
+
+
+def pypi_version_exists(python_version: str) -> bool:
+    with urllib.request.urlopen("https://pypi.org/pypi/attestplane/json", timeout=30) as handle:
+        pypi = json.load(handle)
+    return python_version in pypi.get("releases", {})
+
+
+def npm_package_info(npm_version: str) -> dict[str, Any]:
+    tag_field = "dist" + "-tags"
+    npm = json.loads(
+        capture(
+            ["npm", "view", f"@attestplane/attestplane@{npm_version}", "version", tag_field, "--json"],
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+        )
+    )
+    if not isinstance(npm, dict):
+        raise RuntimeError(f"npm returned malformed package info: {npm!r}")
+    return npm
+
+
+def npm_version_exists(npm_version: str) -> bool:
+    try:
+        return npm_package_info(npm_version).get("version") == npm_version
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return False
+
+
+def npm_dist_tags_synced(npm_version: str) -> bool:
+    try:
+        npm = npm_package_info(npm_version)
+        tag_field = "dist" + "-tags"
+        return (
+            npm.get("version") == npm_version
+            and npm.get(tag_field, {}).get("alpha") == npm_version
+            and npm.get(tag_field, {}).get("latest") == npm_version
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return False
+
+
+def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
     if local_tag_points_at_head(candidate.release):
         print(f"local tag already exists at HEAD; skipping local tag creation: {candidate.release}", flush=True)
     else:
         run(["git", "tag", "-a", candidate.release, "-m", candidate.release], dry_run=dry_run)
-    run_git_push(["git", "push", "origin", candidate.release], dry_run=dry_run)
+    if stage_done(state_path, candidate, "tag_pushed"):
+        print(f"stage tag_pushed already done; skipping tag push: {candidate.release}", flush=True)
+    else:
+        tag_push = ["git", "push", "origin", candidate.release]
+        if not dry_run and git_push_remote_converged(tag_push):
+            mark_stage(state_path, candidate, "tag_pushed", "done", {"observed": True})
+            print(f"stage tag_pushed observed done; skipping tag push: {candidate.release}", flush=True)
+        else:
+            run_git_push(tag_push, dry_run=dry_run)
+            mark_stage(state_path, candidate, "tag_pushed", "done")
     if candidate.create_github_release:
+        if stage_done(state_path, candidate, "gh_release_created"):
+            print(f"stage gh_release_created already done; skipping GitHub Release create: {candidate.release}", flush=True)
+            return
+        if not dry_run and gh_release_exists(candidate.release):
+            mark_stage(state_path, candidate, "gh_release_created", "done", {"observed": True})
+            print(f"stage gh_release_created observed done; skipping GitHub Release create: {candidate.release}", flush=True)
+            return
         assets = [
             f"sdk/python/dist/attestplane-{candidate.python_version}.tar.gz",
             f"sdk/python/dist/attestplane-{candidate.python_version}-py3-none-any.whl",
@@ -1101,14 +1260,21 @@ def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool) -> None:
             ],
             dry_run=dry_run,
         )
+        mark_stage(state_path, candidate, "gh_release_created", "done")
 
 
-def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool) -> tuple[str | None, str | None]:
+def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> tuple[str | None, str | None]:
     python_run = None
     npm_run = None
     if candidate.publish_python:
-        run(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"], dry_run=dry_run)
-        if not dry_run:
+        if stage_done(state_path, candidate, "pypi_published"):
+            print(f"stage pypi_published already done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
+        elif not dry_run and pypi_version_exists(candidate.python_version):
+            mark_stage(state_path, candidate, "pypi_published", "done", {"observed": True})
+            print(f"stage pypi_published observed done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
+        else:
+            run(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"], dry_run=dry_run)
+        if not dry_run and not stage_done(state_path, candidate, "pypi_published"):
             time.sleep(5)
             python_run = capture(
                 [
@@ -1126,12 +1292,19 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool) -> tuple[str 
                 ]
             )
             run(["gh", "run", "watch", python_run, "--exit-status"], dry_run=False)
+            mark_stage(state_path, candidate, "pypi_published", "done", {"run": python_run})
     if candidate.publish_npm:
-        run(
-            ["gh", "workflow", "run", "publish-typescript.yml", "-f", "tag=alpha", "-f", "dry_run=false", "--ref", "main"],
-            dry_run=dry_run,
-        )
-        if not dry_run:
+        if stage_done(state_path, candidate, "npm_published"):
+            print(f"stage npm_published already done; skipping npm publish dispatch: {candidate.release}", flush=True)
+        elif not dry_run and npm_version_exists(candidate.npm_version):
+            mark_stage(state_path, candidate, "npm_published", "done", {"observed": True})
+            print(f"stage npm_published observed done; skipping npm publish dispatch: {candidate.release}", flush=True)
+        else:
+            run(
+                ["gh", "workflow", "run", "publish-typescript.yml", "-f", "tag=alpha", "-f", "dry_run=false", "--ref", "main"],
+                dry_run=dry_run,
+            )
+        if not dry_run and not stage_done(state_path, candidate, "npm_published"):
             time.sleep(5)
             npm_run = capture(
                 [
@@ -1149,6 +1322,13 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool) -> tuple[str 
                 ]
             )
             run(["gh", "run", "watch", npm_run, "--exit-status"], dry_run=False)
+            mark_stage(state_path, candidate, "npm_published", "done", {"run": npm_run})
+        if stage_done(state_path, candidate, "dist_tag_synced"):
+            print(f"stage dist_tag_synced already done; skipping npm dist-tag sync: {candidate.release}", flush=True)
+        elif not dry_run and npm_dist_tags_synced(candidate.npm_version):
+            mark_stage(state_path, candidate, "dist_tag_synced", "done", {"observed": True})
+            print(f"stage dist_tag_synced observed done; skipping npm dist-tag sync: {candidate.release}", flush=True)
+        else:
             run(
                 [
                     "gh",
@@ -1162,8 +1342,10 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool) -> tuple[str 
                     "--ref",
                     "main",
                 ],
-                dry_run=False,
+                dry_run=dry_run,
             )
+            if dry_run:
+                return python_run, npm_run
             time.sleep(5)
             latest_run = capture(
                 [
@@ -1181,33 +1363,28 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool) -> tuple[str 
                 ]
             )
             run(["gh", "run", "watch", latest_run, "--exit-status"], dry_run=False)
+            mark_stage(state_path, candidate, "dist_tag_synced", "done", {"run": latest_run})
     return python_run, npm_run
 
 
-def verify_registries(candidate: AlphaCandidate, *, dry_run: bool) -> None:
+def verify_registries(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
+    if stage_done(state_path, candidate, "registry_verified"):
+        print(f"stage registry_verified already done; skipping registry verification: {candidate.release}", flush=True)
+        return
     if dry_run:
         print(f"DRY-RUN: would verify PyPI {candidate.python_version} and npm {candidate.npm_version}")
+        mark_stage(state_path, candidate, "registry_verified", "done")
         return
     last_error = "registry verification did not run"
     for attempt in range(1, REGISTRY_VERIFY_ATTEMPTS + 1):
         try:
-            with urllib.request.urlopen("https://pypi.org/pypi/attestplane/json", timeout=30) as handle:
-                pypi = json.load(handle)
-            if candidate.python_version not in pypi.get("releases", {}):
+            if not pypi_version_exists(candidate.python_version):
                 raise RuntimeError(f"PyPI version missing after publish: {candidate.python_version}")
-            tag_field = "dist" + "-tags"
-            npm = json.loads(
-                capture(
-                    ["npm", "view", f"@attestplane/attestplane@{candidate.npm_version}", "version", tag_field, "--json"],
-                    timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
-                )
-            )
-            if npm.get("version") != candidate.npm_version:
-                raise RuntimeError(f"npm version mismatch after publish: {npm!r}")
-            if npm.get(tag_field, {}).get("alpha") != candidate.npm_version:
-                raise RuntimeError(f"npm alpha tag did not move to {candidate.npm_version}")
-            if npm.get(tag_field, {}).get("latest") != candidate.npm_version:
-                raise RuntimeError(f"npm latest tag did not move to {candidate.npm_version}")
+            if not npm_version_exists(candidate.npm_version):
+                raise RuntimeError(f"npm version missing after publish: {candidate.npm_version}")
+            if not npm_dist_tags_synced(candidate.npm_version):
+                raise RuntimeError(f"npm dist-tags did not move to {candidate.npm_version}")
+            mark_stage(state_path, candidate, "registry_verified", "done")
             return
         except Exception as exc:
             last_error = str(exc)
@@ -1588,16 +1765,16 @@ def display_path(path: Path) -> Path:
         return path
 
 
-def run_candidate(candidate: AlphaCandidate, *, dry_run: bool) -> None:
+def run_candidate(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
     print(f"=== alpha candidate: {candidate.release} ===", flush=True)
     verify_candidate_files(candidate)
     assert_clean_tree()
-    preflight_public_release_surfaces(candidate)
-    run_local_gates(candidate, dry_run=dry_run)
-    run_git_push(["git", "push", "origin", "main"], dry_run=dry_run)
-    create_tag_and_release(candidate, dry_run=dry_run)
-    publish_platforms(candidate, dry_run=dry_run)
-    verify_registries(candidate, dry_run=dry_run)
+    preflight_public_release_surfaces(candidate, state_path=state_path)
+    ensure_local_gates(candidate, dry_run=dry_run, state_path=state_path)
+    ensure_main_pushed(candidate, dry_run=dry_run, state_path=state_path)
+    create_tag_and_release(candidate, dry_run=dry_run, state_path=state_path)
+    publish_platforms(candidate, dry_run=dry_run, state_path=state_path)
+    verify_registries(candidate, dry_run=dry_run, state_path=state_path)
 
 
 def load_continuous_state(path: Path) -> dict[str, Any]:
@@ -1844,7 +2021,7 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             for candidate in candidates[: args.max_count]:
                 try:
                     mark_processing(args.state_file, candidate, dry_run=not args.execute)
-                    run_candidate(candidate, dry_run=not args.execute)
+                    run_candidate(candidate, dry_run=not args.execute, state_path=args.state_file)
                     mark_processed(args.state_file, candidate, dry_run=not args.execute)
                 except Exception as exc:
                     if args.execute and is_git_push_error(exc):
@@ -1998,7 +2175,7 @@ def main(argv: list[str] | None = None) -> int:
         print("alpha train: no candidates; nothing to release")
         return 0
     for candidate in candidates[: args.max_count]:
-        run_candidate(candidate, dry_run=not args.execute)
+        run_candidate(candidate, dry_run=not args.execute, state_path=args.state_file)
     print("alpha train: completed finite candidate batch")
     return 0
 
