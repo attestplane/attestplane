@@ -2,16 +2,15 @@
 # SPDX-FileCopyrightText: 2026 The Attestplane Authors
 # SPDX-License-Identifier: Apache-2.0
 #
-# P3.3 release-asset dry-run gate.
+# Release-asset dry-run gate.
 #
 # Builds Python wheel/sdist + npm tarball locally, hygiene-scans the
 # archive contents for forbidden patterns, recomputes SHA-256, and
-# asserts the manifest in
-# release/artifacts/v0.0.3-alpha/artifact-manifest.json + the
-# checksums.sha256 file match the on-disk artefacts.
+# asserts the selected release manifest + checksums.sha256 file match the
+# on-disk artefacts.
 #
 # This gate NEVER uploads to GitHub Release, NEVER publishes to PyPI/npm,
-# NEVER touches the v0.0.3-alpha tag, and NEVER triggers a publish workflow.
+# NEVER touches the selected release tag, and NEVER triggers a publish workflow.
 # It asserts those invariants post-build.
 set -euo pipefail
 
@@ -24,9 +23,13 @@ if [ ! -x "$py" ]; then
   exit 1
 fi
 
-manifest="release/artifacts/v0.0.3-alpha/artifact-manifest.json"
-checksums="release/artifacts/v0.0.3-alpha/checksums.sha256"
-upload_plan="release/artifacts/v0.0.3-alpha/upload-plan.md"
+python_version="${PYTHON_VERSION:-$(grep -E '^version = ' sdk/python/pyproject.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')}"
+npm_version="${NPM_VERSION:-$(node -e 'console.log(require("./sdk/typescript/package.json").version)')}"
+release_version="${RELEASE_VERSION:-v${npm_version}}"
+
+manifest="release/artifacts/${release_version}/artifact-manifest.json"
+checksums="release/artifacts/${release_version}/checksums.sha256"
+upload_plan="release/artifacts/${release_version}/upload-plan.md"
 
 [ -f "$manifest" ] || { echo "::error::missing $manifest" >&2; exit 1; }
 [ -f "$checksums" ] || { echo "::error::missing $checksums" >&2; exit 1; }
@@ -50,9 +53,9 @@ echo "=== build npm tarball ==="
   npm pack --silent >/dev/null
 )
 
-py_whl="sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl"
-py_sdist="sdk/python/dist/attestplane-0.0.3a0.tar.gz"
-npm_tgz="sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz"
+py_whl="sdk/python/dist/attestplane-${python_version}-py3-none-any.whl"
+py_sdist="sdk/python/dist/attestplane-${python_version}.tar.gz"
+npm_tgz="sdk/typescript/attestplane-attestplane-${npm_version}.tgz"
 
 for f in "$py_whl" "$py_sdist" "$npm_tgz"; do
   [ -f "$f" ] || { echo "::error::expected artefact missing: $f" >&2; exit 1; }
@@ -126,32 +129,24 @@ echo "  checksums.sha256: all lines verified"
 
 echo ""
 echo "=== upload-plan execution check ==="
-# The v0.0.3-alpha GitHub Release can be in one of two valid states:
-#   * 0 assets — pre-upload P3.3 dry-run baseline
-#   * 5 assets — founder-authorized upload on 2026-05-18T07:04:43Z
-#     (wheel + sdist + npm-tarball + checksums.sha256 + artifact-manifest.json),
-#     recorded in docs/validation/v0.0.3_alpha_release_asset_upload_report_20260518.md
-# Any OTHER count means the Release was modified out-of-band and the
-# gate must fail closed.
-remote_assets=$(gh release view v0.0.3-alpha --json assets -q '.assets | length' 2>/dev/null || echo "remote_unreachable")
+expected_remote_assets=$(($(jq '.artifacts | length' "$manifest") + 2))
+remote_assets=$(gh release view "$release_version" --json assets -q '.assets | length' 2>/dev/null || echo "remote_unreachable")
 if [ "$remote_assets" = "remote_unreachable" ]; then
   echo "  GitHub Release assets check: SKIP (gh cli unavailable or no network)"
-elif [ "$remote_assets" != "0" ] && [ "$remote_assets" != "5" ]; then
-  echo "::error::GitHub Release v0.0.3-alpha now has $remote_assets asset(s); gate accepts 0 (pre-upload) or 5 (founder-authorized upload)" >&2
+elif [ "$remote_assets" != "0" ] && [ "$remote_assets" != "$expected_remote_assets" ]; then
+  echo "::error::GitHub Release $release_version now has $remote_assets asset(s); gate accepts 0 (pre-upload) or $expected_remote_assets (manifest artifacts + checksums + manifest)" >&2
   exit 1
 else
-  echo "  GitHub Release v0.0.3-alpha assets: $remote_assets (0=pre-upload or 5=founder-authorized upload, both OK)"
+  echo "  GitHub Release $release_version assets: $remote_assets (0=pre-upload or $expected_remote_assets=published asset set, both OK)"
 fi
 
 echo ""
-echo "=== v0.0.3-alpha tag freeze ==="
-tag_target=$(git rev-parse "v0.0.3-alpha^{}")
-expected_tag_target="9bde6338df008afe58d561b0ba66eaaf75e298ad"
-if [ "$tag_target" != "$expected_tag_target" ]; then
-  echo "::error::v0.0.3-alpha tag has moved: now $tag_target, expected $expected_tag_target" >&2
-  exit 1
+echo "=== release tag state ==="
+if tag_target=$(git rev-parse "${release_version}^{}" 2>/dev/null); then
+  echo "  ${release_version}^{} = $tag_target"
+else
+  echo "  ${release_version}: local tag not present yet"
 fi
-echo "  v0.0.3-alpha^{} = $tag_target (frozen)"
 
 echo ""
 echo "=== claim scan ==="

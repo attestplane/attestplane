@@ -76,6 +76,27 @@ only prepared unprocessed candidates, writes local ignored state under
 `release/alpha-train/reports/`, and sleeps when no candidate is ready. A failed
 gate or registry verification stops the process.
 
+For a higher-automation local loop that promotes only already prepared local
+artifacts:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --auto-promote-prepared \
+  --execute \
+  --max-count 1
+```
+
+`--auto-promote-prepared` scans release notes and artifact directories, rejects
+incomplete candidates, skips already tagged releases, and appends only
+deterministic prepared candidates to `queue.json`. Opus advisory output remains
+issue-planning material and is never promoted into a queue candidate. Create
+`release/alpha-train/STOP` to request a clean stop before the next cycle. The
+default execution cap is one alpha per UTC day; `--max-releases-per-day 0`
+means unlimited daily cadence and should only be used for an explicitly
+accepted release window.
+
 The runner performs:
 
 - optional Opus advisory issue planning when `--plan-next-alpha` is passed,
@@ -110,6 +131,9 @@ Continuous mode additionally stops on any exception from candidate validation,
 local gates, tag/release creation, workflow monitoring, or registry
 verification. It does not continue through failed release state.
 
+Continuous mode also exits cleanly if `release/alpha-train/STOP` exists before
+the next cycle. Remove the file to resume later.
+
 ## Human Ownership
 
 The founder/maintainer remains the release owner. The release train is only a
@@ -120,7 +144,8 @@ Operational owner for the current single-maintainer phase:
 
 - GitHub owner: `@merchloubna70-dot`
 - Registry owner: the authenticated PyPI/npm publisher for the project
-- Manual review point: before adding an entry to `release/alpha-train/queue.json`
+- Manual review point: periodic inspection of proposals, queue state, train
+  reports, registry state, and any newly auto-promoted prepared candidates
 
 ## Rollback and Recovery
 

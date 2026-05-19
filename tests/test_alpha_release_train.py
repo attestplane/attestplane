@@ -123,3 +123,53 @@ def test_continuous_state_filters_processed_releases(tmp_path: Path) -> None:
         state_file,
     )
     assert [item.release for item in remaining] == ["v0.0.7-alpha"]
+
+
+def test_auto_promote_merge_is_dry_run_safe(tmp_path: Path) -> None:
+    queue = write_queue(tmp_path, [])
+    promoted = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+        }
+    )
+
+    merged = alpha_release_train.merge_prepared_candidates(queue, [promoted], dry_run=True)
+
+    assert [item.release for item in merged] == ["v0.0.8-alpha"]
+    assert json.loads(queue.read_text(encoding="utf-8"))["candidates"] == []
+
+
+def test_auto_promote_merge_persists_when_executing(tmp_path: Path) -> None:
+    queue = write_queue(tmp_path, [])
+    promoted = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+        }
+    )
+
+    alpha_release_train.merge_prepared_candidates(queue, [promoted], dry_run=False)
+
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    assert payload["candidates"][0]["release"] == "v0.0.8-alpha"
+
+
+def test_stop_file_requests_clean_exit(tmp_path: Path) -> None:
+    stop_file = tmp_path / "STOP"
+    assert alpha_release_train.stop_requested(stop_file) is False
+    stop_file.write_text("stop\n", encoding="utf-8")
+    assert alpha_release_train.stop_requested(stop_file) is True
+
+
+def test_request_stop_writes_reason(tmp_path: Path) -> None:
+    stop_file = tmp_path / "STOP"
+    alpha_release_train.request_stop(stop_file, "fail-closed test")
+    assert alpha_release_train.stop_requested(stop_file) is True
+    assert "fail-closed test" in stop_file.read_text(encoding="utf-8")
+
+
+def test_daily_release_count_defaults_to_zero(tmp_path: Path) -> None:
+    assert alpha_release_train.daily_release_count(tmp_path / "missing-state.json") == 0

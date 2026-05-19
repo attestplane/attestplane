@@ -55,6 +55,25 @@ unprocessed candidates, marks released candidates in local ignored state, and
 continues sleeping when the queue is empty. Any failed gate or platform
 verification remains fail-closed and stops the process.
 
+The higher-automation local watcher form is:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --auto-promote-prepared \
+  --execute \
+  --max-count 1
+```
+
+This still does not promote Opus advisory text into a release. It only
+discovers fully prepared local alpha artifacts already present in the repo,
+adds unreleased candidates to `queue.json`, and then runs the same gated train.
+Create `release/alpha-train/STOP` to stop before the next cycle. The default
+continuous execution cap is one alpha per UTC day; use
+`--max-releases-per-day 0` only after explicitly accepting unlimited daily
+release cadence.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.

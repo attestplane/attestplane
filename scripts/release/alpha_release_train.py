@@ -27,6 +27,8 @@ DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
 DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
 DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
 DEFAULT_STATE_FILE = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.json"
+DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
+DEFAULT_MAX_RELEASES_PER_DAY = 1
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -106,6 +108,102 @@ def load_queue(path: Path) -> list[AlphaCandidate]:
     if duplicates:
         raise ValueError("duplicate alpha release entries: " + ", ".join(sorted(duplicates)))
     return candidates
+
+
+def write_queue(path: Path, candidates: list[AlphaCandidate]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": "attestplane_alpha_release_train_queue.v1",
+        "candidates": [
+            {
+                "release": candidate.release,
+                "python_version": candidate.python_version,
+                "npm_version": candidate.npm_version,
+                "release_notes": candidate.release_notes,
+                "manifest": candidate.manifest,
+                "checksums": candidate.checksums,
+                "publish_python": candidate.publish_python,
+                "publish_npm": candidate.publish_npm,
+                "create_github_release": candidate.create_github_release,
+            }
+            for candidate in candidates
+        ],
+    }
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def alpha_python_version(release: str) -> str:
+    return release.removeprefix("v").removesuffix("-alpha") + "a0"
+
+
+def alpha_npm_version(release: str) -> str:
+    return release.removeprefix("v")
+
+
+def prepared_candidate_from_release(release: str) -> AlphaCandidate:
+    return AlphaCandidate.from_json(
+        {
+            "release": release,
+            "python_version": alpha_python_version(release),
+            "npm_version": alpha_npm_version(release),
+            "release_notes": f"docs/release-notes/{release}.draft.md",
+            "manifest": f"release/artifacts/{release}/artifact-manifest.json",
+            "checksums": f"release/artifacts/{release}/checksums.sha256",
+            "publish_python": True,
+            "publish_npm": True,
+            "create_github_release": True,
+        }
+    )
+
+
+def alpha_release_exists(release: str) -> bool:
+    local_tag = subprocess.run(
+        ["git", "rev-parse", "-q", "--verify", f"refs/tags/{release}"],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if local_tag.returncode == 0:
+        return True
+    remote_tag = subprocess.run(
+        ["git", "ls-remote", "--exit-code", "--tags", "origin", release],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return remote_tag.returncode == 0
+
+
+def discover_prepared_candidates() -> list[AlphaCandidate]:
+    releases: list[str] = []
+    for notes in sorted((ROOT / "docs" / "release-notes").glob("v*-alpha.draft.md")):
+        release = notes.name.removesuffix(".draft.md")
+        if alpha_release_exists(release):
+            continue
+        candidate = prepared_candidate_from_release(release)
+        try:
+            verify_candidate_files(candidate)
+        except FileNotFoundError:
+            continue
+        releases.append(release)
+    return [prepared_candidate_from_release(release) for release in sorted(set(releases))]
+
+
+def merge_prepared_candidates(queue_path: Path, discovered: list[AlphaCandidate], *, dry_run: bool) -> list[AlphaCandidate]:
+    queued = load_queue(queue_path)
+    by_release = {candidate.release: candidate for candidate in queued}
+    for candidate in discovered:
+        by_release.setdefault(candidate.release, candidate)
+    merged = [by_release[release] for release in sorted(by_release)]
+    if not dry_run and [candidate.release for candidate in merged] != [candidate.release for candidate in queued]:
+        write_queue(queue_path, merged)
+    return merged
 
 
 def reject_advisory_release_input(path: Path) -> None:
@@ -500,6 +598,10 @@ def mark_processed(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> N
     processed = set(str(item) for item in state.get("processed_releases", []))
     processed.add(candidate.release)
     state["processed_releases"] = sorted(processed)
+    releases_by_day = dict(state.get("release_count_by_day", {}))
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    releases_by_day[day] = int(releases_by_day.get(day, 0)) + 1
+    state["release_count_by_day"] = releases_by_day
     state["updated_at_epoch"] = int(time.time())
     save_continuous_state(path, state)
 
@@ -510,11 +612,37 @@ def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -
     return [candidate for candidate in candidates if candidate.release not in processed]
 
 
+def daily_release_count(state_path: Path) -> int:
+    state = load_continuous_state(state_path)
+    releases_by_day = state.get("release_count_by_day", {})
+    if not isinstance(releases_by_day, dict):
+        raise ValueError(f"continuous state release_count_by_day is malformed: {state_path}")
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    return int(releases_by_day.get(day, 0))
+
+
+def stop_requested(path: Path) -> bool:
+    return path.exists()
+
+
+def request_stop(path: Path, reason: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    path.write_text(f"{stamp} {reason}\n", encoding="utf-8")
+
+
 def run_continuous_pipeline(args: argparse.Namespace) -> int:
     cycles = 0
     next_plan_at = 0.0
-    print("alpha train: continuous mode active; stop with Ctrl-C or process termination", flush=True)
+    print(
+        f"alpha train: continuous mode active; stop with Ctrl-C, process termination, or {display_path(args.stop_file)}",
+        flush=True,
+    )
     while True:
+        if stop_requested(args.stop_file):
+            print(f"alpha train: stop file present; exiting: {display_path(args.stop_file)}", flush=True)
+            return 0
+
         now = time.time()
         advisory_plan = None
         if args.pipeline and now >= next_plan_at:
@@ -525,7 +653,20 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             )
             next_plan_at = now + args.plan_interval_seconds
 
-        candidates = unprocessed_candidates(load_queue(args.queue), args.state_file)
+        queue_candidates = load_queue(args.queue)
+        if args.auto_promote_prepared:
+            discovered = discover_prepared_candidates()
+            queue_candidates = merge_prepared_candidates(args.queue, discovered, dry_run=not args.execute)
+            print(f"alpha train: auto-promote discovered {len(discovered)} prepared candidates", flush=True)
+
+        candidates = unprocessed_candidates(queue_candidates, args.state_file)
+        if args.execute and args.max_releases_per_day and daily_release_count(args.state_file) >= args.max_releases_per_day:
+            print(
+                f"alpha train: max releases per UTC day reached ({args.max_releases_per_day}); sleeping {args.poll_seconds}s",
+                flush=True,
+            )
+            candidates = []
+
         if args.pipeline:
             report = write_pipeline_report(
                 advisory_plan=advisory_plan,
@@ -538,8 +679,13 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
 
         if candidates:
             for candidate in candidates[: args.max_count]:
-                run_candidate(candidate, dry_run=not args.execute)
-                mark_processed(args.state_file, candidate, dry_run=not args.execute)
+                try:
+                    run_candidate(candidate, dry_run=not args.execute)
+                    mark_processed(args.state_file, candidate, dry_run=not args.execute)
+                except Exception as exc:
+                    if args.execute:
+                        request_stop(args.stop_file, f"fail-closed after {candidate.release}: {type(exc).__name__}")
+                    raise
             cycles += 1
         else:
             print(f"alpha train: no unprocessed candidates; sleeping {args.poll_seconds}s", flush=True)
@@ -559,10 +705,17 @@ def main() -> int:
     parser.add_argument("--plan-next-alpha", action="store_true", help="Call Opus advisory to draft next-alpha issues first.")
     parser.add_argument("--pipeline", action="store_true", help="Run the linked advisory-plan then finite release-queue pipeline.")
     parser.add_argument("--continuous", action="store_true", help="Continuously watch the queue until manually stopped.")
+    parser.add_argument(
+        "--auto-promote-prepared",
+        action="store_true",
+        help="Continuously add fully prepared local alpha artifacts to the queue. Advisory text is never promoted.",
+    )
     parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
     parser.add_argument("--plan-interval-seconds", type=int, default=3600, help="Minimum seconds between Opus advisory planning calls in continuous mode.")
     parser.add_argument("--poll-seconds", type=int, default=300, help="Seconds to sleep between continuous queue checks.")
     parser.add_argument("--idle-exit-after", type=int, default=0, help="Testing helper: exit continuous mode after N cycles. 0 means never.")
+    parser.add_argument("--max-releases-per-day", type=int, default=DEFAULT_MAX_RELEASES_PER_DAY, help="UTC daily release cap in continuous execute mode. 0 means unlimited.")
+    parser.add_argument("--stop-file", type=Path, default=DEFAULT_STOP_FILE, help="If this file exists, continuous mode exits before starting the next cycle.")
     parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
     parser.add_argument("--state-file", type=Path, default=DEFAULT_STATE_FILE)
@@ -573,6 +726,8 @@ def main() -> int:
         raise SystemExit("--poll-seconds must be >= 1")
     if args.plan_interval_seconds < 1:
         raise SystemExit("--plan-interval-seconds must be >= 1")
+    if args.max_releases_per_day < 0:
+        raise SystemExit("--max-releases-per-day must be >= 0")
     if args.continuous:
         return run_continuous_pipeline(args)
 
