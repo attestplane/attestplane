@@ -231,6 +231,12 @@ def resolve_next_alpha_release(release_override: str | None = None) -> str:
     return release_override
 
 
+def compare_alpha_releases(left: str, right: str) -> int:
+    left_parts = parse_alpha_release(left)
+    right_parts = parse_alpha_release(right)
+    return (left_parts > right_parts) - (left_parts < right_parts)
+
+
 def prepared_candidate_from_release(release: str) -> AlphaCandidate:
     return AlphaCandidate.from_json(
         {
@@ -655,17 +661,16 @@ def finalize_next_alpha(
     proposals_dir: Path = DEFAULT_PROPOSALS_DIR,
 ) -> AlphaCandidate | None:
     assert_clean_tree()
-    release = resolve_next_alpha_release(release_override)
-    if alpha_release_exists(release):
-        print(f"alpha train: next release already exists; not finalizing {release}")
-        return None
-    candidate = prepared_candidate_from_release(release)
-    version_evaluation = plan_alpha_version_evaluation(
-        release=candidate.release,
+    release, version_evaluation = resolve_opus_decided_alpha_release(
+        release_override=release_override,
         dry_run=False,
         timeout_seconds=advisor_timeout,
         proposals_dir=proposals_dir,
     )
+    if alpha_release_exists(release):
+        print(f"alpha train: next release already exists; not finalizing {release}")
+        return None
+    candidate = prepared_candidate_from_release(release)
     if version_evaluation is not None:
         advisory_plan = version_evaluation
     sync_version_state(candidate)
@@ -697,7 +702,12 @@ def auto_prepare_next_alpha(
 ) -> AlphaCandidate | None:
     if not dry_run:
         assert_clean_tree()
-    release = resolve_next_alpha_release(release_override)
+    release, version_evaluation = resolve_opus_decided_alpha_release(
+        release_override=release_override,
+        dry_run=dry_run,
+        timeout_seconds=advisor_timeout,
+        proposals_dir=proposals_dir,
+    )
     if alpha_release_exists(release):
         print(f"alpha train: next release already exists; not preparing {release}")
         return None
@@ -705,12 +715,6 @@ def auto_prepare_next_alpha(
     if dry_run:
         print(f"DRY-RUN: would prepare draft candidate {candidate.release}")
         return candidate
-    version_evaluation = plan_alpha_version_evaluation(
-        release=candidate.release,
-        dry_run=False,
-        timeout_seconds=advisor_timeout,
-        proposals_dir=proposals_dir,
-    )
     if version_evaluation is not None:
         advisory_plan = version_evaluation
     prepared_dir = write_draft_candidate_bundle(candidate, advisory_plan=advisory_plan, prepared_root=prepared_root)
@@ -1253,6 +1257,48 @@ def plan_alpha_version_evaluation(
         display = output
     print(f"alpha version evaluation advisory written: {display}")
     return output
+
+
+def selected_version_from_advisory(path: Path) -> str | None:
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r"(?im)^\s*SELECTED_VERSION\s*:\s*(\S+)\s*$", text)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def validate_opus_selected_alpha_version(selected: str, *, latest: str) -> None:
+    parse_alpha_release(selected)
+    if compare_alpha_releases(selected, latest) <= 0:
+        raise ValueError(f"Opus-selected alpha release must be greater than latest {latest}: {selected}")
+    major, _minor, _patch = parse_alpha_release(selected)
+    if major != 0:
+        raise ValueError(f"Opus-selected alpha release must stay in major version 0 while alpha: {selected}")
+
+
+def resolve_opus_decided_alpha_release(
+    *,
+    release_override: str | None,
+    dry_run: bool,
+    timeout_seconds: int,
+    proposals_dir: Path,
+) -> tuple[str, Path | None]:
+    deterministic_release = resolve_next_alpha_release(release_override)
+    if release_override is not None or not requires_version_evaluation(deterministic_release):
+        return deterministic_release, None
+    advisory = plan_alpha_version_evaluation(
+        release=deterministic_release,
+        dry_run=dry_run,
+        timeout_seconds=timeout_seconds,
+        proposals_dir=proposals_dir,
+    )
+    if advisory is None:
+        return deterministic_release, None
+    selected = selected_version_from_advisory(advisory)
+    if selected is None:
+        raise ValueError(f"Opus version advisory did not include SELECTED_VERSION: {advisory}")
+    validate_opus_selected_alpha_version(selected, latest=latest_alpha_release_from_notes())
+    return selected, advisory
 
 
 def write_pipeline_report(

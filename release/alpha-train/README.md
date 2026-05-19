@@ -40,11 +40,21 @@ The train treats these as SemVer segments, not decimal numbers. `0.1.10-alpha`
 is the tenth patch alpha in the `0.1` band; it is not `0.110`.
 
 When the train is about to create a milestone alpha with patch `0`, it calls
-Opus for a version-number evaluation advisory. That advisory is written under
+Opus for a version-number decision advisory. That advisory is written under
 `release/alpha-train/proposals/version-evaluation-*.md` with
-`SCOPE: VERSION_NUMBER_EVALUATION_ONLY`. It can explain whether the milestone
-numbering is clear and claim-safe, but it cannot authorize publishing or
-override the deterministic cadence above.
+`SCOPE: VERSION_NUMBER_EVALUATION_ONLY`. Opus may select the milestone version
+by emitting a line like:
+
+```text
+SELECTED_VERSION: v0.2.0-alpha
+```
+
+The local train accepts that selected version only after deterministic
+validation: it must be an alpha SemVer tag, must be greater than the latest
+release note, must remain in major version `0`, and must not authorize
+publishing, tagging, release creation, or npm dist-tag changes. If Opus omits a
+selected version or selects an invalid version, the train fails closed instead
+of silently falling back.
 
 ## Queue
 

@@ -281,6 +281,60 @@ def test_non_milestone_version_evaluation_is_skipped(tmp_path: Path) -> None:
     assert list(tmp_path.iterdir()) == []
 
 
+def test_opus_can_select_milestone_alpha_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    monkeypatch.setenv(
+        "ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE",
+        "verdict: appropriate\nSELECTED_VERSION: v0.2.0-alpha\n",
+    )
+
+    selected, advisory = alpha_release_train.resolve_opus_decided_alpha_release(
+        release_override=None,
+        dry_run=False,
+        timeout_seconds=1,
+        proposals_dir=tmp_path / "proposals",
+    )
+
+    assert selected == "v0.2.0-alpha"
+    assert advisory is not None
+    assert "SELECTED_VERSION: v0.2.0-alpha" in advisory.read_text(encoding="utf-8")
+
+
+def test_opus_version_decision_rejects_non_alpha_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "SELECTED_VERSION: v1.0.0\n")
+
+    with pytest.raises(ValueError, match="invalid alpha release"):
+        alpha_release_train.resolve_opus_decided_alpha_release(
+            release_override=None,
+            dry_run=False,
+            timeout_seconds=1,
+            proposals_dir=tmp_path / "proposals",
+        )
+
+
+def test_opus_version_decision_rejects_non_increasing_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "SELECTED_VERSION: v0.1.10-alpha\n")
+
+    with pytest.raises(ValueError, match="must be greater than latest"):
+        alpha_release_train.resolve_opus_decided_alpha_release(
+            release_override=None,
+            dry_run=False,
+            timeout_seconds=1,
+            proposals_dir=tmp_path / "proposals",
+        )
+
+
 def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
     monkeypatch.setattr(alpha_release_train, "capture", lambda argv: "abc123")
