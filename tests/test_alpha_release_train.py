@@ -245,3 +245,35 @@ def test_full_auto_alpha_keeps_stop_file_guard() -> None:
     args = alpha_release_train.parse_args(["--full-auto-alpha"])
 
     assert args.stop_file == alpha_release_train.DEFAULT_STOP_FILE
+
+
+def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed_envs: list[dict[str, str]] = []
+
+    monkeypatch.setattr(alpha_release_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
+    monkeypatch.setattr(alpha_release_train, "update_python_version", lambda version: None)
+    monkeypatch.setattr(alpha_release_train, "update_npm_version", lambda version: None)
+    monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: None)
+    monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: None)
+    monkeypatch.setattr(alpha_release_train, "write_release_metadata", lambda candidate: None)
+    monkeypatch.setattr(alpha_release_train, "commit_release_prep", lambda candidate: None)
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        if argv == ["scripts/check-release-assets-prep.sh"] and env is not None:
+            observed_envs.append(env)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+
+    candidate = alpha_release_train.finalize_next_alpha(advisory_plan=None)
+
+    assert candidate is not None
+    assert candidate.release == "v0.0.8-alpha"
+    assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"

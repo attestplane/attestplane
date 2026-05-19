@@ -16,6 +16,7 @@ release_version="${RELEASE_VERSION:-v0.0.5-alpha}"
 python_version="${PYTHON_VERSION:-0.0.5a0}"
 npm_version="${NPM_VERSION:-0.0.5-alpha}"
 py="${PYTHON:-sdk/python/.venv/bin/python}"
+prebuilt="${ATTESTPLANE_RELEASE_ASSETS_PREBUILT:-0}"
 
 manifest="release/artifacts/${release_version}/artifact-manifest.json"
 checksums="release/artifacts/${release_version}/checksums.sha256"
@@ -26,28 +27,33 @@ upload_plan="release/artifacts/${release_version}/upload-plan.md"
 [ -f "$checksums" ] || { echo "::error::missing $checksums" >&2; exit 1; }
 [ -f "$upload_plan" ] || { echo "::error::missing $upload_plan" >&2; exit 1; }
 
-echo "=== build Python wheel + sdist (${python_version}) ==="
-(
-  cd sdk/python
-  rm -rf dist build
-  "$repo_root/$py" -m build >/dev/null
-  "$repo_root/$py" -m twine check dist/*
-)
-
-echo ""
-echo "=== build npm tarball (${npm_version}) ==="
-(
-  cd sdk/typescript
-  find . -maxdepth 1 -name '*.tgz' -delete
-  npm ci --silent >/dev/null
-  npm run build --silent >/dev/null
-  npm test --silent >/dev/null
-  npm pack --silent >/dev/null
-)
-
 py_whl="sdk/python/dist/attestplane-${python_version}-py3-none-any.whl"
 py_sdist="sdk/python/dist/attestplane-${python_version}.tar.gz"
 npm_tgz="sdk/typescript/attestplane-attestplane-${npm_version}.tgz"
+
+if [ "$prebuilt" != "1" ]; then
+  echo "=== build Python wheel + sdist (${python_version}) ==="
+  (
+    cd sdk/python
+    rm -rf dist build
+    "$repo_root/$py" -m build >/dev/null
+    "$repo_root/$py" -m twine check dist/*
+  )
+
+  echo ""
+  echo "=== build npm tarball (${npm_version}) ==="
+  (
+    cd sdk/typescript
+    find . -maxdepth 1 -name '*.tgz' -delete
+    npm ci --silent >/dev/null
+    npm run build --silent >/dev/null
+    npm test --silent >/dev/null
+    npm pack --silent >/dev/null
+  )
+else
+  echo "=== verify prebuilt release artifacts (${release_version}) ==="
+  "$repo_root/$py" -m twine check "$py_whl" "$py_sdist"
+fi
 
 for f in "$py_whl" "$py_sdist" "$npm_tgz"; do
   [ -f "$f" ] || { echo "::error::expected artifact missing: $f" >&2; exit 1; }

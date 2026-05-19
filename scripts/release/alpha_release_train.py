@@ -481,8 +481,10 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
                 "",
                 "## Claim Boundary",
                 "",
-                "This alpha candidate does not claim production readiness, legal certification,",
-                "GDPR compliance, EU AI Act compliance, certified provenance, or SLSA L3.",
+                "This alpha candidate is limited to the alpha package artifacts listed",
+                "above. Legal, compliance, certification, provenance-attestation,",
+                "and supply-chain assurance categories remain out of scope unless",
+                "backed by separate verified artifacts.",
                 "",
             ]
         ),
@@ -518,6 +520,7 @@ def finalize_next_alpha(*, advisory_plan: Path | None) -> AlphaCandidate | None:
     write_release_metadata(candidate)
     env = {
         **os.environ,
+        "ATTESTPLANE_RELEASE_ASSETS_PREBUILT": "1",
         "RELEASE_VERSION": candidate.release,
         "PYTHON_VERSION": candidate.python_version,
         "NPM_VERSION": candidate.npm_version,
