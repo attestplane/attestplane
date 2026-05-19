@@ -539,6 +539,7 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
 def commit_release_prep(candidate: AlphaCandidate) -> None:
     files = [
         "sdk/python/pyproject.toml",
+        "sdk/python/uv.lock",
         "sdk/typescript/package.json",
         candidate.release_notes,
         candidate.manifest,

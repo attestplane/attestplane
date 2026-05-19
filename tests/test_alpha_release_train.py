@@ -323,6 +323,27 @@ def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.Monke
     assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
 
 
+def test_release_prep_commit_includes_python_lockfile(monkeypatch: pytest.MonkeyPatch) -> None:
+    staged: list[str] = []
+    candidate = alpha_release_train.prepared_candidate_from_release("v0.0.8-alpha")
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        if argv[:2] == ["git", "add"]:
+            staged.extend(argv[2:])
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+
+    alpha_release_train.commit_release_prep(candidate)
+
+    assert "sdk/python/uv.lock" in staged
+
+
 def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(alpha_release_train, "capture", lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git")
 
