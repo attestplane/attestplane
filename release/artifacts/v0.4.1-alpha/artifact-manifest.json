@@ -1,0 +1,59 @@
+{
+  "artifacts": [
+    {
+      "kind": "python-wheel",
+      "package": "attestplane",
+      "path": "sdk/python/dist/attestplane-0.4.1a0-py3-none-any.whl",
+      "sha256": "69206903e88fcb3773186e19e67c92bebf43cf4ff4edd57f02d13c908ee20fef",
+      "size_bytes": 161840,
+      "validation": {
+        "published": false
+      },
+      "version": "0.4.1a0"
+    },
+    {
+      "kind": "python-sdist",
+      "package": "attestplane",
+      "path": "sdk/python/dist/attestplane-0.4.1a0.tar.gz",
+      "sha256": "6042f0d94424c03034c5a4a60ae74eec6022071cc019f99db86d1951ea200b11",
+      "size_bytes": 220329,
+      "validation": {
+        "published": false
+      },
+      "version": "0.4.1a0"
+    },
+    {
+      "kind": "npm-tarball",
+      "package": "@attestplane/attestplane",
+      "path": "sdk/typescript/attestplane-attestplane-0.4.1-alpha.tgz",
+      "sha256": "a5a1f83b29a79b19701df16a8ef63eb1e1ff7eb879d9c753e4b3336b75cd1309",
+      "size_bytes": 118818,
+      "validation": {
+        "published": false
+      },
+      "version": "0.4.1-alpha"
+    }
+  ],
+  "checksums_file": "release/artifacts/v0.4.1-alpha/checksums.sha256",
+  "explicit_non_actions": {
+    "deploy": "not performed",
+    "force_push": "not performed",
+    "npm_latest_change": "deferred until publish succeeds",
+    "release_publish": "not performed during prep",
+    "workflow_dispatch": "not performed during prep"
+  },
+  "explicit_non_claims": {
+    "certified_provenance": false,
+    "compliance_certification": false,
+    "production_ready": false,
+    "slsa_l3": false
+  },
+  "release": "v0.4.1-alpha",
+  "release_notes_file": "docs/release-notes/v0.4.1-alpha.draft.md",
+  "schema": "attestplane_release_artifact_manifest.v1",
+  "source_state": {
+    "prepared_by": "alpha_release_train_auto_release_prep",
+    "target_commit": "42859030b513c575dde6d710078bb0f1f45d7957"
+  },
+  "upload_plan_file": "release/artifacts/v0.4.1-alpha/upload-plan.md"
+}
