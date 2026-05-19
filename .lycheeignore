@@ -23,3 +23,8 @@ https://www\.npmjs\.com/.*
 # 2026-05-19 at 05:23 UTC). The links are real and stable; whitelisting
 # transient-timeout-prone external standards URLs.
 https://slsa\.dev/.*
+
+# Guardtime KSI is referenced as an eIDAS/TSA positioning example. The site
+# can time out on GitHub-hosted runners while remaining a real external vendor
+# page, so keep lychee focused on repository-owned links.
+https://guardtime\.com/ksi

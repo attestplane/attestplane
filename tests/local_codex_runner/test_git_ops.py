@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from scripts.local_codex_runner.git_ops import GitOps, GitSafetyError, is_forbidden_path, slugify
@@ -5,8 +7,8 @@ from scripts.local_codex_runner.git_ops import GitOps, GitSafetyError, is_forbid
 
 class FakeGit(GitOps):
     def __init__(self, outputs):
+        super().__init__(Path("/tmp/fake-attestplane"))
         self.outputs = outputs
-        self.commands_run = []
 
     def run(self, args):
         self.commands_run.append(" ".join(args))
