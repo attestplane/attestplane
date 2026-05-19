@@ -82,6 +82,26 @@ def test_advisory_plan_strips_forbidden_commands(tmp_path: Path) -> None:
     assert "Issue B" in text
 
 
+def test_advisory_planning_failure_writes_limitation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.delenv("ATTESTPLANE_ALPHA_PLAN_FAKE_RESPONSE", raising=False)
+
+    def fail_run(*args: object, **kwargs: object) -> object:
+        return alpha_release_train.subprocess.CompletedProcess(["ask_opus.sh"], 1, "", "")
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fail_run)
+    output = alpha_release_train.plan_next_alpha_issues(
+        dry_run=False,
+        timeout_seconds=1,
+        proposals_dir=tmp_path,
+    )
+
+    assert output is not None
+    text = output.read_text(encoding="utf-8")
+    assert "STATUS: ADVISORY" in text
+    assert "status: failed" in text
+    assert "deterministic release queue processing continues" in text
+
+
 def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
     plan = tmp_path / "next-alpha.md"
     plan.write_text("STATUS: ADVISORY\n", encoding="utf-8")

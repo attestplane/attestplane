@@ -495,12 +495,48 @@ def plan_next_alpha_issues(*, dry_run: bool, timeout_seconds: int, proposals_dir
     if fake is not None:
         raw_output = fake
     else:
-        raw_output = subprocess.check_output(
-            ["ask_opus.sh", "architect", prompt],
-            cwd=ROOT,
-            text=True,
-            timeout=timeout_seconds,
-        )
+        try:
+            completed = subprocess.run(
+                ["ask_opus.sh", "architect", prompt],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            raw_output = "\n".join(
+                [
+                    "Opus advisory unavailable.",
+                    "",
+                    "status: timeout",
+                    f"timeout_seconds: {timeout_seconds}",
+                    "limitation: advisory planning skipped; deterministic release queue processing continues.",
+                ]
+            )
+        except FileNotFoundError:
+            raw_output = "\n".join(
+                [
+                    "Opus advisory unavailable.",
+                    "",
+                    "status: command_unavailable",
+                    "limitation: ask_opus.sh not found; deterministic release queue processing continues.",
+                ]
+            )
+        else:
+            if completed.returncode == 0:
+                raw_output = completed.stdout
+            else:
+                raw_output = "\n".join(
+                    [
+                        "Opus advisory unavailable.",
+                        "",
+                        "status: failed",
+                        f"returncode: {completed.returncode}",
+                        "limitation: advisory planning skipped; deterministic release queue processing continues.",
+                    ]
+                )
     output = write_advisory_plan(raw_output, prompt=prompt, proposals_dir=proposals_dir)
     try:
         display = output.relative_to(ROOT)
