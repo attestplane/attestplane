@@ -764,6 +764,20 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
     assert pushes == [["git", "push", "origin", "v0.0.8-alpha"]]
 
 
+def test_local_tag_points_at_head_suppresses_missing_tag_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_run(*args: object, **kwargs: object) -> object:
+        calls.append({"argv": args[0], "stderr": kwargs.get("stderr")})
+        return alpha_release_train.subprocess.CompletedProcess(args[0], 128, "", "fatal: missing tag")
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+
+    assert alpha_release_train.local_tag_points_at_head("v0.1.4-alpha") is False
+    assert calls[0]["argv"] == ["git", "rev-list", "-n", "1", "refs/tags/v0.1.4-alpha"]
+    assert calls[0]["stderr"] is alpha_release_train.subprocess.DEVNULL
+
+
 def test_external_stage_ledger_skips_completed_publish_steps(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

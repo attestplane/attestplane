@@ -158,11 +158,31 @@ def is_git_push_error(exc: BaseException) -> bool:
 
 def local_tag_points_at_head(release: str) -> bool:
     try:
-        tag_commit = capture(["git", "rev-list", "-n", "1", release], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
-        head_commit = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        tag_result = subprocess.run(
+            ["git", "rev-list", "-n", "1", f"refs/tags/{release}"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if tag_result.returncode != 0:
+            return False
+        head_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if head_result.returncode != 0:
+            return False
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
-    return tag_commit == head_commit
+    return tag_result.stdout.strip() == head_result.stdout.strip()
 
 
 def git_push_remote_converged(argv: list[str]) -> bool:
