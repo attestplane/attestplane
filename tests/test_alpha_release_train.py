@@ -218,7 +218,23 @@ def test_next_alpha_release_from_notes(monkeypatch: pytest.MonkeyPatch, tmp_path
     (docs / "v0.0.9-alpha.draft.md").write_text("# v0.0.9-alpha\n", encoding="utf-8")
     (docs / "v0.0.10-alpha.draft.md").write_text("# v0.0.10-alpha\n", encoding="utf-8")
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
-    assert alpha_release_train.next_alpha_release() == "v0.0.11-alpha"
+    assert alpha_release_train.next_alpha_release() == "v0.1.0-alpha"
+
+
+def test_next_alpha_release_after_milestone_uses_patch_one(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.1.0-alpha.draft.md").write_text("# v0.1.0-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    assert alpha_release_train.next_alpha_release() == "v0.1.1-alpha"
+
+
+def test_next_alpha_release_rolls_minor_after_ten_patch_alphas(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    docs = tmp_path / "docs" / "release-notes"
+    docs.mkdir(parents=True)
+    (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
+    monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
+    assert alpha_release_train.next_alpha_release() == "v0.2.0-alpha"
 
 
 def test_explicit_next_alpha_release_override_is_validated() -> None:

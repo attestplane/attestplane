@@ -219,6 +219,8 @@ def latest_alpha_release_from_notes() -> str:
 
 def next_alpha_release() -> str:
     major, minor, patch = parse_alpha_release(latest_alpha_release_from_notes())
+    if patch >= 10:
+        return f"v{major}.{minor + 1}.0-alpha"
     return f"v{major}.{minor}.{patch + 1}-alpha"
 
 

@@ -21,6 +21,25 @@ review, and blur alpha/no-go claims. The supported loop is therefore:
 6. Verify GitHub Release, PyPI, npm, and issue status.
 7. Prepare the next candidate only after the previous one is complete.
 
+## Version Cadence
+
+The default train cadence is ten patch alphas per milestone alpha band:
+
+```text
+v0.0.1-alpha ... v0.0.10-alpha -> v0.1.0-alpha
+v0.1.1-alpha ... v0.1.10-alpha -> v0.2.0-alpha
+v0.2.1-alpha ... v0.2.10-alpha -> v0.3.0-alpha
+```
+
+The registry equivalents are:
+
+```text
+Git tag v0.1.0-alpha -> PyPI 0.1.0a0 -> npm 0.1.0-alpha
+```
+
+These are SemVer segments, not decimal notation. After `v0.1.10-alpha`, the
+next default release is `v0.2.0-alpha`, not `v0.1.11-alpha`.
+
 ## Advisory Planning First
 
 ```bash

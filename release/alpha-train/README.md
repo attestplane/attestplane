@@ -18,6 +18,27 @@ scope, generate code, or publish an unprepared version.
   certification, SLSA level, or signed provenance unless those artifacts are
   actually present and verified.
 
+## Version Cadence
+
+Alpha versions are grouped into ten-patch milestone bands. After ten patch
+alphas, the train rolls to the next minor milestone alpha:
+
+```text
+v0.0.1-alpha ... v0.0.10-alpha -> v0.1.0-alpha
+v0.1.1-alpha ... v0.1.10-alpha -> v0.2.0-alpha
+v0.2.1-alpha ... v0.2.10-alpha -> v0.3.0-alpha
+```
+
+In package registries the same release is represented as PEP 440 and npm
+SemVer:
+
+```text
+Git tag v0.1.0-alpha -> PyPI 0.1.0a0 -> npm 0.1.0-alpha
+```
+
+The train treats these as SemVer segments, not decimal numbers. `0.1.10-alpha`
+is the tenth patch alpha in the `0.1` band; it is not `0.110`.
+
 ## Queue
 
 The first step for the next alpha cycle is advisory planning:
