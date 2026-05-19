@@ -1,0 +1,21 @@
+repo: "OWNER/attestplane"
+workdir: "/Users/YOUR_USER/dev/attestplane"
+base_branch: "main"
+approved_label: "auto-codex-approved"
+candidate_label: "auto-codex-candidate"
+in_progress_label: "codex-in-progress"
+pr_opened_label: "codex-pr-opened"
+ci_green_label: "codex-ci-green"
+needs_human_label: "codex-needs-human"
+max_issues_per_run: 3
+max_local_fix_rounds: 3
+max_ci_fix_rounds: 2
+dry_run: true
+watch_ci: true
+create_pr: true
+codex_command: "codex"
+codex_sandbox: "workspace-write"
+state_path: ".local_codex_runner/state.json"
+evidence_dir: "docs/validation/local_codex_runner"
+gate_matrix_path: ".local-codex-gates.yml"
+

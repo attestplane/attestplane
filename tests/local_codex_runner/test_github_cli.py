@@ -1,0 +1,61 @@
+import subprocess
+
+import pytest
+
+from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError, redact
+
+
+def test_issue_list_json_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(command, capture_output, text, check):
+        assert command[:3] == ["gh", "issue", "list"]
+        return subprocess.CompletedProcess(command, 0, '[{"number":7,"title":"Fix","url":"u","body":"b","labels":[{"name":"auto-codex-approved"}]}]', "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    issues = GitHubCLI(dry_run=False).list_issues("o/r", "auto-codex-approved", 10)
+
+    assert issues[0].number == 7
+    assert issues[0].labels == ["auto-codex-approved"]
+
+
+def test_label_add_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = False
+
+    def fake_run(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    GitHubCLI(dry_run=True).add_labels("o/r", 1, ["codex-in-progress"])
+
+    assert called is False
+
+
+def test_pr_checks_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(command, capture_output, text, check):
+        return subprocess.CompletedProcess(command, 0, '[{"name":"ci","state":"SUCCESS","bucket":"pass","link":"https://example"}]', "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    checks = GitHubCLI(dry_run=False).pr_checks("o/r", "branch")
+
+    assert checks[0].bucket == "pass"
+
+
+def test_secret_redaction() -> None:
+    assert "ghp_x" not in redact("ghp_x")
+    assert "[REDACTED]" in redact("token=x")
+
+
+def test_command_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(command, capture_output, text, check):
+        return subprocess.CompletedProcess(command, 1, "", "token=x")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(RunnerCommandError) as excinfo:
+        GitHubCLI(dry_run=False).current_auth_status()
+
+    assert "github_pat" not in str(excinfo.value)
+

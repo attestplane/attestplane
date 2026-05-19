@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 The Attestplane Authors
+# SPDX-License-Identifier: Apache-2.0
+"""Configuration loading for the local Codex runner."""
+
+from __future__ import annotations
+
+import argparse
+import shlex
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+
+@dataclass
+class RunnerConfig:
+    repo: str | None = None
+    workdir: str | None = None
+    base_branch: str = "main"
+    approved_label: str = "auto-codex-approved"
+    candidate_label: str = "auto-codex-candidate"
+    in_progress_label: str = "codex-in-progress"
+    pr_opened_label: str = "codex-pr-opened"
+    ci_green_label: str = "codex-ci-green"
+    needs_human_label: str = "codex-needs-human"
+    max_issues_per_run: int = 3
+    max_local_fix_rounds: int = 3
+    max_ci_fix_rounds: int = 2
+    dry_run: bool = True
+    watch_ci: bool = True
+    create_pr: bool = True
+    codex_command: str = "codex"
+    codex_command_template: str | None = None
+    codex_sandbox: str = "workspace-write"
+    allow_danger_full_access: bool = False
+    allow_dirty: bool = False
+    allow_push_on_local_failure: bool = False
+    allow_rerun: bool = False
+    state_path: str = ".local_codex_runner/state.json"
+    evidence_dir: str = "docs/validation/local_codex_runner"
+    gate_matrix_path: str = ".local-codex-gates.yml"
+    gate_timeout_seconds: int = 900
+    ci_timeout_seconds: int = 1800
+    ci_poll_seconds: int = 30
+
+    def validate(self) -> None:
+        missing = [name for name in ("repo", "workdir") if not getattr(self, name)]
+        if missing:
+            raise ConfigError(f"Missing required local Codex runner config field(s): {', '.join(missing)}")
+        if self.codex_sandbox == "danger-full-access" and not self.allow_danger_full_access:
+            raise ConfigError("danger-full-access requires allow_danger_full_access=true")
+
+    def workdir_path(self) -> Path:
+        if self.workdir is None:
+            raise ConfigError("workdir is required")
+        return Path(self.workdir).expanduser().resolve()
+
+    def state_file(self) -> Path:
+        return self.workdir_path() / self.state_path
+
+    def evidence_root(self) -> Path:
+        return self.workdir_path() / self.evidence_dir
+
+    def gate_matrix_file(self) -> Path:
+        return self.workdir_path() / self.gate_matrix_path
+
+
+class ConfigError(ValueError):
+    """Raised when runner configuration is invalid."""
+
+
+def load_config(path: Path | None, overrides: dict[str, Any] | None = None) -> RunnerConfig:
+    data: dict[str, Any] = {}
+    if path is not None and path.exists():
+        data.update(load_yaml_mapping(path))
+    if overrides:
+        data.update({key: value for key, value in overrides.items() if value is not None})
+    config = RunnerConfig(**{key: value for key, value in data.items() if key in RunnerConfig.__dataclass_fields__})
+    config.validate()
+    return config
+
+
+def load_yaml_mapping(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8")
+    try:
+        import yaml  # type: ignore[import-not-found]
+
+        loaded = yaml.safe_load(text) or {}
+        if not isinstance(loaded, dict):
+            raise ConfigError(f"{path}: expected a YAML mapping")
+        return dict(loaded)
+    except ModuleNotFoundError:
+        return parse_simple_yaml(text, path)
+
+
+def parse_simple_yaml(text: str, path: Path) -> dict[str, Any]:
+    data: dict[str, Any] = {}
+    current_key: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.split("#", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        if line.startswith("  - ") and current_key:
+            data.setdefault(current_key, []).append(parse_scalar(line[4:].strip()))
+            continue
+        if ":" not in line:
+            raise ConfigError(f"{path}: unsupported YAML line: {raw_line}")
+        key, value = line.split(":", 1)
+        current_key = key.strip()
+        data[current_key] = [] if not value.strip() else parse_scalar(value.strip())
+    return data
+
+
+def parse_scalar(value: str) -> Any:
+    if value in {"true", "True"}:
+        return True
+    if value in {"false", "False"}:
+        return False
+    if value in {"null", "None", "~"}:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return shlex.split(value)[0] if value.startswith(('"', "'")) else value
+
+
+def add_common_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--config", type=Path, default=Path(".local-codex-runner.yml"))
+    parser.add_argument("--repo")
+    parser.add_argument("--workdir")
+    parser.add_argument("--issue-number", type=int)
+    parser.add_argument("--dry-run", action="store_true", default=None)
+    parser.add_argument("--no-dry-run", action="store_false", dest="dry_run")
+    parser.add_argument("--max-local-fix-rounds", type=int)
+    parser.add_argument("--max-ci-fix-rounds", type=int)
+    parser.add_argument("--create-pr", action="store_true", default=None)
+    parser.add_argument("--no-create-pr", action="store_false", dest="create_pr")
+    parser.add_argument("--watch-ci", action="store_true", default=None)
+    parser.add_argument("--no-watch-ci", action="store_false", dest="watch_ci")
+    parser.add_argument("--allow-dirty", action="store_true", default=None)
+    parser.add_argument("--include-label", action="append", default=[])
+    parser.add_argument("--exclude-label", action="append", default=[])
+
+
+def overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
+    keys = ("repo", "workdir", "dry_run", "max_local_fix_rounds", "max_ci_fix_rounds", "create_pr", "watch_ci", "allow_dirty")
+    return {key: getattr(args, key) for key in keys if hasattr(args, key)}
+

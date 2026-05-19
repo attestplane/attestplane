@@ -1,0 +1,15 @@
+default:
+  - "python -m compileall scripts"
+  - "pytest -q"
+claim-safety:
+  - "pytest tests/sentinel -q"
+  - "pytest tests/release -q"
+verifier:
+  - "pytest tests/verifier -q"
+test-gap:
+  - "pytest tests -q"
+docs:
+  - "python -m compileall scripts"
+release-blocker:
+  - "pytest tests/sentinel tests/release -q"
+
