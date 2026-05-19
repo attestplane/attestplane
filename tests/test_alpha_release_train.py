@@ -1106,3 +1106,53 @@ def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pyt
         "main",
     ] in commands
     assert ["gh", "run", "watch", "manage-npm-run-id", "--exit-status"] in commands
+
+
+def test_publish_platforms_retries_transient_pypi_watch_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+            "publish_npm": False,
+        }
+    )
+    commands: list[list[str]] = []
+    run_ids = iter(["python-run-1", "python-run-2"])
+    watch_attempts = 0
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        nonlocal watch_attempts
+        commands.append(argv)
+        if argv[:3] == ["gh", "run", "watch"]:
+            watch_attempts += 1
+            if watch_attempts == 1:
+                raise alpha_release_train.subprocess.CalledProcessError(1, argv)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        if argv[:4] == ["gh", "run", "list", "--workflow"] and argv[4] == "publish-python.yml":
+            return next(run_ids)
+        return ""
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train, "pypi_version_exists", lambda version: False)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
+
+    alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
+
+    assert commands.count(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"]) == 2
+    assert commands.count(["gh", "run", "watch", "python-run-1", "--exit-status"]) == 1
+    assert commands.count(["gh", "run", "watch", "python-run-2", "--exit-status"]) == 1
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert state["release_stages"]["v0.0.8-alpha"]["pypi_published"] == "done"

@@ -21,7 +21,7 @@ import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +44,8 @@ REMOTE_PUSH_TIMEOUT_SECONDS = 120
 CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS = 300
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
+PUBLISH_WORKFLOW_ATTEMPTS = 2
+PUBLISH_WORKFLOW_RETRY_SECONDS = 15
 
 EXTERNAL_STAGES = (
     "local_gates_passed",
@@ -149,6 +151,26 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
             time.sleep(REMOTE_PUSH_RETRY_SECONDS)
     assert last_error is not None
     raise last_error
+
+
+def watch_publish_workflow(
+    run_id: str,
+    *,
+    workflow_name: str,
+    observed: Callable[[], bool],
+) -> tuple[bool, bool, str | None]:
+    try:
+        run(["gh", "run", "watch", run_id, "--exit-status"], dry_run=False)
+        return True, False, None
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        watch_error = f"{type(exc).__name__}: {exc}"
+        if observed():
+            return True, True, watch_error
+        print(
+            f"{workflow_name} watch failed for run {run_id}: {watch_error}",
+            flush=True,
+        )
+        return False, False, watch_error
 
 
 def is_git_push_error(exc: BaseException) -> bool:
@@ -1300,26 +1322,59 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
             mark_stage(state_path, candidate, "pypi_published", "done", {"observed": True})
             print(f"stage pypi_published observed done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
         else:
-            run(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"], dry_run=dry_run)
-        if not dry_run and not stage_done(state_path, candidate, "pypi_published"):
-            time.sleep(5)
-            python_run = capture(
-                [
-                    "gh",
-                    "run",
-                    "list",
-                    "--workflow",
-                    "publish-python.yml",
-                    "--limit",
-                    "1",
-                    "--json",
-                    "databaseId",
-                    "--jq",
-                    ".[0].databaseId",
-                ]
-            )
-            run(["gh", "run", "watch", python_run, "--exit-status"], dry_run=False)
-            mark_stage(state_path, candidate, "pypi_published", "done", {"run": python_run})
+            last_error = "PyPI publish workflow did not run"
+            for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
+                run(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"], dry_run=dry_run)
+                if dry_run:
+                    break
+                time.sleep(5)
+                python_run = capture(
+                    [
+                        "gh",
+                        "run",
+                        "list",
+                        "--workflow",
+                        "publish-python.yml",
+                        "--limit",
+                        "1",
+                        "--json",
+                        "databaseId",
+                        "--jq",
+                        ".[0].databaseId",
+                    ]
+                )
+                completed, observed, watch_error = watch_publish_workflow(
+                    python_run,
+                    workflow_name="publish-python",
+                    observed=lambda: pypi_version_exists(candidate.python_version),
+                )
+                if completed:
+                    if observed:
+                        mark_stage(
+                            state_path,
+                            candidate,
+                            "pypi_published",
+                            "done",
+                            {"run": python_run, "observed": True, "watch_error": watch_error},
+                        )
+                        print(
+                            f"stage pypi_published observed done after watch failure: {candidate.release}",
+                            flush=True,
+                        )
+                    else:
+                        mark_stage(state_path, candidate, "pypi_published", "done", {"run": python_run})
+                    break
+                last_error = watch_error or last_error
+                if attempt == PUBLISH_WORKFLOW_ATTEMPTS:
+                    break
+                print(
+                    f"PyPI publish attempt {attempt}/{PUBLISH_WORKFLOW_ATTEMPTS} failed: {last_error}; "
+                    f"retrying in {PUBLISH_WORKFLOW_RETRY_SECONDS}s",
+                    flush=True,
+                )
+                time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
+            else:
+                raise RuntimeError(last_error)
     if candidate.publish_npm:
         if stage_done(state_path, candidate, "npm_published"):
             print(f"stage npm_published already done; skipping npm publish dispatch: {candidate.release}", flush=True)
@@ -1327,70 +1382,135 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
             mark_stage(state_path, candidate, "npm_published", "done", {"observed": True})
             print(f"stage npm_published observed done; skipping npm publish dispatch: {candidate.release}", flush=True)
         else:
-            run(
-                ["gh", "workflow", "run", "publish-typescript.yml", "-f", "tag=alpha", "-f", "dry_run=false", "--ref", "main"],
-                dry_run=dry_run,
-            )
-        if not dry_run and not stage_done(state_path, candidate, "npm_published"):
-            time.sleep(5)
-            npm_run = capture(
-                [
-                    "gh",
-                    "run",
-                    "list",
-                    "--workflow",
-                    "publish-typescript.yml",
-                    "--limit",
-                    "1",
-                    "--json",
-                    "databaseId",
-                    "--jq",
-                    ".[0].databaseId",
-                ]
-            )
-            run(["gh", "run", "watch", npm_run, "--exit-status"], dry_run=False)
-            mark_stage(state_path, candidate, "npm_published", "done", {"run": npm_run})
+            last_error = "npm publish workflow did not run"
+            for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
+                run(
+                    ["gh", "workflow", "run", "publish-typescript.yml", "-f", "tag=alpha", "-f", "dry_run=false", "--ref", "main"],
+                    dry_run=dry_run,
+                )
+                if dry_run:
+                    break
+                time.sleep(5)
+                npm_run = capture(
+                    [
+                        "gh",
+                        "run",
+                        "list",
+                        "--workflow",
+                        "publish-typescript.yml",
+                        "--limit",
+                        "1",
+                        "--json",
+                        "databaseId",
+                        "--jq",
+                        ".[0].databaseId",
+                    ]
+                )
+                completed, observed, watch_error = watch_publish_workflow(
+                    npm_run,
+                    workflow_name="publish-typescript",
+                    observed=lambda: npm_version_exists(candidate.npm_version),
+                )
+                if completed:
+                    if observed:
+                        mark_stage(
+                            state_path,
+                            candidate,
+                            "npm_published",
+                            "done",
+                            {"run": npm_run, "observed": True, "watch_error": watch_error},
+                        )
+                        print(
+                            f"stage npm_published observed done after watch failure: {candidate.release}",
+                            flush=True,
+                        )
+                    else:
+                        mark_stage(state_path, candidate, "npm_published", "done", {"run": npm_run})
+                    break
+                last_error = watch_error or last_error
+                if attempt == PUBLISH_WORKFLOW_ATTEMPTS:
+                    break
+                print(
+                    f"npm publish attempt {attempt}/{PUBLISH_WORKFLOW_ATTEMPTS} failed: {last_error}; "
+                    f"retrying in {PUBLISH_WORKFLOW_RETRY_SECONDS}s",
+                    flush=True,
+                )
+                time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
+            else:
+                raise RuntimeError(last_error)
         if stage_done(state_path, candidate, "dist_tag_synced"):
             print(f"stage dist_tag_synced already done; skipping npm dist-tag sync: {candidate.release}", flush=True)
         elif not dry_run and npm_dist_tags_synced(candidate.npm_version):
             mark_stage(state_path, candidate, "dist_tag_synced", "done", {"observed": True})
             print(f"stage dist_tag_synced observed done; skipping npm dist-tag sync: {candidate.release}", flush=True)
         else:
-            run(
-                [
-                    "gh",
-                    "workflow",
-                    "run",
-                    "manage-npm.yml",
-                    "-f",
-                    "action=dist-tag-set-latest-to-version",
-                    "-f",
-                    f"version={candidate.npm_version}",
-                    "--ref",
-                    "main",
-                ],
-                dry_run=dry_run,
-            )
-            if dry_run:
-                return python_run, npm_run
-            time.sleep(5)
-            latest_run = capture(
-                [
-                    "gh",
-                    "run",
-                    "list",
-                    "--workflow",
-                    "manage-npm.yml",
-                    "--limit",
-                    "1",
-                    "--json",
-                    "databaseId",
-                    "--jq",
-                    ".[0].databaseId",
-                ]
-            )
-            run(["gh", "run", "watch", latest_run, "--exit-status"], dry_run=False)
-            mark_stage(state_path, candidate, "dist_tag_synced", "done", {"run": latest_run})
+            last_error = "npm dist-tag workflow did not run"
+            for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
+                run(
+                    [
+                        "gh",
+                        "workflow",
+                        "run",
+                        "manage-npm.yml",
+                        "-f",
+                        "action=dist-tag-set-latest-to-version",
+                        "-f",
+                        f"version={candidate.npm_version}",
+                        "--ref",
+                        "main",
+                    ],
+                    dry_run=dry_run,
+                )
+                if dry_run:
+                    return python_run, npm_run
+                time.sleep(5)
+                latest_run = capture(
+                    [
+                        "gh",
+                        "run",
+                        "list",
+                        "--workflow",
+                        "manage-npm.yml",
+                        "--limit",
+                        "1",
+                        "--json",
+                        "databaseId",
+                        "--jq",
+                        ".[0].databaseId",
+                    ]
+                )
+                completed, observed, watch_error = watch_publish_workflow(
+                    latest_run,
+                    workflow_name="manage-npm",
+                    observed=lambda: npm_dist_tags_synced(candidate.npm_version),
+                )
+                if completed:
+                    if observed:
+                        mark_stage(
+                            state_path,
+                            candidate,
+                            "dist_tag_synced",
+                            "done",
+                            {"run": latest_run, "observed": True, "watch_error": watch_error},
+                        )
+                        print(
+                            f"stage dist_tag_synced observed done after watch failure: {candidate.release}",
+                            flush=True,
+                        )
+                    else:
+                        mark_stage(state_path, candidate, "dist_tag_synced", "done", {"run": latest_run})
+                    break
+                last_error = watch_error or last_error
+                if attempt == PUBLISH_WORKFLOW_ATTEMPTS:
+                    break
+                print(
+                    f"npm dist-tag attempt {attempt}/{PUBLISH_WORKFLOW_ATTEMPTS} failed: {last_error}; "
+                    f"retrying in {PUBLISH_WORKFLOW_RETRY_SECONDS}s",
+                    flush=True,
+                )
+                time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
+            else:
+                raise RuntimeError(last_error)
     return python_run, npm_run
 
 
