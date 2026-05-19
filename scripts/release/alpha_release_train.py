@@ -56,7 +56,7 @@ REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 PUBLISH_WORKFLOW_ATTEMPTS = 2
 PUBLISH_WORKFLOW_RETRY_SECONDS = 15
-MAX_GIT_PUSH_TASKS_PER_CYCLE = 2
+MAX_GIT_PUSH_TASKS_PER_CYCLE: int | None = None
 
 EXTERNAL_STAGES = (
     "local_gates_passed",
@@ -662,7 +662,7 @@ def process_git_push_queue(
     *,
     dry_run: bool,
     cooldown_seconds: int,
-    max_pushes_per_cycle: int = MAX_GIT_PUSH_TASKS_PER_CYCLE,
+    max_pushes_per_cycle: int | None = MAX_GIT_PUSH_TASKS_PER_CYCLE,
 ) -> list[dict[str, Any]]:
     if dry_run:
         return []
@@ -690,7 +690,7 @@ def process_git_push_queue(
         ).fetchall()
         processed_count = 0
         for release, ref, stage, status, attempts, next_attempt_at_epoch in rows:
-            if processed_count >= max_pushes_per_cycle:
+            if max_pushes_per_cycle is not None and processed_count >= max_pushes_per_cycle:
                 break
             candidate = prepared_candidate_from_release(str(release))
             argv = normalize_git_push_argv(["git", "push", "origin", str(ref)])

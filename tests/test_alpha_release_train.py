@@ -583,7 +583,7 @@ def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.
     assert len(calls) == 1
 
 
-def test_process_git_push_queue_allows_two_pushes_per_cycle_when_ready(
+def test_process_git_push_queue_processes_all_ready_pushes_in_cycle(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
