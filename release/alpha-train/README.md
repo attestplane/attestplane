@@ -18,6 +18,17 @@ scope, generate code, or publish an unprepared version.
 
 ## Queue
 
+The first step for the next alpha cycle is advisory planning:
+
+```bash
+python scripts/release/alpha_release_train.py --plan-next-alpha --execute
+```
+
+That command calls `ask_opus.sh architect` and writes a proposal under
+`release/alpha-train/proposals/`. The proposal is explicitly marked
+`STATUS: ADVISORY` and `NOT_AUTHORIZED_FOR_PUBLISH`. It must be reviewed and
+converted into issues manually. It is not a queue entry.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.

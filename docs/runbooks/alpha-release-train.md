@@ -13,11 +13,33 @@ An unbounded release loop would be unsafe for PyPI, npm, and GitHub Releases.
 It could publish empty or duplicate alphas, move public trust surfaces without
 review, and blur alpha/no-go claims. The supported loop is therefore:
 
-1. Prepare exactly one alpha candidate.
-2. Put it in `release/alpha-train/queue.json`.
-3. Run the train with `--max-count 1`.
-4. Verify GitHub Release, PyPI, npm, and issue status.
-5. Prepare the next candidate only after the previous one is complete.
+1. Ask Opus for advisory next-alpha issue planning.
+2. Review the advisory plan and create or curate issues manually.
+3. Implement and validate exactly one alpha candidate.
+4. Put the prepared candidate in `release/alpha-train/queue.json`.
+5. Run the train with `--max-count 1`.
+6. Verify GitHub Release, PyPI, npm, and issue status.
+7. Prepare the next candidate only after the previous one is complete.
+
+## Advisory Planning First
+
+```bash
+python scripts/release/alpha_release_train.py --plan-next-alpha --execute
+```
+
+This first step calls `ask_opus.sh architect` and writes an advisory issue plan
+under `release/alpha-train/proposals/`. The file is marked:
+
+```text
+STATUS: ADVISORY
+AUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH
+SCOPE: ISSUE_PLANNING_ONLY
+```
+
+The plan is not a queue entry. It cannot authorize publish, tag, release,
+merge, issue closure, or npm `latest` changes. The runner rejects advisory
+files if they are accidentally used as release notes, manifest, or checksum
+inputs.
 
 ## Command
 
@@ -30,6 +52,7 @@ python scripts/release/alpha_release_train.py \
 
 The runner performs:
 
+- optional Opus advisory issue planning when `--plan-next-alpha` is passed,
 - clean working tree check,
 - Python full tests, ruff, mypy,
 - TypeScript tests, typecheck, lint,

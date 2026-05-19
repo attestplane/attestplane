@@ -11,6 +11,7 @@ invent new alpha scope, bypass gates, or publish from an unprepared tree.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -23,6 +24,16 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
+DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
+
+FORBIDDEN_ADVISORY_COMMANDS = (
+    "git push",
+    "git tag",
+    "gh release",
+    "gh workflow run",
+    "npm publish",
+    "twine upload",
+)
 
 
 @dataclass(frozen=True)
@@ -95,6 +106,14 @@ def load_queue(path: Path) -> list[AlphaCandidate]:
     return candidates
 
 
+def reject_advisory_release_input(path: Path) -> None:
+    if not path.exists() or path.is_dir():
+        return
+    prefix = path.read_text(encoding="utf-8", errors="ignore")[:512]
+    if "STATUS: ADVISORY" in prefix or "NOT_AUTHORIZED_FOR_PUBLISH" in prefix:
+        raise RuntimeError(f"advisory planning output cannot be used as release input: {path}")
+
+
 def verify_candidate_files(candidate: AlphaCandidate) -> None:
     paths = [
         candidate.release_notes,
@@ -107,6 +126,8 @@ def verify_candidate_files(candidate: AlphaCandidate) -> None:
     missing = [path for path in paths if not (ROOT / path).is_file()]
     if missing:
         raise FileNotFoundError("candidate is not release-prepared; missing: " + ", ".join(missing))
+    for path in paths[:3]:
+        reject_advisory_release_input(ROOT / path)
 
 
 def assert_clean_tree() -> None:
@@ -271,6 +292,124 @@ def verify_registries(candidate: AlphaCandidate, *, dry_run: bool) -> None:
         raise RuntimeError("npm latest tag unexpectedly points at alpha candidate")
 
 
+def latest_alpha_release_notes() -> list[str]:
+    notes = sorted((ROOT / "docs" / "release-notes").glob("v*-alpha.draft.md"))
+    return [path.name for path in notes[-5:]]
+
+
+def latest_open_issues() -> str:
+    try:
+        return capture(
+            [
+                "gh",
+                "issue",
+                "list",
+                "--state",
+                "open",
+                "--limit",
+                "20",
+                "--json",
+                "number,title,labels",
+            ]
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "[]"
+
+
+def build_alpha_issue_planning_prompt() -> str:
+    return "\n".join(
+        [
+            "Plan the next Attestplane alpha release issues.",
+            "",
+            "Hard boundaries:",
+            "- Advisory only.",
+            "- Do not authorize publishing, tagging, releasing, merging, or closing issues.",
+            "- Do not propose production/compliance/certification claims.",
+            "- Keep npm latest unchanged; alpha channel only.",
+            "- Prefer small, testable issues with acceptance criteria.",
+            "",
+            "Recent alpha release notes:",
+            json.dumps(latest_alpha_release_notes(), indent=2, sort_keys=True),
+            "",
+            "Current open issues JSON:",
+            latest_open_issues(),
+            "",
+            "Return Markdown with 5 to 10 proposed issues. For each include:",
+            "- title",
+            "- motivation",
+            "- scope",
+            "- acceptance criteria",
+            "- explicit non-goals",
+            "- risk",
+        ]
+    )
+
+
+def strip_forbidden_advisory_commands(text: str) -> tuple[str, list[str]]:
+    removed: list[str] = []
+    kept: list[str] = []
+    for line in text.splitlines():
+        if any(command in line.lower() for command in FORBIDDEN_ADVISORY_COMMANDS):
+            removed.append(line)
+            continue
+        kept.append(line)
+    return "\n".join(kept).strip() + "\n", removed
+
+
+def advisory_header(prompt: str, removed_lines: list[str]) -> str:
+    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+    return "\n".join(
+        [
+            "# Next Alpha Advisory Issue Plan",
+            "",
+            "STATUS: ADVISORY",
+            "AUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH",
+            "SCOPE: ISSUE_PLANNING_ONLY",
+            f"PROMPT_SHA256: {prompt_hash}",
+            f"REMOVED_FORBIDDEN_COMMAND_LINES: {len(removed_lines)}",
+            "",
+            "> This file is not a release queue entry, not approval, and not",
+            "> authorization to tag, publish, deploy, close issues, or change npm latest.",
+            "",
+        ]
+    )
+
+
+def write_advisory_plan(raw_output: str, *, prompt: str, proposals_dir: Path) -> Path:
+    cleaned, removed = strip_forbidden_advisory_commands(raw_output)
+    proposals_dir.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    output = proposals_dir / f"next-alpha-{stamp}.md"
+    tmp = output.with_suffix(".tmp")
+    tmp.write_text(advisory_header(prompt, removed) + cleaned, encoding="utf-8")
+    tmp.replace(output)
+    return output
+
+
+def plan_next_alpha_issues(*, dry_run: bool, timeout_seconds: int, proposals_dir: Path) -> Path | None:
+    prompt = build_alpha_issue_planning_prompt()
+    if dry_run:
+        print("DRY-RUN: would call ask_opus.sh architect for next alpha issue planning")
+        return None
+    fake = os.environ.get("ATTESTPLANE_ALPHA_PLAN_FAKE_RESPONSE")
+    if fake is not None:
+        raw_output = fake
+    else:
+        raw_output = subprocess.check_output(
+            ["ask_opus.sh", "architect", prompt],
+            cwd=ROOT,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    output = write_advisory_plan(raw_output, prompt=prompt, proposals_dir=proposals_dir)
+    try:
+        display = output.relative_to(ROOT)
+    except ValueError:
+        display = output
+    print(f"alpha advisory issue plan written: {display}")
+    return output
+
+
 def run_candidate(candidate: AlphaCandidate, *, dry_run: bool) -> None:
     print(f"=== alpha candidate: {candidate.release} ===", flush=True)
     verify_candidate_files(candidate)
@@ -288,9 +427,19 @@ def main() -> int:
     parser.add_argument("--queue", type=Path, default=DEFAULT_QUEUE)
     parser.add_argument("--execute", action="store_true", help="Perform mutations. Default is dry-run.")
     parser.add_argument("--max-count", type=int, default=1, help="Maximum candidates to process in this invocation.")
+    parser.add_argument("--plan-next-alpha", action="store_true", help="Call Opus advisory to draft next-alpha issues first.")
+    parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
+    parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
     args = parser.parse_args()
     if args.max_count < 1:
         raise SystemExit("--max-count must be >= 1; unbounded release loops are intentionally unsupported")
+
+    if args.plan_next_alpha:
+        plan_next_alpha_issues(
+            dry_run=not args.execute,
+            timeout_seconds=args.advisor_timeout,
+            proposals_dir=args.proposals_dir,
+        )
 
     candidates = load_queue(args.queue)
     if not candidates:

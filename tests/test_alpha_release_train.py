@@ -57,3 +57,26 @@ def test_queue_rejects_non_alpha_npm_version(tmp_path: Path) -> None:
     path = write_queue(tmp_path, [item])
     with pytest.raises(ValueError, match="npm alpha versions"):
         alpha_release_train.load_queue(path)
+
+
+def test_advisory_release_input_is_rejected(tmp_path: Path) -> None:
+    advisory = tmp_path / "advisory.md"
+    advisory.write_text("STATUS: ADVISORY\nAUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="advisory planning output"):
+        alpha_release_train.reject_advisory_release_input(advisory)
+
+
+def test_advisory_plan_strips_forbidden_commands(tmp_path: Path) -> None:
+    output = alpha_release_train.write_advisory_plan(
+        "Issue A\nRun npm publish now\nRun git push origin main\nIssue B\n",
+        prompt="plan",
+        proposals_dir=tmp_path,
+    )
+    text = output.read_text(encoding="utf-8")
+    assert "STATUS: ADVISORY" in text
+    assert "NOT_AUTHORIZED_FOR_PUBLISH" in text
+    assert "REMOVED_FORBIDDEN_COMMAND_LINES: 2" in text
+    assert "npm publish" not in text
+    assert "git push" not in text
+    assert "Issue A" in text
+    assert "Issue B" in text
