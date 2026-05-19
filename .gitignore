@@ -30,6 +30,9 @@ venv/
 
 # Logs
 *.log
+release/alpha-train/reports/*.sqlite
+release/alpha-train/reports/*.sqlite-shm
+release/alpha-train/reports/*.sqlite-wal
 
 # Test / coverage
 coverage/

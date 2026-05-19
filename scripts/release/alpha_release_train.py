@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import time
 import urllib.request
@@ -28,6 +29,7 @@ DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
 DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
 DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
 DEFAULT_STATE_FILE = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.json"
+DEFAULT_STATE_DB = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.sqlite"
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_PREPARED_DIR = ROOT / "release" / "alpha-train" / "prepared"
 DEFAULT_MAX_RELEASES_PER_DAY = 1
@@ -174,6 +176,140 @@ def git_push_remote_converged(argv: list[str]) -> bool:
 
 def capture(argv: list[str], *, timeout: int | None = None) -> str:
     return subprocess.check_output(argv, cwd=ROOT, text=True, timeout=timeout).strip()
+
+
+def state_db_path(state_path: Path) -> Path:
+    if state_path.suffix == ".sqlite":
+        return state_path
+    return state_path.with_suffix(".sqlite")
+
+
+def init_state_db(db_path: Path) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(db_path) as db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS release_state (
+                release TEXT PRIMARY KEY,
+                python_version TEXT,
+                npm_version TEXT,
+                status TEXT NOT NULL,
+                updated_at_epoch INTEGER NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS daily_counts (
+                day TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                count INTEGER NOT NULL,
+                PRIMARY KEY (day, kind)
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS state_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                release TEXT,
+                event TEXT NOT NULL,
+                detail TEXT NOT NULL,
+                created_at_epoch INTEGER NOT NULL
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS state_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )
+            """
+        )
+        db.execute(
+            "INSERT OR REPLACE INTO state_meta(key, value) VALUES (?, ?)",
+            ("schema", "attestplane_alpha_continuous_state.sqlite.v1"),
+        )
+
+
+def release_status(db: sqlite3.Connection, release: str) -> str | None:
+    row = db.execute("SELECT status FROM release_state WHERE release = ?", (release,)).fetchone()
+    return str(row[0]) if row else None
+
+
+def upsert_release_state(db: sqlite3.Connection, candidate: AlphaCandidate, status: str, now: int) -> None:
+    current = release_status(db, candidate.release)
+    if current == "released" and status != "released":
+        return
+    db.execute(
+        """
+        INSERT INTO release_state(release, python_version, npm_version, status, updated_at_epoch)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(release) DO UPDATE SET
+            python_version = excluded.python_version,
+            npm_version = excluded.npm_version,
+            status = excluded.status,
+            updated_at_epoch = excluded.updated_at_epoch
+        """,
+        (candidate.release, candidate.python_version, candidate.npm_version, status, now),
+    )
+
+
+def increment_daily_count(db: sqlite3.Connection, kind: str, now: int) -> None:
+    day = time.strftime("%Y-%m-%d", time.gmtime(now))
+    db.execute(
+        """
+        INSERT INTO daily_counts(day, kind, count) VALUES (?, ?, 1)
+        ON CONFLICT(day, kind) DO UPDATE SET count = count + 1
+        """,
+        (day, kind),
+    )
+
+
+def append_state_event(db: sqlite3.Connection, release: str | None, event: str, detail: dict[str, Any], now: int) -> None:
+    db.execute(
+        "INSERT INTO state_events(release, event, detail, created_at_epoch) VALUES (?, ?, ?, ?)",
+        (release, event, json.dumps(detail, sort_keys=True), now),
+    )
+
+
+def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
+    init_state_db(db_path)
+    with sqlite3.connect(db_path) as db:
+        rows = db.execute("SELECT release, status FROM release_state ORDER BY release").fetchall()
+        counts = db.execute("SELECT day, kind, count FROM daily_counts ORDER BY day, kind").fetchall()
+    prepared = sorted(str(release) for release, status in rows if status in {"prepared", "processing", "released"})
+    processed = sorted(str(release) for release, status in rows if status == "released")
+    prepare_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "prepared"}
+    release_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "released"}
+    return {
+        "schema": "attestplane_alpha_continuous_state.v2",
+        "state_backend": "sqlite",
+        "state_db": str(db_path),
+        "prepared_releases": prepared,
+        "processed_releases": processed,
+        "prepare_count_by_day": prepare_count_by_day,
+        "release_count_by_day": release_count_by_day,
+        "updated_at_epoch": int(time.time()),
+    }
+
+
+def write_continuous_state_snapshot(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def migrate_json_state_to_sqlite(state_path: Path, db_path: Path) -> None:
+    if not state_path.exists():
+        return
+    payload = json.loads(state_path.read_text(encoding="utf-8"))
+    if not isinstance(payload.get("processed_releases", []), list):
+        raise ValueError(f"continuous state is malformed: {state_path}")
+    save_continuous_state(state_path, payload)
 
 
 def remote_probe(argv: list[str], *, timeout_error: str) -> subprocess.CompletedProcess[str]:
@@ -1465,49 +1601,123 @@ def run_candidate(candidate: AlphaCandidate, *, dry_run: bool) -> None:
 
 
 def load_continuous_state(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {"schema": "attestplane_alpha_continuous_state.v1", "processed_releases": []}
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload.get("processed_releases"), list):
-        raise ValueError(f"continuous state is malformed: {path}")
-    return payload
+    db_path = state_db_path(path)
+    if db_path.exists():
+        payload = continuous_state_from_db(db_path)
+        if path.suffix != ".sqlite":
+            write_continuous_state_snapshot(path, payload)
+        return payload
+    if path.exists():
+        migrate_json_state_to_sqlite(path, db_path)
+        payload = continuous_state_from_db(db_path)
+        if path.suffix != ".sqlite":
+            write_continuous_state_snapshot(path, payload)
+        return payload
+    return {
+        "schema": "attestplane_alpha_continuous_state.v2",
+        "state_backend": "sqlite",
+        "state_db": str(db_path),
+        "processed_releases": [],
+        "prepared_releases": [],
+        "release_count_by_day": {},
+        "prepare_count_by_day": {},
+    }
 
 
 def save_continuous_state(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    prepared = set(str(item) for item in payload.get("prepared_releases", []) if item)
+    processed = set(str(item) for item in payload.get("processed_releases", []) if item)
+    with sqlite3.connect(db_path) as db:
+        for release in sorted(prepared | processed):
+            candidate = prepared_candidate_from_release(release)
+            status = "released" if release in processed else "prepared"
+            upsert_release_state(db, candidate, status, now)
+        for key, kind in (("prepare_count_by_day", "prepared"), ("release_count_by_day", "released")):
+            counts = payload.get(key, {})
+            if not isinstance(counts, dict):
+                raise ValueError(f"continuous state {key} is malformed: {path}")
+            for day, count in counts.items():
+                db.execute(
+                    "INSERT OR REPLACE INTO daily_counts(day, kind, count) VALUES (?, ?, ?)",
+                    (str(day), kind, int(count)),
+                )
+        append_state_event(db, None, "state_imported", {"source": str(path)}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
 def mark_processed(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> None:
     if dry_run:
         return
-    state = load_continuous_state(path)
-    processed = set(str(item) for item in state.get("processed_releases", []))
-    processed.add(candidate.release)
-    state["processed_releases"] = sorted(processed)
-    releases_by_day = dict(state.get("release_count_by_day", {}))
-    day = time.strftime("%Y-%m-%d", time.gmtime())
-    releases_by_day[day] = int(releases_by_day.get(day, 0)) + 1
-    state["release_count_by_day"] = releases_by_day
-    state["updated_at_epoch"] = int(time.time())
-    save_continuous_state(path, state)
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        already_released = release_status(db, candidate.release) == "released"
+        upsert_release_state(db, candidate, "released", now)
+        if not already_released:
+            increment_daily_count(db, "released", now)
+        append_state_event(db, candidate.release, "released", {"idempotent": already_released}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
 def mark_prepared(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> None:
     if dry_run:
         return
-    state = load_continuous_state(path)
-    prepared = set(str(item) for item in state.get("prepared_releases", []))
-    prepared.add(candidate.release)
-    state["prepared_releases"] = sorted(prepared)
-    prepares_by_day = dict(state.get("prepare_count_by_day", {}))
-    day = time.strftime("%Y-%m-%d", time.gmtime())
-    prepares_by_day[day] = int(prepares_by_day.get(day, 0)) + 1
-    state["prepare_count_by_day"] = prepares_by_day
-    state["updated_at_epoch"] = int(time.time())
-    save_continuous_state(path, state)
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        already_present = release_status(db, candidate.release) in {"prepared", "processing", "released"}
+        upsert_release_state(db, candidate, "prepared", now)
+        if not already_present:
+            increment_daily_count(db, "prepared", now)
+        append_state_event(db, candidate.release, "prepared", {"idempotent": already_present}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def mark_processing(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> None:
+    if dry_run:
+        return
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        upsert_release_state(db, candidate, "processing", now)
+        append_state_event(db, candidate.release, "processing", {}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def mark_cooldown(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool) -> None:
+    if dry_run:
+        return
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        upsert_release_state(db, candidate, "prepared", now)
+        append_state_event(db, candidate.release, "cooldown", {"reason": reason}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def mark_failed(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool) -> None:
+    if dry_run:
+        return
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        upsert_release_state(db, candidate, "failed", now)
+        append_state_event(db, candidate.release, "failed", {"reason": reason}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
 def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -> list[AlphaCandidate]:
@@ -1633,10 +1843,12 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
         if candidates:
             for candidate in candidates[: args.max_count]:
                 try:
+                    mark_processing(args.state_file, candidate, dry_run=not args.execute)
                     run_candidate(candidate, dry_run=not args.execute)
                     mark_processed(args.state_file, candidate, dry_run=not args.execute)
                 except Exception as exc:
                     if args.execute and is_git_push_error(exc):
+                        mark_cooldown(args.state_file, candidate, reason=type(exc).__name__, dry_run=False)
                         print(
                             f"alpha train: remote git push unavailable for {candidate.release}; "
                             f"cooling down {args.remote_push_cooldown_seconds}s before retrying the same candidate",
@@ -1645,6 +1857,7 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                         remote_push_cooldown = True
                         break
                     if args.execute:
+                        mark_failed(args.state_file, candidate, reason=type(exc).__name__, dry_run=False)
                         request_stop(args.stop_file, f"fail-closed after {candidate.release}: {type(exc).__name__}")
                     raise
             cycles += 1
@@ -1714,7 +1927,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
     parser.add_argument("--prepared-dir", type=Path, default=DEFAULT_PREPARED_DIR)
     parser.add_argument("--state-file", type=Path, default=DEFAULT_STATE_FILE)
+    parser.add_argument(
+        "--state-db",
+        type=Path,
+        default=None,
+        help="SQLite state database path. Defaults to the --state-file path with a .sqlite suffix.",
+    )
     args = parser.parse_args(argv)
+    if args.state_db is not None:
+        args.state_file = args.state_db
     if args.full_auto_alpha:
         args.pipeline = True
         args.continuous = True

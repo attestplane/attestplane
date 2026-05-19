@@ -146,6 +146,47 @@ def test_continuous_state_filters_processed_releases(tmp_path: Path) -> None:
     assert [item.release for item in remaining] == ["v0.0.7-alpha"]
 
 
+def test_continuous_state_uses_sqlite_with_json_snapshot(tmp_path: Path) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+
+    alpha_release_train.mark_prepared(state_file, candidate_value, dry_run=False)
+    alpha_release_train.mark_processed(state_file, candidate_value, dry_run=False)
+    alpha_release_train.mark_processed(state_file, candidate_value, dry_run=False)
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    snapshot = json.loads(state_file.read_text(encoding="utf-8"))
+
+    assert state["state_backend"] == "sqlite"
+    assert state["processed_releases"] == ["v0.0.8-alpha"]
+    assert snapshot["processed_releases"] == ["v0.0.8-alpha"]
+    assert sum(state["release_count_by_day"].values()) == 1
+    assert (tmp_path / "state.sqlite").is_file()
+
+
+def test_sqlite_state_can_import_legacy_json(tmp_path: Path) -> None:
+    state_file = tmp_path / "state.json"
+    state_file.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_alpha_continuous_state.v1",
+                "prepared_releases": ["v0.0.7-alpha"],
+                "processed_releases": ["v0.0.8-alpha"],
+                "prepare_count_by_day": {"2026-05-19": 1},
+                "release_count_by_day": {"2026-05-19": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+
+    assert state["state_backend"] == "sqlite"
+    assert state["prepared_releases"] == ["v0.0.7-alpha", "v0.0.8-alpha"]
+    assert state["processed_releases"] == ["v0.0.8-alpha"]
+    assert (tmp_path / "state.sqlite").is_file()
+
+
 def test_auto_promote_merge_is_dry_run_safe(tmp_path: Path) -> None:
     queue = write_queue(tmp_path, [])
     promoted = alpha_release_train.AlphaCandidate.from_json(
