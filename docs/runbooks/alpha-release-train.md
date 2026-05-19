@@ -217,11 +217,11 @@ The runner performs:
 After a candidate reaches `registry_verified`, the runner writes an
 integration evidence packet through
 `scripts/release/alpha_train_integrations.py`. That packet reads GitHub,
-registry, Linear, Sentry, CodeRabbit availability, and local Codex Security
-surface facts, then generates JSON plus Markdown reports under
-`release/alpha-train/reports/`. Those reports are for observation and human
-review only; they do not authorize publish, tag, release, workflow dispatch,
-or npm dist-tag movement.
+registry, Linear, Sentry, CodeRabbit availability, local Codex Security
+surface facts, and the SQLite `git_push_tasks` queue, then generates JSON plus
+Markdown reports under `release/alpha-train/reports/`. Those reports are for
+observation and human review only; they do not authorize publish, tag,
+release, workflow dispatch, npm dist-tag movement, or git push scheduling.
 
 See [Alpha Release Integration Evidence](alpha-release-integrations.md).
 
@@ -240,9 +240,11 @@ The train stops on:
 - npm `latest` not pointing at the alpha candidate after the post-publish
   synchronization step.
 
-Continuous mode additionally stops on any exception from candidate validation,
-local gates, tag/release creation, workflow monitoring, or registry
-verification. It does not continue through failed release state.
+Continuous mode still stops on candidate validation, local-gate, release,
+workflow, or registry failures. By contrast, `git push` is queue-backed:
+transient push failures are recorded in `git_push_tasks` and do not block later
+queued candidates from running. The queue is retried opportunistically on later
+cycles.
 
 Continuous mode also exits cleanly if `release/alpha-train/STOP` exists before
 the next cycle. Remove the file to resume later.
@@ -276,6 +278,11 @@ If a run fails after tag or GitHub Release creation but before registry publish:
 1. Do not retag.
 2. Mark the GitHub Release notes with the failed platform state.
 3. Prepare a new alpha candidate if code changes are required.
+
+If `git push` is temporarily unavailable, the train records the queued push
+task and continues with later candidates. That failure does not imply a
+release-state rollback; it is a transport limitation, not a release
+authorization change.
 
 If a registry publish succeeds and a later platform fails:
 

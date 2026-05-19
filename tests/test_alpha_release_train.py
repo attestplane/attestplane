@@ -415,6 +415,82 @@ def test_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(calls) == 2
 
 
+def test_git_push_failure_reason_classifies_network_errors() -> None:
+    exc = alpha_release_train.subprocess.CalledProcessError(
+        128,
+        ["git", "push", "origin", "main"],
+        stderr="fatal: unable to access 'https://github.com/attestplane/attestplane.git/': Failed to connect to github.com port 443 after 75003 ms: Couldn't connect to server",
+    )
+
+    assert alpha_release_train.classify_git_push_failure(exc) == "git_push_network_unavailable"
+
+
+def test_git_push_failure_reason_classifies_timeouts() -> None:
+    exc = alpha_release_train.subprocess.TimeoutExpired(
+        ["git", "push", "origin", "main"],
+        timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS,
+    )
+
+    assert alpha_release_train.classify_git_push_failure(exc) == "git_push_timeout"
+
+
+def test_ensure_main_pushed_enqueues_task_without_blocking(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    state_file = tmp_path / "state.json"
+    queue_calls: list[tuple[str, str]] = []
+    stage_calls: list[tuple[str, str]] = []
+
+    monkeypatch.setattr(alpha_release_train, "stage_done", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        alpha_release_train,
+        "enqueue_git_push_task",
+        lambda path, candidate, ref, *, dry_run: queue_calls.append((candidate.release, ref)),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "mark_stage",
+        lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
+    )
+    monkeypatch.setattr(alpha_release_train, "run_git_push", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("run_git_push should not run")))
+
+    alpha_release_train.ensure_main_pushed(candidate_value, dry_run=False, state_path=state_file)
+
+    assert queue_calls == [("v0.0.8-alpha", "main")]
+    assert stage_calls == [("main_pushed", "queued")]
+
+
+def test_create_tag_and_release_enqueues_tag_push_without_blocking(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    candidate_value = alpha_release_train.AlphaCandidate.from_json({**candidate("v0.0.8-alpha"), "create_github_release": False})
+    state_file = tmp_path / "state.json"
+    queue_calls: list[tuple[str, str]] = []
+    stage_calls: list[tuple[str, str]] = []
+    run_calls: list[list[str]] = []
+
+    monkeypatch.setattr(alpha_release_train, "stage_done", lambda *args, **kwargs: False)
+    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: True)
+    monkeypatch.setattr(
+        alpha_release_train,
+        "enqueue_git_push_task",
+        lambda path, candidate, ref, *, dry_run: queue_calls.append((candidate.release, ref)),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "mark_stage",
+        lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "run",
+        lambda argv, *, dry_run, env=None: run_calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
+    )
+
+    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=state_file)
+
+    assert queue_calls == [("v0.0.8-alpha", "v0.0.8-alpha")]
+    assert stage_calls == [("tag_pushed", "queued")]
+    assert ["git", "push", "origin", "v0.0.8-alpha"] not in run_calls
+
+
 def test_git_push_timeout_continues_when_main_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
     remote_checks = 0
@@ -705,7 +781,7 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    queue = write_queue(tmp_path, [candidate("v0.0.8-alpha")])
+    queue = write_queue(tmp_path, [candidate("v0.0.8-alpha"), candidate("v0.0.9-alpha")])
     stop_file = tmp_path / "STOP"
     state_file = tmp_path / "state.json"
     calls: list[str] = []
@@ -718,7 +794,12 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
         state_path: Path | None = None,
     ) -> None:
         calls.append(candidate.release)
-        raise alpha_release_train.subprocess.CalledProcessError(128, ["git", "push", "origin", "main"])
+        if candidate.release == "v0.0.8-alpha":
+            raise alpha_release_train.subprocess.CalledProcessError(
+                128,
+                ["git", "push", "origin", "main"],
+                stderr="fatal: unable to access 'https://github.com/attestplane/attestplane.git/': Failed to connect to github.com port 443 after 75003 ms: Couldn't connect to server",
+            )
 
     monkeypatch.setattr(alpha_release_train, "run_candidate", fail_remote_push)
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: sleeps.append(seconds))
@@ -733,8 +814,10 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
             str(state_file),
             "--stop-file",
             str(stop_file),
-            "--idle-exit-after",
+            "--max-count",
             "2",
+            "--idle-exit-after",
+            "1",
             "--remote-push-cooldown-seconds",
             "7",
         ]
@@ -742,15 +825,19 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
 
     assert alpha_release_train.run_continuous_pipeline(args) == 0
 
-    assert calls == ["v0.0.8-alpha", "v0.0.8-alpha"]
-    assert sleeps == [7]
+    assert calls == ["v0.0.8-alpha", "v0.0.9-alpha"]
+    assert sleeps == []
     assert not stop_file.exists()
-    assert alpha_release_train.load_continuous_state(state_file)["processed_releases"] == []
+    assert alpha_release_train.load_continuous_state(state_file)["processed_releases"] == [
+        "v0.0.8-alpha",
+        "v0.0.9-alpha",
+    ]
 
 
-def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     commands: list[list[str]] = []
-    pushes: list[list[str]] = []
+    queue_calls: list[tuple[str, str]] = []
+    stage_calls: list[tuple[str, str]] = []
     candidate_value = alpha_release_train.AlphaCandidate.from_json(
         {
             "release": "v0.0.8-alpha",
@@ -761,14 +848,23 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
     )
 
     monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: True)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_converged", lambda argv: False)
     monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
-    monkeypatch.setattr(alpha_release_train, "run_git_push", lambda argv, *, dry_run: pushes.append(argv))
+    monkeypatch.setattr(
+        alpha_release_train,
+        "enqueue_git_push_task",
+        lambda path, candidate, ref, *, dry_run: queue_calls.append((candidate.release, ref)),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "mark_stage",
+        lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
+    )
 
-    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False)
+    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=tmp_path / "state.json")
 
     assert ["git", "tag", "-a", "v0.0.8-alpha", "-m", "v0.0.8-alpha"] not in commands
-    assert pushes == [["git", "push", "origin", "v0.0.8-alpha"]]
+    assert queue_calls == [("v0.0.8-alpha", "v0.0.8-alpha")]
+    assert stage_calls == [("tag_pushed", "queued")]
 
 
 def test_local_tag_points_at_head_suppresses_missing_tag_stderr(monkeypatch: pytest.MonkeyPatch) -> None:

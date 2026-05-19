@@ -57,6 +57,7 @@ The packet records:
 - PyPI and npm publication observation,
 - npm `latest` and `alpha` dist-tag alignment,
 - SQLite release stage state,
+- SQLite `git_push_tasks` queue state,
 - CodeRabbit availability/auth status,
 - Codex Security local check inventory, and
 - explicit non-actions.
@@ -65,8 +66,10 @@ The packet records:
 
 Integration failures are limitations, not release authorization changes. A
 missing CodeRabbit CLI, temporary GitHub query failure, or registry propagation
-delay is recorded in the packet. The release train remains governed by the
-deterministic release stages and registry verification.
+delay is recorded in the packet. A queued or temporarily failed `git push`
+records transport state only; it does not block later candidates or grant new
+authority. The release train remains governed by the deterministic release
+stages and registry verification.
 
 ## Human Review Use
 

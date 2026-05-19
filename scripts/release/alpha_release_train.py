@@ -138,13 +138,7 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
     last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None
     for attempt in range(1, REMOTE_PUSH_ATTEMPTS + 1):
         try:
-            return subprocess.run(
-                argv,
-                cwd=ROOT,
-                text=True,
-                timeout=REMOTE_PUSH_TIMEOUT_SECONDS,
-                check=True,
-            )
+            return attempt_git_push_once(argv, dry_run=False)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             last_error = exc
             if git_push_remote_converged(argv):
@@ -160,6 +154,37 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
             time.sleep(REMOTE_PUSH_RETRY_SECONDS)
     assert last_error is not None
     raise last_error
+
+
+def attempt_git_push_once(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProcess[str]:
+    print("+ " + " ".join(argv), flush=True)
+    if dry_run:
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    result = subprocess.run(
+        argv,
+        cwd=ROOT,
+        text=True,
+        timeout=REMOTE_PUSH_TIMEOUT_SECONDS,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    echo_subprocess_output(result.stdout)
+    echo_subprocess_output(result.stderr)
+    if result.returncode == 0:
+        return result
+    raise subprocess.CalledProcessError(
+        result.returncode,
+        argv,
+        output=result.stdout,
+        stderr=result.stderr,
+    )
+
+
+def echo_subprocess_output(text: str | None) -> None:
+    if not text:
+        return
+    print(text, end="" if text.endswith("\n") else "\n", flush=True)
 
 
 def watch_publish_workflow(
@@ -185,6 +210,62 @@ def watch_publish_workflow(
 def is_git_push_error(exc: BaseException) -> bool:
     cmd = getattr(exc, "cmd", None)
     return isinstance(cmd, list) and len(cmd) >= 3 and cmd[:3] == ["git", "push", "origin"]
+
+
+def git_push_failure_text(exc: BaseException) -> str:
+    pieces: list[str] = [type(exc).__name__, str(exc)]
+    for attr in ("stderr", "output"):
+        value = getattr(exc, attr, None)
+        if isinstance(value, bytes):
+            try:
+                value = value.decode("utf-8", errors="replace")
+            except Exception:  # pragma: no cover - defensive fallback.
+                value = repr(value)
+        if isinstance(value, str) and value:
+            pieces.append(value)
+    return "\n".join(piece for piece in pieces if piece).lower()
+
+
+def classify_git_push_failure(exc: BaseException) -> str:
+    if isinstance(exc, subprocess.TimeoutExpired):
+        return "git_push_timeout"
+    text = git_push_failure_text(exc)
+    if any(
+        phrase in text
+        for phrase in (
+            "failed to connect to server",
+            "failed to connect to github.com",
+            "couldn't connect to server",
+            "connection timed out",
+            "recv failure",
+            "could not resolve host",
+            "network is unreachable",
+        )
+    ):
+        return "git_push_network_unavailable"
+    if any(
+        phrase in text
+        for phrase in (
+            "authentication failed",
+            "permission denied",
+            "repository not found",
+            "could not read from remote repository",
+            "fatal: unable to access",
+        )
+    ):
+        return "git_push_auth_or_repo_unavailable"
+    if any(
+        phrase in text
+        for phrase in (
+            "non-fast-forward",
+            "fetch first",
+            "rejected",
+            "updates were rejected",
+            "failed to push some refs",
+        )
+    ):
+        return "git_push_rejected"
+    return f"git_push_{type(exc).__name__.lower()}"
 
 
 def local_tag_points_at_head(release: str) -> bool:
@@ -249,6 +330,14 @@ def state_db_path(state_path: Path) -> Path:
     return state_path.with_suffix(".sqlite")
 
 
+def git_push_stage_name(ref: str) -> str:
+    if ref == "main":
+        return "main_pushed"
+    if re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref):
+        return "tag_pushed"
+    raise ValueError(f"unsupported git push ref for alpha train queue: {ref!r}")
+
+
 def init_state_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as db:
@@ -294,6 +383,22 @@ def init_state_db(db_path: Path) -> None:
                 detail TEXT NOT NULL,
                 updated_at_epoch INTEGER NOT NULL,
                 PRIMARY KEY (release, stage)
+            )
+            """
+        )
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS git_push_tasks (
+                release TEXT NOT NULL,
+                ref TEXT NOT NULL,
+                stage TEXT NOT NULL,
+                status TEXT NOT NULL,
+                attempts INTEGER NOT NULL,
+                last_error TEXT NOT NULL,
+                next_attempt_at_epoch INTEGER NOT NULL,
+                created_at_epoch INTEGER NOT NULL,
+                updated_at_epoch INTEGER NOT NULL,
+                PRIMARY KEY (release, ref)
             )
             """
         )
@@ -354,6 +459,184 @@ def append_state_event(db: sqlite3.Connection, release: str | None, event: str, 
     )
 
 
+def enqueue_git_push_task(path: Path, candidate: AlphaCandidate, ref: str, *, dry_run: bool) -> None:
+    if dry_run:
+        return
+    stage = git_push_stage_name(ref)
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    with sqlite3.connect(db_path) as db:
+        row = db.execute(
+            "SELECT status FROM git_push_tasks WHERE release = ? AND ref = ?",
+            (candidate.release, ref),
+        ).fetchone()
+        if row and str(row[0]) == "done":
+            return
+        if row is None:
+            db.execute(
+                """
+                INSERT INTO git_push_tasks(
+                    release, ref, stage, status, attempts, last_error, next_attempt_at_epoch, created_at_epoch, updated_at_epoch
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (candidate.release, ref, stage, "queued", 0, "", now, now, now),
+            )
+        else:
+            db.execute(
+                """
+                UPDATE git_push_tasks
+                   SET stage = ?, status = 'queued', updated_at_epoch = ?
+                 WHERE release = ? AND ref = ?
+                """,
+                (stage, now, candidate.release, ref),
+            )
+        append_state_event(db, candidate.release, "git_push_queued", {"ref": ref, "stage": stage}, now)
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def update_git_push_task(
+    path: Path,
+    candidate: AlphaCandidate,
+    ref: str,
+    *,
+    status: str,
+    last_error: str = "",
+    attempts_delta: int = 0,
+    next_attempt_at_epoch: int | None = None,
+    dry_run: bool,
+) -> None:
+    if dry_run:
+        return
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    stage = git_push_stage_name(ref)
+    with sqlite3.connect(db_path) as db:
+        current = db.execute(
+            "SELECT attempts FROM git_push_tasks WHERE release = ? AND ref = ?",
+            (candidate.release, ref),
+        ).fetchone()
+        if current is None:
+            attempts = max(0, attempts_delta)
+            db.execute(
+                """
+                INSERT INTO git_push_tasks(
+                    release, ref, stage, status, attempts, last_error, next_attempt_at_epoch, created_at_epoch, updated_at_epoch
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    candidate.release,
+                    ref,
+                    stage,
+                    status,
+                    attempts,
+                    last_error,
+                    next_attempt_at_epoch or now,
+                    now,
+                    now,
+                ),
+            )
+        else:
+            db.execute(
+                """
+                UPDATE git_push_tasks
+                   SET stage = ?,
+                       status = ?,
+                       attempts = attempts + ?,
+                       last_error = ?,
+                       next_attempt_at_epoch = ?,
+                       updated_at_epoch = ?
+                 WHERE release = ? AND ref = ?
+                """,
+                (
+                    stage,
+                    status,
+                    attempts_delta,
+                    last_error,
+                    next_attempt_at_epoch or now,
+                    now,
+                    candidate.release,
+                    ref,
+                ),
+            )
+        append_state_event(
+            db,
+            candidate.release,
+            f"git_push_{status}",
+            {"ref": ref, "stage": stage, "last_error": last_error, "next_attempt_at_epoch": next_attempt_at_epoch or now},
+            now,
+        )
+    if status == "done":
+        mark_stage(path, candidate, stage, "done", {"ref": ref})
+    else:
+        mark_stage(
+            path,
+            candidate,
+            stage,
+            "queued",
+            {"ref": ref, "next_attempt_at_epoch": next_attempt_at_epoch or now, "last_error": last_error},
+        )
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+
+
+def process_git_push_queue(path: Path, *, dry_run: bool, cooldown_seconds: int) -> list[dict[str, Any]]:
+    if dry_run:
+        return []
+    db_path = state_db_path(path)
+    init_state_db(db_path)
+    now = int(time.time())
+    processed: list[dict[str, Any]] = []
+    with sqlite3.connect(db_path) as db:
+        rows = db.execute(
+            """
+            SELECT release, ref, stage, status, attempts, next_attempt_at_epoch
+              FROM git_push_tasks
+             WHERE status IN ('queued', 'cooldown')
+               AND next_attempt_at_epoch <= ?
+             ORDER BY next_attempt_at_epoch, created_at_epoch
+            """,
+            (now,),
+        ).fetchall()
+        for release, ref, stage, status, attempts, next_attempt_at_epoch in rows:
+            candidate = prepared_candidate_from_release(str(release))
+            argv = ["git", "push", "origin", str(ref)]
+            try:
+                if git_push_remote_converged(argv):
+                    update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
+                    processed.append({"release": str(release), "ref": str(ref), "status": "done", "observed": True})
+                    continue
+                attempt_git_push_once(argv, dry_run=False)
+                update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
+                processed.append({"release": str(release), "ref": str(ref), "status": "done"})
+            except Exception as exc:
+                failure_reason = classify_git_push_failure(exc)
+                update_git_push_task(
+                    path,
+                    candidate,
+                    str(ref),
+                    status="cooldown",
+                    last_error=failure_reason,
+                    attempts_delta=1,
+                    next_attempt_at_epoch=now + cooldown_seconds,
+                    dry_run=False,
+                )
+                processed.append(
+                    {
+                        "release": str(release),
+                        "ref": str(ref),
+                        "status": "cooldown",
+                        "reason": failure_reason,
+                        "next_attempt_at_epoch": now + cooldown_seconds,
+                    }
+                )
+    if path.suffix != ".sqlite":
+        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
+    return processed
+
+
 def stage_status(db: sqlite3.Connection, release: str, stage: str) -> str | None:
     row = db.execute("SELECT status FROM release_stages WHERE release = ? AND stage = ?", (release, stage)).fetchone()
     return str(row[0]) if row else None
@@ -403,6 +686,9 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
         stage_rows = db.execute(
             "SELECT release, stage, status FROM release_stages ORDER BY release, stage"
         ).fetchall()
+        queue_rows = db.execute(
+            "SELECT release, ref, stage, status, attempts, next_attempt_at_epoch FROM git_push_tasks ORDER BY next_attempt_at_epoch, created_at_epoch"
+        ).fetchall()
     prepared = sorted(str(release) for release, status in rows if status in ACTIVE_RELEASE_STATUSES)
     processed = sorted(str(release) for release, status in rows if status == "released")
     retired = sorted(str(release) for release, status in rows if status == "retired")
@@ -421,6 +707,17 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
             str(release): {str(stage): str(status) for rel, stage, status in stage_rows if rel == release}
             for release in sorted({row[0] for row in stage_rows})
         },
+        "git_push_tasks": [
+            {
+                "release": str(release),
+                "ref": str(ref),
+                "stage": str(stage),
+                "status": str(status),
+                "attempts": int(attempts),
+                "next_attempt_at_epoch": int(next_attempt_at_epoch),
+            }
+            for release, ref, stage, status, attempts, next_attempt_at_epoch in queue_rows
+        ],
         "updated_at_epoch": int(time.time()),
     }
 
@@ -1214,13 +1511,10 @@ def ensure_main_pushed(candidate: AlphaCandidate, *, dry_run: bool, state_path: 
     if stage_done(state_path, candidate, "main_pushed"):
         print(f"stage main_pushed already done; skipping main push: {candidate.release}", flush=True)
         return
-    argv = ["git", "push", "origin", "main"]
-    if not dry_run and git_push_remote_converged(argv):
-        mark_stage(state_path, candidate, "main_pushed", "done", {"observed": True})
-        print(f"stage main_pushed observed done; skipping main push: {candidate.release}", flush=True)
-        return
-    run_git_push(argv, dry_run=dry_run)
-    mark_stage(state_path, candidate, "main_pushed", "done")
+    if state_path is not None:
+        enqueue_git_push_task(state_path, candidate, "main", dry_run=dry_run)
+        mark_stage(state_path, candidate, "main_pushed", "queued", {"ref": "main"})
+    print(f"stage main_pushed queued: {candidate.release}", flush=True)
 
 
 def gh_release_exists(release: str) -> bool:
@@ -1278,13 +1572,10 @@ def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_pa
     if stage_done(state_path, candidate, "tag_pushed"):
         print(f"stage tag_pushed already done; skipping tag push: {candidate.release}", flush=True)
     else:
-        tag_push = ["git", "push", "origin", candidate.release]
-        if not dry_run and git_push_remote_converged(tag_push):
-            mark_stage(state_path, candidate, "tag_pushed", "done", {"observed": True})
-            print(f"stage tag_pushed observed done; skipping tag push: {candidate.release}", flush=True)
-        else:
-            run_git_push(tag_push, dry_run=dry_run)
-            mark_stage(state_path, candidate, "tag_pushed", "done")
+        if state_path is not None:
+            enqueue_git_push_task(state_path, candidate, candidate.release, dry_run=dry_run)
+            mark_stage(state_path, candidate, "tag_pushed", "queued", {"ref": candidate.release})
+        print(f"stage tag_pushed queued: {candidate.release}", flush=True)
     if candidate.create_github_release:
         if stage_done(state_path, candidate, "gh_release_created"):
             print(f"stage gh_release_created already done; skipping GitHub Release create: {candidate.release}", flush=True)
@@ -1953,6 +2244,12 @@ def run_candidate(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path 
     create_tag_and_release(candidate, dry_run=dry_run, state_path=state_path)
     publish_platforms(candidate, dry_run=dry_run, state_path=state_path)
     verify_registries(candidate, dry_run=dry_run, state_path=state_path)
+    if state_path is not None:
+        process_git_push_queue(
+            state_path,
+            dry_run=dry_run,
+            cooldown_seconds=CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+        )
 
 
 def load_continuous_state(path: Path) -> dict[str, Any]:
@@ -2045,19 +2342,6 @@ def mark_processing(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> 
     with sqlite3.connect(db_path) as db:
         upsert_release_state(db, candidate, "processing", now)
         append_state_event(db, candidate.release, "processing", {}, now)
-    if path.suffix != ".sqlite":
-        write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
-
-
-def mark_cooldown(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool) -> None:
-    if dry_run:
-        return
-    db_path = state_db_path(path)
-    init_state_db(db_path)
-    now = int(time.time())
-    with sqlite3.connect(db_path) as db:
-        upsert_release_state(db, candidate, "prepared", now)
-        append_state_event(db, candidate.release, "cooldown", {"reason": reason}, now)
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
@@ -2271,7 +2555,6 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             )
             print(f"alpha pipeline report written: {display_path(report)}")
 
-        remote_push_cooldown = False
         if candidates:
             for candidate in candidates[: args.max_count]:
                 try:
@@ -2299,14 +2582,14 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                             )
                 except Exception as exc:
                     if args.execute and is_git_push_error(exc):
-                        mark_cooldown(args.state_file, candidate, reason=type(exc).__name__, dry_run=False)
+                        failure_reason = classify_git_push_failure(exc)
+                        mark_processed(args.state_file, candidate, dry_run=False)
                         print(
-                            f"alpha train: remote git push unavailable for {candidate.release}; "
-                            f"cooling down {args.remote_push_cooldown_seconds}s before retrying the same candidate",
+                            f"alpha train: remote git push unavailable for {candidate.release} "
+                            f"({failure_reason}); continuing with later candidates",
                             flush=True,
                         )
-                        remote_push_cooldown = True
-                        break
+                        continue
                     if args.execute:
                         mark_failed(args.state_file, candidate, reason=type(exc).__name__, dry_run=False)
                         request_stop(args.stop_file, f"fail-closed after {candidate.release}: {type(exc).__name__}")
@@ -2316,12 +2599,28 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             print(f"alpha train: no unprocessed candidates; sleeping {args.poll_seconds}s", flush=True)
             cycles += 1
 
+        if args.execute:
+            queue_events = process_git_push_queue(
+                args.state_file,
+                dry_run=False,
+                cooldown_seconds=args.remote_push_cooldown_seconds,
+            )
+            for item in queue_events:
+                if item["status"] == "done":
+                    print(
+                        f"alpha train: git push queue completed {item['release']} -> {item['ref']}",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"alpha train: git push queue cooled down {item['release']} -> {item['ref']} "
+                        f"({item['reason']}); next attempt at {item['next_attempt_at_epoch']}",
+                        flush=True,
+                    )
+
         if args.idle_exit_after and cycles >= args.idle_exit_after:
             print("alpha train: idle-exit limit reached")
             return 0
-        if remote_push_cooldown:
-            time.sleep(args.remote_push_cooldown_seconds)
-            continue
         time.sleep(args.poll_seconds)
 
 
