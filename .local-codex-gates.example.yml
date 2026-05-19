@@ -12,4 +12,3 @@ docs:
   - "python -m compileall scripts"
 release-blocker:
   - "pytest tests/sentinel tests/release -q"
-

@@ -67,4 +67,3 @@ release workflow changes require explicit labels.
 - Claim-safety and P0 repairs still require human review before merge.
 - Local Codex and GitHub login state must be maintained by the user.
 - Fork PR permissions may require repo-specific adjustments.
-

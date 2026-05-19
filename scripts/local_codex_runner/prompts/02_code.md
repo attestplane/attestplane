@@ -12,11 +12,13 @@ Issue body:
 {{issue_body}}
 
 Task:
+
 - Implement the plan using focused code, test, documentation, and evidence changes.
 - Keep the diff scoped to this issue.
 - Update evidence under `{{evidence_dir}}` when behavior or validation changes.
 
 Hard red lines:
+
 - Do not merge `main`.
 - Do not create or move tags.
 - Do not publish packages.
@@ -29,4 +31,3 @@ Hard red lines:
 - Do not read or log ChatGPT cookies, GitHub tokens, OpenAI tokens, private keys, `.pypirc`, `.npmrc`, or credentials files.
 
 Every functional change must include a test or a concrete evidence update.
-

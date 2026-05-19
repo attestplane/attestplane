@@ -18,4 +18,3 @@ codex_sandbox: "workspace-write"
 state_path: ".local_codex_runner/state.json"
 evidence_dir: "docs/validation/local_codex_runner"
 gate_matrix_path: ".local-codex-gates.yml"
-
