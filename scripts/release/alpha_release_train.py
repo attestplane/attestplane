@@ -25,6 +25,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
 DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
+DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -410,6 +411,59 @@ def plan_next_alpha_issues(*, dry_run: bool, timeout_seconds: int, proposals_dir
     return output
 
 
+def write_pipeline_report(
+    *,
+    advisory_plan: Path | None,
+    queue: Path,
+    candidates: list[AlphaCandidate],
+    executed: bool,
+    reports_dir: Path,
+) -> Path:
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    report = reports_dir / f"alpha-pipeline-{stamp}.json"
+    payload = {
+        "schema": "attestplane_alpha_release_pipeline_report.v1",
+        "stages": [
+            {
+                "name": "opus_issue_planning",
+                "authority": "advisory_only",
+                "output": str(advisory_plan.relative_to(ROOT)) if advisory_plan and advisory_plan.is_relative_to(ROOT) else str(advisory_plan)
+                if advisory_plan
+                else None,
+            },
+            {
+                "name": "release_queue",
+                "authority": "deterministic_release_runner",
+                "queue": str(queue),
+                "candidate_count": len(candidates),
+            },
+            {
+                "name": "candidate_execution",
+                "authority": "prepared_candidate_only",
+                "executed": executed,
+                "candidate_releases": [candidate.release for candidate in candidates],
+            },
+        ],
+        "explicit_non_claims": {
+            "opus_authorized_publish": False,
+            "opus_authorized_tag": False,
+            "opus_authorized_release": False,
+            "npm_latest_changed": False,
+            "unbounded_loop": False,
+        },
+    }
+    report.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report
+
+
+def display_path(path: Path) -> Path:
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
+
+
 def run_candidate(candidate: AlphaCandidate, *, dry_run: bool) -> None:
     print(f"=== alpha candidate: {candidate.release} ===", flush=True)
     verify_candidate_files(candidate)
@@ -428,20 +482,33 @@ def main() -> int:
     parser.add_argument("--execute", action="store_true", help="Perform mutations. Default is dry-run.")
     parser.add_argument("--max-count", type=int, default=1, help="Maximum candidates to process in this invocation.")
     parser.add_argument("--plan-next-alpha", action="store_true", help="Call Opus advisory to draft next-alpha issues first.")
+    parser.add_argument("--pipeline", action="store_true", help="Run the linked advisory-plan then finite release-queue pipeline.")
     parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
     parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
+    parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
     args = parser.parse_args()
     if args.max_count < 1:
         raise SystemExit("--max-count must be >= 1; unbounded release loops are intentionally unsupported")
 
-    if args.plan_next_alpha:
-        plan_next_alpha_issues(
+    advisory_plan = None
+    should_plan = args.plan_next_alpha or args.pipeline
+    if should_plan:
+        advisory_plan = plan_next_alpha_issues(
             dry_run=not args.execute,
             timeout_seconds=args.advisor_timeout,
             proposals_dir=args.proposals_dir,
         )
 
     candidates = load_queue(args.queue)
+    if args.pipeline:
+        report = write_pipeline_report(
+            advisory_plan=advisory_plan,
+            queue=args.queue,
+            candidates=candidates[: args.max_count],
+            executed=bool(candidates),
+            reports_dir=args.reports_dir,
+        )
+        print(f"alpha pipeline report written: {display_path(report)}")
     if not candidates:
         print("alpha train: no candidates; nothing to release")
         return 0

@@ -80,3 +80,21 @@ def test_advisory_plan_strips_forbidden_commands(tmp_path: Path) -> None:
     assert "git push" not in text
     assert "Issue A" in text
     assert "Issue B" in text
+
+
+def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
+    plan = tmp_path / "next-alpha.md"
+    plan.write_text("STATUS: ADVISORY\n", encoding="utf-8")
+    report = alpha_release_train.write_pipeline_report(
+        advisory_plan=plan,
+        queue=tmp_path / "queue.json",
+        candidates=[],
+        executed=False,
+        reports_dir=tmp_path,
+    )
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["schema"] == "attestplane_alpha_release_pipeline_report.v1"
+    assert payload["stages"][0]["authority"] == "advisory_only"
+    assert payload["stages"][1]["candidate_count"] == 0
+    assert payload["explicit_non_claims"]["opus_authorized_publish"] is False
+    assert payload["explicit_non_claims"]["unbounded_loop"] is False

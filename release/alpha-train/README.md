@@ -29,6 +29,16 @@ That command calls `ask_opus.sh architect` and writes a proposal under
 `STATUS: ADVISORY` and `NOT_AUTHORIZED_FOR_PUBLISH`. It must be reviewed and
 converted into issues manually. It is not a queue entry.
 
+The connected pipeline form is:
+
+```bash
+python scripts/release/alpha_release_train.py --pipeline --execute --max-count 1
+```
+
+This runs advisory planning first, writes a machine-readable pipeline report
+under `release/alpha-train/reports/`, then consumes at most one prepared queue
+candidate. If the queue is empty, it stops after planning and does not publish.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.

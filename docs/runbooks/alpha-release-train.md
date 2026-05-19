@@ -50,6 +50,16 @@ python scripts/release/alpha_release_train.py \
   --max-count 1
 ```
 
+The connected advisory-to-release pipeline command is:
+
+```bash
+python scripts/release/alpha_release_train.py --pipeline --execute --max-count 1
+```
+
+It always runs Opus advisory issue planning first, writes a JSON stage report
+under `release/alpha-train/reports/`, then consumes at most one prepared queue
+candidate. An empty queue is a successful no-op after planning, not a release.
+
 The runner performs:
 
 - optional Opus advisory issue planning when `--plan-next-alpha` is passed,
