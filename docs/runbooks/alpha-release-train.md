@@ -60,6 +60,22 @@ It always runs Opus advisory issue planning first, writes a JSON stage report
 under `release/alpha-train/reports/`, then consumes at most one prepared queue
 candidate. An empty queue is a successful no-op after planning, not a release.
 
+For a local process that runs until a human stops it:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --execute \
+  --max-count 1
+```
+
+Continuous mode is still queue-gated. It does not invent release candidates.
+It periodically writes advisory issue plans, watches `queue.json`, processes
+only prepared unprocessed candidates, writes local ignored state under
+`release/alpha-train/reports/`, and sleeps when no candidate is ready. A failed
+gate or registry verification stops the process.
+
 The runner performs:
 
 - optional Opus advisory issue planning when `--plan-next-alpha` is passed,
@@ -89,6 +105,10 @@ The train stops on:
 - workflow failure,
 - PyPI/npm registry verification failure,
 - npm `latest` pointing at the alpha candidate.
+
+Continuous mode additionally stops on any exception from candidate validation,
+local gates, tag/release creation, workflow monitoring, or registry
+verification. It does not continue through failed release state.
 
 ## Human Ownership
 

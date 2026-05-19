@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
 DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
 DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
+DEFAULT_STATE_FILE = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.json"
 
 FORBIDDEN_ADVISORY_COMMANDS = (
     "git push",
@@ -450,7 +451,7 @@ def write_pipeline_report(
             "opus_authorized_tag": False,
             "opus_authorized_release": False,
             "npm_latest_changed": False,
-            "unbounded_loop": False,
+            "unbounded_loop_without_queue": False,
         },
     }
     report.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -476,6 +477,80 @@ def run_candidate(candidate: AlphaCandidate, *, dry_run: bool) -> None:
     verify_registries(candidate, dry_run=dry_run)
 
 
+def load_continuous_state(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"schema": "attestplane_alpha_continuous_state.v1", "processed_releases": []}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload.get("processed_releases"), list):
+        raise ValueError(f"continuous state is malformed: {path}")
+    return payload
+
+
+def save_continuous_state(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def mark_processed(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> None:
+    if dry_run:
+        return
+    state = load_continuous_state(path)
+    processed = set(str(item) for item in state.get("processed_releases", []))
+    processed.add(candidate.release)
+    state["processed_releases"] = sorted(processed)
+    state["updated_at_epoch"] = int(time.time())
+    save_continuous_state(path, state)
+
+
+def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -> list[AlphaCandidate]:
+    state = load_continuous_state(state_path)
+    processed = set(str(item) for item in state.get("processed_releases", []))
+    return [candidate for candidate in candidates if candidate.release not in processed]
+
+
+def run_continuous_pipeline(args: argparse.Namespace) -> int:
+    cycles = 0
+    next_plan_at = 0.0
+    print("alpha train: continuous mode active; stop with Ctrl-C or process termination", flush=True)
+    while True:
+        now = time.time()
+        advisory_plan = None
+        if args.pipeline and now >= next_plan_at:
+            advisory_plan = plan_next_alpha_issues(
+                dry_run=not args.execute,
+                timeout_seconds=args.advisor_timeout,
+                proposals_dir=args.proposals_dir,
+            )
+            next_plan_at = now + args.plan_interval_seconds
+
+        candidates = unprocessed_candidates(load_queue(args.queue), args.state_file)
+        if args.pipeline:
+            report = write_pipeline_report(
+                advisory_plan=advisory_plan,
+                queue=args.queue,
+                candidates=candidates[: args.max_count],
+                executed=bool(candidates),
+                reports_dir=args.reports_dir,
+            )
+            print(f"alpha pipeline report written: {display_path(report)}")
+
+        if candidates:
+            for candidate in candidates[: args.max_count]:
+                run_candidate(candidate, dry_run=not args.execute)
+                mark_processed(args.state_file, candidate, dry_run=not args.execute)
+            cycles += 1
+        else:
+            print(f"alpha train: no unprocessed candidates; sleeping {args.poll_seconds}s", flush=True)
+            cycles += 1
+
+        if args.idle_exit_after and cycles >= args.idle_exit_after:
+            print("alpha train: idle-exit limit reached")
+            return 0
+        time.sleep(args.poll_seconds)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", type=Path, default=DEFAULT_QUEUE)
@@ -483,12 +558,23 @@ def main() -> int:
     parser.add_argument("--max-count", type=int, default=1, help="Maximum candidates to process in this invocation.")
     parser.add_argument("--plan-next-alpha", action="store_true", help="Call Opus advisory to draft next-alpha issues first.")
     parser.add_argument("--pipeline", action="store_true", help="Run the linked advisory-plan then finite release-queue pipeline.")
+    parser.add_argument("--continuous", action="store_true", help="Continuously watch the queue until manually stopped.")
     parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
+    parser.add_argument("--plan-interval-seconds", type=int, default=3600, help="Minimum seconds between Opus advisory planning calls in continuous mode.")
+    parser.add_argument("--poll-seconds", type=int, default=300, help="Seconds to sleep between continuous queue checks.")
+    parser.add_argument("--idle-exit-after", type=int, default=0, help="Testing helper: exit continuous mode after N cycles. 0 means never.")
     parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
+    parser.add_argument("--state-file", type=Path, default=DEFAULT_STATE_FILE)
     args = parser.parse_args()
     if args.max_count < 1:
         raise SystemExit("--max-count must be >= 1; unbounded release loops are intentionally unsupported")
+    if args.poll_seconds < 1:
+        raise SystemExit("--poll-seconds must be >= 1")
+    if args.plan_interval_seconds < 1:
+        raise SystemExit("--plan-interval-seconds must be >= 1")
+    if args.continuous:
+        return run_continuous_pipeline(args)
 
     advisory_plan = None
     should_plan = args.plan_next_alpha or args.pipeline

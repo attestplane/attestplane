@@ -97,4 +97,29 @@ def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
     assert payload["stages"][0]["authority"] == "advisory_only"
     assert payload["stages"][1]["candidate_count"] == 0
     assert payload["explicit_non_claims"]["opus_authorized_publish"] is False
-    assert payload["explicit_non_claims"]["unbounded_loop"] is False
+    assert payload["explicit_non_claims"]["unbounded_loop_without_queue"] is False
+
+
+def test_continuous_state_filters_processed_releases(tmp_path: Path) -> None:
+    state_file = tmp_path / "state.json"
+    alpha_release_train.save_continuous_state(
+        state_file,
+        {
+            "schema": "attestplane_alpha_continuous_state.v1",
+            "processed_releases": ["v0.0.6-alpha"],
+        },
+    )
+    remaining = alpha_release_train.unprocessed_candidates(
+        [
+            alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.6-alpha")),
+            alpha_release_train.AlphaCandidate.from_json(
+                {
+                    "release": "v0.0.7-alpha",
+                    "python_version": "0.0.7a0",
+                    "npm_version": "0.0.7-alpha",
+                }
+            ),
+        ],
+        state_file,
+    )
+    assert [item.release for item in remaining] == ["v0.0.7-alpha"]

@@ -39,6 +39,22 @@ This runs advisory planning first, writes a machine-readable pipeline report
 under `release/alpha-train/reports/`, then consumes at most one prepared queue
 candidate. If the queue is empty, it stops after planning and does not publish.
 
+The continuous local watcher form is:
+
+```bash
+python scripts/release/alpha_release_train.py \
+  --pipeline \
+  --continuous \
+  --execute \
+  --max-count 1
+```
+
+This keeps running until a human stops the process. It periodically writes an
+Opus advisory issue plan, watches `queue.json`, releases only prepared
+unprocessed candidates, marks released candidates in local ignored state, and
+continues sleeping when the queue is empty. Any failed gate or platform
+verification remains fail-closed and stops the process.
+
 Create `queue.json` from `queue.example.json` when an alpha candidate is ready.
 The queue is finite; use `--max-count 1` for the standard "one alpha per run"
 release train.
