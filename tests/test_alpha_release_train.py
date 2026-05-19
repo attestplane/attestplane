@@ -484,7 +484,8 @@ def test_create_tag_and_release_enqueues_tag_push_without_blocking(monkeypatch: 
         lambda argv, *, dry_run, env=None: run_calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
     )
 
-    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=state_file)
+    with pytest.raises(alpha_release_train.QueueDependencyPending, match="tag push pending"):
+        alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=state_file)
 
     assert queue_calls == [("v0.0.8-alpha", "v0.0.8-alpha")]
     assert stage_calls == [("tag_pushed", "queued")]
@@ -860,7 +861,8 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
         lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
     )
 
-    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=tmp_path / "state.json")
+    with pytest.raises(alpha_release_train.QueueDependencyPending, match="tag push pending"):
+        alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=tmp_path / "state.json")
 
     assert ["git", "tag", "-a", "v0.0.8-alpha", "-m", "v0.0.8-alpha"] not in commands
     assert queue_calls == [("v0.0.8-alpha", "v0.0.8-alpha")]

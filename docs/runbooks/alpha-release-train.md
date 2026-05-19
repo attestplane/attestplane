@@ -246,6 +246,10 @@ transient push failures are recorded in `git_push_tasks` and do not block later
 queued candidates from running. The queue is retried opportunistically on later
 cycles.
 
+When a candidate's tag push is still queued, GitHub Release creation waits for
+that prerequisite rather than failing the whole train. If the dependency is not
+yet met, the candidate remains pending and later candidates may continue.
+
 Continuous mode also exits cleanly if `release/alpha-train/STOP` exists before
 the next cycle. Remove the file to resume later.
 

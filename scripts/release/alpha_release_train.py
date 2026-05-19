@@ -120,6 +120,10 @@ class AlphaCandidate:
         )
 
 
+class QueueDependencyPending(RuntimeError):
+    """Raised when a release step is waiting on a queued prerequisite."""
+
+
 def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
@@ -1576,6 +1580,18 @@ def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_pa
             enqueue_git_push_task(state_path, candidate, candidate.release, dry_run=dry_run)
             mark_stage(state_path, candidate, "tag_pushed", "queued", {"ref": candidate.release})
         print(f"stage tag_pushed queued: {candidate.release}", flush=True)
+        if state_path is not None and not dry_run:
+            process_git_push_queue(
+                state_path,
+                dry_run=False,
+                cooldown_seconds=CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
+            )
+            if not stage_done(state_path, candidate, "tag_pushed"):
+                print(
+                    f"stage gh_release_created pending tag push queue: {candidate.release}",
+                    flush=True,
+                )
+                raise QueueDependencyPending(f"tag push pending for {candidate.release}")
     if candidate.create_github_release:
         if stage_done(state_path, candidate, "gh_release_created"):
             print(f"stage gh_release_created already done; skipping GitHub Release create: {candidate.release}", flush=True)
@@ -2581,6 +2597,12 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                                 flush=True,
                             )
                 except Exception as exc:
+                    if args.execute and isinstance(exc, QueueDependencyPending):
+                        print(
+                            f"alpha train: {exc}; continuing with later candidates",
+                            flush=True,
+                        )
+                        continue
                     if args.execute and is_git_push_error(exc):
                         failure_reason = classify_git_push_failure(exc)
                         mark_processed(args.state_file, candidate, dry_run=False)
