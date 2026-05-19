@@ -104,6 +104,9 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
         return subprocess.CompletedProcess(argv, 0, "", "")
+    if git_push_remote_converged(argv):
+        print("git push remote state already converged; skipping push", flush=True)
+        return subprocess.CompletedProcess(argv, 0, "", "")
     last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None
     for attempt in range(1, REMOTE_PUSH_ATTEMPTS + 1):
         try:
