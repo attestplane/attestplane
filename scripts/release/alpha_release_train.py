@@ -36,6 +36,8 @@ FULL_AUTO_MAX_RELEASES_PER_DAY = 0
 FULL_AUTO_MAX_PREPARES_PER_DAY = 0
 REMOTE_PROBE_TIMEOUT_SECONDS = 15
 REMOTE_PROBE_ATTEMPTS = 3
+REMOTE_PUSH_ATTEMPTS = 3
+REMOTE_PUSH_RETRY_SECONDS = 10
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 
@@ -94,6 +96,25 @@ def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) ->
     if dry_run:
         return subprocess.CompletedProcess(argv, 0, "", "")
     return subprocess.run(argv, cwd=ROOT, env=env, text=True, check=True)
+
+
+def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProcess[str]:
+    """Retry idempotent git push commands without retrying non-idempotent release actions."""
+    last_error: subprocess.CalledProcessError | None = None
+    for attempt in range(1, REMOTE_PUSH_ATTEMPTS + 1):
+        try:
+            return run(argv, dry_run=dry_run)
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            if attempt == REMOTE_PUSH_ATTEMPTS:
+                break
+            print(
+                f"git push attempt {attempt}/{REMOTE_PUSH_ATTEMPTS} failed; retrying in {REMOTE_PUSH_RETRY_SECONDS}s",
+                flush=True,
+            )
+            time.sleep(REMOTE_PUSH_RETRY_SECONDS)
+    assert last_error is not None
+    raise last_error
 
 
 def capture(argv: list[str], *, timeout: int | None = None) -> str:
@@ -840,7 +861,7 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
 
 def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool) -> None:
     run(["git", "tag", "-a", candidate.release, "-m", candidate.release], dry_run=dry_run)
-    run(["git", "push", "origin", candidate.release], dry_run=dry_run)
+    run_git_push(["git", "push", "origin", candidate.release], dry_run=dry_run)
     if candidate.create_github_release:
         assets = [
             f"sdk/python/dist/attestplane-{candidate.python_version}.tar.gz",
@@ -1360,7 +1381,7 @@ def run_candidate(candidate: AlphaCandidate, *, dry_run: bool) -> None:
     assert_clean_tree()
     preflight_public_release_surfaces(candidate)
     run_local_gates(candidate, dry_run=dry_run)
-    run(["git", "push", "origin", "main"], dry_run=dry_run)
+    run_git_push(["git", "push", "origin", "main"], dry_run=dry_run)
     create_tag_and_release(candidate, dry_run=dry_run)
     publish_platforms(candidate, dry_run=dry_run)
     verify_registries(candidate, dry_run=dry_run)

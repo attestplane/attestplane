@@ -208,6 +208,50 @@ def test_request_stop_writes_reason(tmp_path: Path) -> None:
     assert "fail-closed test" in stop_file.read_text(encoding="utf-8")
 
 
+def test_git_push_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        if len(calls) == 1:
+            raise alpha_release_train.subprocess.CalledProcessError(128, argv)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
+
+    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+
+    assert result.returncode == 0
+    assert calls == [["git", "push", "origin", "main"], ["git", "push", "origin", "main"]]
+
+
+def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        raise alpha_release_train.subprocess.CalledProcessError(128, argv)
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
+
+    with pytest.raises(alpha_release_train.subprocess.CalledProcessError):
+        alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+
+    assert len(calls) == alpha_release_train.REMOTE_PUSH_ATTEMPTS
+
+
 def test_daily_release_count_defaults_to_zero(tmp_path: Path) -> None:
     assert alpha_release_train.daily_release_count(tmp_path / "missing-state.json") == 0
 
