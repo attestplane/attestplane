@@ -208,7 +208,7 @@ The runner performs:
 - public API, schema hash, fixture hash, ProofBundle verifier gates,
 - release artifact prep gate,
 - gitleaks,
-- `git push origin main`,
+- `git -c http.version=HTTP/1.1 push origin main`,
 - annotated release tag push,
 - GitHub prerelease creation with artifacts,
 - PyPI trusted publishing workflow,
@@ -242,10 +242,11 @@ The train stops on:
   synchronization step.
 
 Continuous mode still stops on candidate validation, local-gate, release,
-workflow, or registry failures. By contrast, `git push` is queue-backed:
+workflow, or registry failures. By contrast, `git push` is queue-backed and
+transport-normalized to `http.version=HTTP/1.1`:
 transient push failures are recorded in `git_push_tasks` and do not block later
 queued candidates from running. The queue is retried opportunistically on later
-cycles.
+cycles. This avoids the GitHub 443/H2 proxy stall seen on this workstation.
 
 When a candidate's tag push is still queued, GitHub Release creation waits for
 that prerequisite rather than failing the whole train. If the dependency is not

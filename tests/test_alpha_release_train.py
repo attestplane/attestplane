@@ -352,6 +352,7 @@ def test_request_stop_writes_reason(tmp_path: Path) -> None:
 
 def test_git_push_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
+    expected = ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]
 
     def fake_run(
         argv: list[str],
@@ -370,7 +371,7 @@ def test_git_push_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) ->
     result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
 
     assert result.returncode == 0
-    assert calls == [["git", "push", "origin", "main"], ["git", "push", "origin", "main"]]
+    assert calls == [expected, expected]
 
 
 def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -395,6 +396,7 @@ def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
+    expected = ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]
 
     def fake_run(
         argv: list[str],
@@ -413,6 +415,7 @@ def test_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert result.returncode == 0
     assert len(calls) == 2
+    assert calls == [expected, expected]
 
 
 def test_git_push_failure_reason_classifies_network_errors() -> None:
@@ -818,7 +821,7 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
         if candidate.release == "v0.0.8-alpha":
             raise alpha_release_train.subprocess.CalledProcessError(
                 128,
-                ["git", "push", "origin", "main"],
+                ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"],
                 stderr="fatal: unable to access 'https://github.com/attestplane/attestplane.git/': Failed to connect to github.com port 443 after 75003 ms: Couldn't connect to server",
             )
 

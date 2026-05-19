@@ -51,6 +51,7 @@ REMOTE_PUSH_ATTEMPTS = 3
 REMOTE_PUSH_RETRY_SECONDS = 10
 REMOTE_PUSH_TIMEOUT_SECONDS = 120
 CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS = 300
+GIT_HTTP_VERSION = "HTTP/1.1"
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 PUBLISH_WORKFLOW_ATTEMPTS = 2
@@ -124,6 +125,20 @@ class QueueDependencyPending(RuntimeError):
     """Raised when a release step is waiting on a queued prerequisite."""
 
 
+def normalize_git_push_argv(argv: list[str]) -> list[str]:
+    if (
+        len(argv) >= 5
+        and argv[0] == "git"
+        and argv[1] == "-c"
+        and argv[2] == f"http.version={GIT_HTTP_VERSION}"
+        and argv[3] == "push"
+    ):
+        return argv
+    if len(argv) >= 4 and argv[:3] == ["git", "push", "origin"]:
+        return ["git", "-c", f"http.version={GIT_HTTP_VERSION}", *argv[1:]]
+    return argv
+
+
 def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
@@ -133,6 +148,7 @@ def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) ->
 
 def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProcess[str]:
     """Retry idempotent git push commands without retrying non-idempotent release actions."""
+    argv = normalize_git_push_argv(argv)
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
         return subprocess.CompletedProcess(argv, 0, "", "")
@@ -161,6 +177,7 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
 
 
 def attempt_git_push_once(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProcess[str]:
+    argv = normalize_git_push_argv(argv)
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
         return subprocess.CompletedProcess(argv, 0, "", "")
@@ -213,7 +230,9 @@ def watch_publish_workflow(
 
 def is_git_push_error(exc: BaseException) -> bool:
     cmd = getattr(exc, "cmd", None)
-    return isinstance(cmd, list) and len(cmd) >= 3 and cmd[:3] == ["git", "push", "origin"]
+    if not isinstance(cmd, list) or len(cmd) < 4 or cmd[0] != "git":
+        return False
+    return "push" in cmd and "origin" in cmd
 
 
 def git_push_failure_text(exc: BaseException) -> str:
@@ -302,9 +321,10 @@ def local_tag_points_at_head(release: str) -> bool:
 
 
 def git_push_remote_converged(argv: list[str]) -> bool:
-    if len(argv) != 4 or argv[:3] != ["git", "push", "origin"]:
+    argv = normalize_git_push_argv(argv)
+    if len(argv) != 6 or argv[:4] != ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "push"] or argv[4] != "origin":
         return False
-    ref = argv[3]
+    ref = argv[5]
     try:
         if ref == "main":
             local_tracking_head = capture(
@@ -1264,7 +1284,7 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
                 "",
                 "```bash",
                 f"git tag -a {candidate.release} -m \"{candidate.release}\"",
-                f"git push origin {candidate.release}",
+                f"git -c http.version={GIT_HTTP_VERSION} push origin {candidate.release}",
                 f"gh release create {candidate.release} --prerelease --title \"{candidate.release}\" --notes-file {candidate.release_notes} ...",
                 "gh workflow run publish-python.yml -f target=pypi --ref main",
                 "gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main",
