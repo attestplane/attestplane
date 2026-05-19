@@ -34,7 +34,8 @@ DEFAULT_MAX_RELEASES_PER_DAY = 1
 DEFAULT_MAX_PREPARES_PER_DAY = 1
 FULL_AUTO_MAX_RELEASES_PER_DAY = 0
 FULL_AUTO_MAX_PREPARES_PER_DAY = 0
-REMOTE_PROBE_TIMEOUT_SECONDS = 45
+REMOTE_PROBE_TIMEOUT_SECONDS = 15
+REMOTE_PROBE_ATTEMPTS = 3
 REGISTRY_VERIFY_ATTEMPTS = 10
 REGISTRY_VERIFY_POLL_SECONDS = 15
 
@@ -97,6 +98,29 @@ def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) ->
 
 def capture(argv: list[str], *, timeout: int | None = None) -> str:
     return subprocess.check_output(argv, cwd=ROOT, text=True, timeout=timeout).strip()
+
+
+def remote_probe(argv: list[str], *, timeout_error: str) -> subprocess.CompletedProcess[str]:
+    last_timeout: subprocess.TimeoutExpired | None = None
+    for attempt in range(1, REMOTE_PROBE_ATTEMPTS + 1):
+        try:
+            return subprocess.run(
+                argv,
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            last_timeout = exc
+            if attempt < REMOTE_PROBE_ATTEMPTS:
+                print(
+                    f"remote probe timeout {attempt}/{REMOTE_PROBE_ATTEMPTS}: {' '.join(argv)}",
+                    flush=True,
+                )
+    raise RuntimeError(timeout_error) from last_timeout
 
 
 def sha256_file(path: Path) -> str:
@@ -561,18 +585,10 @@ def alpha_release_exists(release: str) -> bool:
     )
     if local_tag.returncode == 0:
         return True
-    try:
-        remote_tag = subprocess.run(
-            ["git", "ls-remote", "--exit-code", "--tags", "origin", release],
-            cwd=ROOT,
-            text=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"remote tag check timed out for {release}") from exc
+    remote_tag = remote_probe(
+        ["git", "ls-remote", "--exit-code", "--tags", "origin", release],
+        timeout_error=f"remote tag check timed out for {release}",
+    )
     return remote_tag.returncode == 0
 
 
@@ -644,33 +660,17 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate) -> None:
     if local_tag.returncode == 0:
         raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
 
-    try:
-        remote_tag = subprocess.run(
-            ["git", "ls-remote", "--exit-code", "--tags", "origin", candidate.release],
-            cwd=ROOT,
-            text=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"remote tag preflight timed out for {candidate.release}") from exc
+    remote_tag = remote_probe(
+        ["git", "ls-remote", "--exit-code", "--tags", "origin", candidate.release],
+        timeout_error=f"remote tag preflight timed out for {candidate.release}",
+    )
     if remote_tag.returncode == 0:
         raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
 
-    try:
-        release_view = subprocess.run(
-            ["gh", "release", "view", candidate.release, "--json", "tagName"],
-            cwd=ROOT,
-            text=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"GitHub Release preflight timed out for {candidate.release}") from exc
+    release_view = remote_probe(
+        ["gh", "release", "view", candidate.release, "--json", "tagName"],
+        timeout_error=f"GitHub Release preflight timed out for {candidate.release}",
+    )
     if release_view.returncode == 0:
         raise RuntimeError(f"GitHub Release already exists; refusing duplicate release: {candidate.release}")
 
