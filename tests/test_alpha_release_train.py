@@ -286,6 +286,8 @@ def test_git_push_timeout_continues_when_main_reached_remote(monkeypatch: pytest
 
     def fake_capture(argv: list[str], timeout: int | None = None) -> str:
         nonlocal remote_checks
+        if argv == ["git", "rev-parse", "--verify", "refs/remotes/origin/main"]:
+            return "old123"
         if argv == ["git", "ls-remote", "origin", "refs/heads/main"]:
             remote_checks += 1
             if remote_checks == 1:
@@ -344,10 +346,38 @@ def test_git_push_skips_when_main_already_reached_remote(monkeypatch: pytest.Mon
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     def fake_capture(argv: list[str], timeout: int | None = None) -> str:
-        if argv == ["git", "ls-remote", "origin", "refs/heads/main"]:
-            return "abc123\trefs/heads/main"
+        if argv == ["git", "rev-parse", "--verify", "refs/remotes/origin/main"]:
+            return "abc123"
         if argv == ["git", "rev-parse", "HEAD"]:
             return "abc123"
+        raise AssertionError(argv)
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+
+    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+
+    assert result.returncode == 0
+    assert calls == []
+
+
+def test_git_push_skips_main_using_local_tracking_without_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(
+        argv: list[str],
+        **kwargs: object,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    def fake_capture(argv: list[str], timeout: int | None = None) -> str:
+        if argv == ["git", "rev-parse", "--verify", "refs/remotes/origin/main"]:
+            return "abc123"
+        if argv == ["git", "rev-parse", "HEAD"]:
+            return "abc123"
+        if argv == ["git", "ls-remote", "origin", "refs/heads/main"]:
+            raise AssertionError("network probe should not run when local tracking is converged")
         raise AssertionError(argv)
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)

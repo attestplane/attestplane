@@ -140,8 +140,14 @@ def git_push_remote_converged(argv: list[str]) -> bool:
     ref = argv[3]
     try:
         if ref == "main":
-            remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            local_tracking_head = capture(
+                ["git", "rev-parse", "--verify", "refs/remotes/origin/main"],
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            )
             local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            if local_tracking_head == local_head:
+                return True
+            remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
             return bool(remote_head) and remote_head.split()[0] == local_head
         if re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref):
             remote_tag = capture(["git", "ls-remote", "origin", f"refs/tags/{ref}"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
