@@ -9,7 +9,7 @@
   "github_actions": {
     "push_ci_for_head": {
       "head": "0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1",
-      "status": "all_observed_push_workflows_success",
+      "status": "all_verified_push_workflows_success",
       "workflows": [
         "ci",
         "sdk-python",

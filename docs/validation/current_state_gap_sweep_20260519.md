@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Scope
 
-This sweep records the post-`0ba5b32` state after fixing FreeTSA
+This sweep records the state after the FreeTSA recovery commit that fixed
 SHA-512 ECDSA timestamp verification, manually dispatching the
 `nightly-anchor` workflow, closing #11, and posting a conservative
 design response on #7.
@@ -22,7 +22,7 @@ No tag, release, publish, deploy, or package upload was performed.
 
 ## Remote CI State
 
-Observed push workflows for `0ba5b32` completed successfully:
+Verified push workflows for the FreeTSA recovery commit completed successfully:
 
 - `ci`
 - `sdk-python`
