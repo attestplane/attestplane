@@ -222,12 +222,13 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.0.5a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
-| `@attestplane/attestplane@0.0.5-alpha` | [npm alpha dist-tag](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| GitHub Release | `v0.0.5-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
+| `attestplane==0.0.9a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `@attestplane/attestplane@0.0.9-alpha` | [npm alpha/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
+| GitHub Release | `v0.0.9-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
-`latest` npm distribution remains intentionally separate from the `alpha`
-dist-tag unless a maintainer explicitly moves it.
+The npm `alpha` and `latest` dist-tags are synchronized to the current alpha
+release after the release train publishes the package. This improves default
+installability, but it does not change the alpha/pre-GA claim boundary.
 
 ## Quickstart
 

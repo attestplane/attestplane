@@ -10,7 +10,9 @@ scope, generate code, or publish an unprepared version.
 - Each candidate must already have release notes, package versions, local
   artifacts, release manifest, and checksums.
 - The runner stops on the first failed gate or platform verification failure.
-- The runner never promotes npm `latest`.
+- After npm alpha publishing succeeds, the runner synchronizes npm `latest` to
+  the same alpha version. This is an explicit installability policy, not a GA or
+  production-readiness claim.
 - The runner does not retag existing releases.
 - The runner does not claim production readiness, compliance readiness,
   certification, SLSA level, or signed provenance unless those artifacts are
@@ -110,8 +112,9 @@ When the queue is empty, `--auto-finalize-next-alpha` bumps the local Python and
 TypeScript alpha versions, writes release notes, builds local artifacts, writes
 manifest/checksum/upload-plan files, runs the release-prep gate, commits the
 release-prep files, and then hands the candidate to the existing release train.
-It still does not bypass gates, force-push, rewrite tags, move npm `latest`, or
-treat advisory output as authority.
+It still does not bypass gates, force-push, rewrite tags, or treat advisory
+output as authority. npm `latest` movement is restricted to the deterministic
+post-publish synchronization step for the same alpha version.
 
 The preferred tmux entrypoint for that mode is:
 

@@ -304,7 +304,7 @@ def write_draft_candidate_bundle(candidate: AlphaCandidate, *, advisory_plan: Pa
         "explicit_non_actions": {
             "deploy": "not performed",
             "force_push": "not performed",
-            "npm_latest_change": "not performed",
+            "npm_latest_change": "not performed for draft-only candidate",
             "package_version_bump": "not performed",
             "release_publish": "not performed",
             "workflow_dispatch": "not performed",
@@ -473,7 +473,7 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
         "explicit_non_actions": {
             "deploy": "not performed",
             "force_push": "not performed",
-            "npm_latest_change": "not performed",
+            "npm_latest_change": "deferred until publish succeeds",
             "release_publish": "not performed during prep",
             "workflow_dispatch": "not performed during prep",
         },
@@ -518,12 +518,14 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
                 f"gh release create {candidate.release} --prerelease --title \"{candidate.release}\" --notes-file {candidate.release_notes} ...",
                 "gh workflow run publish-python.yml -f target=pypi --ref main",
                 "gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main",
+                f"gh workflow run manage-npm.yml -f action=dist-tag-set-latest-to-version -f version={candidate.npm_version} --ref main",
                 "```",
                 "",
                 "## Explicit Non-Actions in Release Prep",
                 "",
                 "- Force push: not performed.",
-                "- npm `latest` dist-tag change: not performed.",
+                "- npm `latest` dist-tag change: not performed during prep.",
+                "- npm `latest` dist-tag is synchronized only after npm alpha publish succeeds.",
                 "- Deploy: not performed.",
                 "- Workflow dispatch: not performed during prep.",
                 "",
@@ -790,6 +792,38 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool) -> tuple[str 
                 ]
             )
             run(["gh", "run", "watch", npm_run, "--exit-status"], dry_run=False)
+            run(
+                [
+                    "gh",
+                    "workflow",
+                    "run",
+                    "manage-npm.yml",
+                    "-f",
+                    "action=dist-tag-set-latest-to-version",
+                    "-f",
+                    f"version={candidate.npm_version}",
+                    "--ref",
+                    "main",
+                ],
+                dry_run=False,
+            )
+            time.sleep(5)
+            latest_run = capture(
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--workflow",
+                    "manage-npm.yml",
+                    "--limit",
+                    "1",
+                    "--json",
+                    "databaseId",
+                    "--jq",
+                    ".[0].databaseId",
+                ]
+            )
+            run(["gh", "run", "watch", latest_run, "--exit-status"], dry_run=False)
     return python_run, npm_run
 
 
@@ -815,8 +849,8 @@ def verify_registries(candidate: AlphaCandidate, *, dry_run: bool) -> None:
                 raise RuntimeError(f"npm version mismatch after publish: {npm!r}")
             if npm.get(tag_field, {}).get("alpha") != candidate.npm_version:
                 raise RuntimeError(f"npm alpha tag did not move to {candidate.npm_version}")
-            if npm.get(tag_field, {}).get("latest") == candidate.npm_version:
-                raise RuntimeError("npm latest tag unexpectedly points at alpha candidate")
+            if npm.get(tag_field, {}).get("latest") != candidate.npm_version:
+                raise RuntimeError(f"npm latest tag did not move to {candidate.npm_version}")
             return
         except Exception as exc:
             last_error = str(exc)
@@ -864,7 +898,7 @@ def build_alpha_issue_planning_prompt() -> str:
             "- Advisory only.",
             "- Do not authorize publishing, tagging, releasing, merging, or closing issues.",
             "- Do not propose production/compliance/certification claims.",
-            "- Keep npm latest unchanged; alpha channel only.",
+            "- The deterministic release runner may sync npm latest to the current alpha after publish; advisory output never authorizes that.",
             "- Prefer small, testable issues with acceptance criteria.",
             "",
             "Recent alpha release notes:",
@@ -1023,7 +1057,7 @@ def write_pipeline_report(
             "opus_authorized_publish": False,
             "opus_authorized_tag": False,
             "opus_authorized_release": False,
-            "npm_latest_changed": False,
+            "npm_latest_synced_by_policy": True,
             "unbounded_loop_without_queue": False,
         },
     }

@@ -53,7 +53,8 @@ Before creating a new tag:
 3. Rebuild package artifacts from the candidate tag.
 4. Generate a new release artifact manifest and checksums for the new version.
 5. Confirm the new release notes preserve alpha and no-go claim boundaries.
-6. Confirm npm `latest` is not changed unless separately authorized.
+6. Confirm npm `alpha` and `latest` both point at the current alpha after the
+   release train's post-publish dist-tag synchronization.
 
 ## Explicit Non-Actions
 

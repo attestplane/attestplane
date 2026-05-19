@@ -132,8 +132,9 @@ high-assurance supply-chain certification language.
 ### Published artifacts
 
 - Python package `attestplane==0.0.3a0` is published to PyPI as a pre-release.
-- TypeScript package `@attestplane/attestplane@0.0.3-alpha` is published to
-  npm under the `alpha` dist-tag. The npm `latest` dist-tag remains separate.
+- TypeScript package `@attestplane/attestplane@0.0.9-alpha` is published to
+  npm under the `alpha` and `latest` dist-tags. The `latest` dist-tag points at
+  the current alpha for installability only; it is not a stable/GA claim.
 - GitHub Release `v0.0.3-alpha` is a prerelease and carries five release
   assets: Python wheel, Python sdist, npm tarball, checksums, and artifact
   manifest.

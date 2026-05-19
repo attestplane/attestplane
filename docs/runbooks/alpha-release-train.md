@@ -135,8 +135,9 @@ the existing train: it bumps local package versions, writes release notes,
 builds Python/npm artifacts, writes manifest/checksum/upload-plan files, runs
 the release-prep gate, commits the release-prep files, and then releases via
 the same candidate execution stage. It remains fail-closed and still does not
-force-push, rewrite tags, move npm `latest`, or treat Opus advisory output as
-authority.
+force-push, rewrite tags, or treat Opus advisory output as authority. npm
+`latest` movement is restricted to the deterministic post-publish
+synchronization step for the same alpha version.
 
 The preferred operational entrypoint is the tmux wrapper:
 
@@ -190,7 +191,8 @@ The train stops on:
 - existing conflicting tag or GitHub Release,
 - workflow failure,
 - PyPI/npm registry verification failure,
-- npm `latest` pointing at the alpha candidate.
+- npm `latest` not pointing at the alpha candidate after the post-publish
+  synchronization step.
 
 Continuous mode additionally stops on any exception from candidate validation,
 local gates, tag/release creation, workflow monitoring, or registry
@@ -251,7 +253,7 @@ than one maintainer. The current single-maintainer phase avoids self-locking.
 
 - No autonomous code generation.
 - No release scope invention.
-- No npm `latest` promotion.
+- No advisory-authorized or out-of-band npm `latest` promotion.
 - No tag rewriting.
 - No force push.
 - No production/compliance/certification claim.

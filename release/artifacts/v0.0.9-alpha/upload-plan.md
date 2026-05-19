@@ -20,12 +20,14 @@ git push origin v0.0.9-alpha
 gh release create v0.0.9-alpha --prerelease --title "v0.0.9-alpha" --notes-file docs/release-notes/v0.0.9-alpha.draft.md ...
 gh workflow run publish-python.yml -f target=pypi --ref main
 gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main
+gh workflow run manage-npm.yml -f action=dist-tag-set-latest-to-version -f version=0.0.9-alpha --ref main
 ```
 
 ## Explicit Non-Actions in Release Prep
 
 - Force push: not performed.
-- npm `latest` dist-tag change: not performed.
+- npm `latest` dist-tag change: not performed during prep.
+- npm `latest` dist-tag synchronization: performed only after npm alpha publish succeeded.
 - Deploy: not performed.
 - Workflow dispatch: not performed during prep.
 

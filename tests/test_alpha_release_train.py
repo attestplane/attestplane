@@ -447,7 +447,7 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
         return FakeResponse(json.dumps(pypi_payloads.pop(0)))
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        return json.dumps({"version": "0.0.8-alpha", "dist-tags": {"alpha": "0.0.8-alpha", "latest": "0.0.1-alpha.1"}})
+        return json.dumps({"version": "0.0.8-alpha", "dist-tags": {"alpha": "0.0.8-alpha", "latest": "0.0.8-alpha"}})
 
     monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
@@ -456,3 +456,50 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
     alpha_release_train.verify_registries(candidate, dry_run=False)
 
     assert pypi_payloads == []
+
+
+def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+    candidate = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+            "publish_python": False,
+        }
+    )
+    commands: list[list[str]] = []
+    run_ids = iter(["npm-run-id", "manage-npm-run-id"])
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        commands.append(argv)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        if argv[:4] == ["gh", "run", "list", "--workflow"]:
+            return next(run_ids)
+        return ""
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
+
+    alpha_release_train.publish_platforms(candidate, dry_run=False)
+
+    assert [
+        "gh",
+        "workflow",
+        "run",
+        "manage-npm.yml",
+        "-f",
+        "action=dist-tag-set-latest-to-version",
+        "-f",
+        "version=0.0.8-alpha",
+        "--ref",
+        "main",
+    ] in commands
+    assert ["gh", "run", "watch", "manage-npm-run-id", "--exit-status"] in commands

@@ -38,7 +38,7 @@
   "explicit_non_actions": {
     "deploy": "not performed",
     "force_push": "not performed",
-    "npm_latest_change": "not performed",
+    "npm_latest_change": "performed after publish via manage-npm dist-tag synchronization",
     "release_publish": "not performed during prep",
     "workflow_dispatch": "not performed during prep"
   },
