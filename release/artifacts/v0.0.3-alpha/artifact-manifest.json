@@ -3,21 +3,29 @@
   "release": "v0.0.3-alpha",
   "github_release_url": "https://github.com/attestplane/attestplane/releases/tag/v0.0.3-alpha",
   "frozen_tag_target": "9bde6338df008afe58d561b0ba66eaaf75e298ad",
-  "main_build_commit": "544283f153a11e3c455b62d680de50a029537903",
-  "tag_main_split_explanation": "The v0.0.3-alpha annotated tag is pinned to the manifest commit (9bde6338...). Local dry-run artifacts in this manifest were built from main HEAD at 544283f1..., which is the post-tag package-version alignment + P3.1 verifier merge + P3.2 signed/anchored verification merge. Registry-side packages (PyPI attestplane==0.0.3a0 and npm @attestplane/attestplane@0.0.3-alpha) were published from an earlier main HEAD (51c4e6a...). The tag was not moved.",
+  "main_build_commit": "9d3baebbc57241e1229596dd484148ef82e44037",
+  "tag_main_split_explanation": "The v0.0.3-alpha annotated tag is pinned to manifest commit 9bde6338. Currently-published artefacts: PyPI/npm built from main@51c4e6a; GitHub Release assets uploaded from main@d2b90a5 (both pre-gitleaks-remediation). The hashes below reflect a fresh local rebuild of CURRENT main HEAD 9d3baeb (= post-P3.4 positive crypto wiring + post-gitleaks remediation merge). They are NOT byte-identical to the published v0.0.3-alpha registry artefacts or Release assets — those remain frozen at their pre-gitleaks sha256. See pre_gitleaks_published_sha256 below. Tag has not been moved.",
+  "pre_gitleaks_published_sha256": {
+    "note": "These are the sha256 of the v0.0.3-alpha artefacts already published to PyPI / npm / GitHub Release. They are frozen and remain valid for downstream consumers who downloaded the originals. Future releases will use the post-gitleaks bytes documented in artifacts[] below.",
+    "python_wheel": "623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d",
+    "python_sdist": "e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db",
+    "npm_tarball": "471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53",
+    "published_release_upload_timestamp_utc": "2026-05-18T07:04:43Z",
+    "published_release_upload_main_commit": "d2b90a53005ed98b3374883d5b394e61664bd718"
+  },
   "artifacts": [
     {
       "name": "python-wheel",
       "path": "sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl",
       "kind": "python-wheel",
       "version": "0.0.3a0",
-      "sha256": "623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d",
-      "size_bytes": 153372,
-      "build_source": "local dry-run from main 544283f1...",
+      "sha256": "c9fd2716720eb470cbb339a6a579d1bcd2600314002d8cb49a8610a63e066165",
+      "size_bytes": 156164,
+      "build_source": "local dry-run from main 9d3baeb (post-gitleaks remediation)",
       "build_tool": "python -m build (hatchling)",
       "twine_check": "PASSED",
       "registry_status": {
-        "pypi_production": "attestplane==0.0.3a0 already published; this local artifact is NOT byte-identical to the registry artifact and is intended for dry-run/checksum manifest only"
+        "pypi_production": "v0.0.3a0 already published on PyPI (sha256=623cd39e...). This local rebuild post-gitleaks has a different sha256 (c9fd2716...) and is NOT byte-identical to the published artefact. Future tags (v0.0.4-alpha+) would publish the post-gitleaks bytes."
       }
     },
     {
@@ -25,13 +33,13 @@
       "path": "sdk/python/dist/attestplane-0.0.3a0.tar.gz",
       "kind": "python-sdist",
       "version": "0.0.3a0",
-      "sha256": "e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db",
-      "size_bytes": 207215,
-      "build_source": "local dry-run from main 544283f1...",
+      "sha256": "8999ececb47b3829f6ff91afdec65603c7c43831acc39541824202ad0d4d086f",
+      "size_bytes": 213554,
+      "build_source": "local dry-run from main 9d3baeb (post-gitleaks remediation)",
       "build_tool": "python -m build (hatchling)",
       "twine_check": "PASSED",
       "registry_status": {
-        "pypi_production": "attestplane==0.0.3a0 already published; this local artifact is NOT byte-identical to the registry artifact and is intended for dry-run/checksum manifest only"
+        "pypi_production": "v0.0.3a0 already published on PyPI (sha256=e37a78d0...). This local rebuild post-gitleaks has a different sha256 (8999ecec...) and is NOT byte-identical to the published artefact."
       }
     },
     {
@@ -41,7 +49,7 @@
       "version": "0.0.3-alpha",
       "sha256": "471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53",
       "size_bytes": 110826,
-      "build_source": "local dry-run from main 544283f1...",
+      "build_source": "local dry-run from main 9d3baeb (post-gitleaks remediation; npm tarball excludes test files so byte-identical to pre-gitleaks)",
       "build_tool": "npm pack",
       "registry_status": {
         "npm": "@attestplane/attestplane@0.0.3-alpha already published; this local tarball is NOT byte-identical to the registry artifact and is intended for dry-run/checksum manifest only",

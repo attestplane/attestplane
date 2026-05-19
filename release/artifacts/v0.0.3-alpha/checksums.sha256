@@ -1,17 +1,32 @@
-# Attestplane v0.0.3-alpha release asset checksums (SHA-256)
+# AP-EVD/1.0 v0.0.3-alpha release asset checksums (SHA-256)
 #
-# Local dry-run build, P3.3 release-asset-hygiene branch.
-# Build commit: 544283f153a11e3c455b62d680de50a029537903 (main).
+# Local dry-run build, post-gitleaks-remediation main HEAD.
+# Build commit: 9d3baebbc57241e1229596dd484148ef82e44037 (main, includes
+# P3.4 positive crypto wiring + PR #10 gitleaks security remediation).
 # Frozen tag target: 9bde6338df008afe58d561b0ba66eaaf75e298ad.
 #
+# NOTE on previously-uploaded GitHub Release / registry assets:
+# The v0.0.3-alpha GitHub Release was uploaded on 2026-05-18T07:04:43Z
+# from main@d2b90a53… (pre-gitleaks). Those assets remain frozen in-place
+# with their original SHA-256:
+#   wheel  pre-gitleaks:  623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d
+#   sdist  pre-gitleaks:  e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db
+#   npm    pre-gitleaks:  471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53
+# These are the bytes downstream consumers fetched. They are NOT re-published
+# or recalled by this manifest update — gitleaks remediation was a security
+# improvement on `main`, not a v0.0.3-alpha re-release.
+#
+# The hashes below correspond to a fresh local build of current main HEAD
+# (post-gitleaks). They are intended for future v0.0.4-alpha (or later)
+# release planning, not as a replacement for the v0.0.3-alpha frozen assets.
+#
 # Format: <sha256>  <path-relative-to-repo-root>
-# Compatible with: shasum -a 256 -c (when invoked from repo root with the
-# listed paths present locally).
+# Compatible with: shasum -a 256 -c
 #
 # These checksums describe artifact integrity only. They are NOT
 # cryptographic signatures, NOT certified provenance, NOT a SLSA Level 3
 # attestation, and NOT a production-grade supply-chain control.
 
-623cd39e9ac4819f3a88a78715c4da7426882a371635c0c899249608a1d78e7d  sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl
-e37a78d0252eae0d831b9740dfce40d3972484ad47700070e907e2cfa74ff2db  sdk/python/dist/attestplane-0.0.3a0.tar.gz
+c9fd2716720eb470cbb339a6a579d1bcd2600314002d8cb49a8610a63e066165  sdk/python/dist/attestplane-0.0.3a0-py3-none-any.whl
+8999ececb47b3829f6ff91afdec65603c7c43831acc39541824202ad0d4d086f  sdk/python/dist/attestplane-0.0.3a0.tar.gz
 471d37afcd2c1cf1038de5d860df54bd8ea55e72f935a713562de718901c9e53  sdk/typescript/attestplane-attestplane-0.0.3-alpha.tgz

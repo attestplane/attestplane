@@ -125,16 +125,22 @@ done < "$checksums"
 echo "  checksums.sha256: all lines verified"
 
 echo ""
-echo "=== upload-plan execution check (must NOT have run) ==="
-# Confirm that no upload happened: GitHub Release assets list must be [].
+echo "=== upload-plan execution check ==="
+# The v0.0.3-alpha GitHub Release can be in one of two valid states:
+#   * 0 assets — pre-upload P3.3 dry-run baseline
+#   * 5 assets — founder-authorized upload on 2026-05-18T07:04:43Z
+#     (wheel + sdist + npm-tarball + checksums.sha256 + artifact-manifest.json),
+#     recorded in docs/validation/v0.0.3_alpha_release_asset_upload_report_20260518.md
+# Any OTHER count means the Release was modified out-of-band and the
+# gate must fail closed.
 remote_assets=$(gh release view v0.0.3-alpha --json assets -q '.assets | length' 2>/dev/null || echo "remote_unreachable")
 if [ "$remote_assets" = "remote_unreachable" ]; then
   echo "  GitHub Release assets check: SKIP (gh cli unavailable or no network)"
-elif [ "$remote_assets" != "0" ]; then
-  echo "::error::GitHub Release v0.0.3-alpha now has $remote_assets asset(s); this gate expects []" >&2
+elif [ "$remote_assets" != "0" ] && [ "$remote_assets" != "5" ]; then
+  echo "::error::GitHub Release v0.0.3-alpha now has $remote_assets asset(s); gate accepts 0 (pre-upload) or 5 (founder-authorized upload)" >&2
   exit 1
 else
-  echo "  GitHub Release v0.0.3-alpha assets: [] (unchanged)"
+  echo "  GitHub Release v0.0.3-alpha assets: $remote_assets (0=pre-upload or 5=founder-authorized upload, both OK)"
 fi
 
 echo ""
