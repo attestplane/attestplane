@@ -123,6 +123,23 @@ def remote_probe(argv: list[str], *, timeout_error: str) -> subprocess.Completed
     raise RuntimeError(timeout_error) from last_timeout
 
 
+def github_repo_slug() -> str:
+    origin = capture(["git", "remote", "get-url", "origin"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+    match = re.search(r"github\.com[:/](?P<slug>[^/]+/[^/.]+)(?:\.git)?$", origin)
+    if not match:
+        raise RuntimeError(f"origin is not a GitHub repository URL: {origin!r}")
+    return match.group("slug")
+
+
+def remote_tag_exists(release: str) -> bool:
+    repo = github_repo_slug()
+    remote_tag = remote_probe(
+        ["gh", "api", f"repos/{repo}/git/ref/tags/{release}", "--silent"],
+        timeout_error=f"remote tag check timed out for {release}",
+    )
+    return remote_tag.returncode == 0
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -585,11 +602,7 @@ def alpha_release_exists(release: str) -> bool:
     )
     if local_tag.returncode == 0:
         return True
-    remote_tag = remote_probe(
-        ["git", "ls-remote", "--exit-code", "--tags", "origin", release],
-        timeout_error=f"remote tag check timed out for {release}",
-    )
-    return remote_tag.returncode == 0
+    return remote_tag_exists(release)
 
 
 def discover_prepared_candidates() -> list[AlphaCandidate]:
@@ -660,11 +673,7 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate) -> None:
     if local_tag.returncode == 0:
         raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
 
-    remote_tag = remote_probe(
-        ["git", "ls-remote", "--exit-code", "--tags", "origin", candidate.release],
-        timeout_error=f"remote tag preflight timed out for {candidate.release}",
-    )
-    if remote_tag.returncode == 0:
+    if remote_tag_exists(candidate.release):
         raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
 
     release_view = remote_probe(

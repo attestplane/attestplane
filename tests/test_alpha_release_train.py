@@ -324,6 +324,8 @@ def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.Monke
 
 
 def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(alpha_release_train, "capture", lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git")
+
     def fake_run(*args: object, **kwargs: object) -> object:
         argv = args[0]
         if isinstance(argv, list) and argv[:4] == ["git", "rev-parse", "-q", "--verify"]:
@@ -334,6 +336,21 @@ def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> N
 
     with pytest.raises(RuntimeError, match="remote tag check timed out"):
         alpha_release_train.alpha_release_exists("v0.0.8-alpha")
+
+
+def test_remote_tag_check_uses_github_api(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(alpha_release_train, "capture", lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git")
+
+    def fake_run(*args: object, **kwargs: object) -> object:
+        argv = args[0]
+        calls.append(argv)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 1, "", "")
+
+    monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
+
+    assert alpha_release_train.remote_tag_exists("v0.0.8-alpha") is False
+    assert calls[0][:3] == ["gh", "api", "repos/attestplane/attestplane/git/ref/tags/v0.0.8-alpha"]
 
 
 def test_continuous_unhandled_exception_writes_stop_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
