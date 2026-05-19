@@ -11,6 +11,7 @@ invent new alpha scope, bypass gates, or publish from an unprepared tree.
 from __future__ import annotations
 
 import argparse
+import sys
 import hashlib
 import json
 import os
@@ -25,6 +26,14 @@ from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def bootstrap_repo_root() -> None:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+
+bootstrap_repo_root()
 DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
 DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
 DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"

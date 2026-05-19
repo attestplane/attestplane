@@ -156,6 +156,13 @@ def test_continuous_state_filters_processed_releases(tmp_path: Path) -> None:
     assert [item.release for item in remaining] == ["v0.0.7-alpha"]
 
 
+def test_bootstrap_repo_root_adds_repo_root_to_sys_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    repo_root = str(REPO_ROOT)
+    monkeypatch.setattr(alpha_release_train.sys, "path", [p for p in alpha_release_train.sys.path if p != repo_root])
+    alpha_release_train.bootstrap_repo_root()
+    assert alpha_release_train.sys.path[0] == repo_root
+
+
 def test_continuous_state_uses_sqlite_with_json_snapshot(tmp_path: Path) -> None:
     state_file = tmp_path / "state.json"
     candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
