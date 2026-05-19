@@ -8,4 +8,4 @@
  * (index.ts re-exports symbols from those same modules).
  */
 
-export const VERSION = '0.5.1-alpha';
+export const VERSION = '0.5.2-alpha';
