@@ -182,3 +182,25 @@ def test_release_cd_dispatch_args_forwards_verified_audit_inputs(monkeypatch: py
     assert "audit_verified=true" in argv
     assert f"audit_plan_url={audit_plan_url}" in argv
     assert argv[-2:] == ["--ref", "main"]
+
+
+def test_write_release_notes_uses_subjects_without_commit_hashes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "docs/release-notes").mkdir(parents=True)
+    monkeypatch.setattr(stable_auto_train, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "capture",
+        lambda argv: "fix(release): wait for push CI before publishing stable train\n"
+        "docs(release): approve v1.0.0 audit gate",
+    )
+
+    stable_auto_train.write_release_notes(
+        stable_auto_train.StableVersion.parse("0.9.10"),
+        stable_auto_train.StableVersion.parse("1.0.0"),
+    )
+
+    notes = (tmp_path / "docs/release-notes/v1.0.0.draft.md").read_text(encoding="utf-8")
+    assert "873ded9" not in notes
+    assert "- fix(release): wait for push CI before publishing stable train" in notes

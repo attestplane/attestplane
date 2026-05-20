@@ -395,8 +395,8 @@ def update_versions(version: StableVersion) -> None:
 
 def write_release_notes(previous: StableVersion, version: StableVersion) -> None:
     path = ROOT / "docs" / "release-notes" / f"{version.tag}.draft.md"
-    commits = capture(["git", "log", "--oneline", f"{previous.tag}..HEAD"])
-    changes = [f"- `{line}`" for line in commits.splitlines()[:20]]
+    commits = capture(["git", "log", "--format=%s", f"{previous.tag}..HEAD"])
+    changes = [f"- {line}" for line in commits.splitlines()[:20]]
     if not changes:
         changes = [f"- Queue advancement from `{previous.tag}` to `{version.tag}`."]
     path.write_text(
