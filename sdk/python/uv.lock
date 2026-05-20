@@ -70,7 +70,7 @@ wheels = [
 
 [[package]]
 name = "attestplane"
-version = "0.8.5rc4"
+version = "0.8.5rc5"
 source = { editable = "." }
 dependencies = [
     { name = "uuid-utils" },
