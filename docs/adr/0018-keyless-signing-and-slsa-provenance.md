@@ -49,11 +49,27 @@ applied forward only:
    computes SHA-256 digests of the release assets, then invokes the
    upstream
    [`slsa-framework/slsa-github-generator`](https://github.com/slsa-framework/slsa-github-generator)
-   `generator_generic_slsa3.yml` reusable workflow pinned by commit
-   SHA (`f7dd8c54c2067bafc12ca7a55595d5ee9b75204a`, tag `v2.1.0`,
+   `generator_generic_slsa3.yml` reusable workflow at tag `v2.1.0`
+   (audit-anchor commit `f7dd8c54c2067bafc12ca7a55595d5ee9b75204a`,
    released 2025-02-24). The generator emits an
    `attestplane-<TAG>.intoto.jsonl` attestation that is uploaded to
    the GitHub Release only when `execute=true`.
+
+   **Tag-ref vs SHA-pin caveat.** GitHub Actions' reusable-workflow
+   `uses:` clause only accepts a tag ref (`refs/tags/vX.Y.Z`), not a
+   bare commit SHA; the upstream slsa-github-generator binary-fetch
+   path explicitly rejects SHA-pinned calls with
+   `Invalid ref: <sha>. Expected ref of the form refs/tags/vX.Y.Z`.
+   The workflow therefore references the upstream by **tag**
+   (`@v2.1.0`) and records the **commit SHA** in a sidecar comment as
+   the audit anchor. Tag immutability on the upstream repository plus
+   the published Sigstore signature on the upstream release together
+   provide the SHA-equivalent integrity binding. A future bump
+   requires the maintainer to (a) verify the new tag's commit SHA
+   against the upstream release notes, (b) update both the `@vX.Y.Z`
+   tag ref and the sidecar SHA comment in `slsa-provenance.yml`, and
+   (c) re-run `slsa-verifier verify-artifact` end-to-end before
+   merging the bump.
 
 3. **Verification recipe owned by users, not by Attestplane.** The
    verification path is documented in

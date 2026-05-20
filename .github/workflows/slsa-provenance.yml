@@ -103,10 +103,13 @@ jobs:
       id-token: write
       contents: write
       actions: read
-    # Pinned to v2.1.0 (commit f7dd8c54c2067bafc12ca7a55595d5ee9b75204a)
-    # released 2025-02-24. Bump only after verifying provenance still
-    # passes slsa-verifier verify-artifact end-to-end.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a
+    # Pinned to v2.1.0 (audit-anchor commit f7dd8c54c2067bafc12ca7a55595d5ee9b75204a,
+    # released 2025-02-24). slsa-github-generator's reusable-workflow `uses:` clause
+    # only accepts a tag ref (refs/tags/vX.Y.Z), not a commit SHA; the SHA is
+    # recorded here as the audit anchor and is enforced by the upstream tag's
+    # immutability + signature. Bump only after verifying provenance still passes
+    # slsa-verifier verify-artifact end-to-end. See ADR-0018 §"Tag-ref vs SHA-pin".
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: ${{ needs.collect-digests.outputs.hashes }}
       provenance-name: attestplane-${{ inputs.tag }}.intoto.jsonl
