@@ -11,6 +11,7 @@ on:
           - dist-tag-list
           - dist-tag-remove-latest
           - dist-tag-set-alpha-to-latest-version
+          - dist-tag-set-ca-to-version
           - dist-tag-set-latest-to-version
       version:
         description: 'Version (when action requires it)'
@@ -79,6 +80,17 @@ jobs:
         run: |
           set -e
           npm dist-tag add "@attestplane/attestplane@${{ inputs.version }}" alpha
+          echo ""
+          echo "After:"
+          npm dist-tag ls @attestplane/attestplane
+
+      - name: Set 'ca' tag to specified version
+        if: inputs.action == 'dist-tag-set-ca-to-version'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -e
+          npm dist-tag add "@attestplane/attestplane@${{ inputs.version }}" ca
           echo ""
           echo "After:"
           npm dist-tag ls @attestplane/attestplane
