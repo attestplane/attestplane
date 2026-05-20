@@ -30,6 +30,8 @@ import subprocess
 import sys
 import time
 import tomllib
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -104,6 +106,18 @@ class ReleaseTarget:
     version: StableVersion
     channel: str
     min_soak_hours: int
+
+
+@dataclass(frozen=True)
+class PublicationStatus:
+    python_visible: bool
+    npm_visible: bool
+    npm_latest: bool
+    github_release: bool
+
+    @property
+    def complete(self) -> bool:
+        return self.python_visible and self.npm_visible and self.npm_latest and self.github_release
 
 
 def run(argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
@@ -296,6 +310,14 @@ def load_target_queue(path: Path) -> list[ReleaseTarget]:
 
 
 def select_target(path: Path) -> ReleaseTarget:
+    try:
+        base = latest_stable()
+    except RuntimeError:
+        base = None
+    if base is not None and not publication_status(base).complete:
+        print(f"autodev-train stable: latest tag {base.tag} is not fully published; recovering before advancing", flush=True)
+        return ReleaseTarget(version=base, channel="latest", min_soak_hours=0)
+
     for target in load_target_queue(path):
         if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(target.version.tag):
             print(f"autodev-train stable: target {target.version.tag} already has stable tag; skipping", flush=True)
@@ -658,6 +680,185 @@ def truthy_env(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def pypi_version_visible(version: StableVersion) -> bool:
+    try:
+        with urllib.request.urlopen(
+            f"https://pypi.org/pypi/attestplane/{version.python_version}/json",
+            timeout=20,
+        ) as response:
+            payload = json.load(response)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return False
+        raise
+    return payload.get("info", {}).get("version") == version.python_version
+
+
+def npm_version_visible(version: StableVersion) -> bool:
+    result = run_process(
+        ["npm", "view", f"@attestplane/attestplane@{version.npm_version}", "version"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=30,
+    )
+    return result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
+
+
+def npm_latest_points_to(version: StableVersion) -> bool:
+    result = run_process(
+        ["npm", "view", "@attestplane/attestplane", "dist-tags.latest"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=30,
+    )
+    return result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
+
+
+def github_release_exists(version: StableVersion) -> bool:
+    result = run_process(
+        ["gh", "release", "view", version.tag, "--json", "tagName"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=30,
+    )
+    return result.returncode == 0
+
+
+def publication_status(version: StableVersion) -> PublicationStatus:
+    status = PublicationStatus(
+        python_visible=pypi_version_visible(version),
+        npm_visible=npm_version_visible(version),
+        npm_latest=npm_latest_points_to(version),
+        github_release=github_release_exists(version),
+    )
+    print(
+        "autodev-train stable: publication status "
+        f"{version.tag}: pypi={status.python_visible} npm={status.npm_visible} "
+        f"npm_latest={status.npm_latest} github_release={status.github_release}",
+        flush=True,
+    )
+    return status
+
+
+def wait_for_pypi(version: StableVersion) -> None:
+    deadline = time.monotonic() + 900
+    while time.monotonic() < deadline:
+        if pypi_version_visible(version):
+            print(f"PyPI visible for {version.tag}", flush=True)
+            return
+        time.sleep(20)
+    raise TimeoutError(f"timed out waiting for PyPI version {version.python_version}")
+
+
+def dispatch_publish_python(version: StableVersion) -> None:
+    caller = f"stable-auto-recovery-{version.tag}-{int(time.time())}"
+    run(
+        [
+            "gh",
+            "workflow",
+            "run",
+            "publish-python.yml",
+            "--ref",
+            "main",
+            "-f",
+            "target=pypi",
+            "-f",
+            f"release_ref={version.tag}",
+            "-f",
+            "dry_run=false",
+            "-f",
+            f"caller_run_id={caller}",
+        ]
+    )
+    wait_for_publish_python(version, caller)
+
+
+def wait_for_publish_python(version: StableVersion, caller: str) -> None:
+    print(f"waiting for delegated publish-python workflow for {version.tag}", flush=True)
+    expected_title = f"publish-python {version.tag} pypi caller-{caller}"
+    deadline = time.monotonic() + 1200
+    while time.monotonic() < deadline:
+        try:
+            run_id = capture(
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--workflow",
+                    "publish-python.yml",
+                    "--event",
+                    "workflow_dispatch",
+                    "--limit",
+                    "50",
+                    "--json",
+                    "databaseId,displayTitle,status",
+                    "--jq",
+                    f'.[] | select(.displayTitle == "{expected_title}") | .databaseId',
+                ]
+            ).splitlines()[0]
+        except (subprocess.CalledProcessError, IndexError):
+            time.sleep(5)
+            continue
+        run(["gh", "run", "watch", run_id, "--exit-status"])
+        return
+    raise TimeoutError(f"timed out waiting for delegated publish-python workflow for {version.tag}")
+
+
+def ensure_github_release(version: StableVersion) -> None:
+    notes_file = ROOT / "docs" / "release-notes" / f"{version.tag}.draft.md"
+    asset_paths = [
+        ROOT / "release" / "artifacts" / version.tag / "artifact-manifest.json",
+        ROOT / "release" / "artifacts" / version.tag / "checksums.sha256",
+        ROOT / "release" / "artifacts" / version.tag / "upload-plan.md",
+    ]
+    if not notes_file.is_file():
+        raise FileNotFoundError(f"release notes missing for recovery: {notes_file}")
+    for asset in asset_paths:
+        if not asset.is_file():
+            raise FileNotFoundError(f"release asset missing for recovery: {asset}")
+
+    release_flags = ["--title", version.tag, "--notes-file", str(notes_file)]
+    assets = [str(asset) for asset in asset_paths]
+    if github_release_exists(version):
+        run(["gh", "release", "edit", version.tag, *release_flags])
+        run(["gh", "release", "upload", version.tag, "--clobber", *assets])
+    else:
+        run(["gh", "release", "create", version.tag, "--verify-tag", *release_flags, *assets])
+
+
+def recover_existing_release(version: StableVersion) -> None:
+    status = publication_status(version)
+    if status.complete:
+        print(f"autodev-train stable: existing release {version.tag} is complete", flush=True)
+        return
+    if not status.npm_visible or not status.npm_latest:
+        raise RuntimeError(
+            f"cannot auto-recover {version.tag}: npm state is incomplete "
+            f"(visible={status.npm_visible}, latest={status.npm_latest})"
+        )
+    if not status.python_visible:
+        last_error: Exception | None = None
+        for attempt in range(1, 4):
+            try:
+                print(f"autodev-train stable: recovering PyPI publish for {version.tag} (attempt {attempt}/3)", flush=True)
+                dispatch_publish_python(version)
+                wait_for_pypi(version)
+                break
+            except Exception as exc:  # noqa: BLE001 - keep continuous train recoverable after transient publisher failures.
+                last_error = exc
+                print(f"autodev-train stable: PyPI recovery attempt failed for {version.tag}: {exc}", flush=True)
+                time.sleep(30)
+        else:
+            raise RuntimeError(f"cannot auto-recover PyPI publication for {version.tag}: {last_error}") from last_error
+    ensure_github_release(version)
+    final = publication_status(version)
+    if not final.complete:
+        raise RuntimeError(f"release recovery did not complete for {version.tag}: {final}")
+
+
 def wait_for_push_ci(head_sha: str) -> None:
     print(f"waiting for push CI workflows for {head_sha}", flush=True)
     deadline = time.monotonic() + 1800
@@ -749,7 +950,13 @@ def wait_for_release_cd(version: StableVersion) -> None:
             time.sleep(10)
             continue
         if run_id:
-            run(["gh", "run", "watch", run_id, "--exit-status"])
+            try:
+                run(["gh", "run", "watch", run_id, "--exit-status"])
+            except subprocess.CalledProcessError:
+                if publication_status(version).complete:
+                    print(f"release-cd reported failure but registries and GitHub Release are complete for {version.tag}", flush=True)
+                    return
+                raise
             return
     raise TimeoutError(f"timed out waiting for release-cd workflow for {version.tag}")
 
@@ -763,6 +970,9 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     previous = latest_stable_before(target.version)
     version = target.version
     if git_ref_exists(f"refs/tags/{version.tag}") or remote_tag_exists(version.tag):
+        if publish:
+            recover_existing_release(version)
+            return version.tag
         raise RuntimeError(f"stable tag already exists: {version.tag}")
 
     print(
@@ -824,11 +1034,15 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             if not args.continuous:
                 raise
-            print(f"autodev-train stable: cycle failed; will retry after poll interval: {exc}", flush=True)
+            print(
+                f"autodev-train stable: cycle failed; sleeping {args.poll_seconds}s before retry: {exc}",
+                flush=True,
+            )
             time.sleep(args.poll_seconds)
             continue
         if not args.continuous:
             return 0 if result else 1
+        print(f"autodev-train stable: cycle finished for {result}; sleeping {args.poll_seconds}s", flush=True)
         time.sleep(args.poll_seconds)
 
 

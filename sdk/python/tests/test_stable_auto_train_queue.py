@@ -105,6 +105,86 @@ def test_next_stable_after_rolls_post_one_patch_ten_to_next_minor_zero() -> None
     assert stable_auto_train.next_stable_after(current).tag == "v1.1.0"
 
 
+def test_select_target_recovers_latest_incomplete_tag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.0.7", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    latest = stable_auto_train.StableVersion.parse("1.0.6")
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: latest)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda version: stable_auto_train.PublicationStatus(
+            python_visible=False,
+            npm_visible=True,
+            npm_latest=True,
+            github_release=False,
+        ),
+    )
+
+    target = stable_auto_train.select_target(queue)
+
+    assert target.version.tag == "v1.0.6"
+
+
+def test_recover_existing_release_repairs_transient_python_publish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    version = stable_auto_train.StableVersion.parse("1.0.6")
+    status_checks = iter(
+        [
+            stable_auto_train.PublicationStatus(
+                python_visible=False,
+                npm_visible=True,
+                npm_latest=True,
+                github_release=False,
+            ),
+            stable_auto_train.PublicationStatus(
+                python_visible=True,
+                npm_visible=True,
+                npm_latest=True,
+                github_release=True,
+            ),
+        ]
+    )
+    calls: list[str] = []
+    monkeypatch.setattr(stable_auto_train, "publication_status", lambda target: next(status_checks))
+    monkeypatch.setattr(stable_auto_train, "dispatch_publish_python", lambda target: calls.append("publish-python"))
+    monkeypatch.setattr(stable_auto_train, "wait_for_pypi", lambda target: calls.append("wait-pypi"))
+    monkeypatch.setattr(stable_auto_train, "ensure_github_release", lambda target: calls.append("github-release"))
+
+    stable_auto_train.recover_existing_release(version)
+
+    assert calls == ["publish-python", "wait-pypi", "github-release"]
+
+
+def test_recover_existing_release_refuses_incomplete_npm_state() -> None:
+    version = stable_auto_train.StableVersion.parse("1.0.6")
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            stable_auto_train,
+            "publication_status",
+            lambda target: stable_auto_train.PublicationStatus(
+                python_visible=True,
+                npm_visible=False,
+                npm_latest=False,
+                github_release=False,
+            ),
+        )
+        with pytest.raises(RuntimeError, match="npm state is incomplete"):
+            stable_auto_train.recover_existing_release(version)
+
+
 def test_stable_train_blocks_unverified_major_boundary() -> None:
     target = stable_auto_train.ReleaseTarget(
         version=stable_auto_train.StableVersion.parse("1.0.0"),
