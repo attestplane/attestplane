@@ -1187,6 +1187,26 @@ def test_registry_verified_stage_is_idempotent(
     alpha_release_train.verify_registries(candidate_value, dry_run=False, state_path=state_file)
 
 
+def test_preflight_allows_partial_release_tag_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+
+    alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
+    monkeypatch.setattr(
+        alpha_release_train.subprocess,
+        "run",
+        lambda *args, **kwargs: alpha_release_train.subprocess.CompletedProcess(args[0], 0, "", ""),
+    )
+    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: False)
+    monkeypatch.setattr(alpha_release_train, "remote_tag_exists", lambda release: True)
+    monkeypatch.setattr(alpha_release_train, "gh_release_exists", lambda release: False)
+
+    alpha_release_train.preflight_public_release_surfaces(candidate_value, state_path=state_file)
+
+
 def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
     observed_envs: list[dict[str, str]] = []
 

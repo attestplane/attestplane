@@ -1741,8 +1741,12 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate, state_path: Pat
         check=False,
     )
     if local_tag.returncode == 0:
-        if local_tag_points_at_head(candidate.release):
-            print(f"local tag already exists at HEAD; treating as interrupted tag-push recovery: {candidate.release}")
+        if (
+            local_tag_points_at_head(candidate.release)
+            or stage_done(state_path, candidate, "tag_pushed")
+            or stage_done(state_path, candidate, "gh_release_created")
+        ):
+            print(f"local tag already exists; treating as interrupted release recovery: {candidate.release}")
         else:
             raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
 
