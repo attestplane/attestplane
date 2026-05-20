@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""Validate Attestplane GitHub CD release inputs.
+
+This script is intentionally local and deterministic. It reads package version
+metadata, validates the release tag/channel policy, and optionally writes
+GitHub Actions outputs. It never creates tags, publishes packages, or reads
+secrets.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+import tomllib
+from dataclasses import dataclass
+from pathlib import Path
+
+TAG_RE = re.compile(
+    r"^v(?P<major>0|[1-9]\d*)\."
+    r"(?P<minor>0|[1-9]\d*)\."
+    r"(?P<patch>0|[1-9]\d*)"
+    r"(?:-(?P<channel>alpha|beta|rc)\.(?P<ordinal>0|[1-9]\d*))?$"
+)
+
+
+class ReleaseCdPolicyError(ValueError):
+    """Raised when the requested release violates the CD policy."""
+
+
+@dataclass(frozen=True)
+class ReleaseCdDecision:
+    release_tag: str
+    channel: str
+    python_version: str
+    npm_version: str
+    npm_dist_tag: str
+    is_prerelease: bool
+
+
+def parse_release_tag(release_tag: str) -> dict[str, str]:
+    match = TAG_RE.match(release_tag)
+    if match is None:
+        raise ReleaseCdPolicyError(
+            "release tag must match vMAJOR.MINOR.PATCH or "
+            "vMAJOR.MINOR.PATCH-(alpha|beta|rc).N"
+        )
+    return {k: v for k, v in match.groupdict().items() if v is not None}
+
+
+def expected_versions(release_tag: str) -> tuple[str, str, str, bool]:
+    parts = parse_release_tag(release_tag)
+    base = f"{parts['major']}.{parts['minor']}.{parts['patch']}"
+    channel = parts.get("channel")
+    ordinal = parts.get("ordinal")
+    if channel is None:
+        return base, base, "latest", False
+    assert ordinal is not None
+    py_suffix = {"alpha": "a", "beta": "b", "rc": "rc"}[channel]
+    return f"{base}{py_suffix}{ordinal}", f"{base}-{channel}.{ordinal}", channel, True
+
+
+def read_python_version(repo_root: Path) -> str:
+    with (repo_root / "sdk/python/pyproject.toml").open("rb") as f:
+        data = tomllib.load(f)
+    try:
+        return str(data["project"]["version"])
+    except KeyError as exc:
+        raise ReleaseCdPolicyError("sdk/python/pyproject.toml missing project.version") from exc
+
+
+def read_npm_version(repo_root: Path) -> str:
+    try:
+        data = json.loads((repo_root / "sdk/typescript/package.json").read_text(encoding="utf-8"))
+        return str(data["version"])
+    except KeyError as exc:
+        raise ReleaseCdPolicyError("sdk/typescript/package.json missing version") from exc
+
+
+def decide_release(
+    *,
+    release_tag: str,
+    requested_channel: str,
+    repo_root: Path,
+    allow_prerelease_latest: bool = False,
+) -> ReleaseCdDecision:
+    expected_python, expected_npm, canonical_channel, is_prerelease = expected_versions(release_tag)
+    if requested_channel != canonical_channel:
+        if not (allow_prerelease_latest and is_prerelease and requested_channel == "latest"):
+            raise ReleaseCdPolicyError(
+                f"channel {requested_channel!r} does not match release tag {release_tag!r}; "
+                f"expected {canonical_channel!r}"
+            )
+
+    if is_prerelease and requested_channel == "latest" and not allow_prerelease_latest:
+        raise ReleaseCdPolicyError("pre-release packages must not publish with npm latest")
+
+    python_version = read_python_version(repo_root)
+    npm_version = read_npm_version(repo_root)
+    if python_version != expected_python:
+        raise ReleaseCdPolicyError(
+            f"Python package version {python_version!r} does not match {release_tag!r}; "
+            f"expected {expected_python!r}"
+        )
+    if npm_version != expected_npm:
+        raise ReleaseCdPolicyError(
+            f"npm package version {npm_version!r} does not match {release_tag!r}; "
+            f"expected {expected_npm!r}"
+        )
+
+    return ReleaseCdDecision(
+        release_tag=release_tag,
+        channel=requested_channel,
+        python_version=python_version,
+        npm_version=npm_version,
+        npm_dist_tag=requested_channel,
+        is_prerelease=is_prerelease,
+    )
+
+
+def write_github_outputs(decision: ReleaseCdDecision) -> None:
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if not output_path:
+        return
+    with Path(output_path).open("a", encoding="utf-8") as f:
+        f.write(f"release_tag={decision.release_tag}\n")
+        f.write(f"channel={decision.channel}\n")
+        f.write(f"python_version={decision.python_version}\n")
+        f.write(f"npm_version={decision.npm_version}\n")
+        f.write(f"npm_dist_tag={decision.npm_dist_tag}\n")
+        f.write(f"is_prerelease={str(decision.is_prerelease).lower()}\n")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--release-tag", required=True)
+    parser.add_argument("--channel", required=True, choices=["alpha", "beta", "rc", "latest"])
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--allow-prerelease-latest",
+        action="store_true",
+        help="Allow a maintainer-recorded prerelease latest movement.",
+    )
+    args = parser.parse_args(argv)
+
+    try:
+        decision = decide_release(
+            release_tag=args.release_tag,
+            requested_channel=args.channel,
+            repo_root=args.repo_root.resolve(),
+            allow_prerelease_latest=args.allow_prerelease_latest,
+        )
+    except ReleaseCdPolicyError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 2
+
+    write_github_outputs(decision)
+    print(
+        "release CD policy ok: "
+        f"tag={decision.release_tag} python={decision.python_version} "
+        f"npm={decision.npm_version} npm_dist_tag={decision.npm_dist_tag}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

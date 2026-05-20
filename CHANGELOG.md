@@ -18,6 +18,8 @@ notes are the authoritative reference for supply-chain verification.
   `AP-EVD/1.0` fixture shape.
 - Added ADR-0016 to freeze the public SDK and wire-format surfaces for
   the v0.8 RC line.
+- Added ADR-0017 and a GitHub CD release runbook so package publication
+  goes through GitHub Actions rather than local publish commands.
 - Expanded verifier conformance with tampered-report,
   schema-version-skew, and malformed policy-trace reference cases.
 - Updated the npm publish workflow to support the `rc` dist-tag and to

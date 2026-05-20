@@ -1,6 +1,21 @@
 name: publish-typescript
 
 on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'npm dist-tag'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run only (no actual publish)'
+        required: false
+        default: false
+        type: boolean
+      release_ref:
+        description: 'Git ref or tag to publish from'
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       tag:
@@ -18,6 +33,11 @@ on:
         required: false
         default: false
         type: boolean
+      release_ref:
+        description: 'Git ref or tag to publish from (empty = workflow ref)'
+        required: false
+        default: ''
+        type: string
   push:
     tags:
       - 'sdk-typescript-v*'
@@ -44,6 +64,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
@@ -74,8 +96,19 @@ jobs:
       - name: Validate npm dist-tag policy
         run: |
           set -e
-          TAG="${{ inputs.tag || 'alpha' }}"
           VERSION="$(node -p "require('./package.json').version")"
+          INPUT_TAG="${{ inputs.tag || '' }}"
+          if [[ -n "$INPUT_TAG" ]]; then
+            TAG="$INPUT_TAG"
+          elif [[ "$VERSION" == *-alpha.* ]]; then
+            TAG="alpha"
+          elif [[ "$VERSION" == *-beta.* ]]; then
+            TAG="beta"
+          elif [[ "$VERSION" == *-rc.* ]]; then
+            TAG="rc"
+          else
+            TAG="latest"
+          fi
           case "$TAG" in
             alpha|beta|rc|latest) ;;
             *)
@@ -95,17 +128,45 @@ jobs:
 
       - name: Publish dry-run
         if: ${{ inputs.dry_run == true }}
-        run: npm publish --access public --tag ${{ inputs.tag }} --dry-run
+        run: |
+          set -e
+          VERSION="$(node -p "require('./package.json').version")"
+          INPUT_TAG="${{ inputs.tag || '' }}"
+          if [[ -n "$INPUT_TAG" ]]; then
+            TAG="$INPUT_TAG"
+          elif [[ "$VERSION" == *-alpha.* ]]; then
+            TAG="alpha"
+          elif [[ "$VERSION" == *-beta.* ]]; then
+            TAG="beta"
+          elif [[ "$VERSION" == *-rc.* ]]; then
+            TAG="rc"
+          else
+            TAG="latest"
+          fi
+          npm publish --access public --tag "$TAG" --dry-run
 
       - name: Publish (real)
         if: |
           (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-typescript-v')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)
+          (github.event_name == 'workflow_dispatch' && inputs.dry_run != true) ||
+          (github.event_name == 'workflow_call' && inputs.dry_run != true)
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -e
-          TAG="${{ inputs.tag || 'alpha' }}"
+          VERSION="$(node -p "require('./package.json').version")"
+          INPUT_TAG="${{ inputs.tag || '' }}"
+          if [[ -n "$INPUT_TAG" ]]; then
+            TAG="$INPUT_TAG"
+          elif [[ "$VERSION" == *-alpha.* ]]; then
+            TAG="alpha"
+          elif [[ "$VERSION" == *-beta.* ]]; then
+            TAG="beta"
+          elif [[ "$VERSION" == *-rc.* ]]; then
+            TAG="rc"
+          else
+            TAG="latest"
+          fi
           unset NODE_AUTH_TOKEN
           export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/npm-trusted-publishing.npmrc"
           printf 'registry=https://registry.npmjs.org/\n' > "$NPM_CONFIG_USERCONFIG"

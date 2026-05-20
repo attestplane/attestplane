@@ -186,7 +186,11 @@ adapters, verifier predicates, public API drift gates, storage compatibility
 policy, and release provenance hygiene, but it is not GA, not
 production-ready, and not compliance-ready.
 
-The package and release registry surfaces remain the source of truth.
+The package and release registry surfaces remain the source of truth. Package
+publication now runs through the GitHub Actions CD path documented in
+[`docs/runbooks/github-cd-release.md`](docs/runbooks/github-cd-release.md);
+local machines prepare and dispatch releases but do not directly publish to
+PyPI or npm.
 
 The current `attestplane verify` command is deliberately narrow:
 

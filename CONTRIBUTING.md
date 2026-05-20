@@ -35,6 +35,17 @@ PRs without sign-off will not be merged.**
 The full DCO text is available in the repository root at [`DCO.txt`](DCO.txt),
 which contains the standard DCO 1.1 text.
 
+## Release Boundary
+
+Package publication must go through the GitHub Actions CD path documented in
+[`docs/runbooks/github-cd-release.md`](docs/runbooks/github-cd-release.md).
+Do not publish Attestplane packages from a local machine with `npm publish`,
+`twine upload`, direct PyPI upload commands, or ad-hoc registry scripts.
+
+Local release work is limited to preparing code and docs, running gates,
+committing, pushing, creating an intentional release tag, dispatching the CD
+workflow, and verifying registry state.
+
 ---
 
 ## 2. Local Dev Setup

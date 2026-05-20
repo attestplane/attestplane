@@ -1,6 +1,21 @@
 name: publish-python
 
 on:
+  workflow_call:
+    inputs:
+      target:
+        description: 'Publication target'
+        required: true
+        type: string
+      release_ref:
+        description: 'Git ref or tag to publish from'
+        required: false
+        type: string
+      dry_run:
+        description: 'Build only; do not publish'
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       target:
@@ -11,6 +26,16 @@ on:
         options:
           - testpypi
           - pypi
+      release_ref:
+        description: 'Git ref or tag to publish from (empty = workflow ref)'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Build only; do not publish'
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'sdk-python-v*'
@@ -34,6 +59,8 @@ jobs:
         working-directory: sdk/python
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
 
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
@@ -63,7 +90,7 @@ jobs:
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: python-dist-${{ github.sha }}
+          name: python-dist-${{ github.run_id }}
           path: sdk/python/dist/
           retention-days: 30
           if-no-files-found: error
@@ -71,7 +98,7 @@ jobs:
   publish-testpypi:
     name: Publish to TestPyPI
     needs: build
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi' && inputs.dry_run != true
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -81,7 +108,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: python-dist-${{ github.sha }}
+          name: python-dist-${{ github.run_id }}
           path: dist/
 
       - name: Confirm dist contents
@@ -99,7 +126,8 @@ jobs:
     needs: build
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-python-v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi' && inputs.dry_run != true) ||
+      (github.event_name == 'workflow_call' && inputs.target == 'pypi' && inputs.dry_run != true)
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -109,7 +137,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: python-dist-${{ github.sha }}
+          name: python-dist-${{ github.run_id }}
           path: dist/
 
       - name: Confirm dist contents
