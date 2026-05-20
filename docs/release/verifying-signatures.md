@@ -147,6 +147,67 @@ trusting any Attestplane-hosted service.
 | Does Attestplane certify EU AI Act compliance for the consumer? | No. See [`docs/spec/aia-12-aligned-profile.md`](../spec/aia-12-aligned-profile.md) — Attestplane provides Article-12-aligned evidence substrate primitives, not compliance certification. |
 | Can I rely on a hosted Attestplane API for verification?        | No. Verification must use the offline tooling above; hosted endpoints are convenience only, per [`docs/architecture/verifier_independence.md`](../architecture/verifier_independence.md). |
 
+## Worked example: v1.0.8
+
+Tag `v1.0.8` is the first Attestplane release whose assets carry
+Sigstore keyless bundles uploaded through `sign-release.yml`
+(execute mode). The release was tagged at 2026-05-20T21:02:39Z, after
+[ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) was
+merged at 2026-05-20T18:25:20Z, so it falls inside the forward-only
+signing window.
+
+Inventory after the
+[`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26191173510):
+
+```
+artifact-manifest.json
+artifact-manifest.json.cosign.bundle
+checksums.sha256
+checksums.sha256.cosign.bundle
+upload-plan.md
+upload-plan.md.cosign.bundle
+```
+
+Reproducible verification on any workstation with `cosign v3.0.6+`:
+
+```sh
+TAG=v1.0.8
+REPO=attestplane/attestplane
+mkdir -p attestplane-${TAG} && cd attestplane-${TAG}
+gh release download "${TAG}" --repo "${REPO}" --pattern "*"
+
+for asset in artifact-manifest.json checksums.sha256 upload-plan.md; do
+  cosign verify-blob \
+    --bundle "${asset}.cosign.bundle" \
+    --certificate-identity-regexp \
+      "^https://github.com/${REPO}/\.github/workflows/sign-release\.yml@refs/heads/main\$" \
+    --certificate-oidc-issuer \
+      "https://token.actions.githubusercontent.com" \
+    "${asset}"
+done
+```
+
+Expected output is `Verified OK` for all three assets. The
+certificate-identity regex pins to `refs/heads/main` because the
+`workflow_dispatch` that produced `v1.0.8`'s signatures was triggered
+from `main`; once signing is wired into `release-cd.yml` per ADR-0018
+the identity will pin to `refs/tags/${TAG}` and the example above will
+switch to that form. Either form is a complete cosign keyless
+verification — the regex is what binds the signature to a specific
+workflow definition, not to a specific branch.
+
+**SLSA Build L3 provenance is not yet attached to `v1.0.8`.** The
+`slsa-provenance.yml` dry-run for the same tag
+([`actions/runs/26191209461`](https://github.com/attestplane/attestplane/actions/runs/26191209461))
+failed in the upstream `slsa-framework/slsa-github-generator@v2.1.0`
+generic generator with `Invalid ref: f7dd8c5...c. Expected ref of the
+form refs/tags/vX.Y.Z`, because the project pins the reusable workflow
+by SHA but the upstream binary-fetch step expects a tag ref. A
+follow-up PR will reconcile that pinning style. Until then, Step 3
+above is a forward-looking recipe that becomes runnable on the first
+tag with `attestplane-<TAG>.intoto.jsonl` attached; `v1.0.8` is **not**
+that tag.
+
 ## Reporting verification failures
 
 If `cosign verify-blob` or `slsa-verifier verify-artifact` fails on a

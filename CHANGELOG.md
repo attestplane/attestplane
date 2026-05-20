@@ -11,6 +11,57 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### First signed release: v1.0.8
+
+- Triggered `sign-release.yml` with `execute=true` against tag `v1.0.8`
+  (the latest GitHub Release published after [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md)
+  was merged on 2026-05-20T18:25:20Z). This is the first tag whose
+  release assets carry Sigstore keyless cosign bundles uploaded by the
+  signing workflow rather than dry-run inventory only.
+  - sign-release execute run:
+    [`actions/runs/26191173510`](https://github.com/attestplane/attestplane/actions/runs/26191173510)
+- Sigstore bundles now attached to `v1.0.8` alongside the original
+  inventory assets:
+  - `artifact-manifest.json.cosign.bundle`
+  - `checksums.sha256.cosign.bundle`
+  - `upload-plan.md.cosign.bundle`
+- External verification with `cosign v3.0.6` against all three bundles
+  on a maintainer workstation:
+
+  ```sh
+  cosign verify-blob \
+    --bundle "${asset}.cosign.bundle" \
+    --certificate-identity-regexp \
+      "^https://github.com/attestplane/attestplane/\.github/workflows/sign-release\.yml@refs/heads/main\$" \
+    --certificate-oidc-issuer \
+      "https://token.actions.githubusercontent.com" \
+    "${asset}"
+  ```
+
+  Result: `Verified OK` for `artifact-manifest.json`,
+  `checksums.sha256`, and `upload-plan.md`. The certificate identity
+  resolves to `refs/heads/main` because the run was dispatched from the
+  default branch; tag-pinned identities will become the norm once
+  signing is wired into `release-cd.yml` per ADR-0018.
+- SLSA Build L3 provenance via `slsa-provenance.yml` is **deferred to a
+  follow-up.** The dry-run dispatch
+  ([`actions/runs/26191209461`](https://github.com/attestplane/attestplane/actions/runs/26191209461))
+  failed in the upstream
+  `slsa-framework/slsa-github-generator@f7dd8c5` reusable workflow at
+  the `generate-builder.sh` step with
+  `Invalid ref: f7dd8c5...c. Expected ref of the form refs/tags/vX.Y.Z`.
+  The pinned-by-SHA `uses:` line satisfies the project's pinning
+  policy but the upstream generator's binary-fetch path expects a tag
+  ref. A follow-up PR will switch `uses:` to `@v2.1.0` while keeping
+  the SHA in a comment for provenance, or compile the builder
+  in-workflow. The `execute=true` SLSA dispatch was therefore not
+  attempted; the v1.0.8 release does not yet carry
+  `attestplane-v1.0.8.intoto.jsonl`.
+- This proves the cosign signing path end to end; **v1.0 GA will be the
+  first marketed signed release** with full cosign + SLSA evidence.
+  Until then this CHANGELOG entry stands as evidence that the workflow
+  path is operational rather than dry-run-only.
+
 ### Supply-chain evidence regime
 
 - Added ADR-0018 committing to Sigstore keyless cosign signing and
