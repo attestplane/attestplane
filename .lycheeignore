@@ -28,3 +28,9 @@ https://slsa\.dev/.*
 # can time out on GitHub-hosted runners while remaining a real external vendor
 # page, so keep lychee focused on repository-owned links.
 https://guardtime\.com/ksi
+
+# EBA is referenced from ADR-0001 for EU/DORA procurement context. The public
+# site can return transient 502 responses to GitHub-hosted runners while the
+# link remains a real regulator URL, so do not let external availability block
+# release-train push CI.
+https://www\.eba\.europa\.eu/.*
