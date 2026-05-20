@@ -25,3 +25,13 @@ def test_release_cd_records_release_gate_decision_without_blocking_fast_track() 
     assert "python scripts/release/release_gate.py" in release_cd
     assert "ATTESTPLANE_RELEASE_AUDIT: ${{ vars.ATTESTPLANE_RELEASE_AUDIT }}" in release_cd
     assert "release_track: ${{ steps.release_gate.outputs.track }}" in release_cd
+
+
+def test_release_cd_enforces_verified_audit_for_audit_track() -> None:
+    release_cd = (REPO_ROOT / ".github/workflows/release-cd.yml").read_text(encoding="utf-8")
+
+    assert "audit_verified:" in release_cd
+    assert "audit_plan_url:" in release_cd
+    assert "--enforce" in release_cd
+    assert "--audit-verified" in release_cd
+    assert "--audit-plan-url" in release_cd

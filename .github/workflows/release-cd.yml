@@ -22,6 +22,16 @@ on:
         required: false
         default: true
         type: boolean
+      audit_verified:
+        description: 'Allow audit-track publication after verified Opus plan / maintainer approval'
+        required: false
+        default: false
+        type: boolean
+      audit_plan_url:
+        description: 'URL of verified Opus plan or tracking issue for audit-track releases'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   actions: write
@@ -47,6 +57,8 @@ jobs:
       release_track: ${{ steps.release_gate.outputs.track }}
       release_audit_required: ${{ steps.release_gate.outputs.audit_required }}
       release_gate_reasons: ${{ steps.release_gate.outputs.reasons }}
+      audit_gate_allowed: ${{ steps.release_gate.outputs.audit_gate_allowed }}
+      audit_gate_reason: ${{ steps.release_gate.outputs.audit_gate_reason }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -76,7 +88,10 @@ jobs:
           set -euo pipefail
           python scripts/release/release_gate.py \
             --release-tag "${{ inputs.release_tag }}" \
-            --channel "${{ inputs.channel }}"
+            --channel "${{ inputs.channel }}" \
+            --audit-verified "${{ inputs.audit_verified }}" \
+            --audit-plan-url "${{ inputs.audit_plan_url }}" \
+            --enforce
 
       - name: Release CD summary
         run: |
@@ -91,6 +106,9 @@ jobs:
             echo "- release_track: ${{ steps.release_gate.outputs.track }}"
             echo "- audit_required: \`${{ steps.release_gate.outputs.audit_required }}\`"
             echo "- release_gate_reasons: \`${{ steps.release_gate.outputs.reasons }}\`"
+            echo "- audit_gate_allowed: \`${{ steps.release_gate.outputs.audit_gate_allowed }}\`"
+            echo "- audit_gate_reason: \`${{ steps.release_gate.outputs.audit_gate_reason }}\`"
+            echo "- audit_plan_url: \`${{ steps.release_gate.outputs.audit_plan_url }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   python-gate:

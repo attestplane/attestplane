@@ -103,3 +103,14 @@ def test_next_stable_after_rolls_post_one_patch_ten_to_next_minor_zero() -> None
     current = stable_auto_train.StableVersion.parse("1.0.10")
 
     assert stable_auto_train.next_stable_after(current).tag == "v1.1.0"
+
+
+def test_stable_train_blocks_unverified_major_boundary() -> None:
+    target = stable_auto_train.ReleaseTarget(
+        version=stable_auto_train.StableVersion.parse("1.0.0"),
+        channel="latest",
+        min_soak_hours=0,
+    )
+
+    with pytest.raises(RuntimeError, match="audit_required_without_verified_plan"):
+        stable_auto_train.assert_release_gate_allows_target(target)

@@ -21,11 +21,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
 import signal
 import subprocess
+import sys
 import time
 import tomllib
 from dataclasses import dataclass
@@ -34,6 +36,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
+RELEASE_GATE_PATH = ROOT / "scripts" / "release" / "release_gate.py"
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
@@ -286,6 +289,39 @@ def select_target(path: Path) -> ReleaseTarget:
         flush=True,
     )
     return ReleaseTarget(version=generated, channel="latest", min_soak_hours=0)
+
+
+def load_release_gate_module() -> Any:
+    spec = importlib.util.spec_from_file_location("release_gate", RELEASE_GATE_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load release gate module from {RELEASE_GATE_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def assert_release_gate_allows_target(target: ReleaseTarget) -> None:
+    release_gate = load_release_gate_module()
+    decision = release_gate.decide_release_gate(
+        release_tag=target.version.tag,
+        channel=target.channel,
+        labels=[],
+        release_audit=False,
+        milestone=None,
+        dependency_major_bump=False,
+        env=os.environ,
+    )
+    verification = release_gate.validate_audit_verification(
+        decision,
+        audit_verified=release_gate.truthy(os.environ.get("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", "")),
+        audit_plan_url=os.environ.get("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", ""),
+    )
+    if not verification.allowed:
+        raise RuntimeError(
+            "release gate blocked stable autodev target "
+            f"{target.version.tag}: {verification.reason}; reasons={','.join(decision.reasons)}"
+        )
 
 
 def read_python_version() -> str:
@@ -628,6 +664,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     assert_on_main()
     best_effort_fetch_tags()
     target = select_target(target_queue)
+    assert_release_gate_allows_target(target)
     previous = latest_stable_before(target.version)
     version = target.version
     if git_ref_exists(f"refs/tags/{version.tag}") or remote_tag_exists(version.tag):

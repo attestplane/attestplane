@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Decide whether a release should use fast track or audit track.
 
-This is a P0 interface layer only. It does not create GitHub issues, call LLMs,
-publish packages, or block the existing release train. Fast track remains the
-default unless a high-risk release signal is present.
+Fast track remains the default unless a high-risk release signal is present.
+When enforcement is enabled, audit-track releases must carry an explicit
+verified audit plan URL before publication can continue.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
@@ -42,6 +43,20 @@ class ReleaseGateDecision:
         }
 
 
+@dataclass(frozen=True)
+class AuditVerification:
+    allowed: bool
+    reason: str
+    audit_plan_url: str
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "allowed": self.allowed,
+            "reason": self.reason,
+            "audit_plan_url": self.audit_plan_url,
+        }
+
+
 def parse_release_tag(release_tag: str) -> tuple[int, int, int]:
     match = TAG_RE.fullmatch(release_tag)
     if match is None:
@@ -51,6 +66,10 @@ def parse_release_tag(release_tag: str) -> tuple[int, int, int]:
 
 def audit_disabled(env: Mapping[str, str]) -> bool:
     return env.get("ATTESTPLANE_RELEASE_AUDIT", "").strip().lower() in {"0", "false", "no", "off"}
+
+
+def truthy(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def decide_release_gate(
@@ -95,7 +114,25 @@ def decide_release_gate(
     return ReleaseGateDecision(track="fast", audit_required=False, reasons=["default_fast_track"])
 
 
-def write_github_outputs(decision: ReleaseGateDecision) -> None:
+def validate_audit_verification(
+    decision: ReleaseGateDecision,
+    *,
+    audit_verified: bool,
+    audit_plan_url: str,
+) -> AuditVerification:
+    normalized_plan_url = audit_plan_url.strip()
+    if not decision.audit_required:
+        return AuditVerification(allowed=True, reason="audit_not_required", audit_plan_url=normalized_plan_url)
+    if audit_verified and normalized_plan_url:
+        return AuditVerification(allowed=True, reason="audit_verified", audit_plan_url=normalized_plan_url)
+    return AuditVerification(
+        allowed=False,
+        reason="audit_required_without_verified_plan",
+        audit_plan_url=normalized_plan_url,
+    )
+
+
+def write_github_outputs(decision: ReleaseGateDecision, verification: AuditVerification) -> None:
     output_path = os.environ.get("GITHUB_OUTPUT")
     if not output_path:
         return
@@ -103,6 +140,9 @@ def write_github_outputs(decision: ReleaseGateDecision) -> None:
         handle.write(f"track={decision.track}\n")
         handle.write(f"audit_required={str(decision.audit_required).lower()}\n")
         handle.write(f"reasons={','.join(decision.reasons)}\n")
+        handle.write(f"audit_gate_allowed={str(verification.allowed).lower()}\n")
+        handle.write(f"audit_gate_reason={verification.reason}\n")
+        handle.write(f"audit_plan_url={verification.audit_plan_url}\n")
 
 
 def parse_labels(raw: str) -> list[str]:
@@ -117,6 +157,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--release-audit", action="store_true")
     parser.add_argument("--milestone")
     parser.add_argument("--dependency-major-bump", action="store_true")
+    parser.add_argument("--audit-verified", default="false")
+    parser.add_argument("--audit-plan-url", default="")
+    parser.add_argument("--enforce", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -128,15 +171,37 @@ def main(argv: list[str] | None = None) -> int:
         milestone=args.milestone,
         dependency_major_bump=args.dependency_major_bump,
     )
-    write_github_outputs(decision)
+    verification = validate_audit_verification(
+        decision,
+        audit_verified=truthy(args.audit_verified),
+        audit_plan_url=args.audit_plan_url,
+    )
+    write_github_outputs(decision, verification)
     if args.json:
-        print(json.dumps(decision.as_dict(), sort_keys=True))
+        print(
+            json.dumps(
+                {
+                    "decision": decision.as_dict(),
+                    "verification": verification.as_dict(),
+                },
+                sort_keys=True,
+            )
+        )
     else:
         print(
             "release gate decision: "
             f"track={decision.track} audit_required={str(decision.audit_required).lower()} "
-            f"reasons={','.join(decision.reasons)}"
+            f"reasons={','.join(decision.reasons)} "
+            f"audit_gate_allowed={str(verification.allowed).lower()} "
+            f"audit_gate_reason={verification.reason}"
         )
+    if args.enforce and not verification.allowed:
+        print(
+            "::error::release audit gate blocked publication: "
+            f"{verification.reason}; reasons={','.join(decision.reasons)}",
+            file=sys.stderr,
+        )
+        return 3
     return 0
 
 

@@ -117,3 +117,45 @@ def test_dependency_major_bump_uses_audit_track() -> None:
 
     assert decision.track == "audit"
     assert decision.reasons == ["dependency_major_bump"]
+
+
+def test_audit_gate_blocks_without_verified_plan() -> None:
+    decision = release_gate.decide_release_gate(
+        release_tag="v1.0.0",
+        channel="latest",
+        labels=[],
+        release_audit=False,
+        milestone=None,
+        dependency_major_bump=False,
+        env={},
+    )
+
+    result = release_gate.validate_audit_verification(
+        decision,
+        audit_verified=False,
+        audit_plan_url="",
+    )
+
+    assert result.allowed is False
+    assert result.reason == "audit_required_without_verified_plan"
+
+
+def test_audit_gate_allows_verified_plan() -> None:
+    decision = release_gate.decide_release_gate(
+        release_tag="v1.0.0",
+        channel="latest",
+        labels=[],
+        release_audit=False,
+        milestone=None,
+        dependency_major_bump=False,
+        env={},
+    )
+
+    result = release_gate.validate_audit_verification(
+        decision,
+        audit_verified=True,
+        audit_plan_url="https://github.com/attestplane/attestplane/issues/1",
+    )
+
+    assert result.allowed is True
+    assert result.reason == "audit_verified"
