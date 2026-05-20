@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 The Attestplane Authors
 # SPDX-License-Identifier: Apache-2.0
-"""Package import-surface smoke tests for alpha release hardening."""
+"""Package import-surface smoke tests for beta release hardening."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ PY_SRC = REPO_ROOT / "sdk" / "python" / "src"
 
 
 def test_import_attestplane_smoke() -> None:
-    assert attestplane.__version__ == "0.7.9a0"
+    assert attestplane.__version__ == "0.8.0b0"
     assert attestplane.canonicalize({"a": 1}) == b'{"a":1}'
 
 

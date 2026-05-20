@@ -6,19 +6,19 @@
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
-[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.7.9a0-blue)](https://pypi.org/project/attestplane/)
+[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.8.0b0-blue)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
 [![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplane/commits/main)
 [![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplane/stargazers)
-[![Alpha — API may change](https://img.shields.io/badge/status-alpha-orange.svg)](#roadmap)
+[![Beta — prerelease](https://img.shields.io/badge/status-beta-blue.svg)](#roadmap)
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
-> **Alpha software.** API surfaces are not yet stable. Not for production use without review of your specific compliance obligations.
+> **Beta prerelease.** API surfaces are entering a freeze window, but this is not GA and not for production use without review of your specific compliance obligations.
 >
-> **Current verifier scope.** Attestplane is an alpha-grade dual-SDK
+> **Current verifier scope.** Attestplane is a beta-stage dual-SDK
 > tamper-evident evidence substrate. It provides restricted
 > canonicalization, SHA-256 hash-chain primitives, evidence payload
 > schemas, sidecar signing/anchoring primitives, and read-only verifier
@@ -31,7 +31,7 @@
 
 ## What is Attestplane?
 
-Attestplane is an Apache-2.0 cryptographic evidence substrate for recording AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain. The current alpha includes sidecar signing and anchoring primitives plus proof-bundle export surfaces, but those sidecars are not part of the default CLI verifier path. `attestplane verify` is chain/report-oriented: it replays bundle events, compares the embedded `verification_report` with the recomputed chain result, and fails closed on malformed ProofBundle metadata and `policy_trace_refs` closure.
+Attestplane is an Apache-2.0 cryptographic evidence substrate for recording AI agent actions, decisions, policy checks, lease lifecycle events, replay outcomes, and human approvals into a tamper-evident hash chain. The current beta prerelease includes sidecar signing and anchoring primitives plus proof-bundle export surfaces, but those sidecars are not part of the default CLI verifier path. `attestplane verify` is chain/report-oriented: it replays bundle events, compares the embedded `verification_report` with the recomputed chain result, and fails closed on malformed ProofBundle metadata and `policy_trace_refs` closure.
 
 ### Two sides of one evidence protocol
 
@@ -42,7 +42,7 @@ Attestplane is built around a single shared protocol — **`AP-EVD/1.0`** (Attes
 | **Produce** | Banks · Insurers · Hospitals · Governments · HR platforms · any AI-using organisation under EU AI Act / DORA / NIS2 / GDPR / NIST AI RMF / China algorithmic-recommendation regs | Embed the SDK; emit byte-faithful evidence events from the AI runtime |
 | **Verify** | Law firms · Big 4 AI assurance practices · Notified bodies (TÜV / BSI / DEKRA) · regulators (BaFin / CSSF / DNB / CAC) | Consume proof bundles and sidecar evidence; cite `AP-EVD/1.0` conformance in legal opinions, audit reports, conformity assessments |
 
-Both sides depend on the same OSS protocol; both can independently inspect and replay the same bundle bytes. Law firms and Big 4 audit practices participate on **both** sides — they use AI internally (Produce) **and** issue compliance opinions to clients (Verify). The current alpha does not itself issue those opinions and does not certify legal compliance.
+Both sides depend on the same OSS protocol; both can independently inspect and replay the same bundle bytes. Law firms and Big 4 audit practices participate on **both** sides — they use AI internally (Produce) **and** issue compliance opinions to clients (Verify). The current beta prerelease does not itself issue those opinions and does not certify legal compliance.
 
 ### What Attestplane is not
 
@@ -60,7 +60,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.1.0-alpha** builds on the earlier alpha substrate releases and adds:
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opens the beta prerelease line and adds:
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (newline-terminated records, optional fsync,
@@ -77,9 +77,9 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
-The current alpha line, **v0.1.0-alpha**, tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains alpha substrate work and is not a legal compliance certification.
+The current beta line, **v0.8.0-beta.0**, tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains prerelease substrate work and is not a legal compliance certification.
 
-Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate alpha substrate conformance, not production readiness or regulatory compliance.
+Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate substrate conformance, not production readiness or regulatory compliance.
 
 Attestplane is infrastructure your team owns, operates, and audits independently. The substrate stays in your control plane.
 
@@ -147,7 +147,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  SDKs                                                         │   │
-│  │  Python (0.1.0a0)   │  TypeScript (0.1.0-alpha)               │   │
+│  │  Python (0.8.0b0)   │  TypeScript (0.8.0-beta.0)             │   │
 │  │  FastAPI / Express / NestJS / Django helpers (M5)             │   │
 │  │  Rust crate (M7)                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -168,17 +168,18 @@ Integration with each partner does **not** imply endorsement by the partner. The
 
 ---
 
-## Current release posture: public alpha
+## Current release posture: public beta prerelease
 
-The public alpha line is live as a GitHub prerelease and as package artifacts:
-Python `attestplane==0.7.9a0` is published to PyPI, and
-`@attestplane/attestplane@0.7.9-alpha` is published to npm under the
-`alpha` dist-tag. This line is alpha-grade substrate work: it expands the core
+The public beta prerelease line is live as a GitHub prerelease and as package artifacts:
+Python `attestplane==0.8.0b0` is published to PyPI, and
+`@attestplane/attestplane@0.8.0-beta.0` is published to npm under the
+`beta` dist-tag. The npm `latest` dist-tag is not moved by beta publication.
+This line is beta-stage substrate work: it expands the core
 with schemas, sidecar primitives, storage, adapters, verifier predicates,
 public API drift gates, storage compatibility policy, and release provenance
-hygiene, but it is not pre-beta, not production-ready, and not compliance-ready.
+hygiene, but it is not GA, not production-ready, and not compliance-ready.
 
-The `v0.1.0-alpha` line tightens verifier conformance and release evidence. The package and release registry surfaces remain the source of truth.
+The `v0.8.0-beta.0` line tightens verifier conformance and release evidence. The package and release registry surfaces remain the source of truth.
 
 The current `attestplane verify` command is deliberately narrow:
 
@@ -190,9 +191,9 @@ The current `attestplane verify` command is deliberately narrow:
 - It does not verify signatures or anchors.
 - It does not issue compliance certification.
 
-## Published alpha status
+## Published beta status
 
-Implemented in the published alpha artifacts:
+Implemented in the published beta artifacts:
 
 - Python SDK
 - TypeScript SDK
@@ -201,8 +202,8 @@ Implemented in the published alpha artifacts:
 - cross-language conformance vectors
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
-Designed and merged on `main` since v0.0.1-alpha (alpha substrate surface
-through the v0.1.0-alpha release-prep line; not a production claim):
+Designed and merged on `main` since v0.0.1-alpha (beta-stage substrate surface
+through the v0.8.0-beta.0 release-prep line; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -211,7 +212,7 @@ through the v0.1.0-alpha release-prep line; not a production claim):
 - Compliance obligation registry (EU AI Act Article 12 + DORA Article 8): machine-readable framework mappings with locked `implementation_status` enum per the claim-safety triad
 - Negative conformance vectors: five frozen broken-chain fixtures pinning gates A2 and A3
 - Stable verifier error taxonomy and retention/deletion proof marker checks
-  (`v0.1.0-alpha`), still under alpha/non-certification boundaries
+  (`v0.8.0-beta.0`), still under beta prerelease/non-certification boundaries
 
 Not yet implemented:
 
@@ -222,17 +223,16 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.7.9a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
-| `@attestplane/attestplane@0.7.9-alpha` | [npm alpha/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| GitHub Release | `v0.7.9-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
+| `attestplane==0.8.0b0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `@attestplane/attestplane@0.8.0-beta.0` | [npm beta dist-tag](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
+| GitHub Release | `v0.8.0-beta.0` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
-The npm `alpha` dist-tag is synchronized to the current alpha release after
-the release train publishes the package. The `latest` tag is managed
-separately, so alpha publication does not depend on a writable npm token.
-This improves default installability, but it does not change the alpha/pre-GA
-claim boundary.
+The npm `beta` dist-tag is synchronized to the current beta prerelease after
+the release workflow publishes the package. The `latest` tag is managed
+separately and is not moved by beta publication. This improves prerelease
+installability, but it does not change the beta/pre-GA claim boundary.
 
-The local alpha train also writes a post-release integration evidence packet
+The local release train also writes a post-release integration evidence packet
 under `release/alpha-train/reports/`. It reads GitHub Release/workflow facts,
 PyPI/npm registry facts, Linear issue-flow facts, Sentry failure-source facts,
 CodeRabbit advisory availability, local Codex Security check surfaces, and the
@@ -250,7 +250,7 @@ What works today, end-to-end.
 ### Python
 
 ```bash
-pip install attestplane==0.7.9a0
+pip install attestplane==0.8.0b0
 ```
 
 ```python
@@ -277,7 +277,7 @@ assert sub.verify().ok            # chain integrity check
 ### TypeScript
 
 ```bash
-npm install @attestplane/attestplane@alpha
+npm install @attestplane/attestplane@beta
 ```
 
 ```typescript
@@ -321,7 +321,7 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 ## Future Compliance Framework Mapping Targets
 
 The table below lists roadmap targets for future compliance mapping. The
-prepared v0.1.0-alpha artifacts include obligation registry data and
+prepared v0.8.0-beta.0 artifacts include obligation registry data and
 chain/report-oriented verifier predicates, but they do not ship a full
 ProofBundle, signed, anchored, or compliance certification verifier. All
 entries below carry `implementation_status` values from the locked four-value
@@ -345,12 +345,12 @@ enum (`mapping_target` / `designed_toward` / `field_supported` /
 
 | Milestone | Target | Scope |
 |---|---|---|
-| **M5 — v0.1.x alpha hardening** | 2026-08-15 | Self-hosted OSS substrate · full CLI ProofBundle verification · FastAPI/Express helpers · expanded framework mapping · production-storage design review |
+| **M5 — v0.8.x beta hardening** | 2026-08-15 | Self-hosted OSS substrate · full CLI ProofBundle verification · FastAPI/Express helpers · expanded framework mapping · production-storage design review |
 | **M6 — Cloud preview** | 2026-09 | Attestplane Cloud hosted TSA + Sigstore Rekor mirror + framework auto-update · free for EU deployments · Design Partner Program launch |
 | **M7 — Client-side DP aggregation** | 2026-Q4 | Client-side differential privacy SDK (Rust + TypeScript + Python) · ε-configurable Laplace noise · regulator dashboard preview · customer attestation data never leaves customer control plane |
 | **M8 — Paid tier** | 2027-Q1+ | Pro / Team / Enterprise paid tiers · SSO/SCIM/RBAC · SLA · first FTE hire |
 
-Current status: **public alpha** — community velocity stage. Contributions,
+Current status: **public beta prerelease** — community velocity stage. Contributions,
 issue reports, and deployment feedback are the project's most valuable input
 right now.
 
