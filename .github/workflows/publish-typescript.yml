@@ -51,6 +51,7 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org/'
+          package-manager-cache: false
 
       - name: Install dependencies
         run: npm ci
@@ -83,5 +84,7 @@ jobs:
         run: |
           set -e
           TAG="${{ inputs.tag || 'alpha' }}"
-          echo "Publishing @attestplane/attestplane to npm with dist-tag '$TAG' and provenance attestation"
-          npm publish --provenance --access public --tag "$TAG"
+          unset NODE_AUTH_TOKEN
+          npm config delete //registry.npmjs.org/:_authToken || true
+          echo "Publishing @attestplane/attestplane to npm with OIDC trusted publishing and dist-tag '$TAG'"
+          npm publish --access public --tag "$TAG"

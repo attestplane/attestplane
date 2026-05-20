@@ -1925,6 +1925,7 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
             print(f"stage pypi_published observed done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
         else:
             last_error = "PyPI publish workflow did not run"
+            published = False
             for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
                 run(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"], dry_run=dry_run)
                 if dry_run:
@@ -1951,6 +1952,7 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                     observed=lambda: pypi_version_exists(candidate.python_version),
                 )
                 if completed:
+                    published = True
                     if observed:
                         mark_stage(
                             state_path,
@@ -1975,7 +1977,7 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                     flush=True,
                 )
                 time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
-            else:
+            if not dry_run and not published and not stage_done(state_path, candidate, "pypi_published"):
                 raise RuntimeError(last_error)
     if candidate.publish_npm:
         if stage_done(state_path, candidate, "npm_published"):
@@ -1985,6 +1987,7 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
             print(f"stage npm_published observed done; skipping npm publish dispatch: {candidate.release}", flush=True)
         else:
             last_error = "npm publish workflow did not run"
+            published = False
             for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
                 run(
                     ["gh", "workflow", "run", "publish-typescript.yml", "-f", "tag=alpha", "-f", "dry_run=false", "--ref", "main"],
@@ -2014,6 +2017,7 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                     observed=lambda: npm_version_exists(candidate.npm_version),
                 )
                 if completed:
+                    published = True
                     if observed:
                         mark_stage(
                             state_path,
@@ -2038,7 +2042,7 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                     flush=True,
                 )
                 time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
-            else:
+            if not dry_run and not published and not stage_done(state_path, candidate, "npm_published"):
                 raise RuntimeError(last_error)
         if stage_done(state_path, candidate, "dist_tag_synced"):
             print(f"stage dist_tag_synced already done; skipping npm alpha tag record: {candidate.release}", flush=True)

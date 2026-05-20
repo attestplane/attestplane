@@ -1626,3 +1626,55 @@ def test_publish_platforms_retries_transient_pypi_watch_failure(
     assert commands.count(["gh", "run", "watch", "python-run-2", "--exit-status"]) == 1
     state = alpha_release_train.load_continuous_state(state_file)
     assert state["release_stages"]["v0.0.8-alpha"]["pypi_published"] == "done"
+
+
+def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.0.8-alpha",
+            "python_version": "0.0.8a0",
+            "npm_version": "0.0.8-alpha",
+            "publish_python": False,
+        }
+    )
+    run_ids = iter(["npm-run-1", "npm-run-2"])
+
+    def fake_run(
+        argv: list[str],
+        *,
+        dry_run: bool,
+        env: dict[str, str] | None = None,
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        if argv[:3] == ["gh", "run", "watch"]:
+            raise alpha_release_train.subprocess.CalledProcessError(1, argv)
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        if argv[:4] == ["gh", "run", "list", "--workflow"] and argv[4] == "publish-typescript.yml":
+            return next(run_ids)
+        return ""
+
+    monkeypatch.setattr(alpha_release_train, "run", fake_run)
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train, "npm_version_exists", lambda version: False)
+    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
+
+    with pytest.raises(RuntimeError, match="CalledProcessError"):
+        alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    stages = state.get("release_stages", {}).get("v0.0.8-alpha", {})
+    assert stages.get("npm_published") != "done"
+    assert stages.get("dist_tag_synced") != "done"
+
+
+def test_publish_typescript_workflow_uses_trusted_publishing_without_token() -> None:
+    workflow = (REPO_ROOT / ".github" / "workflows" / "publish-typescript.yml").read_text(encoding="utf-8")
+    assert "package-manager-cache: false" in workflow
+    assert "unset NODE_AUTH_TOKEN" in workflow
+    assert "npm config delete //registry.npmjs.org/:_authToken || true" in workflow
+    assert 'npm publish --access public --tag "$TAG"' in workflow
