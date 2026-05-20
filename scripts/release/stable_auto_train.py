@@ -5,7 +5,8 @@
 
 This train advances an explicit seed queue of stable versions such as v0.8.6,
 v0.8.7, and v0.9.0, then continues with the same sequence rule:
-patch releases advance through .10, then the next minor starts at .0. It
+patch releases advance through .10, the next minor starts at .0, and 0.9.10
+promotes to 1.0.0. It
 prepares local package artifacts, commits the version bump, creates an
 immutable annotated tag, pushes main plus that tag, and delegates publication
 to GitHub release-cd.
@@ -190,6 +191,8 @@ def latest_stable() -> StableVersion:
 
 
 def next_stable_after(version: StableVersion) -> StableVersion:
+    if version.major == 0 and version.minor >= 9 and version.patch >= PATCH_ROLLOVER:
+        return StableVersion(1, 0, 0)
     if version.patch >= PATCH_ROLLOVER:
         return StableVersion(version.major, version.minor + 1, 0)
     return StableVersion(version.major, version.minor, version.patch + 1)

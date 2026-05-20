@@ -93,7 +93,13 @@ def test_next_stable_after_continues_after_minor_boundary() -> None:
     assert stable_auto_train.next_stable_after(current).tag == "v0.9.1"
 
 
-def test_next_stable_after_rolls_later_patch_ten_to_next_minor_zero() -> None:
+def test_next_stable_after_rolls_zero_nine_ten_to_one_zero_zero() -> None:
     current = stable_auto_train.StableVersion.parse("0.9.10")
 
-    assert stable_auto_train.next_stable_after(current).tag == "v0.10.0"
+    assert stable_auto_train.next_stable_after(current).tag == "v1.0.0"
+
+
+def test_next_stable_after_rolls_post_one_patch_ten_to_next_minor_zero() -> None:
+    current = stable_auto_train.StableVersion.parse("1.0.10")
+
+    assert stable_auto_train.next_stable_after(current).tag == "v1.1.0"
