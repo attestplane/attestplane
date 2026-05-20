@@ -45,6 +45,9 @@ DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
 REMOTE_PROBE_TIMEOUT_SECONDS = 30
+REMOTE_PUSH_ATTEMPTS = 3
+REMOTE_PUSH_RETRY_SECONDS = 10
+REMOTE_PUSH_TIMEOUT_SECONDS = 120
 PATCH_ROLLOVER = 10
 PUSH_CI_WORKFLOWS = (
     "ci",
@@ -206,6 +209,139 @@ def terminate_process_group(process: subprocess.Popen[str]) -> None:
         except ProcessLookupError:
             return
         process.wait(timeout=5)
+
+
+def normalize_git_push_argv(argv: list[str]) -> list[str]:
+    if (
+        len(argv) >= 5
+        and argv[0] == "git"
+        and argv[1] == "-c"
+        and argv[2] == f"http.version={GIT_HTTP_VERSION}"
+        and argv[3] == "push"
+    ):
+        return argv
+    if len(argv) >= 4 and argv[:3] == ["git", "push", "origin"]:
+        return ["git", "-c", f"http.version={GIT_HTTP_VERSION}", *argv[1:]]
+    return argv
+
+
+def run_git_push(argv: list[str]) -> subprocess.CompletedProcess[str]:
+    """Push an idempotent ref with timeout/retry and remote convergence checks."""
+    argv = normalize_git_push_argv(argv)
+    print("+ " + " ".join(argv), flush=True)
+    converged, preflight_reason = git_push_remote_status(argv)
+    if converged:
+        print("git push remote state already converged; skipping push", flush=True)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    if preflight_reason is not None:
+        raise subprocess.CalledProcessError(
+            128,
+            argv,
+            stderr=f"preflight git remote probe failed: {preflight_reason}",
+        )
+
+    last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None
+    for attempt in range(1, REMOTE_PUSH_ATTEMPTS + 1):
+        try:
+            return attempt_git_push_once(argv)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            last_error = exc
+            if git_push_remote_converged(argv):
+                print("git push remote state already converged; continuing after failed or timed-out local push", flush=True)
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            if attempt == REMOTE_PUSH_ATTEMPTS:
+                break
+            print(
+                f"git push attempt {attempt}/{REMOTE_PUSH_ATTEMPTS} failed or timed out; "
+                f"retrying in {REMOTE_PUSH_RETRY_SECONDS}s",
+                flush=True,
+            )
+            time.sleep(REMOTE_PUSH_RETRY_SECONDS)
+    assert last_error is not None
+    raise last_error
+
+
+def attempt_git_push_once(argv: list[str]) -> subprocess.CompletedProcess[str]:
+    argv = normalize_git_push_argv(argv)
+    result = run_process(
+        argv,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=REMOTE_PUSH_TIMEOUT_SECONDS,
+    )
+    echo_subprocess_output(result.stdout)
+    echo_subprocess_output(result.stderr)
+    if result.returncode == 0:
+        return result
+    raise subprocess.CalledProcessError(result.returncode, argv, output=result.stdout, stderr=result.stderr)
+
+
+def echo_subprocess_output(text: str | None) -> None:
+    if not text:
+        return
+    print(text, end="" if text.endswith("\n") else "\n", flush=True)
+
+
+def git_push_remote_converged(argv: list[str]) -> bool:
+    return git_push_remote_status(argv)[0]
+
+
+def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
+    argv = normalize_git_push_argv(argv)
+    if len(argv) != 6 or argv[:4] != ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "push"] or argv[4] != "origin":
+        return False, None
+    ref = argv[5]
+    try:
+        if ref == "main":
+            local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            return bool(remote_head) and remote_head.split()[0] == local_head, None
+        if STABLE_TAG_RE.fullmatch(ref):
+            remote_tag = capture(["git", "ls-remote", "origin", f"refs/tags/{ref}"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            return bool(remote_tag), None
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        return False, classify_git_push_failure(exc)
+    return False, None
+
+
+def classify_git_push_failure(exc: BaseException) -> str:
+    if isinstance(exc, subprocess.TimeoutExpired):
+        return "git_push_timeout"
+    text_parts = [str(exc)]
+    for attr in ("stderr", "output"):
+        value = getattr(exc, attr, None)
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="replace")
+        if isinstance(value, str):
+            text_parts.append(value)
+    text = "\n".join(text_parts).lower()
+    if any(
+        phrase in text
+        for phrase in (
+            "failed to connect",
+            "couldn't connect",
+            "connection timed out",
+            "operation timed out",
+            "could not resolve host",
+            "network is unreachable",
+        )
+    ):
+        return "git_push_network_unavailable"
+    if any(
+        phrase in text
+        for phrase in (
+            "authentication failed",
+            "permission denied",
+            "repository not found",
+            "could not read from remote repository",
+            "fatal: unable to access",
+        )
+    ):
+        return "git_push_auth_or_repo_unavailable"
+    if any(phrase in text for phrase in ("non-fast-forward", "fetch first", "rejected", "failed to push some refs")):
+        return "git_push_rejected"
+    return f"git_push_{type(exc).__name__.lower()}"
 
 
 def sha256_file(path: Path) -> str:
@@ -675,10 +811,10 @@ def commit_and_tag(version: StableVersion) -> None:
 
 
 def push_and_dispatch(version: StableVersion, *, wait: bool) -> None:
-    run(["git", "push", "origin", "main"])
+    run_git_push(["git", "push", "origin", "main"])
     head_sha = capture(["git", "rev-parse", "HEAD"])
     wait_for_push_ci(head_sha)
-    run(["git", "push", "origin", version.tag])
+    run_git_push(["git", "push", "origin", version.tag])
     run(release_cd_dispatch_args(version))
     if wait:
         wait_for_release_cd(version)

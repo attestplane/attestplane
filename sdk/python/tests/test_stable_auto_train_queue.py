@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -340,6 +341,63 @@ def test_wait_for_push_ci_allows_successful_required_workflows(monkeypatch: pyte
     monkeypatch.setattr(stable_auto_train, "capture", lambda argv: json.dumps(runs))
 
     stable_auto_train.wait_for_push_ci(head_sha)
+
+
+def test_push_and_dispatch_uses_timed_pushes_before_release_cd(monkeypatch: pytest.MonkeyPatch) -> None:
+    version = stable_auto_train.StableVersion.parse("1.1.3")
+    calls: list[tuple[str, list[str]]] = []
+
+    monkeypatch.setattr(
+        stable_auto_train,
+        "run_git_push",
+        lambda argv: calls.append(("push", argv)),
+    )
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "abc123")
+    monkeypatch.setattr(stable_auto_train, "wait_for_push_ci", lambda head_sha: calls.append(("ci", [head_sha])))
+    monkeypatch.setattr(stable_auto_train, "run", lambda argv: calls.append(("run", argv)))
+
+    stable_auto_train.push_and_dispatch(version, wait=False)
+
+    assert calls == [
+        ("push", ["git", "push", "origin", "main"]),
+        ("ci", ["abc123"]),
+        ("push", ["git", "push", "origin", "v1.1.3"]),
+        ("run", stable_auto_train.release_cd_dispatch_args(version)),
+    ]
+
+
+def test_run_git_push_skips_when_remote_already_converged(monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "git_push_remote_status", lambda argv: (True, None))
+    monkeypatch.setattr(stable_auto_train, "attempt_git_push_once", lambda argv: attempts.append(argv))
+
+    result = stable_auto_train.run_git_push(["git", "push", "origin", "main"])
+
+    assert result.returncode == 0
+    assert result.args == ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]
+    assert attempts == []
+
+
+def test_run_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"attempts": 0}
+
+    monkeypatch.setattr(stable_auto_train, "git_push_remote_status", lambda argv: (False, None))
+    monkeypatch.setattr(stable_auto_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+
+    def fake_attempt(argv: list[str]) -> object:
+        calls["attempts"] += 1
+        if calls["attempts"] < 2:
+            raise subprocess.TimeoutExpired(argv, stable_auto_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(stable_auto_train, "attempt_git_push_once", fake_attempt)
+
+    result = stable_auto_train.run_git_push(["git", "push", "origin", "v1.1.3"])
+
+    assert result.returncode == 0
+    assert calls["attempts"] == 2
 
 
 def test_wait_for_push_ci_blocks_failed_required_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
