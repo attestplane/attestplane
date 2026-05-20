@@ -250,6 +250,31 @@ def test_retire_obsolete_prepared_keeps_active_candidate(
     assert alpha_release_train.load_continuous_state(state_file)["prepared_releases"] == ["v0.0.7-alpha"]
 
 
+def test_retire_obsolete_prepared_keeps_minor_boundary_until_registry_done(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.7.0-alpha")
+
+    alpha_release_train.mark_prepared(state_file, candidate_value, dry_run=False)
+    alpha_release_train.mark_stage(state_file, candidate_value, "local_gates_passed", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "main_pushed", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.7.0-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: True)
+
+    retired = alpha_release_train.retire_obsolete_prepared_releases(
+        state_file,
+        active_candidates=[],
+        dry_run=False,
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert retired == []
+    assert state["prepared_releases"] == ["v0.7.0-alpha"]
+
+
 def test_retire_obsolete_prepared_dry_run_does_not_report_actual_retirement(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -288,7 +313,10 @@ def test_retire_obsolete_prepared_handles_empty_release_floor(
     ) == []
 
 
-def test_recoverable_failed_publish_candidates_retry_latest_partial_release(tmp_path: Path) -> None:
+def test_recoverable_failed_publish_candidates_retry_latest_partial_release(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     state_file = tmp_path / "state.json"
     older = alpha_release_train.prepared_candidate_from_release("v0.6.5-alpha")
     latest = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
@@ -299,6 +327,8 @@ def test_recoverable_failed_publish_candidates_retry_latest_partial_release(tmp_
     alpha_release_train.mark_failed(state_file, latest, reason="RuntimeError", dry_run=False)
     alpha_release_train.mark_stage(state_file, latest, "gh_release_created", "done")
     alpha_release_train.mark_stage(state_file, latest, "pypi_published", "done", {"run": "latest"})
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha")
+    monkeypatch.setattr(alpha_release_train, "verify_candidate_files", lambda candidate: None)
 
     recovered = alpha_release_train.recoverable_failed_publish_candidates(state_file)
 

@@ -2712,17 +2712,22 @@ def retire_obsolete_prepared_releases(
     for release in state.get("prepared_releases", []):
         if not isinstance(release, str) or release in active:
             continue
+        candidate = prepared_candidate_from_release(release)
         try:
             is_older_than_latest = compare_alpha_releases(release, latest_known) < 0
         except ValueError:
             continue
         if alpha_release_exists(release):
+            if alpha_registry_publish_enabled(release) and not all(
+                stage_done(state_path, candidate, stage)
+                for stage in ("pypi_published", "npm_published", "registry_verified")
+            ):
+                continue
             reason = "release_already_exists"
         elif is_older_than_latest:
             reason = f"older_than_latest_alpha:{latest_known}"
         else:
             continue
-        candidate = prepared_candidate_from_release(release)
         retire_prepared(state_path, candidate, reason=reason, dry_run=dry_run)
         if not dry_run:
             retired.append({"release": release, "reason": reason})
