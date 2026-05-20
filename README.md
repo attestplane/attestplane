@@ -17,7 +17,7 @@
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
 > **Release-candidate preparation.** The next planned cut is
-> `v0.8.0-rc.1`. Public SDK and wire-format surfaces are frozen for the
+> `v0.8.5-rc.1`. Public SDK and wire-format surfaces are frozen for the
 > RC line, subject to explicit `rc.N` bumps for breaking corrections.
 > This is not GA and not a production-readiness or compliance claim.
 >
@@ -63,7 +63,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; **v0.8.0-rc.1** is the next planned release-candidate cut and carries the public API and wire-format freeze documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md):
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; **v0.8.5-rc.1** is the next planned release-candidate cut and carries the public API and wire-format freeze documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md):
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (newline-terminated records, optional fsync,
@@ -174,10 +174,10 @@ Integration with each partner does **not** imply endorsement by the partner. The
 ## Current release posture: RC preparation
 
 The published beta line is live as a GitHub prerelease and as package
-artifacts: Python `attestplane==0.8.4a0` is published to PyPI, and
-`@attestplane/attestplane@0.8.4-alpha` is published to npm under the
-`beta` dist-tag. The next planned cut is `v0.8.0-rc.1` (`0.8.0rc1` on
-PyPI, `0.8.0-rc.1` on npm under the `rc` dist-tag).
+artifacts: Python `attestplane==0.8.0b0` is published to PyPI, and
+`@attestplane/attestplane@0.8.0-beta.0` is published to npm under the
+`beta` and `latest` dist-tags. The next planned cut is `v0.8.5-rc.1` (`0.8.5rc1` on
+PyPI, `0.8.5-rc.1` on npm under the `rc` dist-tag).
 
 RC preparation freezes public SDK exports and wire-format behavior under
 [ADR-0016](docs/adr/0016-rc-api-freeze.md) and the [compatibility policy](docs/spec/compat.md).
@@ -219,7 +219,7 @@ Implemented in the published beta artifacts:
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
 Designed and merged on `main` since v0.0.1-alpha (pre-GA substrate surface
-through the v0.8.0-rc.1 preparation line; not a production claim):
+through the v0.8.5-rc.1 preparation line; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -240,9 +240,9 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.8.4a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `attestplane==0.8.0b0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
 | `@attestplane/attestplane@0.8.0-beta.0` | [npm beta/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| `v0.8.0-rc.1` | planned RC cut | publish under npm `rc`; do not reuse versions |
+| `v0.8.5-rc.1` | planned RC cut | publish under npm `rc`; do not reuse versions |
 | GitHub Release | `v0.8.0-beta.0` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
 The npm `latest` tag currently points at `0.8.0-beta.0` by explicit
@@ -340,7 +340,7 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 ## Future Compliance Framework Mapping Targets
 
 The table below lists roadmap targets for future compliance mapping. The
-published v0.8.0-beta.0 artifacts and planned v0.8.0-rc.1 cut include
+published v0.8.0-beta.0 artifacts and planned v0.8.5-rc.1 cut include
 obligation registry data and chain/report-oriented verifier predicates, but
 they do not ship a full
 ProofBundle, signed, anchored, or compliance certification verifier. All

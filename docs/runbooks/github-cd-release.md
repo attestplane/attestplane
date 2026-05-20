@@ -36,8 +36,8 @@ verifies PyPI and npm registry visibility.
 |---|---|---|---|
 | `v0.8.0-alpha.0` | `0.8.0a0` | `0.8.0-alpha.0` | `alpha` |
 | `v0.8.0-beta.0` | `0.8.0b0` | `0.8.0-beta.0` | `beta` |
-| `v0.8.0-rc.1` | `0.8.0rc1` | `0.8.0-rc.1` | `rc` |
-| `v0.8.0` | `0.8.0` | `0.8.0` | `latest` |
+| `v0.8.5-rc.1` | `0.8.5rc1` | `0.8.5-rc.1` | `rc` |
+| `v0.8.5` | `0.8.5` | `0.8.5` | `latest` |
 
 Pre-release packages must publish under their matching `alpha`, `beta`, or
 `rc` dist-tag. A pre-release must not be published with npm `latest` unless a
@@ -54,7 +54,7 @@ Dry-run validation:
 
 ```bash
 gh workflow run release-cd.yml \
-  -f release_tag=v0.8.0-rc.1 \
+  -f release_tag=v0.8.5-rc.1 \
   -f channel=rc \
   -f dry_run=true
 ```
@@ -63,7 +63,7 @@ Real publication:
 
 ```bash
 gh workflow run release-cd.yml \
-  -f release_tag=v0.8.0-rc.1 \
+  -f release_tag=v0.8.5-rc.1 \
   -f channel=rc \
   -f dry_run=false
 ```
@@ -103,7 +103,7 @@ Do not delete or reuse a published version.
   version.
 - GitHub workflow: revert the release workflow change and re-dispatch only
   after review.
-- Broken RC: publish a new `v0.8.0-rc.N+1` with a changelog entry.
+- Broken RC: publish a new `v0.8.5-rc.N+1` with a changelog entry.
 
 Use the scoped recovery checklist in
 [`release-rollback.md`](release-rollback.md) before mutating registry state.

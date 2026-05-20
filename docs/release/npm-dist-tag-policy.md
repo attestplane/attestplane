@@ -38,9 +38,9 @@ This does not change the claim boundary:
 
 ## Planned RC Behavior
 
-The planned `v0.8.0-rc.1` cut must publish as:
+The planned `v0.8.5-rc.1` cut must publish as:
 
-- npm version: `0.8.0-rc.1`
+- npm version: `0.8.5-rc.1`
 - npm dist-tag: `rc`
 
 The RC release must not move `latest` unless a separate maintainer decision is
@@ -48,8 +48,8 @@ recorded before dispatch.
 
 ## Planned GA Behavior
 
-When `v0.8.0` GA is cut, `latest` should move from `0.8.0-beta.0` to
-`0.8.0` through the documented GitHub CD path.
+When `v0.8.5` GA is cut, `latest` should move from `0.8.0-beta.0` to
+`0.8.5` through the documented GitHub CD path.
 
 The beta dist-tag may remain pinned to `0.8.0-beta.0` for reproducible
 installation of the beta line.

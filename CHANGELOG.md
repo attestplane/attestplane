@@ -11,7 +11,7 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
-### Preparing v0.8.0-rc.1
+### Preparing v0.8.5-rc.1
 
 - Added a release-candidate compatibility policy for SDK exports,
   proof-bundle v1, verifier reason codes, canonical bytes, and
