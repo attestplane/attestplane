@@ -875,6 +875,11 @@ def test_next_alpha_release_rolls_minor_after_ten_patch_alphas(monkeypatch: pyte
     assert alpha_release_train.next_alpha_release() == "v0.2.0-alpha"
 
 
+def test_alpha_registry_publish_enabled_only_for_minor_boundaries() -> None:
+    assert alpha_release_train.alpha_registry_publish_enabled("v0.4.0-alpha") is True
+    assert alpha_release_train.alpha_registry_publish_enabled("v0.4.1-alpha") is False
+
+
 def test_explicit_next_alpha_release_override_is_validated() -> None:
     assert alpha_release_train.resolve_next_alpha_release("v0.1.0-alpha") == "v0.1.0-alpha"
     with pytest.raises(ValueError, match="invalid alpha release"):
@@ -998,9 +1003,9 @@ def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.M
     monkeypatch.setattr(alpha_release_train, "capture", lambda argv: "abc123")
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
-            "release": "v0.0.8-alpha",
-            "python_version": "0.0.8a0",
-            "npm_version": "0.0.8-alpha",
+            "release": "v0.1.0-alpha",
+            "python_version": "0.1.0a0",
+            "npm_version": "0.1.0-alpha",
         }
     )
 
@@ -1249,9 +1254,9 @@ def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.Monke
     observed_envs: list[dict[str, str]] = []
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
-            "release": "v0.0.8-alpha",
-            "python_version": "0.0.8a0",
-            "npm_version": "0.0.8-alpha",
+            "release": "v0.1.0-alpha",
+            "python_version": "0.1.0a0",
+            "npm_version": "0.1.0-alpha",
         }
     )
 
@@ -1392,9 +1397,9 @@ def test_continuous_unhandled_exception_writes_stop_file(monkeypatch: pytest.Mon
 def test_registry_verification_retries_for_propagation(monkeypatch: pytest.MonkeyPatch) -> None:
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
-            "release": "v0.0.8-alpha",
-            "python_version": "0.0.8a0",
-            "npm_version": "0.0.8-alpha",
+            "release": "v0.1.0-alpha",
+            "python_version": "0.1.0a0",
+            "npm_version": "0.1.0-alpha",
         }
     )
     pypi_payloads = [
@@ -1403,7 +1408,7 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
     ]
     simple_index_payloads = [
         "<html><body></body></html>",
-        "<html><body><a href='/packages/attestplane-0.0.8a0-py3-none-any.whl'>attestplane-0.0.8a0</a></body></html>",
+        "<html><body><a href='/packages/attestplane-0.1.0a0-py3-none-any.whl'>attestplane-0.1.0a0</a></body></html>",
     ]
 
     class FakeResponse(io.StringIO):
@@ -1420,7 +1425,7 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
         return FakeResponse(simple_index_payloads.pop(0))
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        return json.dumps({"version": "0.0.8-alpha", "dist-tags": {"alpha": "0.0.8-alpha", "latest": "0.0.8-alpha"}})
+        return json.dumps({"version": "0.1.0-alpha", "dist-tags": {"alpha": "0.1.0-alpha", "latest": "0.1.0-alpha"}})
 
     monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
@@ -1558,9 +1563,9 @@ def test_npm_dist_tags_synced_only_requires_alpha_dist_tag(
 def test_publish_platforms_syncs_npm_alpha_after_publish(monkeypatch: pytest.MonkeyPatch) -> None:
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
-            "release": "v0.0.8-alpha",
-            "python_version": "0.0.8a0",
-            "npm_version": "0.0.8-alpha",
+            "release": "v0.1.0-alpha",
+            "python_version": "0.1.0a0",
+            "npm_version": "0.1.0-alpha",
             "publish_python": False,
         }
     )
@@ -1607,6 +1612,28 @@ def test_publish_platforms_syncs_npm_alpha_after_publish(monkeypatch: pytest.Mon
     assert not any(command[:4] == ["gh", "workflow", "run", "manage-npm.yml"] for command in commands)
 
 
+def test_publish_platforms_skips_patch_alpha_registries(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+
+    alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
+    alpha_release_train.verify_registries(candidate, dry_run=False, state_path=state_file)
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    stages = state["release_stages"]["v0.6.6-alpha"]
+    assert commands == []
+    assert stages["pypi_published"] == "done"
+    assert stages["npm_published"] == "done"
+    assert stages["dist_tag_synced"] == "done"
+    assert stages["registry_verified"] == "done"
+
+
 def test_publish_platforms_retries_transient_pypi_watch_failure(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1614,9 +1641,9 @@ def test_publish_platforms_retries_transient_pypi_watch_failure(
     state_file = tmp_path / "state.json"
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
-            "release": "v0.0.8-alpha",
-            "python_version": "0.0.8a0",
-            "npm_version": "0.0.8-alpha",
+            "release": "v0.1.0-alpha",
+            "python_version": "0.1.0a0",
+            "npm_version": "0.1.0-alpha",
             "publish_npm": False,
         }
     )
@@ -1654,7 +1681,7 @@ def test_publish_platforms_retries_transient_pypi_watch_failure(
     assert commands.count(["gh", "run", "watch", "python-run-1", "--exit-status"]) == 1
     assert commands.count(["gh", "run", "watch", "python-run-2", "--exit-status"]) == 1
     state = alpha_release_train.load_continuous_state(state_file)
-    assert state["release_stages"]["v0.0.8-alpha"]["pypi_published"] == "done"
+    assert state["release_stages"]["v0.1.0-alpha"]["pypi_published"] == "done"
 
 
 def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
@@ -1664,9 +1691,9 @@ def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
     state_file = tmp_path / "state.json"
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
-            "release": "v0.0.8-alpha",
-            "python_version": "0.0.8a0",
-            "npm_version": "0.0.8-alpha",
+            "release": "v0.1.0-alpha",
+            "python_version": "0.1.0a0",
+            "npm_version": "0.1.0-alpha",
             "publish_python": False,
         }
     )
@@ -1696,7 +1723,7 @@ def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
         alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
 
     state = alpha_release_train.load_continuous_state(state_file)
-    stages = state.get("release_stages", {}).get("v0.0.8-alpha", {})
+    stages = state.get("release_stages", {}).get("v0.1.0-alpha", {})
     assert stages.get("npm_published") != "done"
     assert stages.get("dist_tag_synced") != "done"
 

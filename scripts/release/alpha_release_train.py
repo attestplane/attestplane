@@ -1116,6 +1116,20 @@ def parse_alpha_release(release: str) -> tuple[int, int, int]:
     return tuple(int(part) for part in match.groups())
 
 
+def alpha_registry_publish_enabled(release: str) -> bool:
+    _major, _minor, patch = parse_alpha_release(release)
+    return patch == 0
+
+
+def alpha_registry_publish_skip_detail(candidate: AlphaCandidate) -> dict[str, str | bool]:
+    return {
+        "observed": True,
+        "reason": "minor_boundary_only",
+        "release": candidate.release,
+        "skipped": True,
+    }
+
+
 def latest_alpha_release_from_notes() -> str:
     releases = [
         path.name.removesuffix(".draft.md")
@@ -1917,6 +1931,27 @@ def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_pa
 def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> tuple[str | None, str | None]:
     python_run = None
     npm_run = None
+    if not alpha_registry_publish_enabled(candidate.release):
+        detail = alpha_registry_publish_skip_detail(candidate)
+        if not stage_done(state_path, candidate, "pypi_published"):
+            mark_stage(state_path, candidate, "pypi_published", "done", detail)
+            print(
+                f"stage pypi_published skipped by minor-boundary registry policy: {candidate.release}",
+                flush=True,
+            )
+        if not stage_done(state_path, candidate, "npm_published"):
+            mark_stage(state_path, candidate, "npm_published", "done", detail)
+            print(
+                f"stage npm_published skipped by minor-boundary registry policy: {candidate.release}",
+                flush=True,
+            )
+        if not stage_done(state_path, candidate, "dist_tag_synced"):
+            mark_stage(state_path, candidate, "dist_tag_synced", "done", detail)
+            print(
+                f"stage dist_tag_synced skipped by minor-boundary registry policy: {candidate.release}",
+                flush=True,
+            )
+        return python_run, npm_run
     if candidate.publish_python:
         if stage_done(state_path, candidate, "pypi_published"):
             print(f"stage pypi_published already done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
@@ -2067,6 +2102,13 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
 def verify_registries(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
     if stage_done(state_path, candidate, "registry_verified"):
         print(f"stage registry_verified already done; skipping registry verification: {candidate.release}", flush=True)
+        return
+    if not alpha_registry_publish_enabled(candidate.release):
+        mark_stage(state_path, candidate, "registry_verified", "done", alpha_registry_publish_skip_detail(candidate))
+        print(
+            f"stage registry_verified skipped by minor-boundary registry policy: {candidate.release}",
+            flush=True,
+        )
         return
     if dry_run:
         print(f"DRY-RUN: would verify PyPI {candidate.python_version} and npm {candidate.npm_version}")
