@@ -1,4 +1,5 @@
 name: publish-python
+run-name: publish-python ${{ inputs.release_ref || github.ref_name }} ${{ inputs.target || 'auto' }} caller-${{ inputs.caller_run_id || github.run_id }}
 
 on:
   workflow_call:
@@ -16,6 +17,11 @@ on:
         required: false
         default: false
         type: boolean
+      caller_run_id:
+        description: 'Optional release-cd run id used to correlate delegated publishes'
+        required: false
+        default: ''
+        type: string
   workflow_dispatch:
     inputs:
       target:
@@ -36,6 +42,11 @@ on:
         required: false
         default: false
         type: boolean
+      caller_run_id:
+        description: 'Optional release-cd run id used to correlate delegated publishes'
+        required: false
+        default: ''
+        type: string
   push:
     tags:
       - 'sdk-python-v*'

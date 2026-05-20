@@ -24,6 +24,7 @@ on:
         type: boolean
 
 permissions:
+  actions: write
   contents: read
   id-token: write
 
@@ -102,11 +103,56 @@ jobs:
       - python-gate
       - typescript-gate
     if: inputs.dry_run != true
-    uses: ./.github/workflows/publish-python.yml
-    with:
-      target: pypi
-      dry_run: false
-      release_ref: ${{ inputs.release_tag }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch trusted PyPI publisher workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          CALLER_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh workflow run publish-python.yml \
+            --ref main \
+            -f target=pypi \
+            -f release_ref="${RELEASE_TAG}" \
+            -f dry_run=false \
+            -f caller_run_id="${CALLER_RUN_ID}"
+
+      - name: Wait for trusted PyPI publisher workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          CALLER_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          expected_title="publish-python ${RELEASE_TAG} pypi caller-${CALLER_RUN_ID}"
+          run_id=""
+          deadline=$((SECONDS + 900))
+
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            run_id="$(
+              gh run list \
+                --workflow publish-python.yml \
+                --event workflow_dispatch \
+                --limit 30 \
+                --json databaseId,displayTitle,status \
+                --jq ".[] | select(.displayTitle == \"${expected_title}\") | .databaseId" \
+                | head -n 1
+            )"
+            if [ -n "$run_id" ]; then
+              echo "Found delegated publish-python run: ${run_id}"
+              gh run watch "$run_id" --exit-status
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Timed out waiting for delegated publish-python run: ${expected_title}" >&2
+          exit 1
 
   publish-typescript:
     name: Publish TypeScript package

@@ -1,0 +1,20 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def test_release_cd_delegates_real_pypi_publish_to_direct_workflow() -> None:
+    release_cd = (REPO_ROOT / ".github/workflows/release-cd.yml").read_text(encoding="utf-8")
+    publish_python = (REPO_ROOT / ".github/workflows/publish-python.yml").read_text(
+        encoding="utf-8",
+    )
+
+    assert "gh workflow run publish-python.yml" in release_cd
+    assert "-f caller_run_id=\"${CALLER_RUN_ID}\"" in release_cd
+    assert "gh run watch \"$run_id\" --exit-status" in release_cd
+    assert "caller_run_id:" in publish_python
+    assert "run-name: publish-python" in publish_python
+
