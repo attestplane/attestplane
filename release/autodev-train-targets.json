@@ -1,0 +1,41 @@
+{
+  "schema": "attestplane_autodev_train_targets.v1",
+  "targets": [
+    {
+      "version": "0.8.6",
+      "status": "queued",
+      "min_rc_soak_hours": 24,
+      "promote_to": ["rc"]
+    },
+    {
+      "version": "0.8.7",
+      "status": "queued",
+      "min_rc_soak_hours": 24,
+      "promote_to": ["rc"]
+    },
+    {
+      "version": "0.8.8",
+      "status": "queued",
+      "min_rc_soak_hours": 24,
+      "promote_to": ["rc"]
+    },
+    {
+      "version": "0.8.9",
+      "status": "queued",
+      "min_rc_soak_hours": 24,
+      "promote_to": ["rc"]
+    },
+    {
+      "version": "0.8.10",
+      "status": "queued",
+      "min_rc_soak_hours": 24,
+      "promote_to": ["rc"]
+    },
+    {
+      "version": "0.9.0",
+      "status": "queued",
+      "min_rc_soak_hours": 24,
+      "promote_to": ["rc"]
+    }
+  ]
+}

@@ -44,6 +44,24 @@ The wrapper starts tmux session `autodev-train` by default and writes logs under
 the current RC registry/CD state without creating commits, tags, releases, or
 registry mutations.
 
+RC automation can be started explicitly when the release owner wants the local
+train to prepare the next queued RC:
+
+```bash
+AUTODEV_TRAIN_MODE=full-auto-rc scripts/release/start_autodev_train.sh
+```
+
+The RC queue is recorded in:
+
+```text
+release/autodev-train-targets.json
+```
+
+The current queue advances through `v0.8.6`, `v0.8.7`, `v0.8.8`, `v0.8.9`,
+`v0.8.10`, and `v0.9.0`. The train only cuts `-rc.N` candidates for these
+targets. Suffix-free stable tags, npm `latest`, and npm `ca` remain manual
+release-owner gates after soak and validation evidence.
+
 Historical alpha automation can still be started explicitly when the project is
 in an alpha release window:
 
@@ -90,11 +108,17 @@ rg -n "git push.*--tags|git push origin main|gh workflow run release-cd|npm publ
 
 Expected posture:
 
-- no automatic release-tag push;
+- no automatic stable release-tag push;
 - no automatic `release-cd` dispatch;
 - no direct local registry publication;
 - no direct registry dist-tag mutation; and
 - no implicit removal of `release/alpha-train/STOP`.
+
+`full-auto-rc` is an explicit exception to the generic "no release-tag push" and
+"no release-cd dispatch" posture: after local validation it may push an
+immutable `vX.Y.Z-rc.N` tag and dispatch `release-cd` with `channel=rc`.
+It must not push suffix-free stable tags or dispatch `release-cd` with
+`channel=latest`.
 
 Findings from this audit should be recorded in release validation evidence
 before dispatching a real RC or GA publication.

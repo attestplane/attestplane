@@ -4,9 +4,15 @@
 """Autodev release-candidate train.
 
 This is the RC counterpart to the historical alpha train. It advances one RC
-only when the repository HEAD has commits after the latest RC tag, prepares
-local package artifacts, commits the version bump, creates an immutable tag,
-pushes main plus that tag, and delegates publication to GitHub release-cd.
+only when the repository HEAD has commits after the current target's base tag,
+prepares local package artifacts, commits the version bump, creates an
+immutable tag, pushes main plus that tag, and delegates publication to GitHub
+release-cd.
+
+Stable promotion is intentionally out of scope for this loop. The target queue
+may name stable versions such as 0.8.6 or 0.9.0, but this script only cuts
+their rc.N candidates. Suffix-free stable tags, npm latest, and npm ca remain
+manual release-owner gates.
 """
 
 from __future__ import annotations
@@ -17,7 +23,6 @@ import json
 import os
 import re
 import subprocess
-import sys
 import time
 import tomllib
 from dataclasses import dataclass
@@ -27,11 +32,54 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 RC_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)-rc\.(?P<ordinal>\d+)$")
+STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 MAX_RC_ORDINAL_PER_PATCH = 10
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
+DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
 REMOTE_PROBE_TIMEOUT_SECONDS = 30
+
+
+@dataclass(frozen=True, order=True)
+class StableVersion:
+    major: int
+    minor: int
+    patch: int
+
+    @classmethod
+    def parse(cls, value: str) -> "StableVersion":
+        normalized = value.removeprefix("v")
+        match = re.fullmatch(r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)", normalized)
+        if match is None:
+            raise ValueError(f"invalid stable version: {value}")
+        return cls(*(int(match.group(name)) for name in ("major", "minor", "patch")))
+
+    @classmethod
+    def parse_tag(cls, tag: str) -> "StableVersion":
+        match = STABLE_TAG_RE.fullmatch(tag)
+        if match is None:
+            raise ValueError(f"invalid stable tag: {tag}")
+        return cls(*(int(match.group(name)) for name in ("major", "minor", "patch")))
+
+    @property
+    def tag(self) -> str:
+        return f"v{self.major}.{self.minor}.{self.patch}"
+
+    @property
+    def python_version(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+    @property
+    def npm_version(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+
+@dataclass(frozen=True)
+class ReleaseTarget:
+    version: StableVersion
+    min_rc_soak_hours: int
+    promote_to: tuple[str, ...]
 
 
 @dataclass(frozen=True, order=True)
@@ -64,6 +112,13 @@ class RcVersion:
         if self.ordinal >= MAX_RC_ORDINAL_PER_PATCH:
             return RcVersion(self.major, self.minor, self.patch + 1, 1)
         return RcVersion(self.major, self.minor, self.patch, self.ordinal + 1)
+
+    @property
+    def stable(self) -> StableVersion:
+        return StableVersion(self.major, self.minor, self.patch)
+
+
+ReleaseBase = RcVersion | StableVersion
 
 
 def run(argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
@@ -156,6 +211,107 @@ def latest_rc() -> RcVersion:
     return max(versions)
 
 
+def list_stable_tags() -> list[StableVersion]:
+    raw = capture(["git", "tag", "--list", "v*.*.*"])
+    versions: list[StableVersion] = []
+    for line in raw.splitlines():
+        try:
+            versions.append(StableVersion.parse_tag(line.strip()))
+        except ValueError:
+            continue
+    return sorted(versions)
+
+
+def list_rc_tags_for_target(target: StableVersion) -> list[RcVersion]:
+    raw = capture(["git", "tag", "--list", f"{target.tag}-rc.*"])
+    versions: list[RcVersion] = []
+    for line in raw.splitlines():
+        try:
+            rc = RcVersion.parse(line.strip())
+        except ValueError:
+            continue
+        if rc.stable == target:
+            versions.append(rc)
+    return sorted(versions)
+
+
+def latest_stable_before(target: StableVersion) -> StableVersion:
+    candidates = [version for version in list_stable_tags() if version < target]
+    if not candidates:
+        raise RuntimeError(f"no stable release tag found before {target.tag}")
+    return max(candidates)
+
+
+def load_target_queue(path: Path) -> list[ReleaseTarget]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema") != "attestplane_autodev_train_targets.v1":
+        raise RuntimeError(f"unsupported autodev target queue schema in {path}")
+    raw_targets = payload.get("targets")
+    if not isinstance(raw_targets, list) or not raw_targets:
+        raise RuntimeError(f"autodev target queue has no targets: {path}")
+
+    targets: list[ReleaseTarget] = []
+    previous: StableVersion | None = None
+    for raw in raw_targets:
+        if not isinstance(raw, dict):
+            raise RuntimeError("autodev target queue entries must be objects")
+        status = str(raw.get("status", "queued"))
+        if status not in {"queued", "complete", "paused"}:
+            raise RuntimeError(f"unsupported target status {status!r}")
+        version = StableVersion.parse(str(raw["version"]))
+        if previous is not None and version <= previous:
+            raise RuntimeError("autodev target queue must be strictly increasing")
+        previous = version
+        promote_to_raw = raw.get("promote_to", ["rc"])
+        if not isinstance(promote_to_raw, list) or not all(isinstance(item, str) for item in promote_to_raw):
+            raise RuntimeError(f"target {version.tag} promote_to must be a string list")
+        promote_to = tuple(promote_to_raw)
+        if "latest" in promote_to or "ca" in promote_to:
+            raise RuntimeError(
+                f"target {version.tag} may not request automatic latest/ca promotion; "
+                "stable promotion is a manual release-owner gate"
+            )
+        min_rc_soak_hours = int(raw.get("min_rc_soak_hours", 24))
+        if min_rc_soak_hours < 0:
+            raise RuntimeError(f"target {version.tag} min_rc_soak_hours must be non-negative")
+        if status == "queued":
+            targets.append(
+                ReleaseTarget(version=version, min_rc_soak_hours=min_rc_soak_hours, promote_to=promote_to)
+            )
+    return targets
+
+
+def select_target(path: Path) -> ReleaseTarget:
+    for target in load_target_queue(path):
+        if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(target.version.tag):
+            print(f"autodev-train rc: target {target.version.tag} already has stable tag; skipping", flush=True)
+            continue
+        return target
+    raise RuntimeError("autodev target queue has no remaining queued targets without stable tags")
+
+
+def previous_base_for_target(target: StableVersion) -> ReleaseBase:
+    rcs = list_rc_tags_for_target(target)
+    if rcs:
+        return max(rcs)
+    return latest_stable_before(target)
+
+
+def next_rc_for_target(target: StableVersion, previous: ReleaseBase) -> RcVersion:
+    if isinstance(previous, RcVersion):
+        if previous.stable != target:
+            raise RuntimeError(f"latest RC {previous.tag} is not for target {target.tag}")
+        if previous.ordinal >= MAX_RC_ORDINAL_PER_PATCH:
+            raise RuntimeError(
+                f"{target.tag} has reached rc.{MAX_RC_ORDINAL_PER_PATCH}; "
+                "promote or revise the target before continuing"
+            )
+        return RcVersion(target.major, target.minor, target.patch, previous.ordinal + 1)
+    if previous >= target:
+        raise RuntimeError(f"target {target.tag} must be greater than base stable {previous.tag}")
+    return RcVersion(target.major, target.minor, target.patch, 1)
+
+
 def head_has_changes_since(tag: str) -> bool:
     count = int(capture(["git", "rev-list", "--count", f"{tag}..HEAD"]))
     return count > 0
@@ -211,7 +367,7 @@ def update_versions(version: RcVersion) -> None:
     )
 
 
-def write_release_notes(previous: RcVersion, version: RcVersion) -> None:
+def write_release_notes(previous: ReleaseBase, version: RcVersion) -> None:
     path = ROOT / "docs" / "release-notes" / f"{version.tag}.draft.md"
     commits = capture(["git", "log", "--oneline", f"{previous.tag}..HEAD"])
     changes = [f"- `{line}`" for line in commits.splitlines()[:20]]
@@ -230,9 +386,10 @@ def write_release_notes(previous: RcVersion, version: RcVersion) -> None:
                 "",
                 "## Highlights",
                 "",
-                "- Cuts the current Attestplane SDK and verifier surface as a release-candidate package release.",
+                f"- Cuts the current Attestplane SDK and verifier surface as a release candidate for `{version.stable.tag}`.",
                 "- Preserves deterministic verifier, release-artifact, and claim-safety boundaries.",
                 "- Delegates package publication to GitHub `release-cd` after local prep and immutable tag push.",
+                "- Does not promote the suffix-free stable version, npm `latest`, or npm `ca`.",
                 "",
                 "## Explicit Boundaries",
                 "",
@@ -315,6 +472,8 @@ def write_release_metadata(version: RcVersion) -> None:
         "explicit_non_actions": {
             "deploy": "not performed",
             "force_push": "not performed",
+            "ga_stable_tag": "not performed by RC queue",
+            "npm_ca_change": "not performed by RC queue",
             "npm_latest_change": "not performed during RC prep",
             "release_publish": "not performed during prep",
             "workflow_dispatch": "not performed during prep",
@@ -368,6 +527,8 @@ def write_release_metadata(version: RcVersion) -> None:
                 "## Explicit Non-Actions in Release Prep",
                 "",
                 "- Force push: not performed.",
+                "- Stable GA/CA tag: not performed by RC queue.",
+                "- npm `ca` dist-tag change: not performed by RC queue.",
                 "- npm `latest` dist-tag change: not performed during RC prep.",
                 "- Deploy: not performed.",
                 "- Workflow dispatch: not performed during local prep.",
@@ -494,24 +655,52 @@ def wait_for_release_cd(version: RcVersion) -> None:
     raise TimeoutError(f"timed out waiting for release-cd workflow for {version.tag}")
 
 
-def run_once(*, publish: bool, wait: bool) -> str:
+def assert_package_versions_match(base: ReleaseBase) -> None:
+    if read_python_version() != base.python_version or read_npm_version() != base.npm_version:
+        raise RuntimeError(
+            f"package versions do not match base {base.tag}; "
+            f"expected {base.python_version} and {base.npm_version}"
+        )
+
+
+def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) -> str:
     assert_clean_tree()
     assert_on_main()
     best_effort_fetch_tags()
-    previous = latest_rc()
+    target = select_target(target_queue)
+    previous = previous_base_for_target(target.version)
     if not head_has_changes_since(previous.tag):
-        print(f"autodev-train rc: no commits after {previous.tag}; no new RC needed", flush=True)
+        print(
+            f"autodev-train rc: no commits after {previous.tag}; no new RC needed for {target.version.tag}",
+            flush=True,
+        )
         return "noop"
-    version = previous.next()
+    version = next_rc_for_target(target.version, previous)
     if git_ref_exists(f"refs/tags/{version.tag}") or remote_tag_exists(version.tag):
         raise RuntimeError(f"next RC tag already exists: {version.tag}")
-    if read_python_version() != previous.python_version or read_npm_version() != previous.npm_version:
-        raise RuntimeError(
-            f"package versions do not match latest RC {previous.tag}; "
-            f"expected {previous.python_version} and {previous.npm_version}"
-        )
+    assert_package_versions_match(previous)
 
-    print(f"autodev-train rc: preparing {version.tag} from {previous.tag}", flush=True)
+    print(
+        f"autodev-train rc: preparing {version.tag} for {target.version.tag} from {previous.tag}",
+        flush=True,
+    )
+    if dry_run:
+        print(
+            json.dumps(
+                {
+                    "action": "prepare_rc",
+                    "base": previous.tag,
+                    "publish": publish,
+                    "target": target.version.tag,
+                    "version": version.tag,
+                    "wait": wait,
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        return version.tag
     update_versions(version)
     write_release_notes(previous, version)
     build_artifacts(version)
@@ -530,6 +719,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--continuous", action="store_true")
     parser.add_argument("--poll-seconds", type=int, default=DEFAULT_POLL_SECONDS)
     parser.add_argument("--stop-file", type=Path, default=DEFAULT_STOP_FILE)
+    parser.add_argument("--target-queue", type=Path, default=DEFAULT_TARGET_QUEUE)
+    parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-publish", action="store_true")
     parser.add_argument("--no-wait", action="store_true")
     args = parser.parse_args(argv)
@@ -538,7 +729,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.stop_file.exists():
             print(f"autodev-train rc: STOP file exists: {args.stop_file}", flush=True)
             return 0
-        result = run_once(publish=not args.no_publish, wait=not args.no_wait)
+        result = run_once(
+            publish=not args.no_publish,
+            wait=not args.no_wait,
+            target_queue=args.target_queue,
+            dry_run=args.dry_run,
+        )
         if not args.continuous:
             return 0 if result else 1
         time.sleep(args.poll_seconds)
