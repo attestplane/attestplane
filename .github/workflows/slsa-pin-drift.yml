@@ -1,0 +1,130 @@
+name: slsa-pin-drift
+
+# CI drift gate enforcing that the slsa-github-generator tag ref in
+# .github/workflows/slsa-provenance.yml stays bound to the audit-anchor
+# commit SHA recorded in the sidecar comment immediately above the
+# `uses:` line.
+#
+# Background: PR #32 switched the generator `uses:` clause from a
+# commit-SHA pin to a tag ref (@v2.1.0) because upstream's reusable
+# workflow path rejects SHA refs. The commit SHA is recorded as a
+# sidecar audit anchor. Without enforcement, a future bump could
+# update the tag without refreshing the SHA comment and let the
+# anchor silently drift away from the real upstream commit.
+#
+# This gate is fail-closed: any parser error, any gh api failure, or
+# any SHA mismatch fails the job. The three-step bump procedure is
+# codified in ADR-0018 §"Tag-ref vs SHA-pin caveat"
+# (docs/adr/0018-keyless-signing-and-slsa-provenance.md).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/slsa-provenance.yml"
+      - ".github/workflows/slsa-pin-drift.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/slsa-provenance.yml"
+      - ".github/workflows/slsa-pin-drift.yml"
+  schedule:
+    # Weekly Monday 04:17 UTC — catches upstream tag mutation even
+    # when the slsa-provenance.yml file is untouched.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slsa-pin-drift-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  audit:
+    name: SLSA generator tag/SHA audit-anchor drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Verify slsa-provenance.yml tag ref matches audit-anchor SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          WORKFLOW=".github/workflows/slsa-provenance.yml"
+          UPSTREAM_REPO="slsa-framework/slsa-github-generator"
+          ADR_REF='ADR-0018 §"Tag-ref vs SHA-pin caveat" (docs/adr/0018-keyless-signing-and-slsa-provenance.md)'
+
+          if [ ! -f "$WORKFLOW" ]; then
+            echo "::error::drift gate cannot find $WORKFLOW"
+            exit 1
+          fi
+
+          # Locate the reusable-workflow `uses:` line and extract the tag ref.
+          USES_LINE=$(grep -n "uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@" "$WORKFLOW" | head -1 || true)
+          if [ -z "$USES_LINE" ]; then
+            echo "::error::drift gate could not locate the generator_generic_slsa3.yml \`uses:\` line in $WORKFLOW"
+            exit 1
+          fi
+          USES_LINENO=$(echo "$USES_LINE" | cut -d: -f1)
+          TAG=$(echo "$USES_LINE" | sed -E 's/.*generator_generic_slsa3\.yml@([^[:space:]]+).*/\1/')
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::drift gate parsed tag ref '$TAG' which is not a vX.Y.Z form (line $USES_LINENO of $WORKFLOW)"
+            exit 1
+          fi
+
+          # Extract the audit-anchor SHA from the contiguous comment block
+          # immediately preceding the `uses:` line.
+          START=$((USES_LINENO - 1))
+          COMMENT_BLOCK=$(awk -v end="$START" 'NR<end && /^[[:space:]]*#/ {block=block "\n" $0; next} NR<end {block=""} END{print block}' "$WORKFLOW")
+          COMMENT_SHA=$(echo "$COMMENT_BLOCK" | grep -oE '[0-9a-f]{40}' | head -1 || true)
+          if [ -z "$COMMENT_SHA" ]; then
+            echo "::error::drift gate could not find a 40-char hex audit-anchor SHA in the comment block above line $USES_LINENO of $WORKFLOW"
+            exit 1
+          fi
+
+          # Resolve the upstream actual commit SHA for the parsed tag.
+          # `git/refs/tags/<tag>` may point at either a commit (lightweight
+          # tag) or a tag object (annotated tag). Dereference if needed.
+          REF_JSON=$(gh api "repos/${UPSTREAM_REPO}/git/refs/tags/${TAG}")
+          REF_TYPE=$(echo "$REF_JSON" | jq -r '.object.type')
+          REF_SHA=$(echo "$REF_JSON" | jq -r '.object.sha')
+          case "$REF_TYPE" in
+            commit)
+              UPSTREAM_SHA="$REF_SHA"
+              ;;
+            tag)
+              UPSTREAM_SHA=$(gh api "repos/${UPSTREAM_REPO}/git/tags/${REF_SHA}" --jq '.object.sha')
+              ;;
+            *)
+              echo "::error::drift gate received unexpected git ref object type '$REF_TYPE' for $UPSTREAM_REPO tag $TAG"
+              exit 1
+              ;;
+          esac
+          if ! echo "$UPSTREAM_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::drift gate could not resolve upstream commit SHA for $UPSTREAM_REPO@$TAG (got '$UPSTREAM_SHA')"
+            exit 1
+          fi
+
+          echo "workflow file:   $WORKFLOW"
+          echo "tag ref:         $TAG"
+          echo "comment SHA:     $COMMENT_SHA"
+          echo "upstream actual: $UPSTREAM_SHA"
+
+          if [ "$COMMENT_SHA" != "$UPSTREAM_SHA" ]; then
+            echo "::error::SLSA generator pin drift detected — audit anchor diverges from upstream commit"
+            echo "  workflow file:   $WORKFLOW"
+            echo "  tag ref read:    @$TAG"
+            echo "  comment SHA:     $COMMENT_SHA"
+            echo "  upstream actual: $UPSTREAM_SHA"
+            echo "  bump procedure:  see $ADR_REF (three-step: verify new tag's commit SHA against upstream release notes; update both @vX.Y.Z and the sidecar SHA comment; re-run slsa-verifier verify-artifact end-to-end)"
+            exit 1
+          fi
+
+          echo "audit anchor intact: $UPSTREAM_REPO@$TAG resolves to $UPSTREAM_SHA, matching the sidecar SHA comment in $WORKFLOW"
