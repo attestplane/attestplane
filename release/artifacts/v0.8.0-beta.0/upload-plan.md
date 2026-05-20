@@ -34,4 +34,3 @@ gh workflow run publish-typescript.yml -f tag=beta -f dry_run=false --ref v0.8.0
 
 This beta prerelease is limited to the package artifacts listed above. It is
 not GA, not production-ready, and not a legal or compliance certification.
-
