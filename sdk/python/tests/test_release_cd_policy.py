@@ -34,6 +34,7 @@ def _write_package_versions(root: Path, *, python_version: str, npm_version: str
         ("v0.8.0-alpha.0", "0.8.0a0", "0.8.0-alpha.0", "alpha", True),
         ("v0.8.0-beta.0", "0.8.0b0", "0.8.0-beta.0", "beta", True),
         ("v0.8.0-rc.1", "0.8.0rc1", "0.8.0-rc.1", "rc", True),
+        ("v0.8.5-rc.10", "0.8.5rc10", "0.8.5-rc.10", "rc", True),
         ("v0.8.0", "0.8.0", "0.8.0", "latest", False),
     ],
 )
@@ -49,6 +50,11 @@ def test_expected_versions(
     assert npm_version == expected_npm
     assert channel == expected_channel
     assert prerelease is is_prerelease
+
+
+def test_release_cd_policy_rejects_eleventh_rc_on_same_patch() -> None:
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="use v0.8.6-rc.1"):
+        validate_release_cd.expected_versions("v0.8.5-rc.11")
 
 
 def test_release_cd_policy_accepts_matching_rc_versions(tmp_path: Path) -> None:

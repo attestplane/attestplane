@@ -43,6 +43,10 @@ The planned `v0.8.5-rc.1` cut must publish as:
 - npm version: `0.8.5-rc.1`
 - npm dist-tag: `rc`
 
+The current RC patch line may advance through `0.8.5-rc.10`. If another RC is
+needed after that, the next npm version must be `0.8.6-rc.1` and the PyPI
+version must be `0.8.6rc1`; do not publish `0.8.5-rc.11`.
+
 The RC release must not move `latest` unless a separate maintainer decision is
 recorded before dispatch.
 

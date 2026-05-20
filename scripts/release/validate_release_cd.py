@@ -26,6 +26,7 @@ TAG_RE = re.compile(
     r"(?P<patch>0|[1-9]\d*)"
     r"(?:-(?P<channel>alpha|beta|rc)\.(?P<ordinal>0|[1-9]\d*))?$"
 )
+MAX_RC_ORDINAL_PER_PATCH = 10
 
 
 class ReleaseCdPolicyError(ValueError):
@@ -60,6 +61,13 @@ def expected_versions(release_tag: str) -> tuple[str, str, str, bool]:
     if channel is None:
         return base, base, "latest", False
     assert ordinal is not None
+    if channel == "rc" and int(ordinal) > MAX_RC_ORDINAL_PER_PATCH:
+        next_patch = int(parts["patch"]) + 1
+        next_tag = f"v{parts['major']}.{parts['minor']}.{next_patch}-rc.1"
+        raise ReleaseCdPolicyError(
+            f"RC ordinal {ordinal} exceeds the per-patch maximum "
+            f"{MAX_RC_ORDINAL_PER_PATCH}; use {next_tag} instead"
+        )
     py_suffix = {"alpha": "a", "beta": "b", "rc": "rc"}[channel]
     return f"{base}{py_suffix}{ordinal}", f"{base}-{channel}.{ordinal}", channel, True
 

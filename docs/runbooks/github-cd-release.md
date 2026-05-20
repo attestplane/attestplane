@@ -37,6 +37,8 @@ verifies PyPI and npm registry visibility.
 | `v0.8.0-alpha.0` | `0.8.0a0` | `0.8.0-alpha.0` | `alpha` |
 | `v0.8.0-beta.0` | `0.8.0b0` | `0.8.0-beta.0` | `beta` |
 | `v0.8.5-rc.1` | `0.8.5rc1` | `0.8.5-rc.1` | `rc` |
+| `v0.8.5-rc.10` | `0.8.5rc10` | `0.8.5-rc.10` | `rc` |
+| `v0.8.6-rc.1` | `0.8.6rc1` | `0.8.6-rc.1` | `rc` |
 | `v0.8.5` | `0.8.5` | `0.8.5` | `latest` |
 
 Pre-release packages must publish under their matching `alpha`, `beta`, or
@@ -47,6 +49,14 @@ does not provide that override.
 The detailed npm dist-tag policy and the current `0.8.0-beta.0` latest
 decision are recorded in
 [`npm-dist-tag-policy.md`](../release/npm-dist-tag-policy.md).
+
+## RC Revision Window
+
+Each patch RC line may use at most ten RC ordinals. For the current line, valid
+RC package releases are `v0.8.5-rc.1` through `v0.8.5-rc.10` (`0.8.5rc1`
+through `0.8.5rc10` on PyPI). If another RC is needed after `v0.8.5-rc.10`,
+the next release must be `v0.8.6-rc.1` (`0.8.6rc1` on PyPI), not
+`v0.8.5-rc.11`.
 
 ## Manual Dispatch
 
@@ -103,7 +113,8 @@ Do not delete or reuse a published version.
   version.
 - GitHub workflow: revert the release workflow change and re-dispatch only
   after review.
-- Broken RC: publish a new `v0.8.5-rc.N+1` with a changelog entry.
+- Broken RC: publish a new `v0.8.5-rc.N+1` with a changelog entry, up to
+  `v0.8.5-rc.10`. After that, publish `v0.8.6-rc.1`.
 
 Use the scoped recovery checklist in
 [`release-rollback.md`](release-rollback.md) before mutating registry state.
