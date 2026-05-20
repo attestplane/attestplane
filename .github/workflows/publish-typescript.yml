@@ -97,8 +97,10 @@ jobs:
           fi
           echo "OIDC trusted publishing failed; retrying with configured npm automation token."
           export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/npm-token-publish.npmrc"
+          trap 'rm -f "$NPM_CONFIG_USERCONFIG"' EXIT
           {
             printf 'registry=https://registry.npmjs.org/\n'
-            printf '//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n'
+            printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN"
           } > "$NPM_CONFIG_USERCONFIG"
+          chmod 0600 "$NPM_CONFIG_USERCONFIG"
           npm publish --access public --tag "$TAG"
