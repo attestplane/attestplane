@@ -369,8 +369,11 @@ def test_push_and_dispatch_uses_timed_pushes_before_release_cd(monkeypatch: pyte
 def test_run_git_push_skips_when_remote_already_converged(monkeypatch: pytest.MonkeyPatch) -> None:
     attempts: list[list[str]] = []
 
+    def fail_if_attempted(argv: list[str]) -> None:
+        attempts.append(argv)
+
     monkeypatch.setattr(stable_auto_train, "git_push_remote_status", lambda argv: (True, None))
-    monkeypatch.setattr(stable_auto_train, "attempt_git_push_once", lambda argv: attempts.append(argv))
+    monkeypatch.setattr(stable_auto_train, "attempt_git_push_once", fail_if_attempted)
 
     result = stable_auto_train.run_git_push(["git", "push", "origin", "main"])
 
