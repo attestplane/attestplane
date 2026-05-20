@@ -203,6 +203,97 @@ def test_recover_existing_release_retries_later_on_unknown_probe() -> None:
             stable_auto_train.recover_existing_release(version)
 
 
+def test_run_once_resumes_locally_tagged_unpublished_release(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.0.9", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    version = stable_auto_train.StableVersion.parse("1.0.9")
+    calls: list[str] = []
+
+    monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
+    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: stable_auto_train.StableVersion.parse("1.0.8"))
+    monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.9")
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
+    monkeypatch.setattr(stable_auto_train, "local_tag_points_to_head", lambda tag: True)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=False,
+            npm_visible=False,
+            npm_latest=False,
+            github_release=False,
+        ),
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
+        "resume_tagged_release_publish",
+        lambda target, *, wait: calls.append(f"resume:{target.tag}:wait={wait}"),
+    )
+    monkeypatch.setattr(stable_auto_train, "recover_existing_release", lambda target: calls.append("recover"))
+
+    result = stable_auto_train.run_once(publish=True, wait=True, target_queue=queue, dry_run=False)
+
+    assert result == "v1.0.9"
+    assert calls == ["resume:v1.0.9:wait=True"]
+
+
+def test_run_once_refuses_unknown_status_for_existing_tag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.0.9", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    version = stable_auto_train.StableVersion.parse("1.0.9")
+
+    monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
+    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: stable_auto_train.StableVersion.parse("1.0.8"))
+    monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.9")
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
+    monkeypatch.setattr(stable_auto_train, "local_tag_points_to_head", lambda tag: True)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=None,
+            npm_visible=False,
+            npm_latest=False,
+            github_release=False,
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="publication status probe is incomplete"):
+        stable_auto_train.run_once(publish=True, wait=True, target_queue=queue, dry_run=False)
+
+
 def test_stable_train_blocks_unverified_major_boundary() -> None:
     target = stable_auto_train.ReleaseTarget(
         version=stable_auto_train.StableVersion.parse("1.0.0"),

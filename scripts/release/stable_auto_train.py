@@ -241,6 +241,15 @@ def remote_tag_exists(tag: str) -> bool:
     return result.returncode == 0
 
 
+def local_tag_points_to_head(tag: str) -> bool:
+    try:
+        tag_commit = capture(["git", "rev-parse", f"{tag}^{{commit}}"])
+        head_commit = capture(["git", "rev-parse", "HEAD"])
+    except subprocess.CalledProcessError:
+        return False
+    return tag_commit == head_commit
+
+
 def best_effort_fetch_tags() -> None:
     try:
         run(
@@ -663,6 +672,15 @@ def push_and_dispatch(version: StableVersion, *, wait: bool) -> None:
         wait_for_release_cd(version)
 
 
+def resume_tagged_release_publish(version: StableVersion, *, wait: bool) -> None:
+    if not git_ref_exists(f"refs/tags/{version.tag}"):
+        raise RuntimeError(f"cannot resume {version.tag}: local tag is missing")
+    if not local_tag_points_to_head(version.tag):
+        raise RuntimeError(f"cannot resume {version.tag}: local tag does not point to HEAD")
+    print(f"autodev-train stable: resuming publish for locally tagged {version.tag}", flush=True)
+    push_and_dispatch(version, wait=wait)
+
+
 def release_cd_dispatch_args(version: StableVersion) -> list[str]:
     argv = [
         "gh",
@@ -999,7 +1017,13 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     version = target.version
     if git_ref_exists(f"refs/tags/{version.tag}") or remote_tag_exists(version.tag):
         if publish:
-            recover_existing_release(version)
+            status = publication_status(version)
+            if status.unknown:
+                raise RuntimeError(f"cannot auto-recover {version.tag}: publication status probe is incomplete; retry later")
+            if not status.complete and local_tag_points_to_head(version.tag):
+                resume_tagged_release_publish(version, wait=wait)
+            else:
+                recover_existing_release(version)
             return version.tag
         raise RuntimeError(f"stable tag already exists: {version.tag}")
 
