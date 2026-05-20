@@ -288,6 +288,35 @@ def test_retire_obsolete_prepared_handles_empty_release_floor(
     ) == []
 
 
+def test_recoverable_failed_publish_candidates_retry_latest_partial_release(tmp_path: Path) -> None:
+    state_file = tmp_path / "state.json"
+    older = alpha_release_train.prepared_candidate_from_release("v0.6.5-alpha")
+    latest = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+
+    alpha_release_train.mark_failed(state_file, older, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_stage(state_file, older, "gh_release_created", "done")
+    alpha_release_train.mark_stage(state_file, older, "pypi_published", "done", {"run": "older"})
+    alpha_release_train.mark_failed(state_file, latest, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_stage(state_file, latest, "gh_release_created", "done")
+    alpha_release_train.mark_stage(state_file, latest, "pypi_published", "done", {"run": "latest"})
+
+    recovered = alpha_release_train.recoverable_failed_publish_candidates(state_file)
+
+    assert [candidate.release for candidate in recovered] == ["v0.6.6-alpha"]
+
+
+def test_recoverable_failed_publish_candidates_ignore_registry_verified(tmp_path: Path) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+
+    alpha_release_train.mark_failed(state_file, candidate_value, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_stage(state_file, candidate_value, "gh_release_created", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "pypi_published", "done", {"run": "latest"})
+    alpha_release_train.mark_stage(state_file, candidate_value, "registry_verified", "done")
+
+    assert alpha_release_train.recoverable_failed_publish_candidates(state_file) == []
+
+
 def test_auto_promote_merge_is_dry_run_safe(tmp_path: Path) -> None:
     queue = write_queue(tmp_path, [])
     promoted = alpha_release_train.AlphaCandidate.from_json(

@@ -2679,6 +2679,41 @@ def retire_obsolete_prepared_releases(
     return retired
 
 
+def recoverable_failed_publish_candidates(state_path: Path) -> list[AlphaCandidate]:
+    """Return failed candidates that reached public release surfaces but not npm.
+
+    A failed npm publish leaves the git tag, GitHub release, and often PyPI
+    artifact behind. Those versions are still the right retry target; advancing
+    to a new alpha only accumulates more partial releases.
+    """
+    db_path = state_db_path(state_path)
+    if not db_path.exists():
+        return []
+    init_state_db(db_path)
+    with sqlite3.connect(db_path) as db:
+        rows = db.execute(
+            """
+            SELECT release
+              FROM release_state
+             WHERE status = 'failed'
+             ORDER BY release DESC
+            """
+        ).fetchall()
+        recoverable: list[str] = []
+        for (release,) in rows:
+            release_text = str(release)
+            gh_release_done = stage_status(db, release_text, "gh_release_created") == "done"
+            pypi_done = stage_status(db, release_text, "pypi_published") == "done"
+            npm_done = stage_status(db, release_text, "npm_published") == "done"
+            registry_done = stage_status(db, release_text, "registry_verified") == "done"
+            if (gh_release_done or pypi_done) and not npm_done and not registry_done:
+                recoverable.append(release_text)
+    if not recoverable:
+        return []
+    latest = sorted(set(recoverable), key=parse_alpha_release)[-1]
+    return [prepared_candidate_from_release(latest)]
+
+
 def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -> list[AlphaCandidate]:
     state = load_continuous_state(state_path)
     processed = set(str(item) for item in state.get("processed_releases", []))
@@ -2744,6 +2779,17 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                 dry_run=not args.execute or args.auto_finalize_next_alpha,
             )
             print(f"alpha train: auto-promote discovered {len(discovered)} prepared candidates", flush=True)
+
+        recoverable_candidates = recoverable_failed_publish_candidates(args.state_file)
+        queued_releases = {candidate.release for candidate in queue_candidates}
+        for candidate in recoverable_candidates:
+            if candidate.release not in queued_releases:
+                queue_candidates.append(candidate)
+                queued_releases.add(candidate.release)
+                print(
+                    f"alpha train: recovering failed partial release {candidate.release}; retrying incomplete publish stages",
+                    flush=True,
+                )
 
         candidates = unprocessed_candidates(queue_candidates, args.state_file)
         retired_prepared = retire_obsolete_prepared_releases(
