@@ -19,7 +19,9 @@ import re
 import sqlite3
 import subprocess
 import time
+import urllib.error
 import urllib.request
+from urllib.parse import quote
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -59,6 +61,8 @@ PUBLISH_WORKFLOW_RETRY_SECONDS = 15
 MAX_GIT_PUSH_TASKS_PER_CYCLE: int | None = None
 PYPI_PROJECT = "attestplane"
 PYPI_SIMPLE_INDEX_URL = f"https://pypi.org/simple/{PYPI_PROJECT}/"
+NPM_PACKAGE = "@attestplane/attestplane"
+NPM_REGISTRY_PACKAGE_URL = f"https://registry.npmjs.org/{quote(NPM_PACKAGE, safe='@')}"
 
 EXTERNAL_STAGES = (
     "local_gates_passed",
@@ -1673,21 +1677,32 @@ def pypi_version_exists(python_version: str) -> bool:
 
 def npm_package_info(npm_version: str) -> dict[str, Any]:
     tag_field = "dist" + "-tags"
-    npm = json.loads(
-        capture(
-            ["npm", "view", f"@attestplane/attestplane@{npm_version}", "version", tag_field, "--json"],
-            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+    try:
+        npm = json.loads(
+            capture(
+                ["npm", "view", f"{NPM_PACKAGE}@{npm_version}", "version", tag_field, "--json"],
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            )
         )
-    )
-    if not isinstance(npm, dict):
-        raise RuntimeError(f"npm returned malformed package info: {npm!r}")
-    return npm
+        if not isinstance(npm, dict):
+            raise RuntimeError(f"npm returned malformed package info: {npm!r}")
+        return npm
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        with urllib.request.urlopen(NPM_REGISTRY_PACKAGE_URL, timeout=30) as handle:
+            npm = json.load(handle)
+        if not isinstance(npm, dict):
+            raise RuntimeError(f"npm registry returned malformed package info: {npm!r}")
+        return npm
 
 
 def npm_version_exists(npm_version: str) -> bool:
     try:
-        return npm_package_info(npm_version).get("version") == npm_version
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        npm = npm_package_info(npm_version)
+        versions = npm.get("versions", {})
+        if isinstance(versions, dict) and npm_version in versions:
+            return True
+        return npm.get("version") == npm_version
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, urllib.error.URLError):
         return False
 
 
@@ -1695,12 +1710,13 @@ def npm_dist_tags_synced(npm_version: str) -> bool:
     try:
         npm = npm_package_info(npm_version)
         tag_field = "dist" + "-tags"
+        versions = npm.get("versions", {})
         return (
-            npm.get("version") == npm_version
+            (npm.get("version") == npm_version or (isinstance(versions, dict) and npm_version in versions))
             and npm.get(tag_field, {}).get("alpha") == npm_version
             and npm.get(tag_field, {}).get("latest") == npm_version
         )
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, urllib.error.URLError):
         return False
 
 

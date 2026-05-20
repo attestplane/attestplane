@@ -1333,6 +1333,80 @@ def test_pypi_version_exists_falls_back_to_simple_index(monkeypatch: pytest.Monk
     ]
 
 
+def test_npm_version_exists_falls_back_to_registry_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen_urls: list[str] = []
+
+    class FakeResponse(io.StringIO):
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        raise alpha_release_train.subprocess.CalledProcessError(1, argv, output="", stderr="npm ERR! 404")
+
+    def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
+        url = str(args[0])
+        seen_urls.append(url)
+        return FakeResponse(
+            json.dumps(
+                {
+                    "versions": {
+                        "0.0.8-alpha": {},
+                    },
+                    "dist-tags": {
+                        "alpha": "0.0.8-alpha",
+                        "latest": "0.0.8-alpha",
+                    },
+                }
+            )
+        )
+
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
+
+    assert alpha_release_train.npm_version_exists("0.0.8-alpha") is True
+    assert seen_urls == ["https://registry.npmjs.org/@attestplane%2Fattestplane"]
+
+
+def test_npm_dist_tags_synced_falls_back_to_registry_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen_urls: list[str] = []
+
+    class FakeResponse(io.StringIO):
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        raise alpha_release_train.subprocess.CalledProcessError(1, argv, output="", stderr="npm ERR! 404")
+
+    def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
+        url = str(args[0])
+        seen_urls.append(url)
+        return FakeResponse(
+            json.dumps(
+                {
+                    "versions": {
+                        "0.0.8-alpha": {},
+                    },
+                    "dist-tags": {
+                        "alpha": "0.0.8-alpha",
+                        "latest": "0.0.8-alpha",
+                    },
+                }
+            )
+        )
+
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
+
+    assert alpha_release_train.npm_dist_tags_synced("0.0.8-alpha") is True
+    assert seen_urls == ["https://registry.npmjs.org/@attestplane%2Fattestplane"]
+
+
 def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pytest.MonkeyPatch) -> None:
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
@@ -1361,6 +1435,8 @@ def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pyt
 
     monkeypatch.setattr(alpha_release_train, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+    monkeypatch.setattr(alpha_release_train, "npm_version_exists", lambda version: False)
+    monkeypatch.setattr(alpha_release_train, "npm_dist_tags_synced", lambda version: False)
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     alpha_release_train.publish_platforms(candidate, dry_run=False)
