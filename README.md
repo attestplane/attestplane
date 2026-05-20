@@ -10,6 +10,7 @@
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12924/badge)](https://www.bestpractices.dev/projects/12924)
 [![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplane/commits/main)
 [![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplane/stargazers)
