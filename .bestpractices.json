@@ -1,0 +1,209 @@
+{
+  "name": "attestplane",
+  "description": "Verifiable audit substrate for AI agents — EU AI Act Article 12-aligned. Apache 2.0.",
+  "homepage_url": "https://attestplane.io",
+  "repo_url": "https://github.com/attestplane/attestplane",
+  "license": "Apache-2.0",
+  "implementation_languages": "Python, TypeScript, Shell",
+
+  "description_good_status": "Met",
+  "description_good_justification": "README provides a one-paragraph project description at the top: 'Verifiable audit substrate for AI agents — EU AI Act Article 12-aligned'.",
+
+  "interact_status": "Met",
+  "interact_justification": "GitHub Issues and Discussions enabled; CONTRIBUTING.md documents the PR + DCO sign-off contribution flow; SECURITY.md documents the private vulnerability reporting channel.",
+
+  "contribution_status": "Met",
+  "contribution_justification": "CONTRIBUTING.md covers DCO sign-off (§1), branch and commit conventions (§2-3), PR checklist (§4), review expectations, and the red→green→refactor TDD rhythm.",
+
+  "contribution_requirements_status": "Met",
+  "contribution_requirements_justification": "CONTRIBUTING.md §4 PR Checklist enumerates required test coverage, DCO sign-off, CHANGELOG entry, and lint/type-check gates as acceptance requirements.",
+
+  "floss_license_status": "Met",
+  "floss_license_justification": "Released under Apache-2.0; SPDX-License-Identifier declared via REUSE 3.3; LICENSES/ directory present.",
+
+  "floss_license_osi_status": "Met",
+  "floss_license_osi_justification": "Apache-2.0 is OSI-approved (https://opensource.org/license/apache-2-0).",
+
+  "license_location_status": "Met",
+  "license_location_justification": "LICENSE file at repository root; NOTICE file and LICENSES/ directory present per REUSE 3.3 specification.",
+
+  "documentation_basics_status": "Met",
+  "documentation_basics_justification": "README plus docs/ tree covering adr/, architecture/, security/, runbooks/, spec/, release/, and validation/.",
+
+  "documentation_interface_status": "Met",
+  "documentation_interface_justification": "Python SDK README (sdk/python/README.md) and TypeScript SDK README (sdk/typescript/README.md) document the public API surface; canonical wire format in docs/spec/.",
+
+  "sites_https_status": "Met",
+  "sites_https_justification": "Project homepage attestplane.io, repository github.com, and distribution channels pypi.org and npmjs.com are all HTTPS-only.",
+
+  "discussion_status": "Met",
+  "discussion_justification": "GitHub Issues and Discussions enabled; both are searchable, URL-addressable, and require no proprietary client-side software.",
+
+  "english_status": "Met",
+  "english_justification": "Primary docs (README, CONTRIBUTING, SECURITY, GOVERNANCE, CHANGELOG, ADRs) are all in English; CONTRIBUTING_zh.md is an additional Chinese translation, not a divergent governance document.",
+
+  "maintained_status": "Met",
+  "maintained_justification": "Active development with multiple commits per day; v1.0 GA milestone (full SLA) targeted for 2026-08-15 per SECURITY.md; pre-GA tag line currently at v1.0.3 (2026-05-21).",
+
+  "repo_public_status": "Met",
+  "repo_public_justification": "Repository public at github.com/attestplane/attestplane.",
+
+  "repo_track_status": "Met",
+  "repo_track_justification": "Full git history preserved; every commit carries author identity (GitHub privacy email) and timestamp; DCO sign-off line required on PRs per CONTRIBUTING.md §1 (enforced on inbound contributions).",
+
+  "repo_interim_status": "Met",
+  "repo_interim_justification": "Atomic commits using Conventional Commits format; recent history shows feature/fix/chore/docs separation between releases (e.g. PR #22, #23, #8).",
+
+  "repo_distributed_status": "Met",
+  "repo_distributed_justification": "git (distributed VCS) on GitHub.",
+
+  "version_unique_status": "Met",
+  "version_unique_justification": "Each release tag is unique (v0.0.1-alpha through the v1.0.x line); tag scheme documented in CHANGELOG.md preamble.",
+
+  "version_semver_status": "Met",
+  "version_semver_justification": "CHANGELOG.md preamble declares adherence to Semantic Versioning 2.0; pre-release suffixes (-alpha, -beta.N, -rc.N) follow SemVer §9–11.",
+
+  "version_tags_status": "Met",
+  "version_tags_justification": "Every release has a corresponding vX.Y.Z annotated git tag; release-cd workflow validates tag immutability per ADR-0017.",
+
+  "release_notes_status": "Met",
+  "release_notes_justification": "CHANGELOG.md follows Keep a Changelog 1.1; per-release sections summarise notable changes; GitHub Releases publish per-tag notes.",
+
+  "release_notes_vulns_status": "Met",
+  "release_notes_vulns_justification": "Pre-GA line has no published CVEs to date; SECURITY.md commits to crediting reporters and identifying CVE-assigned vulnerabilities in release notes when fixed.",
+
+  "report_process_status": "Met",
+  "report_process_justification": "CONTRIBUTING.md and SECURITY.md document two channels: public GitHub Issues for general bug reports, SECURITY.md private process for vulnerabilities.",
+
+  "report_tracker_status": "Met",
+  "report_tracker_justification": "GitHub Issues used as the canonical bug tracker.",
+
+  "report_responses_status": "Met",
+  "report_responses_justification": "Recent issues triaged within days (e.g. dependabot PR #8 reviewed and merged same window; issue #7 design questions answered with documented closure). Pre-GA cadence; formal SLA published in SECURITY.md applies from v1.0 GA onwards.",
+
+  "enhancement_responses_status": "Met",
+  "enhancement_responses_justification": "Feature requests routed through Issues and Discussions; v0.8 → v0.9 line shipped community-requested enhancements (e.g. issue #18 Sigstore signing closed by PR #22).",
+
+  "report_archive_status": "Met",
+  "report_archive_justification": "GitHub Issues retains full history; closed issues remain publicly readable and searchable by URL.",
+
+  "vulnerability_report_process_status": "Met",
+  "vulnerability_report_process_justification": "SECURITY.md 'Reporting a Vulnerability' section documents the private email channel and GitHub Security Advisories path; public issues for vulnerabilities are prohibited.",
+
+  "vulnerability_report_private_status": "Met",
+  "vulnerability_report_private_justification": "Private channels are documented in SECURITY.md (email and GitHub Security Advisories), both encrypted in transit. GPG key publication is tracked for v1.0 GA.",
+
+  "vulnerability_report_response_status": "Met",
+  "vulnerability_report_response_justification": "SECURITY.md 'Response Timeline' section commits to acknowledgement within 7 days; the published SLA applies from v1.0 GA (target 2026-08-15) onwards. Pre-GA: best-effort triage on the same cadence.",
+
+  "build_status": "Met",
+  "build_justification": "Documented build paths: 'pip install -e sdk/python[dev]' and 'npm install' in sdk/typescript; release-cd workflow exercises the full build path.",
+
+  "build_common_tools_status": "Met",
+  "build_common_tools_justification": "Standard ecosystem build tools: hatchling (PEP 517) and uv for Python; npm for TypeScript.",
+
+  "build_floss_tools_status": "Met",
+  "build_floss_tools_justification": "All build toolchain (hatchling, uv, npm) is OSI-approved FLOSS.",
+
+  "test_status": "Met",
+  "test_justification": "pytest tests under sdk/python/tests/ and tests/; vitest tests under sdk/typescript/test/; cross-SDK byte-equivalence tests via scripts/test-cross-sdk-roundtrip.sh and the cross-sdk-roundtrip GitHub Actions workflow.",
+
+  "test_invocation_status": "Met",
+  "test_invocation_justification": "Standard invocation documented in CONTRIBUTING.md §2: 'pytest sdk/python/' for Python and 'cd sdk/typescript && npm install && npm test' for TypeScript; PR Checklist §4 enforces both pass.",
+
+  "test_most_status": "Met",
+  "test_most_justification": "Per-PR CI runs pytest + vitest + cross-SDK conformance + invariants gates; CONTRIBUTING.md PR checklist requires test coverage for new public APIs and state transitions.",
+
+  "test_continuous_integration_status": "Met",
+  "test_continuous_integration_justification": "ci.yml workflow triggers on every push to main and every pull_request; concurrency-grouped per ref; supplemented by daily CodeQL, OSV-Scanner, and weekly OSSF Scorecard.",
+
+  "test_policy_status": "Met",
+  "test_policy_justification": "CONTRIBUTING.md §3 documents the red→green→refactor TDD rhythm and requires a failing test first for new behaviour.",
+
+  "tests_are_added_status": "Met",
+  "tests_are_added_justification": "CONTRIBUTING.md §4 PR checklist requires new public APIs, state transitions, and framework mappings to ship with test coverage; recent PRs (e.g. #22, #23) included the corresponding test changes.",
+
+  "tests_documented_added_status": "Met",
+  "tests_documented_added_justification": "ADR template (docs/adr/0000-template.md) includes a test-coverage section; CONTRIBUTING.md §3-4 documents the testing policy and PR checklist obligations.",
+
+  "warnings_status": "Met",
+  "warnings_justification": "ruff and mypy --strict for Python; biome and tsc --noEmit for TypeScript; codespell, typos, yamllint, markdownlint, actionlint, shellcheck, REUSE compliance all run in CI.",
+
+  "warnings_fixed_status": "Met",
+  "warnings_fixed_justification": "ruff, mypy, biome, and tsc all fail-closed in CI; PR cannot merge while warnings outstanding (recent example: PR #23 fixed RUF043 lint regression).",
+
+  "warnings_strict_status": "Met",
+  "warnings_strict_justification": "mypy --strict mode; ruff with project rule set including RUF/E/F families; biome strict; all elevated to CI errors.",
+
+  "know_secure_design_status": "Met",
+  "know_secure_design_justification": "SECURITY.md documents the threat model and substrate-level secure design choices; GOVERNANCE.md captures the maintainer's security responsibilities. Pre-GA: no third-party security audit.",
+
+  "know_common_errors_status": "Met",
+  "know_common_errors_justification": "SECURITY.md threat categories enumerate project-specific failure modes (chain tampering, replay, anchor forgery, supply-chain compromise, claim drift); hardening guidance in the same document.",
+
+  "crypto_published_status": "Met",
+  "crypto_published_justification": "All cryptographic primitives are public standards: SHA-256 (FIPS 180-4), Ed25519 (RFC 8032), RFC 3161 TSA, Sigstore/cosign. No proprietary algorithms.",
+
+  "crypto_call_status": "Met",
+  "crypto_call_justification": "Python pyca/cryptography and Node @noble/ed25519 / WebCrypto used for SHA-256 and Ed25519; no in-house primitive implementations.",
+
+  "crypto_floss_status": "Met",
+  "crypto_floss_justification": "pyca/cryptography is Apache-2.0/BSD; @noble/ed25519 is MIT; both OSI-approved FLOSS.",
+
+  "crypto_keylength_status": "Met",
+  "crypto_keylength_justification": "SHA-256 (256-bit output) and Ed25519 (~128-bit equivalent security) meet 2026 NIST SP 800-57 guidance for the project's threat model; RFC 3161 anchor chains validated against TSA certificate constraints per ADR-0003 and ADR-0005.",
+
+  "crypto_working_status": "Met",
+  "crypto_working_justification": "SHA-256, Ed25519, and RFC 3161 are non-broken as of 2026-05-21 per NIST and ENISA published guidance. Pre-GA: no third-party cryptanalysis audit of project-specific protocol composition.",
+
+  "crypto_weaknesses_status": "Met",
+  "crypto_weaknesses_justification": "No known-weak primitives (MD5, SHA-1, DES, RC4, etc.) used anywhere in the codebase; primitive selection documented in ADR-0005 event signing scheme.",
+
+  "crypto_pfs_status": "N/A",
+  "crypto_pfs_justification": "Project provides evidence-substrate primitives, not a TLS-terminating network service; forward secrecy is the transport layer's responsibility (operator-deployed TLS to TSA endpoints).",
+
+  "crypto_password_storage_status": "N/A",
+  "crypto_password_storage_justification": "Project does not store user passwords; authentication is delegated to operator-deployed gateways per SECURITY.md hardening guidance.",
+
+  "crypto_random_status": "Met",
+  "crypto_random_justification": "OS CSPRNG via pyca/cryptography (os.urandom / secrets) and Node crypto.randomBytes / webcrypto.getRandomValues; no insecure RNG in security-sensitive paths.",
+
+  "delivery_mitm_status": "Met",
+  "delivery_mitm_justification": "Releases distributed via PyPI, npm, and GitHub Releases — all HTTPS-only. Forward-only Sigstore keyless cosign signatures and SLSA Build L3 provenance attached to new releases per ADR-0018.",
+
+  "delivery_unsigned_status": "Met",
+  "delivery_unsigned_justification": "Forward-only Sigstore keyless cosign + SLSA Build L3 provenance per ADR-0018 (workflows sign-release.yml and slsa-provenance.yml). Verification recipe in docs/release/verifying-signatures.md. Pre-ADR-0018 tags are not retroactively signed.",
+
+  "vulnerabilities_fixed_60_days_status": "Met",
+  "vulnerabilities_fixed_60_days_justification": "SECURITY.md Response Timeline commits to Critical ≤30 days, High ≤60 days, Medium/Low ≤90 days from v1.0 GA onwards. No unfixed public CVEs against the pre-GA line.",
+
+  "vulnerabilities_critical_fixed_status": "Met",
+  "vulnerabilities_critical_fixed_justification": "No known unfixed Critical vulnerabilities as of 2026-05-21; OSV-Scanner runs daily and CodeQL on every push.",
+
+  "no_leaked_credentials_status": "Met",
+  "no_leaked_credentials_justification": "OSV-Scanner CI workflow runs daily; gitleaks invariants enforced in invariants.yml; no committed credentials. GitHub secret-scanning push-protection enabled at org level.",
+
+  "static_analysis_status": "Met",
+  "static_analysis_justification": "CodeQL workflow on every push and pull_request plus weekly schedule; ruff and mypy --strict enforced in CI on every commit.",
+
+  "static_analysis_common_vulnerabilities_status": "Met",
+  "static_analysis_common_vulnerabilities_justification": "CodeQL default query packs cover CWE Top 25 patterns; OSV-Scanner runs daily for dependency CVEs; OSSF Scorecard runs weekly.",
+
+  "static_analysis_fixed_status": "Met",
+  "static_analysis_fixed_justification": "Static-analysis findings either fixed before merge or tracked as GitHub Security Advisories; CI fails closed on new High or Critical findings.",
+
+  "static_analysis_often_status": "Met",
+  "static_analysis_often_justification": "CodeQL on every push and PR plus weekly cron; OSV-Scanner daily; OSSF Scorecard weekly; ruff/mypy on every CI run.",
+
+  "dynamic_analysis_status": "Met",
+  "dynamic_analysis_justification": "Hypothesis property-based tests in sdk/python/tests/; nightly mutation testing via mutation.yml; deterministic fault-injection harness in scripts/check-fault-injection.sh.",
+
+  "dynamic_analysis_unsafe_status": "N/A",
+  "dynamic_analysis_unsafe_justification": "Load-bearing code is Python and TypeScript (both memory-safe); no unsafe memory operations in scope.",
+
+  "dynamic_analysis_enable_assertions_status": "Met",
+  "dynamic_analysis_enable_assertions_justification": "Python assert enabled in tests; TypeScript runtime invariants via vitest assertions; ProofBundle verifier predicates fail-closed on assertion violation.",
+
+  "dynamic_analysis_fixed_status": "Met",
+  "dynamic_analysis_fixed_justification": "Mutation-test gaps tracked in advisory issues; hypothesis test failures block CI; no deferred Medium-plus findings outstanding."
+}
