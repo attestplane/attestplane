@@ -1873,8 +1873,12 @@ def npm_dist_tags_synced(npm_version: str) -> bool:
 
 
 def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
-    if local_tag_points_at_head(candidate.release):
-        print(f"local tag already exists at HEAD; skipping local tag creation: {candidate.release}", flush=True)
+    if (
+        local_tag_points_at_head(candidate.release)
+        or stage_done(state_path, candidate, "tag_pushed")
+        or stage_done(state_path, candidate, "gh_release_created")
+    ):
+        print(f"local tag already exists or is recorded; skipping local tag creation: {candidate.release}", flush=True)
     else:
         run(["git", "tag", "-a", candidate.release, "-m", candidate.release], dry_run=dry_run)
     if stage_done(state_path, candidate, "tag_pushed"):

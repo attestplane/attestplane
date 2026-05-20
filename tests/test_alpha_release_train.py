@@ -1132,6 +1132,30 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
     assert stage_calls == [("tag_pushed", "queued")]
 
 
+def test_create_tag_and_release_skips_recorded_partial_release_tag(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    commands: list[list[str]] = []
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        {
+            "release": "v0.6.6-alpha",
+            "python_version": "0.6.6a0",
+            "npm_version": "0.6.6-alpha",
+            "create_github_release": False,
+        }
+    )
+
+    alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
+    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: False)
+    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+
+    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=state_file)
+
+    assert ["git", "tag", "-a", "v0.6.6-alpha", "-m", "v0.6.6-alpha"] not in commands
+
+
 def test_local_tag_points_at_head_suppresses_missing_tag_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[dict[str, object]] = []
 
