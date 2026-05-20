@@ -167,6 +167,16 @@ jobs:
           else
             TAG="latest"
           fi
+          if npm view "@attestplane/attestplane@${VERSION}" version >/tmp/existing-npm-version 2>/dev/null; then
+            EXISTING="$(cat /tmp/existing-npm-version)"
+            DIST_TAG_VERSION="$(npm view @attestplane/attestplane "dist-tags.${TAG}" 2>/dev/null || true)"
+            if [[ "$EXISTING" == "$VERSION" && "$DIST_TAG_VERSION" == "$VERSION" ]]; then
+              echo "npm package already published with expected dist-tag: version=$VERSION tag=$TAG"
+              exit 0
+            fi
+            echo "::error::npm package version already exists but dist-tag is not in the expected state: version=$VERSION tag=$TAG dist-tag-version=$DIST_TAG_VERSION"
+            exit 1
+          fi
           unset NODE_AUTH_TOKEN
           export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/npm-trusted-publishing.npmrc"
           printf 'registry=https://registry.npmjs.org/\n' > "$NPM_CONFIG_USERCONFIG"
