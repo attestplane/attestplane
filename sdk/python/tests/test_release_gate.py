@@ -46,6 +46,38 @@ def test_major_boundary_uses_audit_track() -> None:
     assert decision.reasons == ["major_boundary"]
 
 
+def test_minor_zero_release_after_major_defaults_to_fast_track() -> None:
+    decision = release_gate.decide_release_gate(
+        release_tag="v1.1.0",
+        channel="latest",
+        labels=[],
+        release_audit=False,
+        milestone=None,
+        dependency_major_bump=False,
+        env={},
+    )
+
+    assert decision.track == "fast"
+    assert decision.audit_required is False
+    assert decision.reasons == ["default_fast_track"]
+
+
+def test_next_major_zero_zero_release_uses_audit_track() -> None:
+    decision = release_gate.decide_release_gate(
+        release_tag="v2.0.0",
+        channel="latest",
+        labels=[],
+        release_audit=False,
+        milestone=None,
+        dependency_major_bump=False,
+        env={},
+    )
+
+    assert decision.track == "audit"
+    assert decision.audit_required is True
+    assert decision.reasons == ["major_boundary"]
+
+
 def test_kill_switch_forces_fast_track_even_at_major_boundary() -> None:
     decision = release_gate.decide_release_gate(
         release_tag="v1.0.0",

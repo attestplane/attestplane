@@ -313,6 +313,16 @@ def test_stable_train_blocks_unverified_major_boundary() -> None:
         stable_auto_train.assert_release_gate_allows_target(target)
 
 
+def test_stable_train_allows_minor_zero_after_major_boundary() -> None:
+    target = stable_auto_train.ReleaseTarget(
+        version=stable_auto_train.StableVersion.parse("1.1.0"),
+        channel="latest",
+        min_soak_hours=0,
+    )
+
+    stable_auto_train.assert_release_gate_allows_target(target)
+
+
 def test_wait_for_push_ci_allows_successful_required_workflows(monkeypatch: pytest.MonkeyPatch) -> None:
     head_sha = "abc123"
     runs = [

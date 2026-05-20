@@ -82,7 +82,7 @@ def decide_release_gate(
     dependency_major_bump: bool,
     env: Mapping[str, str] = os.environ,
 ) -> ReleaseGateDecision:
-    major, _minor, patch = parse_release_tag(release_tag)
+    major, minor, patch = parse_release_tag(release_tag)
     if channel not in {"alpha", "beta", "rc", "latest"}:
         raise ValueError(f"unsupported release channel: {channel}")
 
@@ -90,7 +90,7 @@ def decide_release_gate(
         return ReleaseGateDecision(track="fast", audit_required=False, reasons=["audit_disabled"])
 
     reasons: list[str] = []
-    if major >= 1 and patch == 0:
+    if major >= 1 and minor == 0 and patch == 0:
         reasons.append("major_boundary")
 
     normalized_labels = sorted({label.strip().lower() for label in labels if label.strip()})
