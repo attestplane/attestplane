@@ -16,6 +16,10 @@ notes are the authoritative reference for supply-chain verification.
 - Added a release-candidate compatibility policy for SDK exports,
   proof-bundle v1, verifier reason codes, canonical bytes, and
   `AP-EVD/1.0` fixture shape.
+- Added GA/CA cut criteria documenting that `ca` is not a package-version
+  suffix, that stable releases use a suffix-free version, and that Controlled
+  Availability must be expressed through release notes, documentation, and
+  registry/channel policy rather than ad-hoc version strings.
 - Added ADR-0016 to freeze the public SDK and wire-format surfaces for
   the v0.8 RC line.
 - Added ADR-0017 and a GitHub CD release runbook so package publication

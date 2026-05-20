@@ -58,6 +58,12 @@ When `v0.8.5` GA is cut, `latest` should move from `0.8.0-beta.0` to
 The beta dist-tag may remain pinned to `0.8.0-beta.0` for reproducible
 installation of the beta line.
 
+If maintainers choose a Controlled Availability channel before GA, do not encode
+`ca` in the package version. Use the existing RC or stable version scheme and
+record the CA scope in release notes, documentation, and, if needed, an
+explicit registry/channel tag. The GA/CA checklist is recorded in
+[`ga-ca-cut-criteria.md`](ga-ca-cut-criteria.md).
+
 ## Manual Recovery
 
 If a dist-tag points at the wrong version:

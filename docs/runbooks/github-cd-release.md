@@ -50,6 +50,11 @@ The detailed npm dist-tag policy and the current `0.8.0-beta.0` latest
 decision are recorded in
 [`npm-dist-tag-policy.md`](../release/npm-dist-tag-policy.md).
 
+The GA and Controlled Availability decision gate is recorded in
+[`ga-ca-cut-criteria.md`](../release/ga-ca-cut-criteria.md). That document
+defines why `ca` must not be encoded directly in the package version string and
+which evidence is required before moving beyond the RC line.
+
 ## RC Revision Window
 
 Each patch RC line may use at most ten RC ordinals. For the current line, valid
@@ -93,6 +98,11 @@ Before dispatching a real release:
    API drift must pass.
 4. The release tag must point at the reviewed commit.
 5. The maintainer must confirm the npm dist-tag is correct for the channel.
+
+Before dispatching a GA or Controlled Availability release, also complete the
+GA/CA checklist in
+[`ga-ca-cut-criteria.md`](../release/ga-ca-cut-criteria.md). RC releases may
+continue through the RC train while that checklist is being completed.
 
 ## Trusted Publishing
 
