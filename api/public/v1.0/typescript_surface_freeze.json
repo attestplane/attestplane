@@ -1,0 +1,1656 @@
+{
+  "baseline_release": "v0.0.2-alpha",
+  "exports": [
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "ALL_EVENT_TYPES_V1",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "ALL_REASON_CODES_V1",
+      "notes": "",
+      "source": "src/reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "ALL_VERIFY_ERROR_CODES_V1",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "ANCHOR_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AdapterCaseResult",
+      "notes": "",
+      "source": "src/adapter_conformance.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "AdapterConformanceError",
+      "notes": "",
+      "source": "src/adapter_conformance.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AdapterConformanceReport",
+      "notes": "",
+      "source": "src/adapter_conformance.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "AdapterError",
+      "notes": "",
+      "source": "src/adapters.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "AdapterTranslationError",
+      "notes": "",
+      "source": "src/adapters.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "AnchorError",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AnchorPolicy",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AnchorRecord",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AnchorStatus",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "AnchorVerificationError",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AnchorVerificationResult",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AppendOptions",
+      "notes": "",
+      "source": "src/substrate.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "class",
+      "name": "AttestSubstrate",
+      "notes": "",
+      "source": "src/substrate.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AuditEvent",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AuditorExport",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "AuditorExportOptions",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "BUDGET_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "BundleSchemaError",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "BundleVerificationError",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "BundleVerificationResult",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "CanonicalTextError",
+      "notes": "",
+      "source": "src/canonical_text.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "CanonicalizationError",
+      "notes": "",
+      "source": "src/canonical.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "CertStatus",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ChainBundleVerificationResult",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ChainEventForReplay",
+      "notes": "",
+      "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ChainEventForSettlement",
+      "notes": "",
+      "source": "src/settlement_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ChainExtendOptions",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ChainHead",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ChainedEvent",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "DEFAULT_ANCHOR_POLICY",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "DEFAULT_FORBIDDEN_FIELDS",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "DEFAULT_SIGNATURE_POLICY",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "DSSE_PAYLOAD_TYPE",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "DsseEnvelope",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "DsseSignature",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "EVAL_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "EVIDENCE_TAXONOMY_VERSION",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "EnvKeyProvider",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "EnvKeyProviderOptions",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "EventDraft",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "EventDraftInput",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "EventTypeV1",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "FORBIDDEN_PAYLOAD_FIELDS",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "FileKeyProvider",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "FileKeyProviderOptions",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "FrameworkMapping",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "GATEWAY_DECISION_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "GENESIS_HASH",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "GenericRuntimeAdapter",
+      "notes": "",
+      "source": "src/adapters.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "HUMAN_APPROVAL_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ImplementationStatus",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "InMemoryKeyProvider",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "InMemoryKeyProviderOptions",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "IntotoError",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "IntotoStatement",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "IntotoSubject",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "KeyBoundaryError",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "KeyProvider",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "KeyProviderError",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "LEASE_LIFECYCLE_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "LangFuseAdapter",
+      "notes": "",
+      "source": "src/adapters/langfuse.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "LangFuseObservation",
+      "notes": "",
+      "source": "src/adapters/langfuse.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "LangSmithAdapter",
+      "notes": "",
+      "source": "src/adapters/langsmith.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "LangSmithRun",
+      "notes": "",
+      "source": "src/adapters/langsmith.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "LeaseLifecycle",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "LeaseLifecycleEventPayload",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "MockTSAProvider",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "MockTSAProviderInput",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "MultiSignerProvider",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "MultiTSAProvider",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "MultiTSAProviderInput",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ObligationEntry",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ObligationImplementationStatus",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "ObligationRegistryError",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "POLICY_CHECK_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "PREDICATE_TYPE_V1",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ParsedTimestampTs",
+      "notes": "",
+      "source": "src/rfc3161.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "PayloadValidationError",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "PolicyCheckEventPayload",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "PolicyDecision",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "PolicyEffect",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ProofBundle",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "class",
+      "name": "ProofBundleBuilder",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ProofBundleBuilderInput",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "REASON_CODE_DESCRIPTIONS",
+      "notes": "",
+      "source": "src/reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "REASON_CODE_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "RETENTION_PROOF_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "ROUTING_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "RUNTIME_LIFECYCLE_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ReasonCodeV1",
+      "notes": "",
+      "source": "src/reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "Registry",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ReplayCoverage",
+      "notes": "",
+      "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ReplayEventPayload",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ReplayManifest",
+      "notes": "",
+      "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ReplayOptions",
+      "notes": "",
+      "source": "src/adapter_conformance.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "ReplayVerificationResult",
+      "notes": "",
+      "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "RetentionAction",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "RetentionProof",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "RetentionProofVerificationResult",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "SETTLEMENT_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "SIGNATURE_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "STATEMENT_TYPE",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "STATE_TRANSITION_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "STATUS_RANK",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SerializedAuditEvent",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SerializedChainedEvent",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SerializedSignatureRecord",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SerializedSubjectRef",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SettlementPreconditionClaim",
+      "notes": "",
+      "source": "src/settlement_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SettlementVerificationResult",
+      "notes": "",
+      "source": "src/settlement_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SignatureMode",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SignaturePolicy",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SignatureRecord",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SignatureStatus",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "SignatureVerificationError",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "Signer",
+      "notes": "",
+      "source": "src/signing/signer.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SignerOptions",
+      "notes": "",
+      "source": "src/signing/signer.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "SigningError",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SigningMaterial",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SingleAnchorResult",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SingleSignatureResult",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SubjectRef",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "SubjectScheme",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "TOOL_CALL_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "TSAProvider",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "TSAUnavailableError",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "TimestampRequest",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "TranslateAdapter",
+      "notes": "",
+      "source": "src/adapter_conformance.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "TrustRootEntry",
+      "notes": "",
+      "source": "src/signing/trust_roots.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "TrustRoots",
+      "notes": "",
+      "source": "src/signing/trust_roots.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "name": "TrustRootsError",
+      "notes": "",
+      "source": "src/signing/trust_roots.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_ERROR_DESCRIPTIONS",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_ERROR_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERSION",
+      "notes": "",
+      "source": "src/index_version.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerificationResult",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyChainFullOptions",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyChainWithAnchorsOptions",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyChainWithSignaturesOptions",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyChainWithSignaturesResult",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyErrorCode",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyTimestampOptions",
+      "notes": "",
+      "source": "src/rfc3161.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "WORKER_ASSIGNMENT_EVENT",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "buildAuditorExport",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "buildDeletionProof",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "buildPerEventPayload",
+      "notes": "",
+      "source": "src/signing/signer.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "buildRetentionMarker",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "buildSegmentHeadPayload",
+      "notes": "",
+      "source": "src/signing/signer.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "canonicalJsonBytes",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "canonicalize",
+      "notes": "",
+      "source": "src/canonical.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "canonicalizeText",
+      "notes": "",
+      "source": "src/canonical_text.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "chainExtend",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "checkSettlementPrecondition",
+      "notes": "",
+      "source": "src/settlement_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "deriveKeyId",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "deserializeSignatureRecord",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "dsseEnvelopeToStatement",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "exportPublicKeyDer",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "genesisHead",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "hashEvent",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "headOf",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "isKnownReasonCode",
+      "notes": "",
+      "source": "src/reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "isKnownV1EventType",
+      "notes": "",
+      "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "isKnownVerifyErrorCode",
+      "notes": "",
+      "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "loadAllRegistries",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "loadDoraArticle8",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "loadEuAiActArticle12",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "loadTrustRoots",
+      "notes": "",
+      "source": "src/signing/trust_roots.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "makeAnchorPolicy",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "function",
+      "name": "makeEventDraft",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "makeSignaturePolicy",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "function",
+      "name": "makeSubjectRef",
+      "notes": "",
+      "source": "src/types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "makeTimestampRequest",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "obligationById",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "obligationsByEventType",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "obligationsByImplementationStatus",
+      "notes": "",
+      "source": "src/obligations.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "parseTimestampResponse",
+      "notes": "",
+      "source": "src/rfc3161.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "parseTrustRoots",
+      "notes": "",
+      "source": "src/signing/trust_roots.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "proofBundleToInTotoStatement",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "reasonCodeMatchesFormat",
+      "notes": "",
+      "source": "src/reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "replayFixture",
+      "notes": "",
+      "source": "src/adapter_conformance.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "seedToPrivateKey",
+      "notes": "",
+      "source": "src/signing/providers.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "serializeChainedEvent",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "serializeSignatureRecord",
+      "notes": "",
+      "source": "src/proof_bundle.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "shortSummary",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "statementToDsseEnvelope",
+      "notes": "",
+      "source": "src/intoto.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "textHash",
+      "notes": "",
+      "source": "src/canonical_text.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "textHashHex",
+      "notes": "",
+      "source": "src/canonical_text.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "validateAnchorRecord",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "validateLeaseLifecycleEventPayload",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "validatePolicyCheckEventPayload",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "validateReplayEventPayload",
+      "notes": "",
+      "source": "src/event_payloads.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "validateRetentionProof",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "validateSignatureRecord",
+      "notes": "",
+      "source": "src/signing/base.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyChain",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyChainFull",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "experimental"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyChainWithAnchors",
+      "notes": "",
+      "source": "src/anchoring.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyChainWithSignatures",
+      "notes": "",
+      "source": "src/signing/verifier_ext.ts",
+      "stability": "experimental"
+    },
+    {
+      "documented": true,
+      "kind": "function",
+      "name": "verifyProofBundle",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyProofBundleFile",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyReplayManifest",
+      "notes": "",
+      "source": "src/replay_verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyRetentionProofs",
+      "notes": "",
+      "source": "src/retention.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyTimestampToken",
+      "notes": "",
+      "source": "src/rfc3161.ts",
+      "stability": "alpha_public"
+    }
+  ],
+  "language": "typescript",
+  "package": "@attestplane/attestplane",
+  "schema_version": "public_api_manifest.v1"
+}

@@ -1,0 +1,1112 @@
+{
+  "baseline_release": "v0.0.2-alpha",
+  "language": "python",
+  "package": "attestplane",
+  "schema_version": "public_api_manifest.v1",
+  "symbols": [
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ALL_EVENT_TYPES_V1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ALL_REASON_CODES_V1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ALL_VERIFY_ERROR_CODES_V1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ANCHOR_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AbstractStorageBackend",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AdapterCaseResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AdapterConformanceError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AdapterConformanceReport",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AdapterError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AdapterTranslationError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AnchorError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AnchorPolicy",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AnchorRecord",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AnchorVerificationError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AnchorVerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AttestSubstrate",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AuditEvent",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "BUDGET_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "BundleSchemaError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "BundleVerificationError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "BundleVerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "CanonicalTextError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "CanonicalizationError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ChainHead",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ChainedEvent",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "DEFAULT_FORBIDDEN_FIELDS",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "DSSE_PAYLOAD_TYPE",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "EVAL_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "EVIDENCE_TAXONOMY_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "EnvKeyProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "EventDraft",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "FORBIDDEN_PAYLOAD_FIELDS",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "FileKeyProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "FrameworkMapping",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "GATEWAY_DECISION_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "GENESIS_HASH",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "GenericRuntimeAdapter",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "HUMAN_APPROVAL_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "InMemoryKeyProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "IntotoError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "JsonlStorageBackend",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "KeyBoundaryError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "KeyProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "KeyProviderError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "LEASE_LIFECYCLE_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "LangFuseAdapter",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "LangFuseObservation",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "LangSmithAdapter",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "LangSmithRun",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "LeaseLifecycle",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "LeaseLifecycleEventPayload",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "MockTSAProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "MultiSignerProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "MultiTSAProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ObligationEntry",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ObligationRegistryError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "POLICY_CHECK_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "PREDICATE_TYPE_V1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "PolicyCheckEventPayload",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "PolicyDecision",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "PolicyEffect",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ProofBundleBuilder",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "REASON_CODE_DESCRIPTIONS",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "REASON_CODE_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "RETENTION_PROOF_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ROUTING_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "RUNTIME_LIFECYCLE_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ReasonCodeV1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "Registry",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ReplayCoverage",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ReplayEventPayload",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ReplayManifest",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ReplayVerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "RetentionProofVerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "RuntimeEvent",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "SETTLEMENT_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "SIGNATURE_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "STATEMENT_TYPE",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "STATE_TRANSITION_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SettlementPreconditionClaim",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SettlementVerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SignatureMode",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SignaturePolicy",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SignatureRecord",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SignatureVerificationError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SigningError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SigningMaterial",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SingleAnchorResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "StorageError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "StorageReadError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "StorageWriteError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": true,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "SubjectRef",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "TOOL_CALL_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "TSAProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "TSAUnavailableError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "TimestampRequest",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_ERROR_DESCRIPTIONS",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_ERROR_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "VerificationResult",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "VerifyErrorCode",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "WORKER_ASSIGNMENT_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "__version__",
+      "notes": "",
+      "stability": "internal_exported"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "build_auditor_export",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "build_deletion_proof",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "build_retention_marker",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "bundle_to_dsse_envelope",
+      "notes": "",
+      "stability": "experimental"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "bundle_to_in_toto_statement",
+      "notes": "",
+      "stability": "experimental"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "canonicalize",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "canonicalize_text",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "chain_extend",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "check_settlement_precondition",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "derive_key_id",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "dsse_envelope_to_statement",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "genesis_head",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "hash_event",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "is_known_reason_code",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "is_known_v1_event_type",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "is_known_verify_error_code",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "load_all_registries",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "load_dora_article_8",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "load_eu_ai_act_article_12",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "proof_bundle_to_in_toto_statement",
+      "notes": "",
+      "stability": "experimental"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "reason_code_matches_format",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "replay_fixture",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "statement_to_dsse_envelope",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "text_hash",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "text_hash_hex",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "validate_lease_lifecycle_event_payload",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "validate_policy_check_event_payload",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "validate_replay_event_payload",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "validate_retention_proof",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_chain",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_chain_with_anchors",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_proof_bundle",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_proof_bundle_file",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_replay_manifest",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_retention_proofs",
+      "notes": "",
+      "stability": "alpha_public"
+    }
+  ]
+}
