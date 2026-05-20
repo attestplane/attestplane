@@ -192,6 +192,11 @@ publication now runs through the GitHub Actions CD path documented in
 local machines prepare and dispatch releases but do not directly publish to
 PyPI or npm.
 
+The local automation programming loop is named
+[`autodev-train`](docs/runbooks/autodev-train.md). The old
+`attestplane-alpha-train` name remains only as a compatibility alias for the
+alpha-stage wrapper and state directory.
+
 The current `attestplane verify` command is deliberately narrow:
 
 - It replays bundle events and checks hash-chain/report agreement.

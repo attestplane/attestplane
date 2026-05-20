@@ -1,5 +1,10 @@
 # Alpha Release Train Runbook
 
+> Historical name: the alpha release train is now part of
+> [`autodev-train`](autodev-train.md). Use
+> `scripts/release/start_autodev_train.sh` for new automation runs. The old
+> `start_alpha_train_full_auto.sh` wrapper remains as a compatibility alias.
+
 The alpha release train packages the manual Attestplane alpha release sequence
 into a finite, deterministic workflow.
 
@@ -178,10 +183,10 @@ synchronization step for the same alpha version.
 The preferred operational entrypoint is the tmux wrapper:
 
 ```bash
-scripts/release/start_alpha_train_full_auto.sh
+scripts/release/start_autodev_train.sh
 ```
 
-That wrapper starts the `attestplane-alpha-train` session using:
+That wrapper starts the `autodev-train` session using:
 
 ```bash
 python scripts/release/alpha_release_train.py --full-auto-alpha
@@ -192,8 +197,9 @@ python scripts/release/alpha_release_train.py --full-auto-alpha
 --execute --max-count 1 --max-releases-per-day 0 --max-prepares-per-day 0`.
 It exists to avoid accidentally launching the older queue-only watcher, which
 can stay healthy while making no release progress when the queue is empty.
-The wrapper refuses to start if the tmux session is already running or if
-`release/alpha-train/STOP` exists.
+The compatibility wrapper `scripts/release/start_alpha_train_full_auto.sh`
+delegates to `start_autodev_train.sh`. The wrapper refuses to start if the tmux
+session is already running or if `release/alpha-train/STOP` exists.
 
 The runner performs:
 

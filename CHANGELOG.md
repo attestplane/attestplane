@@ -20,6 +20,9 @@ notes are the authoritative reference for supply-chain verification.
   the v0.8 RC line.
 - Added ADR-0017 and a GitHub CD release runbook so package publication
   goes through GitHub Actions rather than local publish commands.
+- Renamed the local automation programming train to `autodev-train`, keeping
+  the old alpha-train wrapper as a compatibility alias, and documented that
+  `release-cd` is its GitHub Actions publication stage.
 - Expanded verifier conformance with tampered-report,
   schema-version-skew, and malformed policy-trace reference cases.
 - Updated the npm publish workflow to support the `rc` dist-tag and to

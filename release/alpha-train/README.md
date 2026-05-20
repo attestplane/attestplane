@@ -1,5 +1,10 @@
 # Alpha Release Train
 
+> Historical state directory: this directory is now used by
+> [`autodev-train`](../../docs/runbooks/autodev-train.md). The old
+> `attestplane-alpha-train` name remains as a compatibility alias for the
+> alpha-stage automation.
+
 This directory defines finite alpha release-train candidates for Attestplane.
 It is intentionally queue-based and bounded. The train does not invent product
 scope, generate code, or publish an unprepared version.
@@ -157,13 +162,16 @@ post-publish synchronization step for the same alpha version.
 The preferred tmux entrypoint for that mode is:
 
 ```bash
-scripts/release/start_alpha_train_full_auto.sh
+scripts/release/start_autodev_train.sh
 ```
 
-The wrapper starts the `attestplane-alpha-train` tmux session with
+The wrapper starts the `autodev-train` tmux session with
 `--full-auto-alpha`, refuses to start if another train session is running, and
 refuses to start while `release/alpha-train/STOP` exists. The Python shortcut
 expands to:
+
+The old `scripts/release/start_alpha_train_full_auto.sh` wrapper delegates to
+`scripts/release/start_autodev_train.sh`.
 
 ```bash
 python scripts/release/alpha_release_train.py --full-auto-alpha

@@ -16,6 +16,10 @@ The unified entrypoint is:
 .github/workflows/release-cd.yml
 ```
 
+`release-cd` is the GitHub Actions publication stage connected to
+[`autodev-train`](autodev-train.md). `autodev-train` may prepare and validate a
+release, but registry publication still runs here.
+
 It coordinates the existing SDK publication workflows:
 
 - `.github/workflows/publish-python.yml`
