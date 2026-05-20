@@ -174,8 +174,8 @@ Integration with each partner does **not** imply endorsement by the partner. The
 ## Current release posture: RC preparation
 
 The published beta line is live as a GitHub prerelease and as package
-artifacts: Python `attestplane==0.8.1a0` is published to PyPI, and
-`@attestplane/attestplane@0.8.1-alpha` is published to npm under the
+artifacts: Python `attestplane==0.8.2a0` is published to PyPI, and
+`@attestplane/attestplane@0.8.2-alpha` is published to npm under the
 `beta` dist-tag. The next planned cut is `v0.8.0-rc.1` (`0.8.0rc1` on
 PyPI, `0.8.0-rc.1` on npm under the `rc` dist-tag).
 
@@ -240,7 +240,7 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.8.1a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `attestplane==0.8.2a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
 | `@attestplane/attestplane@0.8.0-beta.0` | [npm beta/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
 | `v0.8.0-rc.1` | planned RC cut | publish under npm `rc`; do not reuse versions |
 | GitHub Release | `v0.8.0-beta.0` | wheel + sdist + npm tarball + checksums + artifact manifest |
