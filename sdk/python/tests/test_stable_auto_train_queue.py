@@ -114,3 +114,43 @@ def test_stable_train_blocks_unverified_major_boundary() -> None:
 
     with pytest.raises(RuntimeError, match="audit_required_without_verified_plan"):
         stable_auto_train.assert_release_gate_allows_target(target)
+
+
+def test_wait_for_push_ci_allows_successful_required_workflows(monkeypatch: pytest.MonkeyPatch) -> None:
+    head_sha = "abc123"
+    runs = [
+        {
+            "conclusion": "success",
+            "databaseId": index,
+            "headSha": head_sha,
+            "name": name,
+            "status": "completed",
+            "url": f"https://example.test/{name}",
+        }
+        for index, name in enumerate(stable_auto_train.PUSH_CI_WORKFLOWS, start=1)
+    ]
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: json.dumps(runs))
+
+    stable_auto_train.wait_for_push_ci(head_sha)
+
+
+def test_wait_for_push_ci_blocks_failed_required_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
+    head_sha = "abc123"
+    runs = [
+        {
+            "conclusion": "success",
+            "databaseId": index,
+            "headSha": head_sha,
+            "name": name,
+            "status": "completed",
+            "url": f"https://example.test/{name}",
+        }
+        for index, name in enumerate(stable_auto_train.PUSH_CI_WORKFLOWS, start=1)
+    ]
+    runs[0] = {**runs[0], "conclusion": "failure"}
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: json.dumps(runs))
+
+    with pytest.raises(RuntimeError, match="push CI failed.*ci=failure"):
+        stable_auto_train.wait_for_push_ci(head_sha)

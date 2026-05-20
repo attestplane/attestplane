@@ -44,6 +44,25 @@ DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
 REMOTE_PROBE_TIMEOUT_SECONDS = 30
 PATCH_ROLLOVER = 10
+PUSH_CI_WORKFLOWS = (
+    "ci",
+    "sdk-python",
+    "sdk-typescript",
+    "cross-sdk-roundtrip",
+    "verifier-conformance",
+    "invariants",
+    "sbom",
+    "reproducible-build",
+    "osv-scanner",
+    "codeql",
+)
+PUSH_CI_FAILURE_CONCLUSIONS = {
+    "action_required",
+    "cancelled",
+    "failure",
+    "startup_failure",
+    "timed_out",
+}
 
 
 @dataclass(frozen=True, order=True)
@@ -605,6 +624,8 @@ def commit_and_tag(version: StableVersion) -> None:
 
 def push_and_dispatch(version: StableVersion, *, wait: bool) -> None:
     run(["git", "push", "origin", "main"])
+    head_sha = capture(["git", "rev-parse", "HEAD"])
+    wait_for_push_ci(head_sha)
     run(["git", "push", "origin", version.tag])
     run(
         [
@@ -624,6 +645,69 @@ def push_and_dispatch(version: StableVersion, *, wait: bool) -> None:
     )
     if wait:
         wait_for_release_cd(version)
+
+
+def wait_for_push_ci(head_sha: str) -> None:
+    print(f"waiting for push CI workflows for {head_sha}", flush=True)
+    deadline = time.monotonic() + 1800
+    expected = set(PUSH_CI_WORKFLOWS)
+    last_summary = ""
+
+    while time.monotonic() < deadline:
+        try:
+            raw = capture(
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--event",
+                    "push",
+                    "--limit",
+                    "100",
+                    "--json",
+                    "conclusion,databaseId,headSha,name,status,url",
+                ]
+            )
+        except subprocess.CalledProcessError as exc:
+            print(f"push CI probe failed: {exc}; retrying", flush=True)
+            time.sleep(20)
+            continue
+
+        runs = json.loads(raw or "[]")
+        matched = {
+            run["name"]: run
+            for run in runs
+            if run.get("headSha") == head_sha and run.get("name") in expected
+        }
+        failed = [
+            run
+            for run in matched.values()
+            if (run.get("conclusion") or "") in PUSH_CI_FAILURE_CONCLUSIONS
+        ]
+        if failed:
+            details = "; ".join(
+                f"{run.get('name')}={run.get('conclusion')} ({run.get('url')})"
+                for run in sorted(failed, key=lambda item: item.get("name") or "")
+            )
+            raise RuntimeError(f"push CI failed for {head_sha}: {details}")
+
+        missing = sorted(expected - set(matched))
+        pending = sorted(
+            name
+            for name, run in matched.items()
+            if run.get("status") != "completed" or run.get("conclusion") != "success"
+        )
+        if not missing and not pending:
+            print(f"push CI workflows passed for {head_sha}", flush=True)
+            return
+
+        summary = f"missing={','.join(missing) or '-'} pending={','.join(pending) or '-'}"
+        if summary != last_summary:
+            print(f"push CI waiting for {head_sha}: {summary}", flush=True)
+            last_summary = summary
+        time.sleep(20)
+
+    raise TimeoutError(f"timed out waiting for push CI workflows for {head_sha}")
 
 
 def wait_for_release_cd(version: StableVersion) -> None:
