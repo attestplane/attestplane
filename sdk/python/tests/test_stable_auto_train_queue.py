@@ -225,7 +225,11 @@ def test_run_once_resumes_locally_tagged_unpublished_release(
     monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
     monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
-    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: stable_auto_train.StableVersion.parse("1.0.8"))
+    monkeypatch.setattr(
+        stable_auto_train,
+        "latest_stable_before",
+        lambda target: stable_auto_train.StableVersion.parse("1.0.8"),
+    )
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.9")
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
@@ -274,7 +278,11 @@ def test_run_once_refuses_unknown_status_for_existing_tag(
     monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
     monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
-    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: stable_auto_train.StableVersion.parse("1.0.8"))
+    monkeypatch.setattr(
+        stable_auto_train,
+        "latest_stable_before",
+        lambda target: stable_auto_train.StableVersion.parse("1.0.8"),
+    )
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.9")
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
