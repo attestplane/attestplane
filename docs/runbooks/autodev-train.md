@@ -44,12 +44,15 @@ The wrapper starts tmux session `autodev-train` by default and writes logs under
 the current RC registry/CD state without creating commits, tags, releases, or
 registry mutations.
 
-RC automation can be started explicitly when the release owner wants the local
-train to prepare the next queued RC:
+Stable automation can be started explicitly when the release owner wants the
+local train to prepare the next queued suffix-free package release:
 
 ```bash
-AUTODEV_TRAIN_MODE=full-auto-rc scripts/release/start_autodev_train.sh
+AUTODEV_TRAIN_MODE=full-auto-stable scripts/release/start_autodev_train.sh
 ```
+
+`AUTODEV_TRAIN_MODE=full-auto-rc` remains as a compatibility alias, but it now
+uses the suffix-free stable train and does not generate new `-rc.N` tags.
 
 The RC queue is recorded in:
 
@@ -58,9 +61,10 @@ release/autodev-train-targets.json
 ```
 
 The current queue advances through `v0.8.6`, `v0.8.7`, `v0.8.8`, `v0.8.9`,
-`v0.8.10`, and `v0.9.0`. The train only cuts `-rc.N` candidates for these
-targets. Suffix-free stable tags, npm `latest`, and npm `ca` remain manual
-release-owner gates after soak and validation evidence.
+`v0.8.10`, and `v0.9.0`. The train cuts suffix-free stable tags for these
+targets and dispatches GitHub `release-cd` with `channel=latest`. This means
+PyPI default installs and npm `latest` advance with each published train target.
+npm `ca` remains a separate manual dist-tag decision.
 
 Historical alpha automation can still be started explicitly when the project is
 in an alpha release window:
@@ -108,17 +112,15 @@ rg -n "git push.*--tags|git push origin main|gh workflow run release-cd|npm publ
 
 Expected posture:
 
-- no automatic stable release-tag push;
-- no automatic `release-cd` dispatch;
+- no force-push;
 - no direct local registry publication;
-- no direct registry dist-tag mutation; and
+- no direct local registry dist-tag mutation;
+- no automatic npm `ca` movement; and
 - no implicit removal of `release/alpha-train/STOP`.
 
-`full-auto-rc` is an explicit exception to the generic "no release-tag push" and
-"no release-cd dispatch" posture: after local validation it may push an
-immutable `vX.Y.Z-rc.N` tag and dispatch `release-cd` with `channel=rc`.
-It must not push suffix-free stable tags or dispatch `release-cd` with
-`channel=latest`.
+`full-auto-stable` is an explicit release-owner authorized path: after local
+validation it may push an immutable suffix-free `vX.Y.Z` tag and dispatch
+`release-cd` with `channel=latest`. It must not move npm `ca`.
 
 Findings from this audit should be recorded in release validation evidence
 before dispatching a real RC or GA publication.

@@ -40,11 +40,14 @@ case "$MODE" in
     CMD="exec '$PYTHON_BIN' scripts/release/alpha_release_train.py --full-auto-alpha 2>&1 | tee '$LOG'"
     ;;
   full-auto-rc)
-    CMD="exec '$PYTHON_BIN' scripts/release/rc_auto_train.py --continuous 2>&1 | tee '$LOG'"
+    CMD="echo 'full-auto-rc is a legacy alias; using suffix-free full-auto-stable'; exec '$PYTHON_BIN' scripts/release/stable_auto_train.py --continuous 2>&1 | tee '$LOG'"
+    ;;
+  full-auto-stable)
+    CMD="exec '$PYTHON_BIN' scripts/release/stable_auto_train.py --continuous 2>&1 | tee '$LOG'"
     ;;
   *)
     echo "unsupported AUTODEV_TRAIN_MODE: $MODE" >&2
-    echo "supported modes: rc-watch, full-auto-alpha, full-auto-rc" >&2
+    echo "supported modes: rc-watch, full-auto-alpha, full-auto-rc, full-auto-stable" >&2
     exit 1
     ;;
 esac

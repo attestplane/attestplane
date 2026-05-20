@@ -1,41 +1,41 @@
 {
-  "schema": "attestplane_autodev_train_targets.v1",
+  "schema": "attestplane_autodev_train_targets.v2",
   "targets": [
     {
       "version": "0.8.6",
       "status": "queued",
-      "min_rc_soak_hours": 24,
-      "promote_to": ["rc"]
+      "channel": "latest",
+      "min_soak_hours": 0
     },
     {
       "version": "0.8.7",
       "status": "queued",
-      "min_rc_soak_hours": 24,
-      "promote_to": ["rc"]
+      "channel": "latest",
+      "min_soak_hours": 0
     },
     {
       "version": "0.8.8",
       "status": "queued",
-      "min_rc_soak_hours": 24,
-      "promote_to": ["rc"]
+      "channel": "latest",
+      "min_soak_hours": 0
     },
     {
       "version": "0.8.9",
       "status": "queued",
-      "min_rc_soak_hours": 24,
-      "promote_to": ["rc"]
+      "channel": "latest",
+      "min_soak_hours": 0
     },
     {
       "version": "0.8.10",
       "status": "queued",
-      "min_rc_soak_hours": 24,
-      "promote_to": ["rc"]
+      "channel": "latest",
+      "min_soak_hours": 0
     },
     {
       "version": "0.9.0",
       "status": "queued",
-      "min_rc_soak_hours": 24,
-      "promote_to": ["rc"]
+      "channel": "latest",
+      "min_soak_hours": 0
     }
   ]
 }
