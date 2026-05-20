@@ -108,3 +108,13 @@ Unsafe:
 This ADR resolves the retention/deletion proof portion of issue #7 as an
 architecture decision. Follow-up implementation can add concrete event schemas
 and verifier predicates under this boundary.
+
+
+## References
+
+- OM World Execution Proof — [`docs/execution-proof.md` §Deletion evidence
+  (commit-then-redact)](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md#deletion-evidence-commit-then-redact)
+  adopts the same commit-then-redact primitive: minimize PII before ingest →
+  controller-owned sidecar for raw/deletable material → signed
+  deletion-evidence event → append-only chain preserved. Cross-adoption
+  tracked in [issue #7](https://github.com/attestplane/attestplane/issues/7).
