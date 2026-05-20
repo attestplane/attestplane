@@ -11,11 +11,11 @@
 
 | Version range | Status | Notes |
 |---------------|--------|-------|
-| 0.8.0-rc.N / 0.8.0rcN | RC support | Security fixes are prioritized for the current RC line during the RC soak window. No production SLA. |
-| 0.8.0-beta.0 / 0.8.0b0 | Beta support | Best-effort fixes until the first RC is published, then upgrade to the RC line. |
+| 1.0.x (pre-GA tag line) | Pre-GA support | Current live cut. Security fixes are prioritized on the most recent 1.0.x tag during the pre-GA soak window. No production SLA until v1.0 GA. |
+| 0.8.x | No longer supported | Superseded by the 1.0.x pre-GA tag line. Upgrade to the most recent 1.0.x tag for security fixes. |
 | 0.7.x-alpha and older alpha lines | Frozen prerelease | No new features. Security fixes only when a practical backport is safer than upgrading. |
 | 1.0 GA | Full SLA | Target release 2026-08-15. Response timelines below apply from this version forward. |
-| Pre-alpha snapshots | Unsupported | No fixes. Upgrade to the current beta or RC line. |
+| Pre-alpha snapshots | Unsupported | No fixes. Upgrade to the current 1.0.x pre-GA tag line. |
 
 Deployments running beta or RC releases are not recommended for production
 workloads. Operators who choose to deploy a pre-GA release in production do so
@@ -39,6 +39,37 @@ Please include in your report:
 - Steps to reproduce or a minimal proof-of-concept.
 - Your assessment of severity (Critical / High / Medium / Low) and exploitability.
 - Whether you intend to publish; we will coordinate timing with you.
+
+---
+
+## GPG Key (planned for v1.0 GA)
+
+A dedicated GPG key for `security@attestplane.com` will be published at or
+before the **v1.0 GA target of 2026-08-15**. Until that date no project GPG
+key is in circulation; do not trust any key claiming to be the
+`security@attestplane.com` key prior to publication through the channels
+listed below.
+
+**Planned publication channels (all three at GA cut):**
+
+- This `SECURITY.md` file (fingerprint inlined in the placeholder block below).
+- The project homepage at `https://attestplane.io` (security page).
+- The MIT PGP keyserver (`pgp.mit.edu`), searchable by the `security@attestplane.com` UID.
+
+**Pre-GA alternative private channel.** Until the key is published, reporters
+who require an encrypted-in-transit channel MAY use **GitHub Security
+Advisories** ("Report a vulnerability" button in the Security tab of this
+repository). GitHub Security Advisories provide private disclosure with
+TLS-in-transit confidentiality and are the recommended pre-GA path for any
+reporter who is uncomfortable sending sensitive details by plain email.
+
+**Fingerprint placeholder (to be filled in at v1.0 GA cut):**
+
+```
+Primary fingerprint: <to be filled in at v1.0 GA cut, target 2026-08-15>
+UID:                 Attestplane Security <security@attestplane.com>
+Key type:            <to be filled in at v1.0 GA cut>
+```
 
 ---
 
