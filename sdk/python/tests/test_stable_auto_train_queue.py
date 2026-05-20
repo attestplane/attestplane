@@ -73,3 +73,27 @@ def test_target_queue_rejects_non_increasing_versions(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="strictly increasing"):
         stable_auto_train.load_target_queue(queue)
+
+
+def test_next_stable_after_advances_patch_until_ten() -> None:
+    current = stable_auto_train.StableVersion.parse("0.8.9")
+
+    assert stable_auto_train.next_stable_after(current).tag == "v0.8.10"
+
+
+def test_next_stable_after_rolls_patch_ten_to_next_minor_zero() -> None:
+    current = stable_auto_train.StableVersion.parse("0.8.10")
+
+    assert stable_auto_train.next_stable_after(current).tag == "v0.9.0"
+
+
+def test_next_stable_after_continues_after_minor_boundary() -> None:
+    current = stable_auto_train.StableVersion.parse("0.9.0")
+
+    assert stable_auto_train.next_stable_after(current).tag == "v0.9.1"
+
+
+def test_next_stable_after_rolls_later_patch_ten_to_next_minor_zero() -> None:
+    current = stable_auto_train.StableVersion.parse("0.9.10")
+
+    assert stable_auto_train.next_stable_after(current).tag == "v0.10.0"

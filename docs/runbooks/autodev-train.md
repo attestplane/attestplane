@@ -60,11 +60,15 @@ The RC queue is recorded in:
 release/autodev-train-targets.json
 ```
 
-The current queue advances through `v0.8.6`, `v0.8.7`, `v0.8.8`, `v0.8.9`,
-`v0.8.10`, and `v0.9.0`. The train cuts suffix-free stable tags for these
-targets and dispatches GitHub `release-cd` with `channel=latest`. This means
-PyPI default installs and npm `latest` advance with each published train target.
-npm `ca` remains a separate manual dist-tag decision.
+The current seed queue advances through `v0.8.6`, `v0.8.7`, `v0.8.8`,
+`v0.8.9`, `v0.8.10`, and `v0.9.0`. After those tags exist, the train continues
+with the same rule: patch releases advance through `.10`, then the next minor
+starts at `.0` (`v0.9.0`, `v0.9.1`, ..., `v0.9.10`, `v0.10.0`, ...). The train
+cuts suffix-free stable tags for these targets and dispatches GitHub
+`release-cd` with `channel=latest`. This means PyPI default installs and npm
+`latest` advance with each published train target. npm `ca` remains a separate
+manual dist-tag decision. Major-version promotion remains a manual release
+owner decision; the automatic rule only advances the minor/patch sequence.
 
 Historical alpha automation can still be started explicitly when the project is
 in an alpha release window:

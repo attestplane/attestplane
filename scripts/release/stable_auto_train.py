@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Autodev suffix-free stable release train.
 
-This train advances an explicit queue of stable versions such as v0.8.6,
-v0.8.7, and v0.9.0. It prepares local package artifacts, commits the version
-bump, creates an immutable annotated tag, pushes main plus that tag, and
-delegates publication to GitHub release-cd.
+This train advances an explicit seed queue of stable versions such as v0.8.6,
+v0.8.7, and v0.9.0, then continues with the same sequence rule:
+patch releases advance through .10, then the next minor starts at .0. It
+prepares local package artifacts, commits the version bump, creates an
+immutable annotated tag, pushes main plus that tag, and delegates publication
+to GitHub release-cd.
 
 The train does not force-push, delete tags, publish directly from the local
 machine, or move npm ca. Suffix-free stable packages publish through
@@ -36,6 +38,7 @@ DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
 REMOTE_PROBE_TIMEOUT_SECONDS = 30
+PATCH_ROLLOVER = 10
 
 
 @dataclass(frozen=True, order=True)
@@ -179,6 +182,19 @@ def latest_stable_before(target: StableVersion) -> StableVersion:
     return max(candidates)
 
 
+def latest_stable() -> StableVersion:
+    versions = list_stable_tags()
+    if not versions:
+        raise RuntimeError("no stable release tag found")
+    return max(versions)
+
+
+def next_stable_after(version: StableVersion) -> StableVersion:
+    if version.patch >= PATCH_ROLLOVER:
+        return StableVersion(version.major, version.minor + 1, 0)
+    return StableVersion(version.major, version.minor, version.patch + 1)
+
+
 def load_target_queue(path: Path) -> list[ReleaseTarget]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("schema") != "attestplane_autodev_train_targets.v2":
@@ -219,7 +235,13 @@ def select_target(path: Path) -> ReleaseTarget:
             print(f"autodev-train stable: target {target.version.tag} already has stable tag; skipping", flush=True)
             continue
         return target
-    raise RuntimeError("autodev target queue has no remaining queued targets without stable tags")
+    base = latest_stable()
+    generated = next_stable_after(base)
+    print(
+        f"autodev-train stable: target queue exhausted; generated next target {generated.tag} after {base.tag}",
+        flush=True,
+    )
+    return ReleaseTarget(version=generated, channel="latest", min_soak_hours=0)
 
 
 def read_python_version() -> str:
