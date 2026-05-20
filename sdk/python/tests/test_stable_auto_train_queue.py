@@ -202,5 +202,5 @@ def test_write_release_notes_uses_subjects_without_commit_hashes(
     )
 
     notes = (tmp_path / "docs/release-notes/v1.0.0.draft.md").read_text(encoding="utf-8")
-    assert "873ded9" not in notes
+    assert "abc1234" not in notes
     assert "- fix(release): wait for push CI before publishing stable train" in notes
