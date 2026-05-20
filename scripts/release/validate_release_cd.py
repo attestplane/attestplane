@@ -13,6 +13,8 @@ import argparse
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -62,7 +64,28 @@ def expected_versions(release_tag: str) -> tuple[str, str, str, bool]:
     return f"{base}{py_suffix}{ordinal}", f"{base}-{channel}.{ordinal}", channel, True
 
 
-def read_python_version(repo_root: Path) -> str:
+def _git_show_text(repo_root: Path, ref: str, path: str) -> str:
+    git = shutil.which("git")
+    if git is None:
+        raise ReleaseCdPolicyError("git executable not found")
+    result = subprocess.run(  # noqa: S603 - fixed git executable with validated release refs and no shell.
+        [git, "show", f"{ref}:{path}"],
+        cwd=repo_root,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return result.stdout
+
+
+def read_python_version(repo_root: Path, metadata_ref: str | None = None) -> str:
+    if metadata_ref is not None:
+        data = tomllib.loads(_git_show_text(repo_root, metadata_ref, "sdk/python/pyproject.toml"))
+        try:
+            return str(data["project"]["version"])
+        except KeyError as exc:
+            raise ReleaseCdPolicyError("sdk/python/pyproject.toml missing project.version") from exc
+
     with (repo_root / "sdk/python/pyproject.toml").open("rb") as f:
         data = tomllib.load(f)
     try:
@@ -71,9 +94,13 @@ def read_python_version(repo_root: Path) -> str:
         raise ReleaseCdPolicyError("sdk/python/pyproject.toml missing project.version") from exc
 
 
-def read_npm_version(repo_root: Path) -> str:
+def read_npm_version(repo_root: Path, metadata_ref: str | None = None) -> str:
     try:
-        data = json.loads((repo_root / "sdk/typescript/package.json").read_text(encoding="utf-8"))
+        if metadata_ref is not None:
+            raw = _git_show_text(repo_root, metadata_ref, "sdk/typescript/package.json")
+        else:
+            raw = (repo_root / "sdk/typescript/package.json").read_text(encoding="utf-8")
+        data = json.loads(raw)
         return str(data["version"])
     except KeyError as exc:
         raise ReleaseCdPolicyError("sdk/typescript/package.json missing version") from exc
@@ -84,6 +111,7 @@ def decide_release(
     release_tag: str,
     requested_channel: str,
     repo_root: Path,
+    metadata_ref: str | None = None,
     allow_prerelease_latest: bool = False,
 ) -> ReleaseCdDecision:
     expected_python, expected_npm, canonical_channel, is_prerelease = expected_versions(release_tag)
@@ -97,8 +125,8 @@ def decide_release(
     if is_prerelease and requested_channel == "latest" and not allow_prerelease_latest:
         raise ReleaseCdPolicyError("pre-release packages must not publish with npm latest")
 
-    python_version = read_python_version(repo_root)
-    npm_version = read_npm_version(repo_root)
+    python_version = read_python_version(repo_root, metadata_ref=metadata_ref)
+    npm_version = read_npm_version(repo_root, metadata_ref=metadata_ref)
     if python_version != expected_python:
         raise ReleaseCdPolicyError(
             f"Python package version {python_version!r} does not match {release_tag!r}; "
@@ -139,6 +167,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--channel", required=True, choices=["alpha", "beta", "rc", "latest"])
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument(
+        "--metadata-ref",
+        help="Read package versions from this Git ref instead of the current working tree.",
+    )
+    parser.add_argument(
         "--allow-prerelease-latest",
         action="store_true",
         help="Allow a maintainer-recorded prerelease latest movement.",
@@ -150,6 +182,7 @@ def main(argv: list[str] | None = None) -> int:
             release_tag=args.release_tag,
             requested_channel=args.channel,
             repo_root=args.repo_root.resolve(),
+            metadata_ref=args.metadata_ref,
             allow_prerelease_latest=args.allow_prerelease_latest,
         )
     except ReleaseCdPolicyError as exc:

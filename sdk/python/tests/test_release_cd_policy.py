@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -84,3 +86,27 @@ def test_release_cd_policy_rejects_package_version_drift(tmp_path: Path) -> None
             requested_channel="rc",
             repo_root=tmp_path,
         )
+
+
+def test_release_cd_policy_can_read_metadata_from_git_ref(tmp_path: Path) -> None:
+    _write_package_versions(tmp_path, python_version="0.8.0rc1", npm_version="0.8.0-rc.1")
+    git = shutil.which("git")
+    assert git is not None
+
+    subprocess.run([git, "init"], cwd=tmp_path, check=True, stdout=subprocess.PIPE)  # noqa: S603
+    subprocess.run([git, "add", "."], cwd=tmp_path, check=True)  # noqa: S603
+    subprocess.run(  # noqa: S603
+        [git, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-m", "snapshot"],
+        cwd=tmp_path,
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+
+    decision = validate_release_cd.decide_release(
+        release_tag="v0.8.0-rc.1",
+        requested_channel="rc",
+        repo_root=tmp_path,
+        metadata_ref="HEAD",
+    )
+
+    assert decision.npm_dist_tag == "rc"

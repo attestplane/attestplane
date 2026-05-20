@@ -46,7 +46,6 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.release_tag }}
           fetch-depth: 0
 
       - name: Confirm release tag is immutable and reachable
@@ -62,7 +61,8 @@ jobs:
           python scripts/release/validate_release_cd.py \
             --release-tag "${{ inputs.release_tag }}" \
             --channel "${{ inputs.channel }}" \
-            --repo-root "$PWD"
+            --repo-root "$PWD" \
+            --metadata-ref "${{ inputs.release_tag }}"
 
       - name: Release CD summary
         run: |
