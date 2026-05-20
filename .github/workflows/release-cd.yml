@@ -262,3 +262,73 @@ jobs:
           dist_tag_version="$(npm view @attestplane/attestplane "dist-tags.${expected_tag}")"
           test "$dist_tag_version" = "$expected_npm"
           echo "npm visible: ${actual_npm} (${expected_tag})"
+
+  create-github-release:
+    name: Create GitHub Release
+    needs:
+      - validate
+      - verify-registries
+    if: inputs.dry_run != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.release_tag }}
+
+      - name: Create release and upload provenance assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          IS_PRERELEASE: ${{ needs.validate.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+
+          notes_file="docs/release-notes/${RELEASE_TAG}.draft.md"
+          manifest_file="release/artifacts/${RELEASE_TAG}/artifact-manifest.json"
+          checksums_file="release/artifacts/${RELEASE_TAG}/checksums.sha256"
+          upload_plan_file="release/artifacts/${RELEASE_TAG}/upload-plan.md"
+          assets=(
+            "$manifest_file"
+            "$checksums_file"
+            "$upload_plan_file"
+          )
+
+          test -f "$notes_file"
+          for asset in "${assets[@]}"; do
+            test -f "$asset"
+          done
+
+          release_flags=(--title "$RELEASE_TAG" --notes-file "$notes_file")
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            release_flags+=(--prerelease)
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --repo "${{ github.repository }}" \
+              "${release_flags[@]}"
+            gh release upload "$RELEASE_TAG" \
+              --repo "${{ github.repository }}" \
+              --clobber \
+              "${assets[@]}"
+          else
+            gh release create "$RELEASE_TAG" \
+              --repo "${{ github.repository }}" \
+              --verify-tag \
+              "${release_flags[@]}" \
+              "${assets[@]}"
+          fi
+
+          {
+            echo "## GitHub Release"
+            echo ""
+            echo "- tag: \`${RELEASE_TAG}\`"
+            echo "- prerelease: \`${IS_PRERELEASE}\`"
+            echo "- notes: \`${notes_file}\`"
+            echo "- assets:"
+            for asset in "${assets[@]}"; do
+              echo "  - \`${asset}\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
