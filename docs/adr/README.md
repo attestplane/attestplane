@@ -64,5 +64,6 @@ A copy of the template lives at [0000-template.md](0000-template.md).
 | [0013](0013-generic-runtime-adapter-abc.md) | Generic runtime adapter ABC | Accepted |
 | [0014](0014-adapter-conformance-fixture-pinning.md) | Adapter conformance fixture pinning | Accepted |
 | [0015](0015-retention-deletion-proof-profile.md) | Commit-then-redact retention evidence profile | Accepted |
+| [0016](0016-rc-api-freeze.md) | Freeze public SDK and wire-format surfaces for the v0.8 RC line | Accepted |
 
 New ADRs append to this table in the same PR that introduces the ADR file.

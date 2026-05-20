@@ -11,11 +11,15 @@
 
 | Version range | Status | Notes |
 |---------------|--------|-------|
-| 0.x (alpha) | Best-effort | Pre-GA alpha. No production SLA. Security fixes applied on reasonable effort basis. |
+| 0.8.0-rc.N / 0.8.0rcN | RC support | Security fixes are prioritized for the current RC line during the RC soak window. No production SLA. |
+| 0.8.0-beta.0 / 0.8.0b0 | Beta support | Best-effort fixes until the first RC is published, then upgrade to the RC line. |
+| 0.7.x-alpha and older alpha lines | Frozen prerelease | No new features. Security fixes only when a practical backport is safer than upgrading. |
 | 1.0 GA | Full SLA | Target release 2026-08-15. Response timelines below apply from this version forward. |
-| < 0.x (pre-alpha snapshots) | Unsupported | No fixes. Upgrade to current 0.x. |
+| Pre-alpha snapshots | Unsupported | No fixes. Upgrade to the current beta or RC line. |
 
-Deployments running 0.x alpha are not recommended for production workloads. Operators who choose to deploy 0.x in production do so at their own risk.
+Deployments running beta or RC releases are not recommended for production
+workloads. Operators who choose to deploy a pre-GA release in production do so
+at their own risk.
 
 ---
 
@@ -54,7 +58,9 @@ If a fix requires coordinating with an upstream dependency, timelines may be ext
 
 ## Coordinated Disclosure
 
-We follow a **90-day embargo** by default, measured from the date of initial report acknowledgement. At the end of the embargo period (or when a fix ships, whichever comes first), reporters are free to publish their findings.
+We follow a **90-day embargo** by default, measured from the date of initial
+report acknowledgement. At the end of the embargo period (or when a fix ships,
+whichever comes first), reporters are free to publish their findings.
 
 - Researchers will be credited by name or handle in the release notes unless anonymity is explicitly requested.
 - We will share a draft of any security advisory with the reporter before publication.
@@ -201,4 +207,4 @@ Attestplane explicitly acknowledges the following residual risks that cannot be 
 
 ---
 
-*This document was last reviewed: 2026-05-17. Next scheduled review: 2027-Q1 (CRA legal posture checkpoint).*
+*This document was last reviewed: 2026-05-20. Next scheduled review: 2027-Q1 (CRA legal posture checkpoint).*

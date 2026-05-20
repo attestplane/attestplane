@@ -19,7 +19,22 @@
       "case_id": "forged_deletion_proof",
       "expected_error_code": "VERIFY_RETENTION_PROOF_FAILED",
       "expected_ok": false
+    },
+    {
+      "case_id": "tampered_verification_report",
+      "expected_error_code": "VERIFY_CHAIN_RECOMPUTE_FAILED",
+      "expected_ok": false
+    },
+    {
+      "case_id": "version_skew_chain_schema",
+      "expected_error_code": "VERIFY_METADATA_CLOSURE_FAILED",
+      "expected_ok": false
+    },
+    {
+      "case_id": "malformed_policy_trace_refs_empty",
+      "expected_error_code": "VERIFY_POLICY_TRACE_REFS_FAILED",
+      "expected_ok": false
     }
   ],
-  "schema_version": "attestplane.verifier_conformance.v1"
+  "schema_version": "attestplane.verifier_conformance.v1.1"
 }

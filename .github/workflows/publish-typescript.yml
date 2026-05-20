@@ -11,6 +11,7 @@ on:
         options:
           - alpha
           - beta
+          - rc
           - latest
       dry_run:
         description: 'Dry run only (no actual publish)'
@@ -69,6 +70,28 @@ jobs:
           test -f dist/substrate.js
           test -f dist/types.js
           echo "Build artifacts present."
+
+      - name: Validate npm dist-tag policy
+        run: |
+          set -e
+          TAG="${{ inputs.tag || 'alpha' }}"
+          VERSION="$(node -p "require('./package.json').version")"
+          case "$TAG" in
+            alpha|beta|rc|latest) ;;
+            *)
+              echo "::error::unsupported npm dist-tag '$TAG'"
+              exit 1
+              ;;
+          esac
+          if [[ "$TAG" == "latest" && "$VERSION" == *-* ]]; then
+            echo "::error::pre-release version $VERSION must not be published with npm latest"
+            exit 1
+          fi
+          if [[ "$VERSION" == *-rc.* && "$TAG" != "rc" ]]; then
+            echo "::error::RC versions must publish with npm dist-tag 'rc', got '$TAG'"
+            exit 1
+          fi
+          echo "npm dist-tag policy ok: version=$VERSION tag=$TAG"
 
       - name: Publish dry-run
         if: ${{ inputs.dry_run == true }}

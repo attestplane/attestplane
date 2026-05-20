@@ -54,6 +54,17 @@ def _case_bundle(case_id: str) -> dict:
             )
         ]
         return bundle
+    if case_id == "tampered_verification_report":
+        bundle["verification_report"]["ok"] = False
+        bundle["verification_report"]["first_bad_index"] = 0
+        bundle["verification_report"]["reason"] = "tampered report"
+        return bundle
+    if case_id == "version_skew_chain_schema":
+        bundle["chain_metadata"]["schema_version"] = 999
+        return bundle
+    if case_id == "malformed_policy_trace_refs_empty":
+        bundle["policy_trace_refs"] = []
+        return bundle
     raise AssertionError(f"unknown case_id={case_id}")
 
 

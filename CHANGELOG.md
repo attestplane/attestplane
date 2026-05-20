@@ -11,6 +11,19 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### Preparing v0.8.0-rc.1
+
+- Added a release-candidate compatibility policy for SDK exports,
+  proof-bundle v1, verifier reason codes, canonical bytes, and
+  `AP-EVD/1.0` fixture shape.
+- Added ADR-0016 to freeze the public SDK and wire-format surfaces for
+  the v0.8 RC line.
+- Expanded verifier conformance with tampered-report,
+  schema-version-skew, and malformed policy-trace reference cases.
+- Updated the npm publish workflow to support the `rc` dist-tag and to
+  reject prerelease versions published with `latest`.
+- Updated security support language for beta, RC, and future GA lines.
+
 ### Planned for v0.1.0 / M5 (2026-08-15)
 
 - RFC 3161 Time-Stamp Authority anchoring per [ADR-0003](docs/adr/0003-tsa-rfc-3161-anchoring.md):

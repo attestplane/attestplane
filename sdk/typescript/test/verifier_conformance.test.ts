@@ -78,6 +78,22 @@ function caseBundle(caseId: string): Record<string, unknown> {
     ];
     return bundle;
   }
+  if (caseId === 'tampered_verification_report') {
+    const report = bundle.verification_report as Record<string, unknown>;
+    report.ok = false;
+    report.first_bad_index = 0;
+    report.reason = 'tampered report';
+    return bundle;
+  }
+  if (caseId === 'version_skew_chain_schema') {
+    const metadata = bundle.chain_metadata as Record<string, unknown>;
+    metadata.schema_version = 999;
+    return bundle;
+  }
+  if (caseId === 'malformed_policy_trace_refs_empty') {
+    bundle.policy_trace_refs = [];
+    return bundle;
+  }
   throw new Error(`unknown caseId=${caseId}`);
 }
 
