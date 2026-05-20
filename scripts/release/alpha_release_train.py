@@ -2718,6 +2718,8 @@ def retire_obsolete_prepared_releases(
         except ValueError:
             continue
         if alpha_release_exists(release):
+            if not stage_done(state_path, candidate, "gh_release_created"):
+                continue
             if alpha_registry_publish_enabled(release) and not all(
                 stage_done(state_path, candidate, stage)
                 for stage in ("pypi_published", "npm_published", "registry_verified")

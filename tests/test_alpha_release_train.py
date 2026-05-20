@@ -275,6 +275,31 @@ def test_retire_obsolete_prepared_keeps_minor_boundary_until_registry_done(
     assert state["prepared_releases"] == ["v0.7.0-alpha"]
 
 
+def test_retire_obsolete_prepared_keeps_tag_only_patch_alpha(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.7.1-alpha")
+
+    alpha_release_train.mark_prepared(state_file, candidate_value, dry_run=False)
+    alpha_release_train.mark_stage(state_file, candidate_value, "local_gates_passed", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "main_pushed", "done")
+    alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.7.1-alpha")
+    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: True)
+
+    retired = alpha_release_train.retire_obsolete_prepared_releases(
+        state_file,
+        active_candidates=[],
+        dry_run=False,
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert retired == []
+    assert state["prepared_releases"] == ["v0.7.1-alpha"]
+
+
 def test_retire_obsolete_prepared_dry_run_does_not_report_actual_retirement(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
