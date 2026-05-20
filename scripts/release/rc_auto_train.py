@@ -464,6 +464,7 @@ def push_and_dispatch(version: RcVersion, *, wait: bool) -> None:
 def wait_for_release_cd(version: RcVersion) -> None:
     print(f"waiting for release-cd workflow for {version.tag}", flush=True)
     deadline = time.monotonic() + 1800
+    head_sha = capture(["git", "rev-parse", "HEAD"])
     run_id = ""
     while time.monotonic() < deadline:
         try:
@@ -479,9 +480,9 @@ def wait_for_release_cd(version: RcVersion) -> None:
                     "--limit",
                     "20",
                     "--json",
-                    "databaseId,headBranch,status",
+                    "databaseId,headBranch,headSha,status",
                     "--jq",
-                    '.[] | select(.headBranch == "main") | .databaseId',
+                    f'.[] | select(.headBranch == "main") | select(.headSha == "{head_sha}") | .databaseId',
                 ]
             ).splitlines()[0]
         except (subprocess.CalledProcessError, IndexError):
