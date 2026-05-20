@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
-[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.7.4a0-blue)](https://pypi.org/project/attestplane/)
+[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.7.5a0-blue)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
@@ -171,8 +171,8 @@ Integration with each partner does **not** imply endorsement by the partner. The
 ## Current release posture: public alpha
 
 The public alpha line is live as a GitHub prerelease and as package artifacts:
-Python `attestplane==0.7.4a0` is published to PyPI, and
-`@attestplane/attestplane@0.7.4-alpha` is published to npm under the
+Python `attestplane==0.7.5a0` is published to PyPI, and
+`@attestplane/attestplane@0.7.5-alpha` is published to npm under the
 `alpha` dist-tag. This line is alpha-grade substrate work: it expands the core
 with schemas, sidecar primitives, storage, adapters, verifier predicates,
 public API drift gates, storage compatibility policy, and release provenance
@@ -222,9 +222,9 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.7.4a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
-| `@attestplane/attestplane@0.7.4-alpha` | [npm alpha/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| GitHub Release | `v0.7.4-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
+| `attestplane==0.7.5a0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `@attestplane/attestplane@0.7.5-alpha` | [npm alpha/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
+| GitHub Release | `v0.7.5-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
 The npm `alpha` dist-tag is synchronized to the current alpha release after
 the release train publishes the package. The `latest` tag is managed
@@ -250,7 +250,7 @@ What works today, end-to-end.
 ### Python
 
 ```bash
-pip install attestplane==0.7.4a0
+pip install attestplane==0.7.5a0
 ```
 
 ```python
