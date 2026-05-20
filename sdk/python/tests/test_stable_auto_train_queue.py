@@ -353,6 +353,86 @@ def test_wait_for_push_ci_blocks_failed_required_workflow(monkeypatch: pytest.Mo
         stable_auto_train.wait_for_push_ci(head_sha)
 
 
+def test_wait_for_push_ci_accepts_manual_dispatch_for_path_filtered_workflow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    head_sha = "abc123"
+    runs = [
+        {
+            "conclusion": "success",
+            "databaseId": index,
+            "event": "push",
+            "headSha": head_sha,
+            "name": name,
+            "status": "completed",
+            "url": f"https://example.test/{name}",
+        }
+        for index, name in enumerate(stable_auto_train.PUSH_CI_WORKFLOWS, start=1)
+        if name != "sdk-typescript"
+    ]
+    runs.append(
+        {
+            "conclusion": "success",
+            "databaseId": 999,
+            "event": "workflow_dispatch",
+            "headSha": head_sha,
+            "name": "sdk-typescript",
+            "status": "completed",
+            "url": "https://example.test/sdk-typescript",
+        }
+    )
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: json.dumps(runs))
+
+    stable_auto_train.wait_for_push_ci(head_sha)
+
+
+def test_wait_for_push_ci_dispatches_missing_path_filtered_workflow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    head_sha = "abc123"
+    base_runs = [
+        {
+            "conclusion": "success",
+            "databaseId": index,
+            "event": "push",
+            "headSha": head_sha,
+            "name": name,
+            "status": "completed",
+            "url": f"https://example.test/{name}",
+        }
+        for index, name in enumerate(stable_auto_train.PUSH_CI_WORKFLOWS, start=1)
+        if name != "sdk-typescript"
+    ]
+    manual_run = {
+        "conclusion": "success",
+        "databaseId": 999,
+        "event": "workflow_dispatch",
+        "headSha": head_sha,
+        "name": "sdk-typescript",
+        "status": "completed",
+        "url": "https://example.test/sdk-typescript",
+    }
+    calls = {"capture": 0}
+    dispatched: list[list[str]] = []
+
+    def fake_capture(argv: list[str]) -> str:
+        calls["capture"] += 1
+        return json.dumps(base_runs if calls["capture"] <= 2 else [*base_runs, manual_run])
+
+    def fake_run(argv: list[str]) -> None:
+        dispatched.append(argv)
+
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0, 2.0, 63.0, 64.0, 65.0]).__next__)
+    monkeypatch.setattr(stable_auto_train, "run", fake_run)
+
+    stable_auto_train.wait_for_push_ci(head_sha)
+
+    assert dispatched == [["gh", "workflow", "run", "sdk-typescript.yml", "--ref", "main"]]
+
+
 def test_release_cd_dispatch_args_omits_audit_inputs_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", raising=False)
     monkeypatch.delenv("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", raising=False)

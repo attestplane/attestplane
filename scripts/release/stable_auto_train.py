@@ -58,6 +58,18 @@ PUSH_CI_WORKFLOWS = (
     "osv-scanner",
     "codeql",
 )
+PUSH_CI_WORKFLOW_FILES = {
+    "ci": "ci.yml",
+    "sdk-python": "sdk-python.yml",
+    "sdk-typescript": "sdk-typescript.yml",
+    "cross-sdk-roundtrip": "cross-sdk-roundtrip.yml",
+    "verifier-conformance": "verifier-conformance.yml",
+    "invariants": "invariants.yml",
+    "sbom": "sbom.yml",
+    "reproducible-build": "reproducible-build.yml",
+    "osv-scanner": "osv-scanner.yml",
+    "codeql": "codeql.yml",
+}
 PUSH_CI_FAILURE_CONCLUSIONS = {
     "action_required",
     "cancelled",
@@ -910,6 +922,8 @@ def wait_for_push_ci(head_sha: str) -> None:
     deadline = time.monotonic() + 1800
     expected = set(PUSH_CI_WORKFLOWS)
     last_summary = ""
+    dispatched_missing: set[str] = set()
+    first_missing_at: float | None = None
 
     while time.monotonic() < deadline:
         try:
@@ -918,12 +932,10 @@ def wait_for_push_ci(head_sha: str) -> None:
                     "gh",
                     "run",
                     "list",
-                    "--event",
-                    "push",
                     "--limit",
-                    "100",
+                    "200",
                     "--json",
-                    "conclusion,databaseId,headSha,name,status,url",
+                    "conclusion,databaseId,event,headSha,name,status,url",
                 ]
             )
         except subprocess.CalledProcessError as exc:
@@ -958,6 +970,21 @@ def wait_for_push_ci(head_sha: str) -> None:
         if not missing and not pending:
             print(f"push CI workflows passed for {head_sha}", flush=True)
             return
+
+        now = time.monotonic()
+        if missing and first_missing_at is None:
+            first_missing_at = now
+        if missing and first_missing_at is not None and now - first_missing_at >= 60:
+            for name in missing:
+                if name in dispatched_missing:
+                    continue
+                workflow_file = PUSH_CI_WORKFLOW_FILES[name]
+                print(
+                    f"push CI workflow {name} is missing for {head_sha}; dispatching {workflow_file}",
+                    flush=True,
+                )
+                run(["gh", "workflow", "run", workflow_file, "--ref", "main"])
+                dispatched_missing.add(name)
 
         summary = f"missing={','.join(missing) or '-'} pending={','.join(pending) or '-'}"
         if summary != last_summary:
