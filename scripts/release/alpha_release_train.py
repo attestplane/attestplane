@@ -1355,7 +1355,7 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
         "explicit_non_actions": {
             "deploy": "not performed",
             "force_push": "not performed",
-            "npm_latest_change": "deferred until publish succeeds",
+            "npm_latest_change": "not performed by the automatic alpha train",
             "release_publish": "not performed during prep",
             "workflow_dispatch": "not performed during prep",
         },
@@ -1400,14 +1400,13 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
                 f"gh release create {candidate.release} --prerelease --title \"{candidate.release}\" --notes-file {candidate.release_notes} ...",
                 "gh workflow run publish-python.yml -f target=pypi --ref main",
                 "gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main",
-                f"gh workflow run manage-npm.yml -f action=dist-tag-set-latest-to-version -f version={candidate.npm_version} --ref main",
                 "```",
                 "",
                 "## Explicit Non-Actions in Release Prep",
                 "",
                 "- Force push: not performed.",
                 "- npm `latest` dist-tag change: not performed during prep.",
-                "- npm `latest` dist-tag is synchronized only after npm alpha publish succeeds.",
+                "- npm `alpha` dist-tag is the automatic prerelease channel; `latest` is managed separately.",
                 "- Deploy: not performed.",
                 "- Workflow dispatch: not performed during prep.",
                 "",
@@ -1714,7 +1713,6 @@ def npm_dist_tags_synced(npm_version: str) -> bool:
         return (
             (npm.get("version") == npm_version or (isinstance(versions, dict) and npm_version in versions))
             and npm.get(tag_field, {}).get("alpha") == npm_version
-            and npm.get(tag_field, {}).get("latest") == npm_version
         )
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, urllib.error.URLError):
         return False
@@ -1907,78 +1905,22 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
             else:
                 raise RuntimeError(last_error)
         if stage_done(state_path, candidate, "dist_tag_synced"):
-            print(f"stage dist_tag_synced already done; skipping npm dist-tag sync: {candidate.release}", flush=True)
-        elif not dry_run and npm_dist_tags_synced(candidate.npm_version):
-            mark_stage(state_path, candidate, "dist_tag_synced", "done", {"observed": True})
-            print(f"stage dist_tag_synced observed done; skipping npm dist-tag sync: {candidate.release}", flush=True)
+            print(f"stage dist_tag_synced already done; skipping npm alpha tag record: {candidate.release}", flush=True)
         else:
-            last_error = "npm dist-tag workflow did not run"
-            for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
-                run(
-                    [
-                        "gh",
-                        "workflow",
-                        "run",
-                        "manage-npm.yml",
-                        "-f",
-                        "action=dist-tag-set-latest-to-version",
-                        "-f",
-                        f"version={candidate.npm_version}",
-                        "--ref",
-                        "main",
-                    ],
-                    dry_run=dry_run,
-                )
-                if dry_run:
-                    return python_run, npm_run
-                time.sleep(5)
-                latest_run = capture(
-                    [
-                        "gh",
-                        "run",
-                        "list",
-                        "--workflow",
-                        "manage-npm.yml",
-                        "--limit",
-                        "1",
-                        "--json",
-                        "databaseId",
-                        "--jq",
-                        ".[0].databaseId",
-                    ]
-                )
-                completed, observed, watch_error = watch_publish_workflow(
-                    latest_run,
-                    workflow_name="manage-npm",
-                    observed=lambda: npm_dist_tags_synced(candidate.npm_version),
-                )
-                if completed:
-                    if observed:
-                        mark_stage(
-                            state_path,
-                            candidate,
-                            "dist_tag_synced",
-                            "done",
-                            {"run": latest_run, "observed": True, "watch_error": watch_error},
-                        )
-                        print(
-                            f"stage dist_tag_synced observed done after watch failure: {candidate.release}",
-                            flush=True,
-                        )
-                    else:
-                        mark_stage(state_path, candidate, "dist_tag_synced", "done", {"run": latest_run})
-                    break
-                last_error = watch_error or last_error
-                if attempt == PUBLISH_WORKFLOW_ATTEMPTS:
-                    break
-                print(
-                    f"npm dist-tag attempt {attempt}/{PUBLISH_WORKFLOW_ATTEMPTS} failed: {last_error}; "
-                    f"retrying in {PUBLISH_WORKFLOW_RETRY_SECONDS}s",
-                    flush=True,
-                )
-                time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
-            else:
-                raise RuntimeError(last_error)
+            mark_stage(
+                state_path,
+                candidate,
+                "dist_tag_synced",
+                "done",
+                {
+                    "observed": True,
+                    "source": "npm publish --tag alpha",
+                },
+            )
+            print(
+                f"stage dist_tag_synced recorded from npm publish alpha tag: {candidate.release}",
+                flush=True,
+            )
     return python_run, npm_run
 
 
@@ -1998,7 +1940,7 @@ def verify_registries(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
             if not npm_version_exists(candidate.npm_version):
                 raise RuntimeError(f"npm version missing after publish: {candidate.npm_version}")
             if not npm_dist_tags_synced(candidate.npm_version):
-                raise RuntimeError(f"npm dist-tags did not move to {candidate.npm_version}")
+                raise RuntimeError(f"npm alpha dist-tag did not move to {candidate.npm_version}")
             mark_stage(state_path, candidate, "registry_verified", "done")
             return
         except Exception as exc:

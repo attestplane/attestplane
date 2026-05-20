@@ -226,9 +226,11 @@ Not yet implemented:
 | `@attestplane/attestplane@0.5.3-alpha` | [npm alpha/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
 | GitHub Release | `v0.5.3-alpha` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
-The npm `alpha` and `latest` dist-tags are synchronized to the current alpha
-release after the release train publishes the package. This improves default
-installability, but it does not change the alpha/pre-GA claim boundary.
+The npm `alpha` dist-tag is synchronized to the current alpha release after
+the release train publishes the package. The `latest` tag is managed
+separately, so alpha publication does not depend on a writable npm token.
+This improves default installability, but it does not change the alpha/pre-GA
+claim boundary.
 
 The local alpha train also writes a post-release integration evidence packet
 under `release/alpha-train/reports/`. It reads GitHub Release/workflow facts,

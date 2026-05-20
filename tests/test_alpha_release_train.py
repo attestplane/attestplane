@@ -1407,7 +1407,28 @@ def test_npm_dist_tags_synced_falls_back_to_registry_json(monkeypatch: pytest.Mo
     assert seen_urls == ["https://registry.npmjs.org/@attestplane%2Fattestplane"]
 
 
-def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_npm_dist_tags_synced_only_requires_alpha_dist_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        return json.dumps(
+            {
+                "versions": {
+                    "0.0.8-alpha": {},
+                },
+                "dist-tags": {
+                    "alpha": "0.0.8-alpha",
+                    "latest": "0.0.7-alpha",
+                },
+            }
+        )
+
+    monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
+
+    assert alpha_release_train.npm_dist_tags_synced("0.0.8-alpha") is True
+
+
+def test_publish_platforms_syncs_npm_alpha_after_publish(monkeypatch: pytest.MonkeyPatch) -> None:
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
             "release": "v0.0.8-alpha",
@@ -1417,7 +1438,7 @@ def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pyt
         }
     )
     commands: list[list[str]] = []
-    run_ids = iter(["npm-run-id", "manage-npm-run-id"])
+    npm_version_checks = {"count": 0}
 
     def fake_run(
         argv: list[str],
@@ -1430,13 +1451,16 @@ def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pyt
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
         if argv[:4] == ["gh", "run", "list", "--workflow"]:
-            return next(run_ids)
+            return "npm-run-id"
         return ""
+
+    def fake_npm_version_exists(version: str) -> bool:
+        npm_version_checks["count"] += 1
+        return npm_version_checks["count"] > 1
 
     monkeypatch.setattr(alpha_release_train, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
-    monkeypatch.setattr(alpha_release_train, "npm_version_exists", lambda version: False)
-    monkeypatch.setattr(alpha_release_train, "npm_dist_tags_synced", lambda version: False)
+    monkeypatch.setattr(alpha_release_train, "npm_version_exists", fake_npm_version_exists)
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     alpha_release_train.publish_platforms(candidate, dry_run=False)
@@ -1445,15 +1469,15 @@ def test_publish_platforms_syncs_npm_latest_after_alpha_publish(monkeypatch: pyt
         "gh",
         "workflow",
         "run",
-        "manage-npm.yml",
+        "publish-typescript.yml",
         "-f",
-        "action=dist-tag-set-latest-to-version",
+        "tag=alpha",
         "-f",
-        "version=0.0.8-alpha",
+        "dry_run=false",
         "--ref",
         "main",
     ] in commands
-    assert ["gh", "run", "watch", "manage-npm-run-id", "--exit-status"] in commands
+    assert not any(command[:4] == ["gh", "workflow", "run", "manage-npm.yml"] for command in commands)
 
 
 def test_publish_platforms_retries_transient_pypi_watch_failure(
