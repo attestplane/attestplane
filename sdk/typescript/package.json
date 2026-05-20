@@ -16,7 +16,7 @@
   "homepage": "https://attestplane.io",
   "repository": {
     "type": "git",
-    "url": "https://github.com/attestplane/attestplane"
+    "url": "git+https://github.com/attestplane/attestplane.git"
   },
   "bugs": "https://github.com/attestplane/attestplane/issues",
   "type": "module",
