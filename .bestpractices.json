@@ -13,10 +13,10 @@
   "interact_justification": "GitHub Issues and Discussions enabled; CONTRIBUTING.md documents the PR + DCO sign-off contribution flow; SECURITY.md documents the private vulnerability reporting channel.",
 
   "contribution_status": "Met",
-  "contribution_justification": "CONTRIBUTING.md covers DCO sign-off (§1), branch and commit conventions (§2-3), PR checklist (§4), review expectations, and the red→green→refactor TDD rhythm.",
+  "contribution_justification": "CONTRIBUTING.md at https://github.com/attestplane/attestplane/blob/main/CONTRIBUTING.md covers DCO sign-off (§1), branch and commit conventions (§2-3), PR checklist (§4), review expectations, and the red→green→refactor TDD rhythm.",
 
   "contribution_requirements_status": "Met",
-  "contribution_requirements_justification": "CONTRIBUTING.md §4 PR Checklist enumerates required test coverage, DCO sign-off, CHANGELOG entry, and lint/type-check gates as acceptance requirements.",
+  "contribution_requirements_justification": "CONTRIBUTING.md §4 PR Checklist at https://github.com/attestplane/attestplane/blob/main/CONTRIBUTING.md enumerates required test coverage, DCO sign-off, CHANGELOG entry, and lint/type-check gates as acceptance requirements.",
 
   "floss_license_status": "Met",
   "floss_license_justification": "Released under Apache-2.0; SPDX-License-Identifier declared via REUSE 3.3; LICENSES/ directory present.",
@@ -25,7 +25,7 @@
   "floss_license_osi_justification": "Apache-2.0 is OSI-approved (https://opensource.org/license/apache-2-0).",
 
   "license_location_status": "Met",
-  "license_location_justification": "LICENSE file at repository root; NOTICE file and LICENSES/ directory present per REUSE 3.3 specification.",
+  "license_location_justification": "LICENSE file at https://github.com/attestplane/attestplane/blob/main/LICENSE (repository root); NOTICE file and LICENSES/ directory present per REUSE 3.3 specification.",
 
   "documentation_basics_status": "Met",
   "documentation_basics_justification": "README plus docs/ tree covering adr/, architecture/, security/, runbooks/, spec/, release/, and validation/.",
@@ -67,7 +67,7 @@
   "version_tags_justification": "Every release has a corresponding vX.Y.Z annotated git tag; release-cd workflow validates tag immutability per ADR-0017.",
 
   "release_notes_status": "Met",
-  "release_notes_justification": "CHANGELOG.md follows Keep a Changelog 1.1; per-release sections summarise notable changes; GitHub Releases publish per-tag notes.",
+  "release_notes_justification": "CHANGELOG.md at https://github.com/attestplane/attestplane/blob/main/CHANGELOG.md follows Keep a Changelog 1.1; per-release sections summarise notable changes; GitHub Releases publish per-tag notes.",
 
   "release_notes_vulns_status": "Met",
   "release_notes_vulns_justification": "Pre-GA line has no published CVEs to date; SECURITY.md commits to crediting reporters and identifying CVE-assigned vulnerabilities in release notes when fixed.",
@@ -85,10 +85,10 @@
   "enhancement_responses_justification": "Feature requests routed through Issues and Discussions; v0.8 → v0.9 line shipped community-requested enhancements (e.g. issue #18 Sigstore signing closed by PR #22).",
 
   "report_archive_status": "Met",
-  "report_archive_justification": "GitHub Issues retains full history; closed issues remain publicly readable and searchable by URL.",
+  "report_archive_justification": "GitHub Issues at https://github.com/attestplane/attestplane/issues retains full history; closed issues remain publicly readable and searchable by URL.",
 
   "vulnerability_report_process_status": "Met",
-  "vulnerability_report_process_justification": "SECURITY.md 'Reporting a Vulnerability' section documents the private email channel and GitHub Security Advisories path; public issues for vulnerabilities are prohibited.",
+  "vulnerability_report_process_justification": "SECURITY.md at https://github.com/attestplane/attestplane/blob/main/SECURITY.md 'Reporting a Vulnerability' section documents the private email channel and GitHub Security Advisories path; public issues for vulnerabilities are prohibited.",
 
   "vulnerability_report_private_status": "Met",
   "vulnerability_report_private_justification": "Private channels are documented in SECURITY.md (email and GitHub Security Advisories), both encrypted in transit. GPG key publication is tracked for v1.0 GA.",
