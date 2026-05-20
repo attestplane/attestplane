@@ -40,7 +40,18 @@ scripts/release/start_autodev_train.sh
 ```
 
 The wrapper starts tmux session `autodev-train` by default and writes logs under
-`release/alpha-train/reports/`. The existing
+`release/alpha-train/reports/`. Its default mode is `rc-watch`, which monitors
+the current RC registry/CD state without creating commits, tags, releases, or
+registry mutations.
+
+Historical alpha automation can still be started explicitly when the project is
+in an alpha release window:
+
+```bash
+AUTODEV_TRAIN_MODE=full-auto-alpha scripts/release/start_autodev_train.sh
+```
+
+The existing
 `scripts/release/start_alpha_train_full_auto.sh` wrapper is kept for backwards
 compatibility and delegates to `start_autodev_train.sh`.
 

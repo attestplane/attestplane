@@ -9,6 +9,7 @@ REPORTS_DIR="$ROOT/release/alpha-train/reports"
 STOP_FILE="$ROOT/release/alpha-train/STOP"
 PYTHON_BIN="${AUTODEV_TRAIN_PYTHON:-$ROOT/sdk/python/.venv/bin/python}"
 TMUX_BIN="${AUTODEV_TRAIN_TMUX:-tmux}"
+MODE="${AUTODEV_TRAIN_MODE:-rc-watch}"
 
 mkdir -p "$REPORTS_DIR"
 
@@ -19,7 +20,7 @@ fi
 
 if [[ -f "$STOP_FILE" ]]; then
   echo "autodev-train STOP file exists: $STOP_FILE" >&2
-  echo "remove it explicitly before starting full-auto mode" >&2
+  echo "remove it explicitly before starting autodev-train" >&2
   exit 1
 fi
 
@@ -31,8 +32,23 @@ fi
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 LOG="$REPORTS_DIR/continuous-autodev-train-tmux-$STAMP.log"
 
-"$TMUX_BIN" new-session -d -s "$SESSION" -c "$ROOT" \
-  "echo STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ); exec '$PYTHON_BIN' scripts/release/alpha_release_train.py --full-auto-alpha 2>&1 | tee '$LOG'"
+case "$MODE" in
+  rc-watch)
+    CMD="exec '$PYTHON_BIN' scripts/release/rc_release_watch.py 2>&1 | tee '$LOG'"
+    ;;
+  full-auto-alpha)
+    CMD="exec '$PYTHON_BIN' scripts/release/alpha_release_train.py --full-auto-alpha 2>&1 | tee '$LOG'"
+    ;;
+  *)
+    echo "unsupported AUTODEV_TRAIN_MODE: $MODE" >&2
+    echo "supported modes: rc-watch, full-auto-alpha" >&2
+    exit 1
+    ;;
+esac
 
-echo "autodev-train full-auto session started: $SESSION"
+"$TMUX_BIN" new-session -d -s "$SESSION" -c "$ROOT" \
+  "echo STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo MODE='$MODE'; $CMD"
+
+echo "autodev-train session started: $SESSION"
+echo "mode: $MODE"
 echo "log: $LOG"
