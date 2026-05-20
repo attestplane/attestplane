@@ -1,0 +1,50 @@
+{
+  "artifacts": [
+    {
+      "kind": "python-wheel",
+      "name": "attestplane",
+      "path": "sdk/python/dist/attestplane-0.9.1-py3-none-any.whl",
+      "sha256": "987d214bb775dc554fe7c44e1ce868aee30958139e2f51a6154d89f654ad2173",
+      "size_bytes": 161818,
+      "version": "0.9.1"
+    },
+    {
+      "kind": "python-sdist",
+      "name": "attestplane",
+      "path": "sdk/python/dist/attestplane-0.9.1.tar.gz",
+      "sha256": "3b3accee31e2e33c927d15e85e42a9b802070713198e9d79bcefd5053b48201e",
+      "size_bytes": 223409,
+      "version": "0.9.1"
+    },
+    {
+      "kind": "npm-tarball",
+      "name": "@attestplane/attestplane",
+      "path": "sdk/typescript/attestplane-attestplane-0.9.1.tgz",
+      "sha256": "d929b7e3d7d07d1e45136820eb28cf00b3a7f55487d2bbadf0e5e21aa16ed4a3",
+      "size_bytes": 118820,
+      "version": "0.9.1"
+    }
+  ],
+  "checksums_file": "release/artifacts/v0.9.1/checksums.sha256",
+  "explicit_non_actions": {
+    "deploy": "not performed",
+    "force_push": "not performed",
+    "npm_ca_change": "not performed by stable autodev train",
+    "release_publish": "not performed during local prep",
+    "workflow_dispatch": "not performed during prep"
+  },
+  "explicit_non_claims": {
+    "certified_provenance": false,
+    "compliance_certification": false,
+    "production_ready": false,
+    "slsa_l3": false
+  },
+  "release": "v0.9.1",
+  "release_notes_file": "docs/release-notes/v0.9.1.draft.md",
+  "schema": "attestplane_release_artifact_manifest.v1",
+  "source_state": {
+    "prepared_by": "autodev_train_stable_release_prep",
+    "target_commit": "4a066935fb5290ecf0ea253a69e96154b59bd07f"
+  },
+  "upload_plan_file": "release/artifacts/v0.9.1/upload-plan.md"
+}
