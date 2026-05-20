@@ -32,6 +32,14 @@ fi
 STAMP="$(date -u +%Y%m%d-%H%M%S)"
 LOG="$REPORTS_DIR/continuous-autodev-train-tmux-$STAMP.log"
 
+ENV_PREFIX=""
+for name in ATTESTPLANE_RELEASE_AUDIT_VERIFIED ATTESTPLANE_RELEASE_AUDIT_PLAN_URL; do
+  if [[ -n "${!name:-}" ]]; then
+    printf -v quoted_assignment "%q" "$name=${!name}"
+    ENV_PREFIX+="$quoted_assignment "
+  fi
+done
+
 case "$MODE" in
   rc-watch)
     CMD="exec '$PYTHON_BIN' scripts/release/rc_release_watch.py 2>&1 | tee '$LOG'"
@@ -51,6 +59,8 @@ case "$MODE" in
     exit 1
     ;;
 esac
+
+CMD="$ENV_PREFIX$CMD"
 
 "$TMUX_BIN" new-session -d -s "$SESSION" -c "$ROOT" \
   "echo STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo MODE='$MODE'; $CMD"
