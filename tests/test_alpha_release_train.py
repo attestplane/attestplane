@@ -593,13 +593,18 @@ def test_process_git_push_queue_processes_all_ready_pushes_in_cycle(
     alpha_release_train.enqueue_git_push_task(state_file, candidate_value, candidate_value.release, dry_run=False)
 
     calls: list[list[str]] = []
+    pushed_tags: set[str] = set()
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
-    monkeypatch.setattr(
-        alpha_release_train,
-        "attempt_git_push_once",
-        lambda argv, *, dry_run: calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
-    )
+    def fake_remote_status(argv: list[str]) -> tuple[bool, str | None]:
+        return argv[-1] in pushed_tags, None
+
+    def fake_push(argv: list[str], *, dry_run: bool) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        pushed_tags.update(ref for ref in argv[5:] if ref != "main")
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", fake_remote_status)
+    monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", fake_push)
 
     events = alpha_release_train.process_git_push_queue(
         state_file,
@@ -618,6 +623,99 @@ def test_process_git_push_queue_processes_all_ready_pushes_in_cycle(
     ]
     assert [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]["status"] == "done"
     assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
+
+
+def test_process_git_push_queue_batches_ready_alpha_tags(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    first = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    second = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.9-alpha"))
+    alpha_release_train.enqueue_git_push_task(state_file, first, first.release, dry_run=False)
+    alpha_release_train.enqueue_git_push_task(state_file, second, second.release, dry_run=False)
+
+    calls: list[list[str]] = []
+    pushed_tags: set[str] = set()
+
+    def fake_remote_status(argv: list[str]) -> tuple[bool, str | None]:
+        return argv[-1] in pushed_tags, None
+
+    def fake_push(argv: list[str], *, dry_run: bool) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        pushed_tags.update(argv[5:])
+        return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", fake_remote_status)
+    monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", fake_push)
+
+    events = alpha_release_train.process_git_push_queue(
+        state_file,
+        dry_run=False,
+        cooldown_seconds=7,
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert events == [
+        {"release": "v0.0.8-alpha", "ref": "v0.0.8-alpha", "status": "done"},
+        {"release": "v0.0.9-alpha", "ref": "v0.0.9-alpha", "status": "done"},
+    ]
+    assert calls == [
+        [
+            "git",
+            "-c",
+            "http.version=HTTP/1.1",
+            "push",
+            "origin",
+            "v0.0.8-alpha",
+            "v0.0.9-alpha",
+        ],
+    ]
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.9-alpha"][0]["status"] == "done"
+
+
+def test_process_git_push_queue_reconciles_partial_batch_tag_push(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    first = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    second = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.9-alpha"))
+    monkeypatch.setattr(alpha_release_train.time, "time", lambda: 1_000_000)
+    alpha_release_train.enqueue_git_push_task(state_file, first, first.release, dry_run=False)
+    alpha_release_train.enqueue_git_push_task(state_file, second, second.release, dry_run=False)
+
+    pushed = False
+
+    def fake_remote_status(argv: list[str]) -> tuple[bool, str | None]:
+        if not pushed:
+            return False, None
+        if argv[-1] == "v0.0.8-alpha":
+            return True, None
+        return False, None
+
+    def fake_push(argv: list[str], *, dry_run: bool) -> alpha_release_train.subprocess.CompletedProcess[str]:
+        nonlocal pushed
+        pushed = True
+        raise alpha_release_train.subprocess.CalledProcessError(1, argv, stderr="failed to push some refs")
+
+    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", fake_remote_status)
+    monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", fake_push)
+
+    events = alpha_release_train.process_git_push_queue(
+        state_file,
+        dry_run=False,
+        cooldown_seconds=7,
+    )
+
+    state = alpha_release_train.load_continuous_state(state_file)
+    assert events[0] == {"release": "v0.0.8-alpha", "ref": "v0.0.8-alpha", "status": "done", "observed": True}
+    assert events[1]["release"] == "v0.0.9-alpha"
+    assert events[1]["status"] == "cooldown"
+    assert events[1]["reason"] == "git_push_rejected"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.9-alpha"][0]["status"] == "cooldown"
 
 
 def test_process_git_push_queue_uses_longer_cooldown_for_network_failures(

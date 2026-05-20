@@ -419,6 +419,10 @@ def git_push_stage_name(ref: str) -> str:
     raise ValueError(f"unsupported git push ref for alpha train queue: {ref!r}")
 
 
+def is_alpha_tag_push_stage(stage: str, ref: str) -> bool:
+    return stage == "tag_pushed" and re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref) is not None
+
+
 def init_state_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(db_path) as db:
@@ -663,6 +667,114 @@ def update_git_push_task(
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
+def cooldown_git_push_task_event(
+    path: Path,
+    candidate: AlphaCandidate,
+    ref: str,
+    *,
+    failure_reason: str,
+    attempts: int,
+    cooldown_seconds: int,
+    now: int,
+) -> dict[str, Any]:
+    cooldown = git_push_cooldown_seconds_for_failure(
+        failure_reason,
+        attempts=attempts + 1,
+        default_seconds=cooldown_seconds,
+    )
+    update_git_push_task(
+        path,
+        candidate,
+        ref,
+        status="cooldown",
+        last_error=failure_reason,
+        attempts_delta=1,
+        next_attempt_at_epoch=now + cooldown,
+        dry_run=False,
+    )
+    return {
+        "release": candidate.release,
+        "ref": ref,
+        "status": "cooldown",
+        "reason": failure_reason,
+        "cooldown_seconds": cooldown,
+        "next_attempt_at_epoch": now + cooldown,
+    }
+
+
+def process_git_push_tag_batch(
+    path: Path,
+    rows: list[tuple[Any, ...]],
+    *,
+    cooldown_seconds: int,
+    now: int,
+) -> list[dict[str, Any]]:
+    processed: list[dict[str, Any]] = []
+    pending: list[tuple[AlphaCandidate, str, int]] = []
+
+    for release, ref, stage, _status, attempts, _next_attempt_at_epoch in rows:
+        candidate = prepared_candidate_from_release(str(release))
+        ref_text = str(ref)
+        if not is_alpha_tag_push_stage(str(stage), ref_text):
+            raise ValueError(f"expected alpha tag push task, got stage={stage!r} ref={ref_text!r}")
+        argv = normalize_git_push_argv(["git", "push", "origin", ref_text])
+        converged, preflight_reason = git_push_remote_status(argv)
+        if converged:
+            update_git_push_task(path, candidate, ref_text, status="done", dry_run=False)
+            processed.append({"release": candidate.release, "ref": ref_text, "status": "done", "observed": True})
+            continue
+        if preflight_reason is not None:
+            processed.append(
+                cooldown_git_push_task_event(
+                    path,
+                    candidate,
+                    ref_text,
+                    failure_reason=preflight_reason,
+                    attempts=int(attempts),
+                    cooldown_seconds=cooldown_seconds,
+                    now=now,
+                )
+            )
+            continue
+        pending.append((candidate, ref_text, int(attempts)))
+
+    if not pending:
+        return processed
+
+    batch_refs = [ref for _candidate, ref, _attempts in pending]
+    batch_argv = normalize_git_push_argv(["git", "push", "origin", *batch_refs])
+    batch_failure_reason: str | None = None
+    try:
+        attempt_git_push_once(batch_argv, dry_run=False)
+    except Exception as exc:
+        batch_failure_reason = classify_git_push_failure(exc)
+
+    for candidate, ref, attempts in pending:
+        argv = normalize_git_push_argv(["git", "push", "origin", ref])
+        converged, observe_reason = git_push_remote_status(argv)
+        if converged:
+            update_git_push_task(path, candidate, ref, status="done", dry_run=False)
+            event: dict[str, Any] = {"release": candidate.release, "ref": ref, "status": "done"}
+            if batch_failure_reason is not None:
+                event["observed"] = True
+            processed.append(event)
+            continue
+        failure_reason = observe_reason or batch_failure_reason or "git_push_not_observed_after_batch"
+        processed.append(
+            cooldown_git_push_task_event(
+                path,
+                candidate,
+                ref,
+                failure_reason=failure_reason,
+                attempts=attempts,
+                cooldown_seconds=cooldown_seconds,
+                now=now,
+            )
+        )
+
+    return processed
+
+
 def process_git_push_queue(
     path: Path,
     *,
@@ -695,9 +807,31 @@ def process_git_push_queue(
             (now,),
         ).fetchall()
         processed_count = 0
-        for release, ref, stage, status, attempts, next_attempt_at_epoch in rows:
+        row_index = 0
+        while row_index < len(rows):
+            release, ref, stage, status, attempts, next_attempt_at_epoch = rows[row_index]
             if max_pushes_per_cycle is not None and processed_count >= max_pushes_per_cycle:
                 break
+            if is_alpha_tag_push_stage(str(stage), str(ref)):
+                remaining = None if max_pushes_per_cycle is None else max_pushes_per_cycle - processed_count
+                batch_rows: list[tuple[Any, ...]] = []
+                while row_index < len(rows) and (remaining is None or len(batch_rows) < remaining):
+                    batch_row = rows[row_index]
+                    if not is_alpha_tag_push_stage(str(batch_row[2]), str(batch_row[1])):
+                        break
+                    batch_rows.append(batch_row)
+                    row_index += 1
+                batch_events = process_git_push_tag_batch(
+                    path,
+                    batch_rows,
+                    cooldown_seconds=cooldown_seconds,
+                    now=now,
+                )
+                processed.extend(batch_events)
+                processed_count += len(batch_events)
+                if any(event["status"] == "cooldown" for event in batch_events):
+                    break
+                continue
             candidate = prepared_candidate_from_release(str(release))
             argv = normalize_git_push_argv(["git", "push", "origin", str(ref)])
             try:
@@ -706,6 +840,7 @@ def process_git_push_queue(
                     update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
                     processed.append({"release": str(release), "ref": str(ref), "status": "done", "observed": True})
                     processed_count += 1
+                    row_index += 1
                     continue
                 if preflight_reason is not None:
                     cooldown = git_push_cooldown_seconds_for_failure(
@@ -768,6 +903,7 @@ def process_git_push_queue(
                 )
                 processed_count += 1
                 break
+            row_index += 1
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
     return processed
