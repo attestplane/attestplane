@@ -11,6 +11,65 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### First complete signed release: v1.0.9
+
+- Tag `v1.0.9` is the project's first GitHub Release with **both**
+  Sigstore keyless cosign bundles **and** SLSA Build L3 provenance
+  attached — the complete supply-chain evidence chain in a single tag.
+  - sign-release execute run (cosign keyless):
+    [`actions/runs/26192598447`](https://github.com/attestplane/attestplane/actions/runs/26192598447)
+  - slsa-provenance execute run (SLSA Build L3):
+    [`actions/runs/26192349031`](https://github.com/attestplane/attestplane/actions/runs/26192349031)
+- Inventory on `v1.0.9` after signing:
+  - `artifact-manifest.json` + `artifact-manifest.json.cosign.bundle`
+  - `checksums.sha256` + `checksums.sha256.cosign.bundle`
+  - `upload-plan.md` + `upload-plan.md.cosign.bundle`
+  - `attestplane-v1.0.9.intoto.jsonl` (SLSA Build L3 attestation, plus
+    its own `.cosign.bundle`)
+- External verification on a maintainer workstation with
+  `cosign v3.0.6` and `slsa-verifier v2.7.1`:
+
+  ```sh
+  # cosign keyless — pinned to sign-release.yml on refs/heads/main
+  for asset in artifact-manifest.json checksums.sha256 upload-plan.md; do
+    cosign verify-blob \
+      --bundle "${asset}.cosign.bundle" \
+      --certificate-identity-regexp \
+        "^https://github.com/attestplane/attestplane/\.github/workflows/sign-release\.yml@refs/heads/main\$" \
+      --certificate-oidc-issuer \
+        "https://token.actions.githubusercontent.com" \
+      "${asset}"
+  done
+
+  # SLSA Build L3 — pinned to the upstream generator and the source repo
+  for asset in artifact-manifest.json checksums.sha256 upload-plan.md; do
+    slsa-verifier verify-artifact "${asset}" \
+      --provenance-path attestplane-v1.0.9.intoto.jsonl \
+      --source-uri github.com/attestplane/attestplane
+  done
+  ```
+
+  Result: `Verified OK` from cosign and `PASSED: SLSA verification
+  passed` from slsa-verifier on all three primary artifacts. The
+  cosign certificate identity resolves to `refs/heads/main` because
+  the dispatch was triggered from the default branch; the SLSA
+  provenance was verified without `--source-tag` because the run was
+  also dispatched from `main` (the tag-bound identity will follow
+  once signing and provenance are wired into `release-cd.yml` per
+  [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md)).
+- **Historical context — why this is the first complete tag.** The
+  earlier "First signed release: v1.0.8" entry below records the
+  project's first cosign-signed tag. `v1.0.8` carries cosign bundles
+  but **no** SLSA provenance because the SLSA generator pin fix
+  ([PR #32](https://github.com/attestplane/attestplane/pull/32),
+  reconciling [ADR-0018 §"Tag-ref vs SHA-pin caveat"](docs/adr/0018-keyless-signing-and-slsa-provenance.md))
+  merged at 2026-05-20T21:55:37Z, after `v1.0.8` was signed at
+  2026-05-20T21:31:21Z. Tag `v1.0.9`, cut after that fix landed, is
+  the first tag the corrected workflow could attach SLSA provenance to.
+- No retroactive signing of any earlier tag; no retag or rewrite of
+  `v1.0.9`; sign-only, new release assets attached. ADR-0018
+  forward-only invariant preserved.
+
 ### First signed release: v1.0.8
 
 - Triggered `sign-release.yml` with `execute=true` against tag `v1.0.8`

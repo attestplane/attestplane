@@ -221,7 +221,7 @@ applicable to this project's surface, with reason.
 
 | Criterion | State | Evidence or gap | Blocker |
 |---|---|---|---|
-| `signed_releases` | Met | [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) commits to Sigstore keyless cosign + SLSA Build L3 (forward-only). Tag `v1.0.8` is the first release whose assets were signed through the production workflow path: the [`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26191173510) attached `*.cosign.bundle` files to the release, and the bundles verify with `cosign verify-blob` against the workflow-pinned identity. Evidence in [`CHANGELOG.md`](../../CHANGELOG.md) "First signed release: v1.0.8" and [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md) "Worked example: v1.0.8". The SLSA Build L3 provenance leg is tracked as a separate follow-up: the [`slsa-provenance.yml` dry-run](https://github.com/attestplane/attestplane/actions/runs/26191209461) hit an upstream-generator builder-fetch ref-format issue (SHA pin vs `refs/tags/vX.Y.Z` expectation); sign-only still satisfies the OpenSSF `signed_releases` criterion text. | None for the OpenSSF criterion. SLSA provenance is a separate hardening row, not a `signed_releases` blocker. |
+| `signed_releases` | Met | [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) commits to Sigstore keyless cosign + SLSA Build L3 (forward-only). Tag `v1.0.9` is the first release whose assets carry the **complete** chain — both Sigstore keyless cosign bundles ([`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192598447)) and SLSA Build L3 provenance ([`slsa-provenance.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192349031)) — attached to a single release. Both verify with `cosign verify-blob` against the workflow-pinned identity and with `slsa-verifier verify-artifact` against the upstream generator and source repo. Evidence in [`CHANGELOG.md`](../../CHANGELOG.md) "First complete signed release: v1.0.9" and [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md) "Worked example: v1.0.9". Tag `v1.0.8` (the earlier "First signed release" entry) carries cosign bundles only because the SLSA generator pin fix ([PR #32](https://github.com/attestplane/attestplane/pull/32), reconciling [ADR-0018 §"Tag-ref vs SHA-pin caveat"](../adr/0018-keyless-signing-and-slsa-provenance.md)) merged after `v1.0.8` was signed; `v1.0.9` is the first tag cut after that fix landed. | None for the OpenSSF criterion. SLSA pin fix is now in tree; the criterion advances to the complete chain on `v1.0.9` rather than the cosign-only `v1.0.8`. |
 | `version_tags_signed` (SUGGESTED) | unmet | Tags are annotated but not GPG-signed today. | GPG-signed tags depend on the GPG key publication tracked under "Items requiring future commitments". |
 
 ### Security — Other security issues
@@ -313,9 +313,12 @@ governance decisions that are explicitly out of scope for this
 document.
 
 1. **`signed_releases` — first cosign keyless + SLSA Build L3 release.**
-   The CD workflow exists per [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md);
-   the first signed tag lands when v1.0 GA ships. Pre-ADR tags are
-   not retroactively signed.
+   Achieved on tag `v1.0.9` per the row above and the
+   [`CHANGELOG.md`](../../CHANGELOG.md) "First complete signed
+   release: v1.0.9" entry. The CD workflow per
+   [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md)
+   remains the forward path; `release-cd.yml` integration is the
+   next hardening step. Pre-ADR tags are not retroactively signed.
 
 2. **`crypto_credential_agility` — publish GPG key for
    `security@attestplane.com`.** Tracked in [`SECURITY.md`](../../SECURITY.md)

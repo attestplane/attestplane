@@ -147,17 +147,22 @@ trusting any Attestplane-hosted service.
 | Does Attestplane certify EU AI Act compliance for the consumer? | No. See [`docs/spec/aia-12-aligned-profile.md`](../spec/aia-12-aligned-profile.md) — Attestplane provides Article-12-aligned evidence substrate primitives, not compliance certification. |
 | Can I rely on a hosted Attestplane API for verification?        | No. Verification must use the offline tooling above; hosted endpoints are convenience only, per [`docs/architecture/verifier_independence.md`](../architecture/verifier_independence.md). |
 
-## Worked example: v1.0.8
+## Worked example: v1.0.9
 
-Tag `v1.0.8` is the first Attestplane release whose assets carry
-Sigstore keyless bundles uploaded through `sign-release.yml`
-(execute mode). The release was tagged at 2026-05-20T21:02:39Z, after
-[ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) was
-merged at 2026-05-20T18:25:20Z, so it falls inside the forward-only
-signing window.
+Tag `v1.0.9` is the first Attestplane release whose assets carry the
+**complete** supply-chain evidence chain — both Sigstore keyless
+cosign bundles and SLSA Build L3 provenance — attached to a single
+release. The release was tagged at 2026-05-20T21:32:20Z, after both
+[ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) and the
+SLSA generator pin fix
+([PR #32](https://github.com/attestplane/attestplane/pull/32),
+merged 2026-05-20T21:55:37Z) landed, so it is the first tag the
+corrected workflow could populate end-to-end.
 
-Inventory after the
-[`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26191173510):
+Inventory on `v1.0.9` after the
+[`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192598447)
+and the
+[`slsa-provenance.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192349031):
 
 ```
 artifact-manifest.json
@@ -166,16 +171,20 @@ checksums.sha256
 checksums.sha256.cosign.bundle
 upload-plan.md
 upload-plan.md.cosign.bundle
+attestplane-v1.0.9.intoto.jsonl
+attestplane-v1.0.9.intoto.jsonl.cosign.bundle
 ```
 
-Reproducible verification on any workstation with `cosign v3.0.6+`:
+Reproducible verification on any workstation with `cosign v3.0.6+`
+and `slsa-verifier v2.7.1+`:
 
 ```sh
-TAG=v1.0.8
+TAG=v1.0.9
 REPO=attestplane/attestplane
 mkdir -p attestplane-${TAG} && cd attestplane-${TAG}
-gh release download "${TAG}" --repo "${REPO}" --pattern "*"
+gh release download "${TAG}" --repo "${REPO}"
 
+# Step A — cosign keyless on each primary artifact
 for asset in artifact-manifest.json checksums.sha256 upload-plan.md; do
   cosign verify-blob \
     --bundle "${asset}.cosign.bundle" \
@@ -185,28 +194,51 @@ for asset in artifact-manifest.json checksums.sha256 upload-plan.md; do
       "https://token.actions.githubusercontent.com" \
     "${asset}"
 done
+
+# Step B — SLSA Build L3 provenance on the same artifacts
+for asset in artifact-manifest.json checksums.sha256 upload-plan.md; do
+  slsa-verifier verify-artifact "${asset}" \
+    --provenance-path "attestplane-${TAG}.intoto.jsonl" \
+    --source-uri github.com/${REPO}
+done
 ```
 
-Expected output is `Verified OK` for all three assets. The
-certificate-identity regex pins to `refs/heads/main` because the
-`workflow_dispatch` that produced `v1.0.8`'s signatures was triggered
-from `main`; once signing is wired into `release-cd.yml` per ADR-0018
-the identity will pin to `refs/tags/${TAG}` and the example above will
-switch to that form. Either form is a complete cosign keyless
-verification — the regex is what binds the signature to a specific
-workflow definition, not to a specific branch.
+Expected output:
 
-**SLSA Build L3 provenance is not yet attached to `v1.0.8`.** The
-`slsa-provenance.yml` dry-run for the same tag
-([`actions/runs/26191209461`](https://github.com/attestplane/attestplane/actions/runs/26191209461))
-failed in the upstream `slsa-framework/slsa-github-generator@v2.1.0`
-generic generator with `Invalid ref: f7dd8c5...c. Expected ref of the
-form refs/tags/vX.Y.Z`, because the project pins the reusable workflow
-by SHA but the upstream binary-fetch step expects a tag ref. A
-follow-up PR will reconcile that pinning style. Until then, Step 3
-above is a forward-looking recipe that becomes runnable on the first
-tag with `attestplane-<TAG>.intoto.jsonl` attached; `v1.0.8` is **not**
-that tag.
+- Step A prints `Verified OK` for each of the three primary artifacts.
+- Step B prints `PASSED: SLSA verification passed` for each of the
+  three primary artifacts and reports the builder identity
+  `https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v2.1.0`.
+
+Two notes on the identity-pinning choices in this example:
+
+- The cosign `--certificate-identity-regexp` pins to `refs/heads/main`
+  because the `workflow_dispatch` that produced `v1.0.9`'s signatures
+  was triggered from `main`. Once signing is wired into
+  `release-cd.yml` per ADR-0018, the identity will pin to
+  `refs/tags/${TAG}` and this example will switch to that form.
+- The slsa-verifier call omits `--source-tag` for the same reason —
+  the provenance was generated from a `main`-dispatched run, not a
+  tag-triggered one. The source repository is still pinned via
+  `--source-uri`, and the upstream generator identity is verified
+  inside slsa-verifier. Once the workflow path is tag-triggered the
+  example will add `--source-tag "${TAG}"`.
+
+Either form is a complete verification — the pinning is what binds the
+evidence to a specific workflow definition and source repository, not
+to any single branch or tag form.
+
+### Historical: v1.0.8 (cosign-only)
+
+Tag `v1.0.8` was the project's first cosign-signed release
+([`sign-release.yml` execute run `26191173510`](https://github.com/attestplane/attestplane/actions/runs/26191173510)),
+but it carries cosign bundles **only**. The SLSA generator pin fix
+in [PR #32](https://github.com/attestplane/attestplane/pull/32)
+(reconciling ADR-0018 §"Tag-ref vs SHA-pin caveat") merged after
+`v1.0.8` was signed, so the SLSA leg was never attempted in execute
+mode against that tag. `v1.0.9` is the first tag with the complete
+chain; `v1.0.8` remains in the release inventory as historical
+cosign-only evidence and is not retroactively re-signed for SLSA.
 
 ## Reporting verification failures
 
