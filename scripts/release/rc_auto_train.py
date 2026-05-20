@@ -31,7 +31,7 @@ MAX_RC_ORDINAL_PER_PATCH = 10
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
-REMOTE_PROBE_TIMEOUT_SECONDS = 120
+REMOTE_PROBE_TIMEOUT_SECONDS = 30
 
 
 @dataclass(frozen=True, order=True)
@@ -131,6 +131,16 @@ def remote_tag_exists(tag: str) -> bool:
         check=False,
     )
     return result.returncode == 0
+
+
+def best_effort_fetch_tags() -> None:
+    try:
+        run(
+            ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "fetch", "origin", "--tags"],
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        print(f"autodev-train rc: warning: best-effort tag fetch failed or timed out: {exc}", flush=True)
 
 
 def latest_rc() -> RcVersion:
@@ -486,10 +496,7 @@ def wait_for_release_cd(version: RcVersion) -> None:
 def run_once(*, publish: bool, wait: bool) -> str:
     assert_clean_tree()
     assert_on_main()
-    run(
-        ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "fetch", "origin", "--tags"],
-        timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
-    )
+    best_effort_fetch_tags()
     previous = latest_rc()
     if not head_has_changes_since(previous.tag):
         print(f"autodev-train rc: no commits after {previous.tag}; no new RC needed", flush=True)
