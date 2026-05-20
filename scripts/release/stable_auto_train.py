@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import time
 import tomllib
@@ -85,27 +86,69 @@ class ReleaseTarget:
 
 def run(argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
     print("+ " + " ".join(argv), flush=True)
-    return subprocess.run(
+    return run_process(
         argv,
-        cwd=ROOT,
         env=env,
-        text=True,
         check=True,
         timeout=timeout,
     )
 
 
 def capture(argv: list[str], *, timeout: int | None = None) -> str:
-    result = subprocess.run(
+    result = run_process(
         argv,
-        cwd=ROOT,
-        text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=True,
         timeout=timeout,
     )
     return result.stdout.strip()
+
+
+def run_process(
+    argv: list[str],
+    *,
+    env: dict[str, str] | None = None,
+    stdout: int | None = None,
+    stderr: int | None = None,
+    check: bool,
+    timeout: int | None = None,
+) -> subprocess.CompletedProcess[str]:
+    process = subprocess.Popen(  # noqa: S603 - argv is a fixed internal command vector.
+        argv,
+        cwd=ROOT,
+        env=env,
+        text=True,
+        stdout=stdout,
+        stderr=stderr,
+        start_new_session=True,
+    )
+    try:
+        out, err = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        terminate_process_group(process)
+        out, err = process.communicate()
+        raise subprocess.TimeoutExpired(argv, timeout, output=out, stderr=err) from exc
+
+    result = subprocess.CompletedProcess(argv, process.returncode, out, err)
+    if check and result.returncode:
+        raise subprocess.CalledProcessError(result.returncode, argv, output=out, stderr=err)
+    return result
+
+
+def terminate_process_group(process: subprocess.Popen[str]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait(timeout=5)
 
 
 def sha256_file(path: Path) -> str:
@@ -129,9 +172,8 @@ def assert_on_main() -> None:
 
 
 def git_ref_exists(ref: str) -> bool:
-    result = subprocess.run(
+    result = run_process(
         ["git", "rev-parse", "-q", "--verify", ref],
-        cwd=ROOT,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
@@ -141,9 +183,8 @@ def git_ref_exists(ref: str) -> bool:
 
 def remote_tag_exists(tag: str) -> bool:
     try:
-        result = subprocess.run(
+        result = run_process(
             ["git", "ls-remote", "--exit-code", "--tags", "origin", tag],
-            cwd=ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
