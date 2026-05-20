@@ -19,7 +19,7 @@ Every commit must include a sign-off line showing that you have read and certify
 the version 1.1 terms in [`DCO.txt`](DCO.txt).
 
 ```bash
-git commit -s -m "feat(attestchain): add BLAKE3 re-anchor on fork detection"
+git commit -s -m "feat(sdk/python): add JCS canonicalization helper"
 # -s automatically appends: Signed-off-by: Your Name <you@example.com>
 ```
 
@@ -54,7 +54,6 @@ workflow, and verifying registry state.
 
 | Tool | Minimum version |
 | ---- | --------------- |
-| Rust + Cargo | 1.75+ |
 | Python | 3.11+ |
 | Node.js + npm | 20+ |
 
@@ -65,17 +64,11 @@ workflow, and verifying registry state.
 git clone https://github.com/attestplane/attestplane.git
 cd attestplane
 
-# 2. Rust crates
-cargo build --workspace
-cargo test --workspace
-cargo clippy --workspace -- -D warnings
-cargo fmt --all --check
-
-# 3. Python SDK
+# 2. Python SDK
 pip install -e "sdk/python[dev]"
 pytest sdk/python/
 
-# 4. TypeScript SDK (FastAPI / Express / NestJS helper)
+# 3. TypeScript SDK (FastAPI / Express / NestJS helper)
 cd sdk/typescript && npm install && npm test
 ```
 
@@ -114,8 +107,8 @@ Signed-off-by: Your Name <you@example.com>
 Common types: `feat` / `fix` / `test` / `docs` / `refactor` / `chore` /
 `perf`.
 
-The scope should match the crate or SDK package name, such as
-`feat(attestchain)`, `fix(python-sdk)`, or `docs(adr)`.
+The scope should match the SDK or package name, such as
+`feat(sdk/python)`, `fix(sdk/typescript)`, or `docs(adr)`.
 
 ### Development rhythm
 
@@ -134,7 +127,6 @@ review and bisect.
 
 ## 4. PR Checklist
 
-- [ ] `cargo test --workspace` passes
 - [ ] `pytest sdk/python/` passes
 - [ ] `npm test` for the TypeScript SDK passes
 - [ ] Affected documentation is updated, including ADRs, API docs, or changelog
@@ -171,7 +163,7 @@ and include:
 - The minimal command sequence that reproduces the bug
 - Expected behavior vs actual behavior
 - Relevant logs or panic output
-- The affected crate, SDK, or framework mapping
+- The affected SDK or framework mapping
 
 For **security vulnerabilities**, **do not disclose details in a public issue.**
 Follow the responsible disclosure process in [`SECURITY.md`](SECURITY.md) and
