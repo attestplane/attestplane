@@ -1681,6 +1681,10 @@ def test_publish_typescript_workflow_uses_trusted_publishing_without_token() -> 
     assert "npm-trusted-publishing.npmrc" in workflow
     assert "npx --yes --package 'npm@^11.5.1' npm --version" in workflow
     assert 'npx --yes --package \'npm@^11.5.1\' npm publish --provenance --access public --tag "$TAG"' in workflow
+    assert "OIDC trusted publishing failed; retrying with configured npm automation token." in workflow
+    assert "npm-token-publish.npmrc" in workflow
+    assert "NPM_TOKEN: ${{ secrets.NPM_TOKEN }}" in workflow
+    assert 'npm publish --access public --tag "$TAG"' in workflow
 
 
 def test_typescript_package_repository_matches_npm_trusted_publisher() -> None:

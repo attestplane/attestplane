@@ -78,6 +78,8 @@ jobs:
         if: |
           (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/sdk-typescript-v')) ||
           (github.event_name == 'workflow_dispatch' && inputs.dry_run != true)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -e
           TAG="${{ inputs.tag || 'alpha' }}"
@@ -86,4 +88,17 @@ jobs:
           printf 'registry=https://registry.npmjs.org/\n' > "$NPM_CONFIG_USERCONFIG"
           echo "Publishing @attestplane/attestplane to npm with OIDC trusted publishing and dist-tag '$TAG'"
           npx --yes --package 'npm@^11.5.1' npm --version
-          npx --yes --package 'npm@^11.5.1' npm publish --provenance --access public --tag "$TAG"
+          if npx --yes --package 'npm@^11.5.1' npm publish --provenance --access public --tag "$TAG"; then
+            exit 0
+          fi
+          if [[ -z "${NPM_TOKEN:-}" ]]; then
+            echo "OIDC trusted publishing failed and NPM_TOKEN is not configured." >&2
+            exit 1
+          fi
+          echo "OIDC trusted publishing failed; retrying with configured npm automation token."
+          export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/npm-token-publish.npmrc"
+          {
+            printf 'registry=https://registry.npmjs.org/\n'
+            printf '//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n'
+          } > "$NPM_CONFIG_USERCONFIG"
+          npm publish --access public --tag "$TAG"
