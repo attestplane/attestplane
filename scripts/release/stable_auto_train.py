@@ -627,24 +627,35 @@ def push_and_dispatch(version: StableVersion, *, wait: bool) -> None:
     head_sha = capture(["git", "rev-parse", "HEAD"])
     wait_for_push_ci(head_sha)
     run(["git", "push", "origin", version.tag])
-    run(
-        [
-            "gh",
-            "workflow",
-            "run",
-            "release-cd.yml",
-            "-f",
-            f"release_tag={version.tag}",
-            "-f",
-            "channel=latest",
-            "-f",
-            "dry_run=false",
-            "--ref",
-            "main",
-        ]
-    )
+    run(release_cd_dispatch_args(version))
     if wait:
         wait_for_release_cd(version)
+
+
+def release_cd_dispatch_args(version: StableVersion) -> list[str]:
+    argv = [
+        "gh",
+        "workflow",
+        "run",
+        "release-cd.yml",
+        "-f",
+        f"release_tag={version.tag}",
+        "-f",
+        "channel=latest",
+        "-f",
+        "dry_run=false",
+    ]
+    audit_verified = os.environ.get("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", "")
+    audit_plan_url = os.environ.get("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", "").strip()
+    if audit_plan_url:
+        argv.extend(["-f", f"audit_verified={str(truthy_env(audit_verified)).lower()}"])
+        argv.extend(["-f", f"audit_plan_url={audit_plan_url}"])
+    argv.extend(["--ref", "main"])
+    return argv
+
+
+def truthy_env(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def wait_for_push_ci(head_sha: str) -> None:

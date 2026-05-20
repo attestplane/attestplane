@@ -154,3 +154,27 @@ def test_wait_for_push_ci_blocks_failed_required_workflow(monkeypatch: pytest.Mo
 
     with pytest.raises(RuntimeError, match="push CI failed.*ci=failure"):
         stable_auto_train.wait_for_push_ci(head_sha)
+
+
+def test_release_cd_dispatch_args_omits_audit_inputs_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", raising=False)
+    monkeypatch.delenv("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", raising=False)
+    version = stable_auto_train.StableVersion.parse("0.9.10")
+
+    argv = stable_auto_train.release_cd_dispatch_args(version)
+
+    assert "audit_verified=true" not in argv
+    assert all(not item.startswith("audit_plan_url=") for item in argv)
+    assert argv[-2:] == ["--ref", "main"]
+
+
+def test_release_cd_dispatch_args_forwards_verified_audit_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", "1")
+    monkeypatch.setenv("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", "https://github.com/attestplane/attestplane/blob/main/docs/validation/v1_0_0_release_audit_plan_20260520.md")
+    version = stable_auto_train.StableVersion.parse("1.0.0")
+
+    argv = stable_auto_train.release_cd_dispatch_args(version)
+
+    assert "audit_verified=true" in argv
+    assert "audit_plan_url=https://github.com/attestplane/attestplane/blob/main/docs/validation/v1_0_0_release_audit_plan_20260520.md" in argv
+    assert argv[-2:] == ["--ref", "main"]
