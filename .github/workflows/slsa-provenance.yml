@@ -1,0 +1,145 @@
+name: slsa-provenance
+
+# Generate SLSA Build L3 provenance for a released tag by hashing the
+# tag's GitHub Release assets and invoking the slsa-github-generator
+# generic generator. Defaults to dry-run inventory only; the upload
+# of *.intoto.jsonl to the release is gated by execute=true.
+#
+# The SLSA Build L3 claim is the responsibility of the upstream
+# slsa-github-generator implementation, not a project self-assessment.
+# Verification by slsa-verifier against the published provenance is the
+# binding evidence; see docs/release/verifying-signatures.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attest (must already exist and have assets attached)"
+        required: true
+        type: string
+      execute:
+        description: "Upload the generated provenance to the GitHub Release; false is dry-run only"
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      execute:
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slsa-provenance-${{ github.workflow }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  collect-digests:
+    name: Hash release assets for provenance subjects
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+      asset_count: ${{ steps.hash.outputs.asset_count }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Confirm requested tag exists
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+          git rev-list -n 1 "${{ inputs.tag }}"
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/release
+          gh release download "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*" \
+            --dir /tmp/release \
+            --skip-existing
+          find /tmp/release -maxdepth 1 -type f -print | sort
+
+      - name: Compute base64-encoded SHA-256 subjects
+        id: hash
+        run: |
+          set -euo pipefail
+          cd /tmp/release
+          # Exclude any pre-existing signature / provenance files so the
+          # provenance does not attest its own envelope; only attest the
+          # primary release artifacts (wheel, sdist, npm tgz, sbom, etc.).
+          mapfile -t files < <(find . -maxdepth 1 -type f \
+            ! -name "*.cosign.bundle" \
+            ! -name "*.sig" \
+            ! -name "*.pem" \
+            ! -name "*.intoto.jsonl" \
+            -printf "%f\n" | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no primary release assets found to attest"
+            exit 1
+          fi
+          digests="$(sha256sum "${files[@]}" | base64 -w0)"
+          echo "hashes=${digests}" >> "$GITHUB_OUTPUT"
+          echo "asset_count=${#files[@]}" >> "$GITHUB_OUTPUT"
+          printf '  %s\n' "${files[@]}"
+
+  provenance:
+    name: Generate SLSA Build L3 provenance
+    needs: collect-digests
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    # Pinned to v2.1.0 (commit f7dd8c54c2067bafc12ca7a55595d5ee9b75204a)
+    # released 2025-02-24. Bump only after verifying provenance still
+    # passes slsa-verifier verify-artifact end-to-end.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a
+    with:
+      base64-subjects: ${{ needs.collect-digests.outputs.hashes }}
+      provenance-name: attestplane-${{ inputs.tag }}.intoto.jsonl
+      upload-assets: ${{ inputs.execute }}
+      upload-tag-name: ${{ inputs.tag }}
+
+  summary:
+    name: Provenance run summary
+    needs:
+      - collect-digests
+      - provenance
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Emit summary
+        run: |
+          {
+            echo "## SLSA provenance run"
+            echo ""
+            echo "- tag: \`${{ inputs.tag }}\`"
+            echo "- execute (upload to release): \`${{ inputs.execute }}\`"
+            echo "- assets attested: \`${{ needs.collect-digests.outputs.asset_count }}\`"
+            echo "- generator: \`slsa-github-generator@v2.1.0\` (pinned by SHA)"
+            echo ""
+            if [ "${{ inputs.execute }}" = "true" ]; then
+              echo "Provenance was uploaded to the release. Verify with:"
+              echo ""
+              echo "  slsa-verifier verify-artifact <asset> \\"
+              echo "    --provenance-path attestplane-${{ inputs.tag }}.intoto.jsonl \\"
+              echo "    --source-uri github.com/${{ github.repository }} \\"
+              echo "    --source-tag ${{ inputs.tag }}"
+              echo ""
+            else
+              echo "Dry-run only — provenance was generated but not uploaded."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
