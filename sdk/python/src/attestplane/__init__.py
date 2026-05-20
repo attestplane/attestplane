@@ -190,7 +190,7 @@ from attestplane.verify_errors import (
     is_known_verify_error_code,
 )
 
-__version__ = "0.9.9"
+__version__ = "0.9.10"
 
 __all__ = [
     "ALL_EVENT_TYPES_V1",
