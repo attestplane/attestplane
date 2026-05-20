@@ -77,6 +77,48 @@ def test_release_cd_policy_rejects_prerelease_latest(tmp_path: Path) -> None:
         )
 
 
+def test_release_cd_policy_allows_prerelease_latest_only_with_explicit_override(
+    tmp_path: Path,
+) -> None:
+    _write_package_versions(tmp_path, python_version="0.8.0b0", npm_version="0.8.0-beta.0")
+
+    decision = validate_release_cd.decide_release(
+        release_tag="v0.8.0-beta.0",
+        requested_channel="latest",
+        repo_root=tmp_path,
+        allow_prerelease_latest=True,
+    )
+
+    assert decision.npm_dist_tag == "latest"
+    assert decision.is_prerelease is True
+
+
+@pytest.mark.parametrize(
+    ("tag", "python_version", "npm_version", "requested_channel"),
+    [
+        ("v0.8.0-alpha.0", "0.8.0a0", "0.8.0-alpha.0", "beta"),
+        ("v0.8.0-beta.0", "0.8.0b0", "0.8.0-beta.0", "rc"),
+        ("v0.8.0-rc.1", "0.8.0rc1", "0.8.0-rc.1", "beta"),
+        ("v0.8.0", "0.8.0", "0.8.0", "rc"),
+    ],
+)
+def test_release_cd_policy_rejects_channel_drift(
+    tmp_path: Path,
+    tag: str,
+    python_version: str,
+    npm_version: str,
+    requested_channel: str,
+) -> None:
+    _write_package_versions(tmp_path, python_version=python_version, npm_version=npm_version)
+
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="does not match"):
+        validate_release_cd.decide_release(
+            release_tag=tag,
+            requested_channel=requested_channel,
+            repo_root=tmp_path,
+        )
+
+
 def test_release_cd_policy_rejects_package_version_drift(tmp_path: Path) -> None:
     _write_package_versions(tmp_path, python_version="0.8.0b0", npm_version="0.8.0-rc.1")
 

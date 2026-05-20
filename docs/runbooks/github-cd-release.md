@@ -44,6 +44,10 @@ Pre-release packages must publish under their matching `alpha`, `beta`, or
 separate maintainer decision is recorded before dispatch. The default CD path
 does not provide that override.
 
+The detailed npm dist-tag policy and the current `0.8.0-beta.0` latest
+decision are recorded in
+[`npm-dist-tag-policy.md`](../release/npm-dist-tag-policy.md).
+
 ## Manual Dispatch
 
 Dry-run validation:
@@ -100,6 +104,9 @@ Do not delete or reuse a published version.
 - GitHub workflow: revert the release workflow change and re-dispatch only
   after review.
 - Broken RC: publish a new `v0.8.0-rc.N+1` with a changelog entry.
+
+Use the scoped recovery checklist in
+[`release-rollback.md`](release-rollback.md) before mutating registry state.
 
 ## Explicit Non-Goals
 
