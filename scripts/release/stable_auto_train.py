@@ -110,14 +110,23 @@ class ReleaseTarget:
 
 @dataclass(frozen=True)
 class PublicationStatus:
-    python_visible: bool
-    npm_visible: bool
-    npm_latest: bool
-    github_release: bool
+    python_visible: bool | None
+    npm_visible: bool | None
+    npm_latest: bool | None
+    github_release: bool | None
 
     @property
     def complete(self) -> bool:
         return self.python_visible and self.npm_visible and self.npm_latest and self.github_release
+
+    @property
+    def unknown(self) -> bool:
+        return (
+            self.python_visible is None
+            or self.npm_visible is None
+            or self.npm_latest is None
+            or self.github_release is None
+        )
 
 
 def run(argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
@@ -680,7 +689,7 @@ def truthy_env(value: str) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def pypi_version_visible(version: StableVersion) -> bool:
+def pypi_version_visible(version: StableVersion) -> bool | None:
     try:
         with urllib.request.urlopen(
             f"https://pypi.org/pypi/attestplane/{version.python_version}/json",
@@ -691,39 +700,54 @@ def pypi_version_visible(version: StableVersion) -> bool:
         if exc.code == 404:
             return False
         raise
+    except (OSError, TimeoutError) as exc:
+        print(f"autodev-train stable: warning: PyPI probe failed for {version.tag}: {exc}", flush=True)
+        return None
     return payload.get("info", {}).get("version") == version.python_version
 
 
-def npm_version_visible(version: StableVersion) -> bool:
-    result = run_process(
-        ["npm", "view", f"@attestplane/attestplane@{version.npm_version}", "version"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=30,
-    )
+def npm_version_visible(version: StableVersion) -> bool | None:
+    try:
+        result = run_process(
+            ["npm", "view", f"@attestplane/attestplane@{version.npm_version}", "version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        print(f"autodev-train stable: warning: npm version probe timed out for {version.tag}: {exc}", flush=True)
+        return None
     return result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
 
 
-def npm_latest_points_to(version: StableVersion) -> bool:
-    result = run_process(
-        ["npm", "view", "@attestplane/attestplane", "dist-tags.latest"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=30,
-    )
+def npm_latest_points_to(version: StableVersion) -> bool | None:
+    try:
+        result = run_process(
+            ["npm", "view", "@attestplane/attestplane", "dist-tags.latest"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        print(f"autodev-train stable: warning: npm dist-tag probe timed out for {version.tag}: {exc}", flush=True)
+        return None
     return result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
 
 
-def github_release_exists(version: StableVersion) -> bool:
-    result = run_process(
-        ["gh", "release", "view", version.tag, "--json", "tagName"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-        timeout=30,
-    )
+def github_release_exists(version: StableVersion) -> bool | None:
+    try:
+        result = run_process(
+            ["gh", "release", "view", version.tag, "--json", "tagName"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        print(f"autodev-train stable: warning: GitHub Release probe timed out for {version.tag}: {exc}", flush=True)
+        return None
     return result.returncode == 0
 
 
@@ -831,6 +855,8 @@ def ensure_github_release(version: StableVersion) -> None:
 
 def recover_existing_release(version: StableVersion) -> None:
     status = publication_status(version)
+    if status.unknown:
+        raise RuntimeError(f"cannot auto-recover {version.tag}: publication status probe is incomplete; retry later")
     if status.complete:
         print(f"autodev-train stable: existing release {version.tag} is complete", flush=True)
         return
@@ -855,6 +881,8 @@ def recover_existing_release(version: StableVersion) -> None:
             raise RuntimeError(f"cannot auto-recover PyPI publication for {version.tag}: {last_error}") from last_error
     ensure_github_release(version)
     final = publication_status(version)
+    if final.unknown:
+        raise RuntimeError(f"release recovery status is incomplete for {version.tag}: {final}")
     if not final.complete:
         raise RuntimeError(f"release recovery did not complete for {version.tag}: {final}")
 

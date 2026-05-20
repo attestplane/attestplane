@@ -185,6 +185,24 @@ def test_recover_existing_release_refuses_incomplete_npm_state() -> None:
             stable_auto_train.recover_existing_release(version)
 
 
+def test_recover_existing_release_retries_later_on_unknown_probe() -> None:
+    version = stable_auto_train.StableVersion.parse("1.0.6")
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            stable_auto_train,
+            "publication_status",
+            lambda target: stable_auto_train.PublicationStatus(
+                python_visible=None,
+                npm_visible=True,
+                npm_latest=True,
+                github_release=True,
+            ),
+        )
+        with pytest.raises(RuntimeError, match="probe is incomplete"):
+            stable_auto_train.recover_existing_release(version)
+
+
 def test_stable_train_blocks_unverified_major_boundary() -> None:
     target = stable_auto_train.ReleaseTarget(
         version=stable_auto_train.StableVersion.parse("1.0.0"),
