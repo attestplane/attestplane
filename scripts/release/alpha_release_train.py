@@ -2734,12 +2734,15 @@ def recoverable_failed_publish_candidates(state_path: Path) -> list[AlphaCandida
 
     A failed npm publish leaves the git tag, GitHub release, and often PyPI
     artifact behind. Those versions are still the right retry target; advancing
-    to a new alpha only accumulates more partial releases.
+    to a new alpha only accumulates more partial releases. Once a newer alpha
+    is released or prepared, older partial failures are historical and should
+    not be retried.
     """
     db_path = state_db_path(state_path)
     if not db_path.exists():
         return []
     init_state_db(db_path)
+    latest_known = known_released_alpha_floor(state_path)
     with sqlite3.connect(db_path) as db:
         rows = db.execute(
             """
@@ -2752,10 +2755,21 @@ def recoverable_failed_publish_candidates(state_path: Path) -> list[AlphaCandida
         recoverable: list[str] = []
         for (release,) in rows:
             release_text = str(release)
+            try:
+                if compare_alpha_releases(release_text, latest_known) < 0:
+                    continue
+            except ValueError:
+                continue
             gh_release_done = stage_status(db, release_text, "gh_release_created") == "done"
             pypi_done = stage_status(db, release_text, "pypi_published") == "done"
             npm_done = stage_status(db, release_text, "npm_published") == "done"
             registry_done = stage_status(db, release_text, "registry_verified") == "done"
+            candidate = prepared_candidate_from_release(release_text)
+            if not registry_done:
+                try:
+                    verify_candidate_files(candidate)
+                except FileNotFoundError:
+                    continue
             if (gh_release_done or pypi_done) and not npm_done and not registry_done:
                 recoverable.append(release_text)
     if not recoverable:

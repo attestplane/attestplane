@@ -317,6 +317,43 @@ def test_recoverable_failed_publish_candidates_ignore_registry_verified(tmp_path
     assert alpha_release_train.recoverable_failed_publish_candidates(state_file) == []
 
 
+def test_recoverable_failed_publish_candidates_ignore_obsolete_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    obsolete = alpha_release_train.prepared_candidate_from_release("v0.6.3-alpha")
+    released = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+
+    alpha_release_train.mark_failed(state_file, obsolete, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_stage(state_file, obsolete, "gh_release_created", "done")
+    alpha_release_train.mark_stage(state_file, obsolete, "pypi_published", "done", {"run": "older"})
+    alpha_release_train.mark_processed(state_file, released, dry_run=False)
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha")
+
+    assert alpha_release_train.recoverable_failed_publish_candidates(state_file) == []
+
+
+def test_recoverable_failed_publish_candidates_ignore_missing_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    state_file = tmp_path / "state.json"
+    failed = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+
+    alpha_release_train.mark_failed(state_file, failed, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_stage(state_file, failed, "gh_release_created", "done")
+    alpha_release_train.mark_stage(state_file, failed, "pypi_published", "done", {"run": "latest"})
+    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha")
+    monkeypatch.setattr(
+        alpha_release_train,
+        "verify_candidate_files",
+        lambda candidate: (_ for _ in ()).throw(FileNotFoundError("missing")),
+    )
+
+    assert alpha_release_train.recoverable_failed_publish_candidates(state_file) == []
+
+
 def test_auto_promote_merge_is_dry_run_safe(tmp_path: Path) -> None:
     queue = write_queue(tmp_path, [])
     promoted = alpha_release_train.AlphaCandidate.from_json(
