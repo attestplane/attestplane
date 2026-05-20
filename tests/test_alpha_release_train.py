@@ -1675,6 +1675,7 @@ def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
 def test_publish_typescript_workflow_uses_trusted_publishing_without_token() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "publish-typescript.yml").read_text(encoding="utf-8")
     assert "package-manager-cache: false" in workflow
+    assert "environment:" not in workflow
     assert "unset NODE_AUTH_TOKEN" in workflow
     assert "NPM_CONFIG_USERCONFIG" in workflow
     assert "npm-trusted-publishing.npmrc" in workflow
