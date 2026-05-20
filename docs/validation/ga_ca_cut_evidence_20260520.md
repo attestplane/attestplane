@@ -136,17 +136,21 @@ Observed result:
 
 ## Remaining GA/CA Decision Gaps
 
-This evidence does not by itself authorize GA or Controlled Availability.
-Remaining decision items:
+Maintainer decisions recorded after this evidence:
 
-1. Maintainers must define whether `ca` means GA/stable or Controlled
-   Availability.
-2. Stable GA still requires an explicit npm `latest` migration decision.
-3. Release notes must record the selected channel and claim boundary.
-4. Rollback ownership and registry correction steps must be accepted by the
-   maintainer.
-5. Release permissions should remain scoped to GitHub `release-cd`; no PR or
+1. `ca` means Controlled Availability, not GA/stable in the product-readiness
+   sense.
+2. The selected package version is suffix-free `v0.8.5` / PyPI `0.8.5` /
+   npm `0.8.5`; do not publish a `0.8.5-ca.*` version.
+3. Default installs should advance to `0.8.5`:
+   - PyPI: `pip install attestplane`
+   - npm: `npm install @attestplane/attestplane`
+4. npm `latest` and `ca` should point to `0.8.5`; npm `rc` should remain on
+   `0.8.5-rc.5`.
+5. Release notes must state that CA is not GA, not production readiness, not a
+   regulatory certification, and not a legal-compliance claim.
+6. Release permissions should remain scoped to GitHub `release-cd`; no PR or
    fork workflow should inherit publishing authority.
 
-Until those decisions are made, `v0.8.5-rc.5` remains the latest RC, and npm
-`latest` remains pinned to `0.8.0-beta.0`.
+Until `v0.8.5` is published and verified, `v0.8.5-rc.5` remains the latest RC,
+and npm `latest` remains pinned to `0.8.0-beta.0`.

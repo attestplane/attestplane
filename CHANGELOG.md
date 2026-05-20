@@ -11,8 +11,13 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
-### Preparing v0.8.5-rc.1
+### Preparing v0.8.5 Controlled Availability
 
+- Promoted the `v0.8.5-rc.5` evidence set into the planned `v0.8.5`
+  Controlled Availability cut, with default PyPI/npm installs intended to
+  resolve to `0.8.5`.
+- Recorded that Controlled Availability is not GA, not production readiness,
+  not a regulatory certification, and not a legal-compliance claim.
 - Added a release-candidate compatibility policy for SDK exports,
   proof-bundle v1, verifier reason codes, canonical bytes, and
   `AP-EVD/1.0` fixture shape.

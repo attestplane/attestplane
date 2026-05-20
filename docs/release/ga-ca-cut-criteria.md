@@ -20,9 +20,15 @@ Before any CA or GA cut, maintainers must record which meaning is intended:
   documentation, and an optional registry/channel tag. Do not encode `ca` in
   the version string.
 
-If the decision is GA, the release may move npm `latest` only when the
-maintainer explicitly records that default npm installs should advance from the
-current beta line.
+Decision recorded on 2026-05-20: `ca` means **Controlled Availability** for
+`v0.8.5`. It is not GA/stable in the product-readiness sense, but it uses the
+suffix-free stable package version `0.8.5`. The maintainer explicitly decided
+that default PyPI and npm installs should advance to `0.8.5`, and that npm
+should expose both `latest` and `ca` dist-tags for the package.
+
+If a future decision is GA, the release may move npm `latest` only when the
+maintainer explicitly records that GA default installs should advance from the
+current CA line.
 
 ## Current RC Rule
 
@@ -71,15 +77,16 @@ stable or production-readiness claims. The minimum evidence is:
 
 ## npm Latest Decision
 
-The current npm default install path is intentionally pinned to the beta line:
+The current npm default install path is intentionally moved to the CA line:
 
-- `latest`: `0.8.0-beta.0`
+- `latest`: `0.8.5`
+- `ca`: `0.8.5`
 - `beta`: `0.8.0-beta.0`
-- `rc`: latest published `0.8.5-rc.N`
+- `rc`: `0.8.5-rc.5`
 
-Moving `latest` to a stable version is a consumer-facing decision. It must be
-recorded before dispatching a stable release, because it changes what
-`npm install @attestplane/attestplane` resolves to by default.
+Moving `latest` to a stable version is a consumer-facing decision. For
+`v0.8.5`, maintainers selected Controlled Availability and explicitly allowed
+default npm installs to resolve to `0.8.5`.
 
 Prerelease RC packages must continue to publish under `rc` and must not move
 `latest`.

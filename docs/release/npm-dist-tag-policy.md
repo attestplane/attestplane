@@ -21,48 +21,52 @@ Any exception requires a maintainer-recorded decision before dispatch.
 
 ## Current Latest Ownership
 
-`@attestplane/attestplane@0.8.0-beta.0` currently owns both:
+`@attestplane/attestplane@0.8.5` owns both:
 
-- `beta`
 - `latest`
+- `ca`
 
-This was an explicit maintainer decision made after the beta registry release
-became visible on npm and PyPI. It means default npm installs exercise the
-published beta package while the project remains pre-GA.
+This was an explicit maintainer decision made after the `v0.8.5-rc.5`
+evidence gate and before the stable `v0.8.5` package cut. It means default npm
+installs exercise the Controlled Availability package while the project remains
+pre-GA.
 
 This does not change the claim boundary:
 
-- `0.8.0-beta.0` is not GA.
-- `0.8.0-beta.0` is not a production-readiness claim.
-- `0.8.0-beta.0` is not a regulatory certification or legal-compliance claim.
+- `0.8.5` is Controlled Availability, not GA.
+- `0.8.5` is not a production-readiness claim.
+- `0.8.5` is not a regulatory certification or legal-compliance claim.
 
-## Planned RC Behavior
+The beta dist-tag may remain pinned to `0.8.0-beta.0` for reproducible
+installation of the beta line.
 
-The planned `v0.8.5-rc.1` cut must publish as:
+## RC Behavior
 
-- npm version: `0.8.5-rc.1`
+The latest RC evidence cut, `v0.8.5-rc.5`, publishes as:
+
+- npm version: `0.8.5-rc.5`
 - npm dist-tag: `rc`
 
 The current RC patch line may advance through `0.8.5-rc.10`. If another RC is
 needed after that, the next npm version must be `0.8.6-rc.1` and the PyPI
 version must be `0.8.6rc1`; do not publish `0.8.5-rc.11`.
 
-The RC release must not move `latest` unless a separate maintainer decision is
-recorded before dispatch.
+RC releases must not move `latest` unless a separate maintainer decision is
+recorded before dispatch. The recorded maintainer decision for `v0.8.5` moves
+`latest` only for the suffix-free stable package version.
 
-## Planned GA Behavior
+## Controlled Availability Behavior
 
-When `v0.8.5` GA is cut, `latest` should move from `0.8.0-beta.0` to
-`0.8.5` through the documented GitHub CD path.
+`v0.8.5` is a Controlled Availability cut, not GA. It uses the stable package
+version because `ca` is an availability channel, not a SemVer suffix.
 
-The beta dist-tag may remain pinned to `0.8.0-beta.0` for reproducible
-installation of the beta line.
+- `latest` moves to `0.8.5` through the documented GitHub CD path so default
+  npm installs use the CA package.
+- `ca` points to `0.8.5` as an explicit channel marker.
+- `rc` remains pinned to the latest RC evidence package, currently
+  `0.8.5-rc.5`.
 
-If maintainers choose a Controlled Availability channel before GA, do not encode
-`ca` in the package version. Use the existing RC or stable version scheme and
-record the CA scope in release notes, documentation, and, if needed, an
-explicit registry/channel tag. The GA/CA checklist is recorded in
-[`ga-ca-cut-criteria.md`](ga-ca-cut-criteria.md).
+The GA/CA checklist is recorded in [`ga-ca-cut-criteria.md`](ga-ca-cut-criteria.md).
 
 ## Manual Recovery
 

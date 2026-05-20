@@ -6,20 +6,21 @@
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
-[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.8.0b0-blue)](https://pypi.org/project/attestplane/)
+[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.8.5-blue)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
 [![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplane/commits/main)
 [![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplane/stargazers)
-[![RC — preparing](https://img.shields.io/badge/status-rc--preparing-blue.svg)](#roadmap)
+[![Controlled Availability](https://img.shields.io/badge/status-controlled--availability-blue.svg)](#roadmap)
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
-> **Release-candidate preparation.** The next planned cut is
-> `v0.8.5-rc.1`. Public SDK and wire-format surfaces are frozen for the
-> RC line, subject to explicit `rc.N` bumps for breaking corrections.
-> This is not GA and not a production-readiness or compliance claim.
+> **Controlled Availability.** The current stable package cut is `v0.8.5`.
+> Default PyPI and npm installs are intended to resolve to `0.8.5`, with npm
+> `latest` and `ca` pointing at this version. This is a controlled
+> availability cut, not GA, not a production-readiness claim, and not a
+> compliance certification.
 >
 > **Current verifier scope.** Attestplane is a pre-GA dual-SDK
 > tamper-evident evidence substrate. It provides restricted
@@ -63,7 +64,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; **v0.8.5-rc.1** is the next planned release-candidate cut and carries the public API and wire-format freeze documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md):
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; **v0.8.5** is the current Controlled Availability cut and carries the public API and wire-format freeze documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md):
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (newline-terminated records, optional fsync,
@@ -80,7 +81,7 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
-The current RC-preparation line tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains prerelease substrate work and is not a legal compliance certification.
+The current Controlled Availability line tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains pre-GA substrate work and is not a legal compliance certification.
 
 Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate substrate conformance, not production readiness or regulatory compliance.
 
@@ -150,7 +151,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  SDKs                                                         │   │
-│  │  Python (0.8.0b0)   │  TypeScript (0.8.0-beta.0)             │   │
+│  │  Python (0.8.5)     │  TypeScript (0.8.5)                    │   │
 │  │  FastAPI / Express / NestJS / Django helpers (M5)             │   │
 │  │  Rust crate (M7)                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -171,20 +172,21 @@ Integration with each partner does **not** imply endorsement by the partner. The
 
 ---
 
-## Current release posture: RC preparation
+## Current release posture: Controlled Availability
 
-The published beta line is live as a GitHub prerelease and as package
-artifacts: Python `attestplane==0.8.0b0` is published to PyPI, and
-`@attestplane/attestplane@0.8.0-beta.0` is published to npm under the
-`beta` and `latest` dist-tags. The next planned cut is `v0.8.5-rc.1` (`0.8.5rc1` on
-PyPI, `0.8.5-rc.1` on npm under the `rc` dist-tag).
+The current Controlled Availability line is published as stable package
+artifacts: Python `attestplane==0.8.5` is published to PyPI, and
+`@attestplane/attestplane@0.8.5` is published to npm under the `latest`
+and `ca` dist-tags. The previous beta line remains reproducible as
+`0.8.0-beta.0`; the latest RC evidence remains available as `v0.8.5-rc.5`
+(`0.8.5rc5` on PyPI, `0.8.5-rc.5` on npm under the `rc` dist-tag).
 
-RC preparation freezes public SDK exports and wire-format behavior under
+Controlled Availability freezes public SDK exports and wire-format behavior under
 [ADR-0016](docs/adr/0016-rc-api-freeze.md) and the [compatibility policy](docs/spec/compat.md).
 This line expands the core with schemas, sidecar primitives, storage,
 adapters, verifier predicates, public API drift gates, storage compatibility
-policy, and release provenance hygiene, but it is not GA, not
-production-ready, and not compliance-ready.
+policy, and release provenance hygiene, but it is not GA, not production-ready,
+and not compliance-ready.
 
 The package and release registry surfaces remain the source of truth. Package
 publication now runs through the GitHub Actions CD path documented in
@@ -207,7 +209,7 @@ The current `attestplane verify` command is deliberately narrow:
 - It does not verify signatures or anchors.
 - It does not issue compliance certification.
 
-## Published beta and RC-preparation status
+## Published beta, RC, and CA status
 
 Implemented in the published beta artifacts:
 
@@ -219,7 +221,7 @@ Implemented in the published beta artifacts:
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
 Designed and merged on `main` since v0.0.1-alpha (pre-GA substrate surface
-through the v0.8.5-rc.1 preparation line; not a production claim):
+through the v0.8.5 Controlled Availability line; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -240,16 +242,15 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.8.0b0` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
-| `@attestplane/attestplane@0.8.0-beta.0` | [npm beta/latest dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| `v0.8.5-rc.1` | planned RC cut | publish under npm `rc`; do not reuse versions |
-| GitHub Release | `v0.8.0-beta.0` | wheel + sdist + npm tarball + checksums + artifact manifest |
+| `attestplane==0.8.5` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
+| `@attestplane/attestplane@0.8.5` | [npm latest/ca dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
+| `v0.8.5-rc.5` | latest RC evidence cut | npm `rc`; do not reuse versions |
+| GitHub Release | `v0.8.5` | wheel + sdist + npm tarball + checksums + artifact manifest |
 
-The npm `latest` tag currently points at `0.8.0-beta.0` by explicit
-maintainer decision so default npm installs can exercise the beta package.
-This improves prerelease installability, but it does not change the
-pre-GA claim boundary. RC packages must publish under the `rc` dist-tag unless
-maintainers separately record a `latest` movement decision.
+The npm `latest` tag points at `0.8.5` by explicit maintainer decision so
+default npm installs resolve to the Controlled Availability package. This does
+not change the pre-GA claim boundary. The `ca` dist-tag is an availability
+channel marker, not a SemVer suffix.
 
 The local release train also writes a post-release integration evidence packet
 under `release/alpha-train/reports/`. It reads GitHub Release/workflow facts,
@@ -269,7 +270,7 @@ What works today, end-to-end.
 ### Python
 
 ```bash
-pip install attestplane==0.8.0b0
+pip install attestplane
 ```
 
 ```python
@@ -340,7 +341,7 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 ## Future Compliance Framework Mapping Targets
 
 The table below lists roadmap targets for future compliance mapping. The
-published v0.8.0-beta.0 artifacts and planned v0.8.5-rc.1 cut include
+published v0.8.5 Controlled Availability artifacts include
 obligation registry data and chain/report-oriented verifier predicates, but
 they do not ship a full
 ProofBundle, signed, anchored, or compliance certification verifier. All
