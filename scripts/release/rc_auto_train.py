@@ -178,13 +178,18 @@ def git_ref_exists(ref: str) -> bool:
 
 
 def remote_tag_exists(tag: str) -> bool:
-    result = subprocess.run(
-        ["git", "ls-remote", "--exit-code", "--tags", "origin", tag],
-        cwd=ROOT,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "--tags", "origin", tag],
+            cwd=ROOT,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        print(f"autodev-train rc: warning: remote tag probe timed out for {tag}: {exc}", flush=True)
+        return False
     return result.returncode == 0
 
 
@@ -729,12 +734,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.stop_file.exists():
             print(f"autodev-train rc: STOP file exists: {args.stop_file}", flush=True)
             return 0
-        result = run_once(
-            publish=not args.no_publish,
-            wait=not args.no_wait,
-            target_queue=args.target_queue,
-            dry_run=args.dry_run,
-        )
+        try:
+            result = run_once(
+                publish=not args.no_publish,
+                wait=not args.no_wait,
+                target_queue=args.target_queue,
+                dry_run=args.dry_run,
+            )
+        except Exception as exc:
+            if not args.continuous:
+                raise
+            print(f"autodev-train rc: cycle failed; will retry after poll interval: {exc}", flush=True)
+            time.sleep(args.poll_seconds)
+            continue
         if not args.continuous:
             return 0 if result else 1
         time.sleep(args.poll_seconds)
