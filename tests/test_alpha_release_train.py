@@ -1675,6 +1675,8 @@ def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
 def test_publish_typescript_workflow_uses_trusted_publishing_without_token() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "publish-typescript.yml").read_text(encoding="utf-8")
     assert "package-manager-cache: false" in workflow
+    assert "npm install -g 'npm@^11.5.1'" in workflow
+    assert "npm --version" in workflow
     assert "unset NODE_AUTH_TOKEN" in workflow
     assert "npm config delete //registry.npmjs.org/:_authToken || true" in workflow
     assert 'npm publish --access public --tag "$TAG"' in workflow
