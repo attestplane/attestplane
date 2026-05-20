@@ -53,7 +53,7 @@ def test_expected_versions(
 
 
 def test_release_cd_policy_rejects_eleventh_rc_on_same_patch() -> None:
-    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="use v0.8.6-rc.1"):
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match=r"use v0\.8\.6-rc\.1"):
         validate_release_cd.expected_versions("v0.8.5-rc.11")
 
 
