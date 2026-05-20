@@ -44,6 +44,9 @@ jobs:
       npm_version: ${{ steps.policy.outputs.npm_version }}
       npm_dist_tag: ${{ steps.policy.outputs.npm_dist_tag }}
       is_prerelease: ${{ steps.policy.outputs.is_prerelease }}
+      release_track: ${{ steps.release_gate.outputs.track }}
+      release_audit_required: ${{ steps.release_gate.outputs.audit_required }}
+      release_gate_reasons: ${{ steps.release_gate.outputs.reasons }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -65,6 +68,16 @@ jobs:
             --repo-root "$PWD" \
             --metadata-ref "${{ inputs.release_tag }}"
 
+      - name: Decide release gate track
+        id: release_gate
+        env:
+          ATTESTPLANE_RELEASE_AUDIT: ${{ vars.ATTESTPLANE_RELEASE_AUDIT }}
+        run: |
+          set -euo pipefail
+          python scripts/release/release_gate.py \
+            --release-tag "${{ inputs.release_tag }}" \
+            --channel "${{ inputs.channel }}"
+
       - name: Release CD summary
         run: |
           {
@@ -75,6 +88,9 @@ jobs:
             echo "- Python: \`${{ steps.policy.outputs.python_version }}\`"
             echo "- npm: \`${{ steps.policy.outputs.npm_version }}\`"
             echo "- npm dist-tag: \`${{ steps.policy.outputs.npm_dist_tag }}\`"
+            echo "- release_track: ${{ steps.release_gate.outputs.track }}"
+            echo "- audit_required: \`${{ steps.release_gate.outputs.audit_required }}\`"
+            echo "- release_gate_reasons: \`${{ steps.release_gate.outputs.reasons }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   python-gate:

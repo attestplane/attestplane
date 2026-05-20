@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -18,3 +17,11 @@ def test_release_cd_delegates_real_pypi_publish_to_direct_workflow() -> None:
     assert "caller_run_id:" in publish_python
     assert "run-name: publish-python" in publish_python
 
+
+def test_release_cd_records_release_gate_decision_without_blocking_fast_track() -> None:
+    release_cd = (REPO_ROOT / ".github/workflows/release-cd.yml").read_text(encoding="utf-8")
+
+    assert "id: release_gate" in release_cd
+    assert "python scripts/release/release_gate.py" in release_cd
+    assert "ATTESTPLANE_RELEASE_AUDIT: ${{ vars.ATTESTPLANE_RELEASE_AUDIT }}" in release_cd
+    assert "release_track: ${{ steps.release_gate.outputs.track }}" in release_cd
