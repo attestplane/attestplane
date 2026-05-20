@@ -39,9 +39,12 @@ case "$MODE" in
   full-auto-alpha)
     CMD="exec '$PYTHON_BIN' scripts/release/alpha_release_train.py --full-auto-alpha 2>&1 | tee '$LOG'"
     ;;
+  full-auto-rc)
+    CMD="exec '$PYTHON_BIN' scripts/release/rc_auto_train.py --continuous 2>&1 | tee '$LOG'"
+    ;;
   *)
     echo "unsupported AUTODEV_TRAIN_MODE: $MODE" >&2
-    echo "supported modes: rc-watch, full-auto-alpha" >&2
+    echo "supported modes: rc-watch, full-auto-alpha, full-auto-rc" >&2
     exit 1
     ;;
 esac
