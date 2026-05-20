@@ -53,12 +53,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org/'
           package-manager-cache: false
 
-      - name: Use npm CLI with trusted publishing support
-        run: |
-          npm install -g 'npm@^11.5.1'
-          npm --version
-          node --version
-
       - name: Install dependencies
         run: npm ci
 
@@ -81,7 +75,7 @@ jobs:
 
       - name: Publish dry-run
         if: ${{ inputs.dry_run == true }}
-        run: npm publish --provenance --access public --tag ${{ inputs.tag }} --dry-run
+        run: npm publish --access public --tag ${{ inputs.tag }} --dry-run
 
       - name: Publish (real)
         if: |
@@ -91,6 +85,8 @@ jobs:
           set -e
           TAG="${{ inputs.tag || 'alpha' }}"
           unset NODE_AUTH_TOKEN
-          npm config delete //registry.npmjs.org/:_authToken || true
+          export NPM_CONFIG_USERCONFIG="${RUNNER_TEMP}/npm-trusted-publishing.npmrc"
+          printf 'registry=https://registry.npmjs.org/\n' > "$NPM_CONFIG_USERCONFIG"
           echo "Publishing @attestplane/attestplane to npm with OIDC trusted publishing and dist-tag '$TAG'"
-          npm publish --access public --tag "$TAG"
+          npx --yes --package 'npm@^11.5.1' npm --version
+          npx --yes --package 'npm@^11.5.1' npm publish --provenance --access public --tag "$TAG"
