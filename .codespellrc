@@ -2,5 +2,7 @@
 skip = .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,scripts/check-policy.sh
 # recuse: legal term ("to disqualify oneself", used in GOVERNANCE.md conflict-of-interest section)
 # BaFin: German Federal Financial Supervisory Authority
-ignore-words-list = BaFin,attestplane,nd,recuse,recused,recusal
+# intoto: in-toto attestation standard (SLSA / Sigstore ecosystem). Appears
+# in filenames (`*.intoto.jsonl`) and as a sub-module identifier; not "into".
+ignore-words-list = BaFin,attestplane,nd,recuse,recused,recusal,intoto
 check-hidden = true

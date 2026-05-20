@@ -1,0 +1,163 @@
+<!--
+SPDX-FileCopyrightText: 2026 The Attestplane Authors
+SPDX-License-Identifier: Apache-2.0
+-->
+
+# Verifying Attestplane release signatures and provenance
+
+Attestplane signs new release artifacts with Sigstore keyless cosign and
+attaches SLSA Build L3 provenance through the upstream
+[slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator).
+This document gives the end-to-end commands a downstream consumer or
+third-party auditor can run to verify a published release.
+
+## Scope and disclaimers
+
+- **Forward-only.** Signing and provenance apply to new releases
+  published after [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md)
+  lands. Releases tagged before that decision (including all of
+  `v0.0.x`, `v0.7.x`, `v0.8.x`, and the early `v0.9.x` line) are not
+  retroactively signed and were never retagged for signing.
+- **No legal compliance claim.** Verifying a signature confirms the
+  artifact was produced by the Attestplane release workflow on
+  GitHub Actions. It does not assert EU AI Act compliance,
+  certification, or any regulatory conclusion for any deployment
+  that consumes the artifact.
+- **No production-readiness claim.** The substrate remains alpha
+  while pre-`1.0` versions are published; signature evidence does not
+  change that.
+
+## Prerequisites
+
+Install the verification tooling once:
+
+```sh
+# cosign for signature verification (https://docs.sigstore.dev/cosign/installation/)
+brew install cosign        # macOS
+# or follow upstream install docs for Linux / Windows
+
+# slsa-verifier for provenance verification
+go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@v2.7.1
+```
+
+## Step 1 — Download the release assets
+
+Pick the release tag you intend to verify and download every published
+asset for it. Example for tag `vX.Y.Z`:
+
+```sh
+TAG=vX.Y.Z
+mkdir -p attestplane-${TAG} && cd attestplane-${TAG}
+
+gh release download "${TAG}" \
+  --repo attestplane/attestplane \
+  --pattern "*"
+ls -1
+```
+
+A signed release contains, at minimum:
+
+| Asset class            | Examples                                      |
+|------------------------|-----------------------------------------------|
+| Python wheel + sdist   | `attestplane-X.Y.Z-py3-none-any.whl`, `attestplane-X.Y.Z.tar.gz` |
+| npm tarball            | `attestplane-attestplane-X.Y.Z.tgz`           |
+| CycloneDX SBOMs        | `*.cdx.json`, `*.cdx.xml`                      |
+| Sigstore bundles       | `*.cosign.bundle`, `*.sig`, `*.pem`            |
+| SLSA provenance        | `attestplane-${TAG}.intoto.jsonl`              |
+
+If the signature bundles or the `.intoto.jsonl` provenance file are
+absent, the release pre-dates ADR-0018 and is not covered by this
+document.
+
+## Step 2 — Verify each artifact with cosign keyless
+
+For every primary artifact (wheel, sdist, npm tarball, SBOM file),
+verify the keyless signature bundle:
+
+```sh
+TAG=vX.Y.Z
+REPO=attestplane/attestplane
+
+for artifact in *.whl *.tar.gz *.tgz *.cdx.json *.cdx.xml; do
+  [ -e "$artifact" ] || continue
+  cosign verify-blob \
+    --bundle "${artifact}.cosign.bundle" \
+    --certificate-identity-regexp \
+      "^https://github.com/${REPO}/\.github/workflows/sign-release\.yml@refs/tags/${TAG}\$" \
+    --certificate-oidc-issuer \
+      "https://token.actions.githubusercontent.com" \
+    "$artifact"
+done
+```
+
+A successful run prints `Verified OK` for each artifact. Any failure
+must be treated as a verification failure for the whole release: do
+not selectively trust partial results.
+
+The `--certificate-identity-regexp` value pins the verifier to
+**signatures produced by Attestplane's own `sign-release.yml` workflow
+at the exact requested tag**. Substituting a different workflow,
+repository, or tag breaks verification by design.
+
+## Step 3 — Verify SLSA Build L3 provenance
+
+The `*.intoto.jsonl` file is the in-toto attestation produced by the
+upstream slsa-github-generator. Validate it with slsa-verifier against
+each artifact:
+
+```sh
+TAG=vX.Y.Z
+PROVENANCE="attestplane-${TAG}.intoto.jsonl"
+
+for artifact in *.whl *.tar.gz *.tgz *.cdx.json *.cdx.xml; do
+  [ -e "$artifact" ] || continue
+  slsa-verifier verify-artifact "$artifact" \
+    --provenance-path "${PROVENANCE}" \
+    --source-uri github.com/attestplane/attestplane \
+    --source-tag "${TAG}"
+done
+```
+
+`slsa-verifier` checks that:
+
+- The artifact's SHA-256 digest appears as a subject in the
+  attestation.
+- The attestation was issued by the pinned upstream generator
+  workflow at the recorded commit.
+- The source repository and tag match what was requested.
+
+If any of those checks fail, the artifact is not provenance-bound to
+this release and must not be deployed on the basis of this attestation.
+
+## Step 4 — (Optional) Reproduce the CycloneDX SBOM digest
+
+Each release attaches CycloneDX SBOMs for the Python and TypeScript
+SDKs. Independent reproduction is out of scope for this guide, but
+the SBOMs are themselves signed (Step 2) and provenance-bound (Step 3)
+so downstream consumers can reason about the build inputs without
+trusting any Attestplane-hosted service.
+
+## What signature evidence does and does not buy you
+
+| Question                                                        | Answer                                                                                   |
+|-----------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| Was this artifact built by the Attestplane release workflow?    | Yes, if cosign verify-blob passes against the pinned identity.                            |
+| Was it built from the tagged source tree?                       | Yes, if slsa-verifier passes against the source-tag.                                      |
+| Is the artifact safe to deploy in a high-risk AI system?        | Out of scope. Provenance is supply-chain evidence, not a deployment safety conclusion.    |
+| Does Attestplane certify EU AI Act compliance for the consumer? | No. See [`docs/spec/aia-12-aligned-profile.md`](../spec/aia-12-aligned-profile.md) — Attestplane provides Article-12-aligned evidence substrate primitives, not compliance certification. |
+| Can I rely on a hosted Attestplane API for verification?        | No. Verification must use the offline tooling above; hosted endpoints are convenience only, per [`docs/architecture/verifier_independence.md`](../architecture/verifier_independence.md). |
+
+## Reporting verification failures
+
+If `cosign verify-blob` or `slsa-verifier verify-artifact` fails on a
+published release with this evidence attached, open an issue on
+`https://github.com/attestplane/attestplane/issues` with:
+
+- The release tag.
+- The exact command invocation and its error output.
+- The artifact filename and its SHA-256 digest.
+- Whether the `.cosign.bundle` and `*.intoto.jsonl` files were
+  present and downloaded successfully.
+
+Treat any unexplained verification failure as a release-integrity
+incident until proven otherwise.

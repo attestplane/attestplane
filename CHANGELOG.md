@@ -11,6 +11,29 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### Supply-chain evidence regime
+
+- Added ADR-0018 committing to Sigstore keyless cosign signing and
+  SLSA Build L3 provenance via the upstream
+  `slsa-framework/slsa-github-generator` for new releases. The
+  decision is forward-only; existing tags are not retagged or
+  retroactively signed.
+- Added `.github/workflows/slsa-provenance.yml`, which hashes the
+  release assets of a tag and invokes the pinned slsa-github-generator
+  generic generator (v2.1.0, commit
+  `f7dd8c54c2067bafc12ca7a55595d5ee9b75204a`). The workflow defaults
+  to dry-run; `execute=true` is required to upload the
+  `attestplane-<TAG>.intoto.jsonl` attestation to the release.
+- Added a `workflow_call` trigger to `.github/workflows/sign-release.yml`
+  so future automation can invoke signing from `release-cd.yml`
+  without duplicating logic. The default dry-run behaviour and the
+  `execute=true` gate are unchanged.
+- Added `docs/release/verifying-signatures.md`, a downstream
+  verification recipe using `cosign verify-blob` and
+  `slsa-verifier verify-artifact`. The trust root is upstream
+  Sigstore and slsa-verifier; no Attestplane-hosted API is in the
+  verification path.
+
 ### Preparing v0.8.5 Controlled Availability
 
 - Promoted the `v0.8.5-rc.5` evidence set into the planned `v0.8.5`

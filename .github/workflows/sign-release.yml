@@ -19,6 +19,15 @@ on:
         required: false
         default: false
         type: boolean
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      execute:
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
