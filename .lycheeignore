@@ -39,3 +39,9 @@ https://www\.eba\.europa\.eu/.*
 # The site is real but can reset connections from GitHub-hosted runners
 # (observed 2026-05-21), so keep release-train CI focused on owned links.
 https://www\.contributor-covenant\.org/translations
+
+# OpenSSF Scorecard viewer pages are referenced from security docs. The public
+# viewer can fail GitHub-hosted runner TCP connection checks while the pinned
+# ossf-scorecard workflow and api.scorecard.dev badge endpoint remain the
+# release-train evidence source.
+https://scorecard\.dev/.*
