@@ -43,6 +43,7 @@ def test_parse_opus_issue_sections_into_planned_tasks() -> None:
     assert "priority-P0" in tasks[0].labels
     assert "area:release-integrity" in tasks[0].labels
     assert "Source planning issue: #61" in tasks[1].body
+    assert "Plan ID: `" in tasks[1].body
     assert "priority:P1" in tasks[1].labels
     assert "area:docs" in tasks[1].labels
 
@@ -177,3 +178,57 @@ def test_create_issues_fetches_uploaded_github_issues(monkeypatch) -> None:
     ]
     assert any(call[:2] == ["issue", "create"] for call in calls)
     assert calls[-1][:2] == ["issue", "list"]
+
+
+def test_create_issues_reuses_legacy_unstructured_issue_without_plan_id(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    task = plan_to_issues.PlannedTask(
+        title="[P1][ci] Stabilize architecture audit",
+        body="Source planning issue: #100\nPlan ID: `new-plan`\n",
+        priority="P1",
+        labels=("planned-task", "priority:P1"),
+        plan_id="new-plan",
+    )
+
+    def fake_run_gh(args: list[str], *, retries: int = 0, retry_delay: float = 2.0) -> str:
+        calls.append(args)
+        if args[:2] == ["issue", "list"] and "--state" in args and "all" in args:
+            return json.dumps(
+                [
+                    {
+                        "number": 103,
+                        "title": "[P1][ci] Stabilize architecture audit",
+                        "url": "https://github.example/issues/103",
+                    }
+                ]
+            )
+        if args[:2] == ["issue", "view"]:
+            return "Source planning issue: #100\nGenerated from accepted development plan.\n"
+        if args[:2] == ["issue", "list"] and "planned-task" in args:
+            return json.dumps(
+                [
+                    {
+                        "number": 103,
+                        "title": "[P1][ci] Stabilize architecture audit",
+                        "url": "https://github.example/issues/103",
+                        "labels": [{"name": "planned-task"}, {"name": "priority:P1"}],
+                        "body": "Source planning issue: #100\nGenerated from accepted development plan.\n",
+                    }
+                ]
+            )
+        raise AssertionError(args)
+
+    monkeypatch.setattr(plan_to_issues, "run_gh", fake_run_gh)
+
+    uploaded = plan_to_issues.create_issues([task], source_issue=100)
+
+    assert uploaded == [
+        {
+            "number": 103,
+            "title": "[P1][ci] Stabilize architecture audit",
+            "url": "https://github.example/issues/103",
+            "labels": ["planned-task", "priority:P1"],
+        }
+    ]
+    assert not any(call[:2] == ["issue", "create"] for call in calls)

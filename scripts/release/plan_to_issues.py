@@ -169,6 +169,8 @@ def parse_plan(markdown: str, source_issue: int) -> list[PlannedTask]:
         )
         if f"Source planning issue: #{source_issue}" not in body:
             body = f"Source planning issue: #{source_issue}\n{body}".strip()
+        if "Plan ID:" not in body:
+            body = f"{body}\nPlan ID: `{plan_id}`".strip()
         body = body + "\n\nGenerated from accepted development plan."
         tasks.append(
             PlannedTask(
@@ -214,7 +216,10 @@ def issue_exists(title: str, source_issue: int, plan_id: str | None = None) -> s
     for item in json.loads(stdout or "[]"):
         if item.get("title") == title:
             body = run_gh(["issue", "view", str(item["number"]), "--json", "body", "--jq", ".body"], retries=2)
-            if f"Source planning issue: #{source_issue}" in body and (plan_id is None or f"Plan ID: `{plan_id}`" in body):
+            has_source = f"Source planning issue: #{source_issue}" in body
+            has_plan = plan_id is None or f"Plan ID: `{plan_id}`" in body
+            legacy_unstructured = plan_id is not None and "Plan ID:" not in body
+            if has_source and (has_plan or legacy_unstructured):
                 return str(item.get("url") or item.get("number") or "")
     return None
 
@@ -246,7 +251,7 @@ def issue_payload_from_github(item: dict[str, object]) -> dict[str, object]:
     }
 
 
-def fetch_uploaded_issues(source_issue: int, plan_ids: set[str]) -> list[dict[str, object]]:
+def fetch_uploaded_issues(source_issue: int, plan_ids: set[str], titles: set[str] | None = None) -> list[dict[str, object]]:
     stdout = run_gh(
         [
             "issue",
@@ -270,7 +275,9 @@ def fetch_uploaded_issues(source_issue: int, plan_ids: set[str]) -> list[dict[st
         body = item.get("body", "")
         if not isinstance(body, str) or source_marker not in body:
             continue
-        if plan_ids and not any(f"Plan ID: `{plan_id}`" in body for plan_id in plan_ids):
+        has_matching_plan = any(f"Plan ID: `{plan_id}`" in body for plan_id in plan_ids)
+        legacy_matching_title = "Plan ID:" not in body and (not titles or str(item.get("title") or "") in titles)
+        if plan_ids and not (has_matching_plan or legacy_matching_title):
             continue
         uploaded.append(issue_payload_from_github(item))
     return sorted(uploaded, key=lambda issue: int(issue.get("number") or 0))
@@ -280,7 +287,8 @@ def create_issues(tasks: list[PlannedTask], source_issue: int) -> list[dict[str,
     for task in tasks:
         create_issue(task, source_issue)
     plan_ids = {task.plan_id for task in tasks if task.plan_id}
-    uploaded = fetch_uploaded_issues(source_issue, plan_ids)
+    titles = {task.title for task in tasks}
+    uploaded = fetch_uploaded_issues(source_issue, plan_ids, titles)
     if not uploaded:
         raise RuntimeError("planned-task issues were created but could not be fetched back from GitHub")
     return uploaded
