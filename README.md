@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
-[![PyPI](https://img.shields.io/badge/PyPI-attestplane%200.8.5-blue)](https://pypi.org/project/attestplane/)
+[![PyPI](https://img.shields.io/pypi/v/attestplane?label=PyPI)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
 [![REUSE compliant](https://img.shields.io/badge/REUSE-3.3%20compliant-green)](REUSE.toml)
@@ -14,14 +14,15 @@
 [![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplane/commits/main)
 [![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplane/stargazers)
-[![Controlled Availability](https://img.shields.io/badge/status-controlled--availability-blue.svg)](#roadmap)
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
-> **Controlled Availability.** The current stable package cut is `v0.8.5`.
-> Default PyPI and npm installs are intended to resolve to `0.8.5`, with npm
-> `latest` and `ca` pointing at this version. This is a controlled
-> availability cut, not GA, not a production-readiness claim, and not a
-> compliance certification.
+> **v1.0.x pre-GA tag line.** Not GA, not production-ready, not a
+> compliance certification. v1.0 GA target 2026-08-15 per
+> [SECURITY.md](SECURITY.md). Supply-chain evidence (Sigstore keyless +
+> SLSA Build L3) live since v1.0.9 per
+> [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md);
+> cosign+SLSA verification recipes in
+> [docs/release/verifying-signatures.md](docs/release/verifying-signatures.md).
 >
 > **Current verifier scope.** Attestplane is a pre-GA dual-SDK
 > tamper-evident evidence substrate. It provides restricted
@@ -65,7 +66,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; **v0.8.5** is the current Controlled Availability cut and carries the public API and wire-format freeze documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md):
+v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; the project is now on the **v1.0.x pre-GA tag line** — not GA, not production-ready, not a compliance certification. v1.0 GA target 2026-08-15 per [SECURITY.md](SECURITY.md). The public API and wire-format freeze is documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md). Supply-chain evidence (Sigstore keyless + SLSA Build L3) has been live since **v1.0.9** per [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md); cosign+SLSA verification recipes in [docs/release/verifying-signatures.md](docs/release/verifying-signatures.md). The current pre-GA line ships:
 
 - Verifier predicates + `attestplane` CLI for chain/report-oriented checks with metadata and `policy_trace_refs` closure; the CLI does not perform full ProofBundle, signature, anchor, or compliance certification verification
 - JSONL storage backend (newline-terminated records, optional fsync,
@@ -82,7 +83,7 @@ v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic seri
 - Settlement-precondition + replay-manifest verifier predicates (read-only walkers, never re-execute)
 - Obligation registries for EU AI Act Article 12 + DORA Article 8
 
-The current Controlled Availability line tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains pre-GA substrate work and is not a legal compliance certification.
+The v1.0.x pre-GA tag line tightens verifier conformance, stable error taxonomy, retention/deletion proof markers, deterministic CLI JSON, and release-integrity evidence. It remains pre-GA substrate work and is not a legal compliance certification.
 
 Cross-language byte-equality is enforced by frozen conformance fixtures (Python ↔ TypeScript). Green tests indicate substrate conformance, not production readiness or regulatory compliance.
 
@@ -110,7 +111,7 @@ Attestplane is designed to live underneath, not replace, the AI observability an
 | Standards (transparency log) | [Sigstore / Rekor](https://www.sigstore.dev/) | Public transparency-log anchor (alongside RFC-3161 TSAs) | **Shipped** on `main` ([ADR-0006](docs/adr/0006-sigstore-rekor-redundant-anchor.md)) |
 | Standards (wire format) | [in-toto Statement v1](https://github.com/in-toto/attestation) / [DSSE](https://github.com/secure-systems-lab/dsse) | Native serialization of Attestplane evidence events | **Shipped** on `main` |
 | Standards (supply chain) | [SLSA](https://slsa.dev/) | Architectural framing inspiration; not membership | N/A — independent project |
-| Standards (this project's protocol) | **`AP-EVD/1.0`** Attestplane Evidence Protocol ([ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md)) | Two-sided conformance protocol — Side B adapters target it; Side A verifiers cite it | **Shipped** v1.0 (founder + 14-day RFC governance; OpenSSF/CNCF donation path reserved) |
+| Standards (this project's protocol) | **`AP-EVD/1.0`** Attestplane Evidence Protocol ([ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md)) | Two-sided conformance protocol — Side B adapters target it; Side A verifiers cite it | Protocol v1.0 published in-repo (AP-EVD/1.0 conformance frozen); not GA package release (founder + 14-day RFC governance; OpenSSF/CNCF donation path reserved) |
 | AI governance (US) | [Credo AI](https://www.credo.ai/), [Trustible](https://www.trustible.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
 | AI governance (UK/EU) | [Holistic AI](https://www.holisticai.com/), [Modulos](https://www.modulos.ai/), [Saidot](https://www.saidot.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
 | TSA (free/OSS) | [FreeTSA](https://freetsa.org/) | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.3-alpha line) |
@@ -152,7 +153,7 @@ Integration with each partner does **not** imply endorsement by the partner. The
 │          │                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  SDKs                                                         │   │
-│  │  Python (0.8.5)     │  TypeScript (0.8.5)                    │   │
+│  │  Python (v1.0.x)    │  TypeScript (v1.0.x)                   │   │
 │  │  FastAPI / Express / NestJS / Django helpers (M5)             │   │
 │  │  Rust crate (M7)                                              │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -173,18 +174,23 @@ Integration with each partner does **not** imply endorsement by the partner. The
 
 ---
 
-## Current release posture: Controlled Availability
+## Current release posture: v1.0.x pre-GA tag line
 
-The current Controlled Availability line is published as stable package
-artifacts: Python `attestplane==0.8.5` is published to PyPI, and
-`@attestplane/attestplane@0.8.5` is published to npm under the `latest`
-and `ca` dist-tags. The previous beta line remains reproducible as
-`0.8.0-beta.0`; the latest RC evidence remains available as `v0.8.5-rc.5`
-(`0.8.5rc5` on PyPI, `0.8.5-rc.5` on npm under the `rc` dist-tag).
+The project is currently on the **v1.0.x pre-GA tag line**: not GA, not
+production-ready, not a compliance certification. The **v1.0 GA target
+is 2026-08-15** per [SECURITY.md](SECURITY.md). The historical beta
+line remains reproducible as `0.8.0-beta.0`; the prior Controlled
+Availability cut `v0.8.5` is superseded by the v1.0.x pre-GA tag line.
 
-Controlled Availability freezes public SDK exports and wire-format behavior under
+Supply-chain evidence (Sigstore keyless cosign bundles + SLSA Build L3
+provenance) has been live on every release since **v1.0.9** per
+[ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md);
+downstream cosign and slsa-verifier recipes are documented in
+[docs/release/verifying-signatures.md](docs/release/verifying-signatures.md).
+
+The v1.0.x line freezes public SDK exports and wire-format behavior under
 [ADR-0016](docs/adr/0016-rc-api-freeze.md) and the [compatibility policy](docs/spec/compat.md).
-This line expands the core with schemas, sidecar primitives, storage,
+It expands the core with schemas, sidecar primitives, storage,
 adapters, verifier predicates, public API drift gates, storage compatibility
 policy, and release provenance hygiene, but it is not GA, not production-ready,
 and not compliance-ready.
@@ -210,9 +216,9 @@ The current `attestplane verify` command is deliberately narrow:
 - It does not verify signatures or anchors.
 - It does not issue compliance certification.
 
-## Published beta, RC, and CA status
+## Published v1.0.x pre-GA status
 
-Implemented in the published beta artifacts:
+Implemented in the published v1.0.x pre-GA artifacts:
 
 - Python SDK
 - TypeScript SDK
@@ -222,7 +228,7 @@ Implemented in the published beta artifacts:
 - CI / CodeQL / OSV / SBOM / reproducible-build hygiene
 
 Designed and merged on `main` since v0.0.1-alpha (pre-GA substrate surface
-through the v0.8.5 Controlled Availability line; not a production claim):
+through the current v1.0.x pre-GA tag line; not a production claim):
 
 - [ADR-0004 — AIOS-to-Attestplane scope boundary](docs/adr/0004-aios-to-attestplane-boundary.md): substrate-vs-execution-plane separation locked
 - [ADR-0008 — Evidence event taxonomy v1](docs/adr/0008-evidence-event-taxonomy-v1.md): twelve evidence event types + the [taxonomy spec](docs/spec/evidence-event-taxonomy-v1.md)
@@ -243,15 +249,13 @@ Not yet implemented:
 
 | Artifact | Channel | Verify |
 |---|---|---|
-| `attestplane==0.8.5` | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing |
-| `@attestplane/attestplane@0.8.5` | [npm latest/ca dist-tags](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC |
-| `v0.8.5-rc.5` | latest RC evidence cut | npm `rc`; do not reuse versions |
-| GitHub Release | `v0.8.5` | wheel + sdist + npm tarball + checksums + artifact manifest |
+| `attestplane` (latest v1.0.x) | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing; cosign + SLSA Build L3 since v1.0.9 |
+| `@attestplane/attestplane` (latest v1.0.x) | [npm](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC; cosign + SLSA Build L3 since v1.0.9 |
+| GitHub Releases | [`v1.0.x` tags](https://github.com/attestplane/attestplane/releases) | wheel + sdist + npm tarball + checksums + artifact manifest + cosign bundles + `.intoto.jsonl` SLSA provenance |
 
-The npm `latest` tag points at `0.8.5` by explicit maintainer decision so
-default npm installs resolve to the Controlled Availability package. This does
-not change the pre-GA claim boundary. The `ca` dist-tag is an availability
-channel marker, not a SemVer suffix.
+Default PyPI and npm installs resolve to the latest v1.0.x tag. This is
+the pre-GA tag line; resolving to it does not change the pre-GA claim
+boundary. v1.0 GA target 2026-08-15 per [SECURITY.md](SECURITY.md).
 
 The local release train also writes a post-release integration evidence packet
 under `release/alpha-train/reports/`. It reads GitHub Release/workflow facts,
@@ -342,9 +346,8 @@ The Python and TypeScript snippets above produce **byte-identical** `event_hash`
 ## Future Compliance Framework Mapping Targets
 
 The table below lists roadmap targets for future compliance mapping. The
-published v0.8.5 Controlled Availability artifacts include
-obligation registry data and chain/report-oriented verifier predicates, but
-they do not ship a full
+published v1.0.x pre-GA artifacts include obligation registry data and
+chain/report-oriented verifier predicates, but they do not ship a full
 ProofBundle, signed, anchored, or compliance certification verifier. All
 entries below carry `implementation_status` values from the locked four-value
 enum (`mapping_target` / `designed_toward` / `field_supported` /
@@ -367,12 +370,12 @@ enum (`mapping_target` / `designed_toward` / `field_supported` /
 
 | Milestone | Target | Scope |
 |---|---|---|
-| **M5 — v0.8.x RC hardening** | 2026-08-15 | Self-hosted OSS substrate · full CLI ProofBundle verification · FastAPI/Express helpers · expanded framework mapping · production-storage design review |
+| **M5 — v1.0 GA** | 2026-08-15 | Self-hosted OSS substrate · full CLI ProofBundle verification · FastAPI/Express helpers · expanded framework mapping · production-storage design review |
 | **M6 — Cloud preview** | 2026-09 | Attestplane Cloud hosted TSA + Sigstore Rekor mirror + framework auto-update · free for EU deployments · Design Partner Program launch |
 | **M7 — Client-side DP aggregation** | 2026-Q4 | Client-side differential privacy SDK (Rust + TypeScript + Python) · ε-configurable Laplace noise · regulator dashboard preview · customer attestation data never leaves customer control plane |
 | **M8 — Paid tier** | 2027-Q1+ | Pro / Team / Enterprise paid tiers · SSO/SCIM/RBAC · SLA · first FTE hire |
 
-Current status: **release-candidate preparation** — community velocity stage. Contributions,
+Current status: **v1.0.x pre-GA tag line; v1.0 GA target 2026-08-15** — community velocity stage. Contributions,
 issue reports, and deployment feedback are the project's most valuable input
 right now.
 

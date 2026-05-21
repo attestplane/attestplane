@@ -11,6 +11,24 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### Maturity language
+
+- Unified the project's external version-stage language across
+  README.md, this CHANGELOG, SECURITY.md, and `sdk/python/pyproject.toml`
+  to the single anchor phrasing: **v1.0.x pre-GA tag line. Not GA, not
+  production-ready, not a compliance certification.** v1.0 GA target
+  2026-08-15 per [SECURITY.md](SECURITY.md) is unchanged. Supply-chain
+  evidence (Sigstore keyless + SLSA Build L3) has been live since
+  v1.0.9 per [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md);
+  cosign+SLSA verification recipes in
+  [docs/release/verifying-signatures.md](docs/release/verifying-signatures.md).
+- Removed the stale `PyPI-attestplane%200.8.5` README badge and the
+  pre-existing "Controlled Availability" status badge; the dynamic
+  `img.shields.io/pypi/v/attestplane` badge now reflects the current
+  PyPI cut. README narrative and SDK architecture diagram align to the
+  v1.0.x pre-GA tag line. No earlier per-release CHANGELOG section
+  modified; no retag.
+
 ### First complete signed release: v1.0.9
 
 - Tag `v1.0.9` is the project's first GitHub Release with **both**
