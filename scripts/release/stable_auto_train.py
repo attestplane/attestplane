@@ -20,6 +20,7 @@ because PyPI has no dist-tag concept.
 from __future__ import annotations
 
 import argparse
+from datetime import UTC, datetime
 import hashlib
 import importlib.util
 import json
@@ -1309,6 +1310,10 @@ def wait_for_push_ci(head_sha: str) -> None:
     raise TimeoutError(f"timed out waiting for push CI workflows for {head_sha}")
 
 
+def utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) -> bool:
     """Dispatch a signing-class workflow with execute=true and wait for completion.
 
@@ -1318,6 +1323,7 @@ def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) ->
     cycle (forward-only per ADR-0018); the caller records signed/slsa state on
     PublicationStatus so a follow-up cycle can re-trigger without re-publishing.
     """
+    dispatch_started_at = utc_now_iso()
     try:
         run(
             [
@@ -1346,7 +1352,7 @@ def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) ->
     run_id = ""
     while time.monotonic() < deadline:
         try:
-            run_id = capture(
+            raw_runs = capture(
                 [
                     "gh",
                     "run",
@@ -1358,12 +1364,21 @@ def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) ->
                     "--limit",
                     "20",
                     "--json",
-                    "databaseId,headBranch,status",
-                    "--jq",
-                    '.[] | select(.headBranch == "main") | .databaseId',
+                    "createdAt,databaseId,headBranch,status",
                 ]
-            ).splitlines()[0]
-        except (subprocess.CalledProcessError, IndexError):
+            )
+            runs = json.loads(raw_runs or "[]")
+            candidates = [
+                run
+                for run in runs
+                if run.get("headBranch") == "main"
+                and str(run.get("createdAt", "")) >= dispatch_started_at
+                and run.get("databaseId")
+            ]
+            if not candidates:
+                raise IndexError("new signing workflow run not visible yet")
+            run_id = str(candidates[0]["databaseId"])
+        except (subprocess.CalledProcessError, IndexError, json.JSONDecodeError):
             time.sleep(5)
             continue
         if run_id:

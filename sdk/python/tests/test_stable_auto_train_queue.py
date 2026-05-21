@@ -736,7 +736,17 @@ def test_trigger_sign_release_returns_true_on_success(monkeypatch: pytest.Monkey
     calls: list[list[str]] = []
 
     monkeypatch.setattr(stable_auto_train, "run", lambda argv, **kwargs: calls.append(argv))
-    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "12345")
+    monkeypatch.setattr(
+        stable_auto_train,
+        "capture",
+        lambda argv: (
+            "["
+            '{"databaseId":11111,"headBranch":"main","createdAt":"2026-05-21T07:50:00Z"},'
+            '{"databaseId":12345,"headBranch":"main","createdAt":"2026-05-21T08:00:01Z"}'
+            "]"
+        ),
+    )
+    monkeypatch.setattr(stable_auto_train, "utc_now_iso", lambda: "2026-05-21T08:00:00Z")
     monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0, 2.0]).__next__)
     monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
 
@@ -754,7 +764,12 @@ def test_trigger_sign_release_returns_false_on_workflow_failure(monkeypatch: pyt
             raise subprocess.CalledProcessError(1, argv)
 
     monkeypatch.setattr(stable_auto_train, "run", fake_run)
-    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "99999")
+    monkeypatch.setattr(
+        stable_auto_train,
+        "capture",
+        lambda argv: '[{"databaseId":99999,"headBranch":"main","createdAt":"2026-05-21T08:00:01Z"}]',
+    )
+    monkeypatch.setattr(stable_auto_train, "utc_now_iso", lambda: "2026-05-21T08:00:00Z")
     monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0]).__next__)
     monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
 
@@ -765,7 +780,12 @@ def test_trigger_slsa_provenance_returns_true_on_success(monkeypatch: pytest.Mon
     calls: list[list[str]] = []
 
     monkeypatch.setattr(stable_auto_train, "run", lambda argv, **kwargs: calls.append(argv))
-    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "67890")
+    monkeypatch.setattr(
+        stable_auto_train,
+        "capture",
+        lambda argv: '[{"databaseId":67890,"headBranch":"main","createdAt":"2026-05-21T08:00:01Z"}]',
+    )
+    monkeypatch.setattr(stable_auto_train, "utc_now_iso", lambda: "2026-05-21T08:00:00Z")
     monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0, 2.0]).__next__)
     monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
 
