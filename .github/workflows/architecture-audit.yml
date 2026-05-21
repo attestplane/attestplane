@@ -34,6 +34,10 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   ARCHITECTURE_AUDIT_PYTHON: python3.11
+  HTTP_PROXY: http://127.0.0.1:7897
+  HTTPS_PROXY: http://127.0.0.1:7897
+  ALL_PROXY: http://127.0.0.1:7897
+  NO_PROXY: 127.0.0.1,localhost
 
 jobs:
   prepare:
