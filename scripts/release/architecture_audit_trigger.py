@@ -25,6 +25,7 @@ STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 RE_RELEASE_PREP = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.\d+(-\w+)?$")
 AUDIT_LABEL = "architecture-audit"
 PLAN_LABEL = "development-plan"
+TASK_LABEL = "planned-task"
 MEDIUM_UPGRADE_LABEL = "upgrade-medium"
 ARCHITECTURE_UPGRADE_LABEL = "upgrade-architecture"
 AUDITED_LABEL = "audited"
@@ -333,7 +334,10 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         "```",
         "",
         "The review should first produce a concise plan, then decompose the",
-        "accepted plan into GitHub issues. Daily small upgrades stay on the",
+        "accepted plan into GitHub issues. No planned task should be implemented",
+        "directly from this planning issue or from chat; every accepted task must",
+        f"first be created as its own GitHub issue with `{TASK_LABEL}` plus the",
+        "appropriate priority/module labels. Daily small upgrades stay on the",
         "release train; `x.5.0` milestones should focus on medium product and",
         "architecture gaps; integer `x.0.0` milestones should focus on",
         "architecture-level redesign, compatibility, security boundaries, and",
@@ -361,11 +365,29 @@ def render_issue_body(manifest: dict[str, object]) -> str:
             "## Issue-First Completion Contract",
             "",
             "1. Run the Opus/maintainer plan review from this issue.",
-            "2. Create concrete follow-up GitHub issues for accepted P0/P1/P2 work.",
-            "3. Link those issues back here.",
+            f"2. Create one GitHub issue per accepted P0/P1/P2 task with `{TASK_LABEL}`.",
+            "3. Link every generated task issue back here before implementation starts.",
             "4. Close this planning issue with labels "
             f"`{PLAN_LABEL}`, `{AUDIT_LABEL}`, and `{AUDITED_LABEL}` only after",
             "the follow-up issue set is created and the milestone owner accepts the plan.",
+            "",
+            "## Planned Task Issue Template",
+            "",
+            "Use this shape for each generated task issue:",
+            "",
+            "```markdown",
+            "Title: [P1][module] Concrete task title",
+            "",
+            "Source planning issue: #<this issue>",
+            "Priority: P0 | P1 | P2",
+            "Affected modules:",
+            "Acceptance criteria:",
+            "Validation commands:",
+            "Rollout / migration notes:",
+            "```",
+            "",
+            "Execution rule: work only starts from those generated task issues, one",
+            "issue at a time, with validation recorded on the task issue before close.",
         ],
     )
     return "\n".join(lines) + "\n"

@@ -60,6 +60,10 @@ jobs:
             --description "Milestone planning issue generated from release cadence" \
             --color "1d76db" \
             --force
+          gh label create planned-task \
+            --description "Executable task generated from an accepted plan" \
+            --color "0052cc" \
+            --force
           gh label create architecture-audit \
             --description "Architecture gap audit milestone" \
             --color "5319e7" \
