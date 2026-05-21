@@ -21,6 +21,10 @@ certifi = "certifi"
 CNA = "CNA"
 cna = "cna"
 CNAs = "CNAs"
+# `fpr` is the GPG colon-format field name for "fingerprint" (see
+# `gpg --with-colons` output, used in `awk -F: '/^fpr:/ ...'` pipelines) and
+# the `<fpr>` placeholder in docs/security/gpg-key-rotation-playbook.md.
+fpr = "fpr"
 
 [default.extend-identifiers]
 # BaFin = Bundesanstalt fur Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority).

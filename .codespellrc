@@ -7,5 +7,8 @@ skip = .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,script
 # in filenames (`*.intoto.jsonl`) and as a sub-module identifier; not "into".
 # afterAll: vitest test-lifecycle API.
 # CNA / CNAs: CVE Numbering Authority (MITRE CVE Program term). Not "CAN".
-ignore-words-list = BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll,cna,CNA,CNAs
+# fpr: GPG colon-format field name for "fingerprint" (gpg --with-colons output;
+# also the `<fpr>` placeholder in docs/security/gpg-key-rotation-playbook.md).
+# Not the English word "for".
+ignore-words-list = BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll,cna,CNA,CNAs,fpr
 check-hidden = true

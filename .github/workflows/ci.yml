@@ -53,8 +53,10 @@ jobs:
           # in-toto is the attestation-format standard (SLSA/Sigstore ecosystem).
           # afterAll is a vitest API name. CNA/CNAs = CVE Numbering Authority
           # (MITRE CVE Program term, appears in docs/security/mitre-cna-application.md).
+          # fpr = GPG colon-format field name for "fingerprint" (gpg --with-colons
+          # output) and the <fpr> placeholder in the GPG key rotation playbook.
           # All are valid project terms.
-          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll,cna,CNA,CNAs
+          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll,cna,CNA,CNAs,fpr
           skip: .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,sdk/typescript/dist
 
   link-check:
