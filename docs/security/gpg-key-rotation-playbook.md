@@ -29,11 +29,11 @@ maintainer's cosign OIDC identity does not expose past CVE reports.
 
 ## 2. Key shape
 
-* Primary: **ed25519**, capability `cert` only.
-* Signing subkey: **ed25519**, capability `sign`.
-* Encryption subkey: **cv25519**, capability `encrypt`.
-* UID: `Attestplane Security <security@attestplane.com>`.
-* Expiry: **2 years** from generation. Renew (extend `Expire-Date`) at most
+- Primary: **ed25519**, capability `cert` only.
+- Signing subkey: **ed25519**, capability `sign`.
+- Encryption subkey: **cv25519**, capability `encrypt`.
+- UID: `Attestplane Security <security@attestplane.com>`.
+- Expiry: **2 years** from generation. Renew (extend `Expire-Date`) at most
   60 days before expiry; never let the live key lapse.
 
 ## 3. Generation — first key
@@ -84,19 +84,19 @@ gpg --output "revoke-<fpr>.asc" --gen-revoke security@attestplane.com
 
 Store **two independent copies**:
 
-* Encrypted USB drive in a locked drawer at the maintainer's primary
+- Encrypted USB drive in a locked drawer at the maintainer's primary
   residence.
-* Paper printout (the file is short ASCII) in a separate physical
+- Paper printout (the file is short ASCII) in a separate physical
   location — bank deposit box or secondary office safe.
 
 Never commit `revoke-*.asc` to git. Never email it to yourself.
 
 ## 6. Rotation cadence
 
-* **Scheduled rotation:** 18 months after generation, generate a successor
+- **Scheduled rotation:** 18 months after generation, generate a successor
   key, cross-sign it from the outgoing key, publish in parallel for a
   60-day overlap window, then revoke the old key on the overlap end date.
-* **Emergency rotation:** within 24h of suspected compromise — publish the
+- **Emergency rotation:** within 24h of suspected compromise — publish the
   revocation certificate, generate and publish a new key, post a
   `SECURITY-ADVISORY` issue tagged `key-rotation` describing the event.
 
