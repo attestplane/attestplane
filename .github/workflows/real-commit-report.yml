@@ -1,0 +1,55 @@
+name: real-commit-report
+
+# Weekly report of "real" (non-release-prep) commit velocity. The autodev-
+# train pushes a chore(release): prepare vX.Y.Z per autorelease cycle, which
+# inflates the raw git-log count. This job runs scripts/dev/real_commit_stats.py
+# over a 30-day window and uploads the JSON as a workflow artifact so the
+# maintainer can read actual development cadence.
+#
+# Informational only — no gate, no tag movement, no publish. The artifact is
+# read-only telemetry the maintainer downloads from the Actions tab.
+
+on:
+  schedule:
+    # Monday 07:37 UTC — distinct from codeql / scorecard (06:00) and
+    # doc-drift (Tuesday 05:23) so cron load stays staggered.
+    - cron: "37 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-commit-report-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  report:
+    name: Real-commit velocity report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Full history needed for --since "30 days ago".
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Generate 30-day real-commit report
+        run: |
+          python3 scripts/dev/real_commit_stats.py \
+            --window "30 days ago" \
+            --format json \
+            --write reports/real-commit-stats-week.json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: real-commit-stats-week
+          path: reports/real-commit-stats-week.json
+          retention-days: 90
