@@ -104,6 +104,30 @@ Package publication is handled by the `release-cd` workflow:
 publication must go through `release-cd`. See
 [`github-cd-release.md`](github-cd-release.md) for the publication runbook.
 
+## Supply-Chain Evidence (Sigstore + SLSA)
+
+After `release-cd` reports registry visibility, the stable train auto-
+dispatches two evidence workflows with `execute=true` per
+[ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md):
+
+- `sign-release.yml` — Sigstore keyless cosign signing of the primary
+  release assets, producing `*.cosign.bundle` files attached to the
+  GitHub Release.
+- `slsa-provenance.yml` — SLSA Build L3 provenance via the upstream
+  `slsa-framework/slsa-github-generator`, producing
+  `attestplane-<TAG>.intoto.jsonl` attached to the GitHub Release.
+
+These triggers are failure-tolerant: a Sigstore OIDC issue, network
+flake, or upstream `slsa-github-generator` hiccup logs a warning,
+marks `PublicationStatus.signed` / `PublicationStatus.slsa` separately
+from registry visibility, and does not block the cycle. A follow-up
+cycle (or manual `gh workflow run`) can re-trigger signing without
+re-publishing the registry artifacts. ADR-0018's forward-only invariant
+is preserved — no retroactive signing of pre-ADR tags.
+
+Verification recipes are owned by users, not by Attestplane; see
+[`docs/release/verifying-signatures.md`](../release/verifying-signatures.md).
+
 ## Permission Audit
 
 Before using `autodev-train` for an RC or GA preparation window, inspect the

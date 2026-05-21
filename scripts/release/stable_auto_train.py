@@ -99,6 +99,15 @@ PUSH_CI_FAILURE_CONCLUSIONS = {
     "startup_failure",
     "timed_out",
 }
+# Sigstore keyless cosign + SLSA Build L3 provenance workflows. The train
+# auto-triggers both with execute=true after registry visibility is
+# confirmed, so every autodev-train release ships with .cosign.bundle and
+# .intoto.jsonl assets attached to the GitHub Release. Failure-tolerant:
+# signing failures do not block the release cycle (forward-only per ADR-0018).
+SIGN_RELEASE_WORKFLOW = "sign-release.yml"
+SLSA_PROVENANCE_WORKFLOW = "slsa-provenance.yml"
+SIGN_WAIT_TIMEOUT_SECONDS = 300
+SLSA_WAIT_TIMEOUT_SECONDS = 600
 
 
 @dataclass(frozen=True, order=True)
@@ -148,10 +157,28 @@ class PublicationStatus:
     npm_visible: bool | None
     npm_latest: bool | None
     github_release: bool | None
+    # signed / slsa are populated by the auto-trigger of sign-release.yml and
+    # slsa-provenance.yml after registry visibility is confirmed. They are
+    # tracked separately from registry visibility because signing failures
+    # are not allowed to block the release cycle (forward-only per ADR-0018).
+    # None means "not queried this cycle" and is treated as ignored, not as
+    # failure, so pre-this-PR PublicationStatus call sites stay backwards
+    # compatible.
+    signed: bool | None = None
+    slsa: bool | None = None
 
     @property
     def complete(self) -> bool:
-        return self.python_visible and self.npm_visible and self.npm_latest and self.github_release
+        registries_ok = bool(
+            self.python_visible and self.npm_visible and self.npm_latest and self.github_release
+        )
+        if not registries_ok:
+            return False
+        if self.signed is False:
+            return False
+        if self.slsa is False:
+            return False
+        return True
 
     @property
     def unknown(self) -> bool:
@@ -867,6 +894,27 @@ def push_and_dispatch(version: StableVersion, *, wait: bool) -> None:
     run(release_cd_dispatch_args(version))
     if wait:
         wait_for_release_cd(version)
+        # Trigger Sigstore keyless cosign + SLSA Build L3 provenance per
+        # ADR-0018. Failure-tolerant: a signing or provenance failure is
+        # logged but does not block the cycle; signed/slsa state is
+        # tracked separately on PublicationStatus so a follow-up cycle
+        # can re-trigger without re-publishing the registry artifacts.
+        signed = trigger_sign_release(version.tag)
+        slsa = trigger_slsa_provenance(version.tag)
+        if not signed:
+            print(
+                f"autodev-train stable: WARNING: {version.tag} published but cosign signing did not complete; "
+                "supply-chain evidence is incomplete and requires manual re-trigger",
+                file=sys.stderr,
+                flush=True,
+            )
+        if not slsa:
+            print(
+                f"autodev-train stable: WARNING: {version.tag} published but SLSA provenance did not complete; "
+                "supply-chain evidence is incomplete and requires manual re-trigger",
+                file=sys.stderr,
+                flush=True,
+            )
 
 
 def resume_tagged_release_publish(version: StableVersion, *, wait: bool) -> None:
@@ -1178,6 +1226,90 @@ def wait_for_push_ci(head_sha: str) -> None:
         time.sleep(20)
 
     raise TimeoutError(f"timed out waiting for push CI workflows for {head_sha}")
+
+
+def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) -> bool:
+    """Dispatch a signing-class workflow with execute=true and wait for completion.
+
+    Returns True on success. On any failure (dispatch error, run-id resolution
+    timeout, workflow run failure, watch timeout), logs to stderr and returns
+    False. Signing failures are not allowed to block the autodev-train release
+    cycle (forward-only per ADR-0018); the caller records signed/slsa state on
+    PublicationStatus so a follow-up cycle can re-trigger without re-publishing.
+    """
+    try:
+        run(
+            [
+                "gh",
+                "workflow",
+                "run",
+                workflow,
+                "--ref",
+                "main",
+                "-f",
+                f"tag={tag}",
+                "-f",
+                "execute=true",
+            ]
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        print(
+            f"autodev-train stable: failed to dispatch {workflow} for {tag}: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return False
+
+    print(f"waiting for {workflow} run for {tag}", flush=True)
+    deadline = time.monotonic() + timeout_seconds
+    run_id = ""
+    while time.monotonic() < deadline:
+        try:
+            run_id = capture(
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--workflow",
+                    workflow,
+                    "--event",
+                    "workflow_dispatch",
+                    "--limit",
+                    "20",
+                    "--json",
+                    "databaseId,headBranch,status",
+                    "--jq",
+                    '.[] | select(.headBranch == "main") | .databaseId',
+                ]
+            ).splitlines()[0]
+        except (subprocess.CalledProcessError, IndexError):
+            time.sleep(5)
+            continue
+        if run_id:
+            try:
+                run(["gh", "run", "watch", run_id, "--exit-status"], timeout=timeout_seconds)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+                print(
+                    f"autodev-train stable: {workflow} run {run_id} failed for {tag}: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return False
+            return True
+    print(
+        f"autodev-train stable: timed out waiting for {workflow} dispatch for {tag}",
+        file=sys.stderr,
+        flush=True,
+    )
+    return False
+
+
+def trigger_sign_release(tag: str) -> bool:
+    return _dispatch_signing_workflow(SIGN_RELEASE_WORKFLOW, tag, SIGN_WAIT_TIMEOUT_SECONDS)
+
+
+def trigger_slsa_provenance(tag: str) -> bool:
+    return _dispatch_signing_workflow(SLSA_PROVENANCE_WORKFLOW, tag, SLSA_WAIT_TIMEOUT_SECONDS)
 
 
 def wait_for_release_cd(version: StableVersion) -> None:

@@ -633,3 +633,66 @@ def test_write_release_notes_uses_subjects_without_commit_hashes(
     notes = (tmp_path / "docs/release-notes/v1.0.0.draft.md").read_text(encoding="utf-8")
     assert "abc1234" not in notes
     assert "- fix(release): wait for push CI before publishing stable train" in notes
+
+
+def test_trigger_sign_release_returns_true_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "run", lambda argv, **kwargs: calls.append(argv))
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "12345")
+    monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0, 2.0]).__next__)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+
+    assert stable_auto_train.trigger_sign_release("v1.3.9") is True
+    dispatch = calls[0]
+    assert dispatch[:5] == ["gh", "workflow", "run", "sign-release.yml", "--ref"]
+    assert "tag=v1.3.9" in dispatch
+    assert "execute=true" in dispatch
+    assert calls[-1] == ["gh", "run", "watch", "12345", "--exit-status"]
+
+
+def test_trigger_sign_release_returns_false_on_workflow_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(argv: list[str], **kwargs: object) -> None:
+        if argv[:3] == ["gh", "run", "watch"]:
+            raise subprocess.CalledProcessError(1, argv)
+
+    monkeypatch.setattr(stable_auto_train, "run", fake_run)
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "99999")
+    monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0]).__next__)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+
+    assert stable_auto_train.trigger_sign_release("v1.3.9") is False
+
+
+def test_trigger_slsa_provenance_returns_true_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "run", lambda argv, **kwargs: calls.append(argv))
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv: "67890")
+    monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0, 2.0]).__next__)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+
+    assert stable_auto_train.trigger_slsa_provenance("v1.3.9") is True
+    dispatch = calls[0]
+    assert dispatch[:5] == ["gh", "workflow", "run", "slsa-provenance.yml", "--ref"]
+    assert "tag=v1.3.9" in dispatch
+    assert "execute=true" in dispatch
+    assert calls[-1] == ["gh", "run", "watch", "67890", "--exit-status"]
+
+
+def test_trigger_slsa_provenance_returns_false_on_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(argv: list[str], **kwargs: object) -> None:
+        return None
+
+    def fake_capture(argv: list[str]) -> str:
+        raise subprocess.CalledProcessError(1, argv)
+
+    # First call deadline = 0 + 600 = 600; advance the clock past 600 quickly.
+    clock = iter([0.0, 700.0, 800.0, 900.0])
+
+    monkeypatch.setattr(stable_auto_train, "run", fake_run)
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+    monkeypatch.setattr(stable_auto_train.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+
+    assert stable_auto_train.trigger_slsa_provenance("v1.3.9") is False
