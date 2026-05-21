@@ -34,3 +34,8 @@ https://guardtime\.com/ksi
 # link remains a real regulator URL, so do not let external availability block
 # release-train push CI.
 https://www\.eba\.europa\.eu/.*
+
+# Contributor Covenant translation pages are referenced from CODE_OF_CONDUCT.md.
+# The site is real but can reset connections from GitHub-hosted runners
+# (observed 2026-05-21), so keep release-train CI focused on owned links.
+https://www\.contributor-covenant\.org/translations
