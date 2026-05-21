@@ -28,4 +28,3 @@ Do not skip the consultation step for any tier. Do not bypass the plan issue. Do
 - Do not merge without the required gates.
 - Do not push to any remote unless explicitly authorized for that target.
 - Do not print secrets.
-

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -82,12 +83,34 @@ def test_parse_architecture_module_labels() -> None:
 
 
 def test_parse_structured_plan_payload_into_planned_tasks() -> None:
-    markdown = """
+    plan_payload = {
+        "anchor_tag": "v1.4.9",
+        "consultation_level": "feature",
+        "head_sha": "abc123",
+        "issues": [
+            {
+                "acceptance_criteria": ["Document the user-visible boundary."],
+                "modules": ["release notes", "release train"],
+                "ordinal": 1,
+                "priority": "P0",
+                "rollout_notes": "Keep the release boundary explicit and small.",
+                "title": "[P0][release] Define the v1.5.0 release boundary and scope",
+                "validation_commands": ["git diff --check"],
+            }
+        ],
+        "milestone_tag": "v1.5.0",
+        "plan_id": "deadbeef",
+        "plan_level": "medium",
+        "recent_real_commits": [],
+        "schema": "attestplane.plan.v1",
+        "schema_version": 1,
+    }
+    markdown = f"""
 ## Auto-Generated Medium Plan
 
 <!-- ATT_PLAN_SCHEMA_V1_START -->
 ```json
-{"anchor_tag":"v1.4.9","consultation_level":"feature","head_sha":"abc123","issues":[{"acceptance_criteria":["Document the user-visible boundary."],"modules":["release notes","release train"],"ordinal":1,"priority":"P0","rollout_notes":"Keep the release boundary explicit and small.","title":"[P0][release] Define the v1.5.0 release boundary and scope","validation_commands":["git diff --check"]}],"milestone_tag":"v1.5.0","plan_id":"deadbeef","plan_level":"medium","recent_real_commits":[],"schema":"attestplane.plan.v1","schema_version":1}
+{json.dumps(plan_payload, indent=2, sort_keys=True)}
 ```
 <!-- ATT_PLAN_SCHEMA_V1_END -->
 """
