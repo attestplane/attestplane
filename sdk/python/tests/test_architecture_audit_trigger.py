@@ -57,6 +57,22 @@ def test_decide_audit_skips_daily_small_upgrade() -> None:
         commits=commits,
     )
 
+    assert decision.action == "daily-plan"
+    assert decision.reason == "daily_small_upgrade"
+    assert decision.should_open_issue is True
+
+
+def test_decide_audit_skips_daily_small_upgrade_when_no_real_work_exists() -> None:
+    stable_tags = versions(51)
+    commits = [commit("chore(release): prepare v1.4.9")]
+
+    decision = architecture_audit_trigger.decide_audit(
+        milestone_tag="v1.4.9",
+        anchor_tag=None,
+        stable_tags=stable_tags,
+        commits=commits,
+    )
+
     assert decision.action == "skip"
     assert decision.reason == "daily_small_upgrade"
 
@@ -181,23 +197,44 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
     assert "ask_opus.sh architect" in body
     assert "architecture-gap-audit-v1.5.0.md" in body
     assert "plan-to-issues" in body
-    assert "Paste the accepted issue-ready plan as a comment" in body
+    assert "The workflow posts that plan" in body
     assert "`planned-task`" in body
     assert "Execution rule: work only starts from those generated task issues" in body
 
 
-def test_render_auto_architecture_plan_contains_issue_ready_sections() -> None:
-    manifest = {
+def test_render_auto_plan_contains_issue_ready_sections_for_each_level() -> None:
+    daily_manifest = {
+        "milestone_tag": "v1.4.9",
+        "anchor_tag": "v1.4.8",
+        "head_sha": "abc123",
+        "plan_level": "daily",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: small fix"}],
+    }
+    medium_manifest = {
+        "milestone_tag": "v1.5.0",
+        "anchor_tag": "v1.4.9",
+        "head_sha": "def456",
+        "plan_level": "medium",
+        "recent_real_commits": [{"sha": "def456", "subject": "feat: feature"}],
+    }
+    architecture_manifest = {
         "milestone_tag": "v2.0.0",
         "anchor_tag": "v1.5.0",
-        "head_sha": "abc123",
-        "recent_real_commits": [{"sha": "abc123", "subject": "feat: architecture surface"}],
+        "head_sha": "ghi789",
+        "plan_level": "architecture",
+        "recent_real_commits": [{"sha": "ghi789", "subject": "feat: architecture surface"}],
     }
 
-    plan = architecture_audit_trigger.render_auto_architecture_plan(manifest)
+    daily_plan = architecture_audit_trigger.render_auto_plan(daily_manifest)
+    medium_plan = architecture_audit_trigger.render_auto_plan(medium_manifest)
+    architecture_plan = architecture_audit_trigger.render_auto_plan(architecture_manifest)
 
-    assert "Auto-Accepted Architecture Plan" in plan
-    assert "ISSUE 1" in plan
-    assert "[P0][architecture][compatibility]" in plan
-    assert "ISSUE 5" in plan
-    assert "planned-task" in plan
+    assert "Auto-Generated Daily Plan" in daily_plan
+    assert "ISSUE 1" in daily_plan
+    assert "[P0][release]" in daily_plan
+    assert "Auto-Generated Medium Plan" in medium_plan
+    assert "ISSUE 4" in medium_plan
+    assert "Auto-Generated Architecture Plan" in architecture_plan
+    assert "ISSUE 5" in architecture_plan
+    assert "[P0][architecture][compatibility]" in architecture_plan
+    assert "planned-task" in architecture_plan

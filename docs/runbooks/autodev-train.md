@@ -182,13 +182,14 @@ GitHub workflow is:
 ```
 
 It listens for successful `release-cd` runs on `main` and classifies suffix-free
-stable versions into three planning levels:
+stable versions into three planning levels. Every level now consults Opus first,
+then emits a plan issue, then fans out `planned-task` issues from the plan:
 
 | Version shape | Planning level | Workflow behavior |
 |---|---|---|
-| Patch / ordinary minor releases, for example `v1.4.7` | Daily small upgrade | Publish normally; no planning issue. |
-| Half-step minor releases, for example `v1.5.0`, `v1.10.0`, `v2.5.0` | Medium upgrade | Create a `development-plan` issue with `upgrade-medium`. |
-| Integer major releases, for example `v2.0.0`, `v3.0.0` | Architecture-level major upgrade | Create a `development-plan` issue with `upgrade-architecture`, generate and accept the architecture plan automatically, create `planned-task` issues, then close the planning issue with `auto-accepted` and `audited`. |
+| Patch / ordinary minor releases, for example `v1.4.7` | Daily small upgrade | Consult Opus at diff level, create a `development-plan` issue with `upgrade-daily`, then convert the plan into `planned-task` issues. |
+| Half-step minor releases, for example `v1.5.0`, `v1.10.0`, `v2.5.0` | Medium upgrade | Consult Opus at feature level, create a `development-plan` issue with `upgrade-medium`, then convert the plan into `planned-task` issues. |
+| Integer major releases, for example `v2.0.0`, `v3.0.0` | Architecture-level major upgrade | Consult Opus at architecture level, create a `development-plan` issue with `upgrade-architecture`, then convert the plan into `planned-task` issues. |
 
 The workflow does not block `release-cd`, `sign-release`, or
 `slsa-provenance`; it does not create or move git tags; and it does not
@@ -196,26 +197,21 @@ call Opus from GitHub Actions. Instead,
 `scripts/release/architecture_audit_trigger.py` builds an artifact under
 `reports/architecture-audits/` with the milestone tag, the prior audited
 anchor, commit classification, and a local `ask_opus.sh architect`
-prompt. The planning issue is the entry point: run the Opus/maintainer plan,
-paste the accepted issue-ready plan back as a planning-issue comment, and let
+prompt. The planning issue is the entry point: run the Opus consultation,
+post the generated issue-ready plan back as a planning-issue comment, and let
 `.github/workflows/plan-to-issues.yml` convert every accepted P0/P1/P2 section
-into its own GitHub issue with `planned-task`. For integer major milestones,
-the architecture-audit workflow generates a deterministic architecture plan and
-auto-accepts it into `planned-task` issues without waiting for a maintainer
-comment. The workflow links the generated issues back to the planning issue.
-Execution then starts only from those generated task issues. A task listed in a
-plan but not yet represented by a GitHub issue is not executable.
+into its own GitHub issue with `planned-task`. The workflow links the
+generated issues back to the planning issue. Execution then starts only from
+those generated task issues. A task listed in a plan but not yet represented
+by a GitHub issue is not executable.
 
 The audit anchor is tracked through closed issues carrying
-`development-plan`, `architecture-audit`, and `audited`. After the accepted
-plan has been decomposed into GitHub issues and the milestone owner accepts
-the plan, close the planning issue with those labels intact. The next
-milestone uses that issue's milestone tag as its anchor. Auto-accepted
-architecture milestones also carry `auto-accepted`; if task issue creation
-fails, the workflow leaves the planning issue open and applies
-`auto-accept-failed`. If the sidecar
-workflow fails, it files a follow-up issue; published packages remain
-forward-only and unaffected.
+`development-plan`, `architecture-audit`, and `audited`. After the plan has
+been decomposed into GitHub issues and the milestone owner accepts the plan,
+close the planning issue with those labels intact. The next milestone uses
+that issue's milestone tag as its anchor. If the sidecar workflow fails, it
+files a follow-up issue; published packages remain forward-only and
+unaffected.
 
 The execution rule is strict: implementation starts from generated task issues,
 not from the planning issue body or chat. Each task issue should include the

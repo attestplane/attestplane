@@ -92,7 +92,7 @@ class AuditDecision:
 
     @property
     def should_open_issue(self) -> bool:
-        return self.action in {"medium-plan", "architecture-plan"}
+        return self.action in {"daily-plan", "medium-plan", "architecture-plan"}
 
     @property
     def should_upload_artifact(self) -> bool:
@@ -221,8 +221,19 @@ def decide_audit(
     issue_title = f"{plan_level.title()} development plan for {milestone_tag}"
 
     if plan_level == "daily":
+        if not real_commits:
+            return AuditDecision(
+                action="skip",
+                reason="daily_small_upgrade",
+                plan_level=plan_level,
+                milestone_tag=milestone_tag,
+                anchor_tag=anchor_tag,
+                stable_release_count=stable_release_count,
+                real_commit_count=0,
+                issue_title=issue_title,
+            )
         return AuditDecision(
-            action="skip",
+            action="daily-plan",
             reason="daily_small_upgrade",
             plan_level=plan_level,
             milestone_tag=milestone_tag,
@@ -322,19 +333,18 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         "```",
         "",
         "The review should first produce a concise plan, then decompose the",
-        "accepted plan into issue-ready P0/P1/P2 sections. Paste the accepted",
-        "plan back as a comment on this issue; the `plan-to-issues` workflow",
-        f"will convert those sections into GitHub issues with `{TASK_LABEL}` plus",
-        "the appropriate priority/module labels. No planned task should be",
+        "plan into issue-ready P0/P1/P2 sections. The workflow posts that plan",
+        "back as a comment on this issue; the `plan-to-issues` workflow converts",
+        f"those sections into GitHub issues with `{TASK_LABEL}` plus the",
+        "appropriate priority/module labels. No planned task should be",
         "implemented directly from this planning issue, the Opus output, or",
-        "chat. Daily small upgrades stay on the",
-        "release train; `x.5.0` milestones should focus on medium product and",
-        "architecture gaps; integer `x.0.0` milestones should focus on",
-        "architecture-level redesign, compatibility, security boundaries, and",
-        "migration risk. Return issue-ready P0/P1/P2 tasks with owners, affected",
-        "modules, acceptance criteria, and validation commands. Do not include",
-        "secrets, do not move release tags, and do not block already published",
-        "packages.",
+        "chat. Daily small upgrades stay on a diff-level plan; `x.5.0`",
+        "milestones should focus on medium product gaps; integer `x.0.0`",
+        "milestones should focus on architecture-level redesign, compatibility,",
+        "security boundaries, and migration risk. Return issue-ready P0/P1/P2",
+        "tasks with owners, affected modules, acceptance criteria, and",
+        "validation commands. Do not include secrets, do not move release tags,",
+        "and do not block already published packages.",
         "",
         "## Recent Real Commits",
         "",
@@ -354,13 +364,12 @@ def render_issue_body(manifest: dict[str, object]) -> str:
             "",
             "## Issue-First Completion Contract",
             "",
-            "1. Run the Opus/maintainer plan review from this issue.",
-            "2. Paste the accepted issue-ready plan as a comment on this issue.",
+            "1. Run the Opus consultation for the milestone-level plan.",
+            "2. Post the generated issue-ready plan as a comment on this issue.",
             f"3. Let the `plan-to-issues` workflow create one GitHub issue per accepted P0/P1/P2 task with `{TASK_LABEL}`.",
             "4. Link every generated task issue back here before implementation starts.",
-            "5. Close this planning issue with labels "
-            f"`{PLAN_LABEL}`, `{AUDIT_LABEL}`, and `{AUDITED_LABEL}` only after",
-            "the follow-up issue set is created and the milestone owner accepts the plan.",
+            "5. Keep the planning issue open as the source of truth until the task",
+            "   set is created and the milestone owner accepts the plan.",
             "",
             "## Planned Task Issue Template",
             "",
@@ -384,10 +393,13 @@ def render_issue_body(manifest: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_auto_architecture_plan(manifest: dict[str, object]) -> str:
+def render_auto_plan(manifest: dict[str, object]) -> str:
     milestone_tag = str(manifest["milestone_tag"])
-    anchor_tag = manifest.get("anchor_tag") or "repository start"
+    anchor_value = manifest.get("anchor_tag")
+    anchor_tag = anchor_value or "repository start"
+    anchor_ref = anchor_value or "$(git rev-list --max-parents=0 HEAD)"
     head_sha = str(manifest["head_sha"])
+    plan_level = str(manifest.get("plan_level", "daily"))
     recent = manifest.get("recent_real_commits")
     recent_lines: list[str] = []
     if isinstance(recent, list):
@@ -395,7 +407,122 @@ def render_auto_architecture_plan(manifest: dict[str, object]) -> str:
             if isinstance(item, dict):
                 recent_lines.append(f"- `{str(item.get('sha', ''))[:12]}` {item.get('subject', '')}")
     recent_block = "\n".join(recent_lines) if recent_lines else "- none"
-    return f"""## Auto-Accepted Architecture Plan
+    if plan_level == "daily":
+        return f"""## Auto-Generated Daily Plan
+
+Milestone: `{milestone_tag}`
+Anchor: `{anchor_tag}`
+Head SHA: `{head_sha}`
+
+This plan was generated after a diff-level Opus consultation. It creates
+planning issues only; implementation still starts from the generated
+`planned-task` issues, one issue at a time.
+
+Recent real commits considered:
+
+{recent_block}
+
+**ISSUE 1 · [P0][release] Confirm the {milestone_tag} real-change boundary**
+- Priority: P0
+- Affected modules: release train, release notes, release-cd policy
+- Acceptance criteria:
+  1. Verify the range from `{anchor_tag}` to `{milestone_tag}` contains real human work.
+  2. Confirm the release train should publish rather than skip.
+  3. Record any remaining idle-cadence risk as a follow-up issue before close.
+- Validation commands:
+  - `git log --no-merges --pretty=tformat:%s {anchor_ref}..HEAD`
+  - `git diff --stat {anchor_ref}..HEAD`
+  - `git diff --check {anchor_ref}..HEAD`
+- Rollout / migration notes: No tag or registry movement without a real diff.
+
+**ISSUE 2 · [P1][test] Expand regression coverage for the real commits**
+- Priority: P1
+- Affected modules: SDK tests, release gate coverage, release-prep fixtures
+- Acceptance criteria:
+  1. Add or update regression coverage for the real commits in this range.
+  2. Confirm the release-prep diff is not only train-generated metadata.
+  3. Record the validation evidence on the task issue before close.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k \"release_gate or stable_auto_train\" -x`
+  - `git diff --check`
+- Rollout / migration notes: Keep the scope tight; daily work should stay small and direct.
+
+**ISSUE 3 · [P2][docs] Summarize the user-visible delta for {milestone_tag}**
+- Priority: P2
+- Affected modules: docs/release-notes, docs/runbooks, release metadata
+- Acceptance criteria:
+  1. Record the user-visible change in the release notes or runbook.
+  2. Link the release note to the source planning issue and task issues.
+  3. Keep wording within claim boundaries and avoid secrets.
+- Validation commands:
+  - `git diff --check`
+- Rollout / migration notes: This should never be the only task if the diff contains real product work.
+"""
+
+    if plan_level == "medium":
+        return f"""## Auto-Generated Medium Plan
+
+Milestone: `{milestone_tag}`
+Anchor: `{anchor_tag}`
+Head SHA: `{head_sha}`
+
+This plan was generated after a feature-level Opus consultation. It creates
+planning issues only; implementation still starts from the generated
+`planned-task` issues, one issue at a time.
+
+Recent real commits considered:
+
+{recent_block}
+
+**ISSUE 1 · [P0][release] Define the {milestone_tag} release boundary and scope**
+- Priority: P0
+- Affected modules: release notes, release train, package metadata
+- Acceptance criteria:
+  1. Document the user-visible boundary for `{milestone_tag}`.
+  2. Enumerate the intentional scope change and any backward-compatibility notes.
+  3. Link the plan back to the source planning issue before implementation starts.
+- Validation commands:
+  - `git diff --check`
+  - `markdown-link-check docs/**/*.md`
+- Rollout / migration notes: Keep the release boundary explicit and small.
+
+**ISSUE 2 · [P0][compatibility] Review compatibility and migration impact**
+- Priority: P0
+- Affected modules: SDK compatibility, schema fixtures, verifier behavior
+- Acceptance criteria:
+  1. Identify any compatibility or migration impact introduced by the milestone.
+  2. Add fixtures or tests that pin the intended contract.
+  3. Record unresolved compatibility gaps as follow-up issues.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k \"compat or conformance or verifier\" -x`
+  - `git diff --check`
+- Rollout / migration notes: Prefer incremental compatibility work over broad rewrites.
+
+**ISSUE 3 · [P1][docs] Publish the milestone note set**
+- Priority: P1
+- Affected modules: docs/release-notes, docs/runbooks
+- Acceptance criteria:
+  1. Summarize the milestone in release-facing documentation.
+  2. Link the release note to the planning issue and task issues.
+  3. Keep claim wording within documented evidence boundaries.
+- Validation commands:
+  - `git diff --check`
+- Rollout / migration notes: Documentation can land independently once the plan is accepted.
+
+**ISSUE 4 · [P1][test] Expand coverage for the milestone change**
+- Priority: P1
+- Affected modules: SDK tests, release gate coverage, regression fixtures
+- Acceptance criteria:
+  1. Add regression coverage for the real commits in this range.
+  2. Confirm the release path still behaves forward-only.
+  3. Record the validation evidence on the task issue before close.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k \"release_gate or stable_auto_train or conformance\" -x`
+  - `git diff --check`
+- Rollout / migration notes: Scope should stay feature-sized and reviewable.
+"""
+
+    return f"""## Auto-Generated Architecture Plan
 
 Milestone: `{milestone_tag}`
 Anchor: `{anchor_tag}`
@@ -479,6 +606,10 @@ Recent real commits considered:
 """
 
 
+def render_auto_architecture_plan(manifest: dict[str, object]) -> str:
+    return render_auto_plan(manifest)
+
+
 def write_outputs(outputs: dict[str, str]) -> None:
     output_path = os.environ.get("GITHUB_OUTPUT")
     if not output_path:
@@ -552,8 +683,8 @@ def main(argv: list[str] | None = None) -> int:
         report_path = args.output_dir / f"{stem}.md"
         auto_plan_path = args.output_dir / f"architecture-task-plan-{milestone.tag}.md"
         issue_body = render_issue_body(manifest)
-        if decision.action == "architecture-plan":
-            auto_issue_plan = render_auto_architecture_plan(manifest)
+        if decision.should_open_issue:
+            auto_issue_plan = render_auto_plan(manifest)
             auto_plan_path.write_text(auto_issue_plan, encoding="utf-8")
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
         report_path.write_text(issue_body, encoding="utf-8")
@@ -564,7 +695,6 @@ def main(argv: list[str] | None = None) -> int:
             "reason": decision.reason,
             "should_open_issue": str(decision.should_open_issue).lower(),
             "should_upload_artifact": str(decision.should_upload_artifact).lower(),
-            "should_auto_accept_plan": str(decision.action == "architecture-plan").lower(),
             "issue_title": decision.issue_title,
             "issue_body": issue_body,
             "auto_issue_plan": auto_issue_plan,
