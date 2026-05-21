@@ -180,6 +180,7 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
 
     assert "ask_opus.sh architect" in body
     assert "architecture-gap-audit-v1.5.0.md" in body
-    assert "Create one GitHub issue per accepted P0/P1/P2 task" in body
+    assert "plan-to-issues" in body
+    assert "Paste the accepted issue-ready plan as a comment" in body
     assert "`planned-task`" in body
     assert "Execution rule: work only starts from those generated task issues" in body

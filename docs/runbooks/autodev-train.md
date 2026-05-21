@@ -197,10 +197,12 @@ call Opus from GitHub Actions. Instead,
 `reports/architecture-audits/` with the milestone tag, the prior audited
 anchor, commit classification, and a local `ask_opus.sh architect`
 prompt. The planning issue is the entry point: run the Opus/maintainer plan,
-turn every accepted P0/P1/P2 task into its own GitHub issue with
-`planned-task`, link those issues back to the planning issue, and then execute
-only from those generated task issues. A task listed in a plan but not yet
-represented by a GitHub issue is not executable.
+paste the accepted issue-ready plan back as a planning-issue comment, and let
+`.github/workflows/plan-to-issues.yml` convert every accepted P0/P1/P2 section
+into its own GitHub issue with `planned-task`. The workflow links the generated
+issues back to the planning issue. Execution then starts only from those
+generated task issues. A task listed in a plan but not yet represented by a
+GitHub issue is not executable.
 
 The audit anchor is tracked through closed issues carrying
 `development-plan`, `architecture-audit`, and `audited`. After the accepted
