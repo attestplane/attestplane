@@ -29,7 +29,6 @@ TASK_LABEL = "planned-task"
 MEDIUM_UPGRADE_LABEL = "upgrade-medium"
 ARCHITECTURE_UPGRADE_LABEL = "upgrade-architecture"
 AUDITED_LABEL = "audited"
-FULL_AUDIT_MIN_REAL_COMMITS = 5
 MILESTONE_STABLE_RELEASES = 50
 
 
@@ -241,17 +240,6 @@ def decide_audit(
             anchor_tag=anchor_tag,
             stable_release_count=stable_release_count,
             real_commit_count=0,
-            issue_title=issue_title,
-        )
-    if plan_level == "medium" and len(real_commits) < FULL_AUDIT_MIN_REAL_COMMITS:
-        return AuditDecision(
-            action="manifest-only",
-            reason="substantive_changes_below_full_audit_threshold",
-            plan_level=plan_level,
-            milestone_tag=milestone_tag,
-            anchor_tag=anchor_tag,
-            stable_release_count=stable_release_count,
-            real_commit_count=len(real_commits),
             issue_title=issue_title,
         )
     if plan_level == "architecture":

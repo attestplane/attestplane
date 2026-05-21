@@ -105,12 +105,10 @@ def test_decide_audit_skips_pure_release_prep_window() -> None:
     assert decision.reason == "no_substantive_changes_since_anchor"
 
 
-def test_decide_audit_downgrades_small_real_windows_to_manifest_only() -> None:
+def test_decide_audit_requests_medium_plan_for_half_version_with_any_real_work() -> None:
     stable_tags = versions(51)
     commits = [
         commit("feat: add one capability"),
-        commit("fix: repair one edge case"),
-        commit("docs: update release notes"),
     ]
 
     decision = architecture_audit_trigger.decide_audit(
@@ -120,9 +118,10 @@ def test_decide_audit_downgrades_small_real_windows_to_manifest_only() -> None:
         commits=commits,
     )
 
-    assert decision.action == "manifest-only"
+    assert decision.action == "medium-plan"
+    assert decision.reason == "half_version_medium_upgrade"
     assert decision.should_upload_artifact is True
-    assert decision.should_open_issue is False
+    assert decision.should_open_issue is True
 
 
 def test_decide_audit_requests_medium_plan_for_half_version_with_real_work() -> None:
