@@ -33,6 +33,7 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  ARCHITECTURE_AUDIT_PYTHON: python3.11
 
 jobs:
   prepare:
@@ -50,9 +51,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        with:
-          python-version: "3.11"
+      - name: Use local Python on Opus runner
+        run: |
+          set -euo pipefail
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          "$ARCHITECTURE_AUDIT_PYTHON" --version
 
       - name: Ensure audit labels
         env:
@@ -128,8 +131,8 @@ jobs:
             --limit 1 \
             --json number,url,body \
             --jq '.[0] // {}')"
-          issue_url="$(ISSUE_JSON="$issue_json" python3 -c "import json, os; issue = json.loads(os.environ['ISSUE_JSON']); print(issue.get('url', ''))")"
-          anchor="$(ISSUE_JSON="$issue_json" python3 -c "import json, os, re; tick = chr(96); issue = json.loads(os.environ['ISSUE_JSON']); match = re.search('- milestone: ' + tick + '([^' + tick + ']+)' + tick, issue.get('body', '')); print(match.group(1) if match else '')")"
+          issue_url="$(ISSUE_JSON="$issue_json" "$ARCHITECTURE_AUDIT_PYTHON" -c "import json, os; issue = json.loads(os.environ['ISSUE_JSON']); print(issue.get('url', ''))")"
+          anchor="$(ISSUE_JSON="$issue_json" "$ARCHITECTURE_AUDIT_PYTHON" -c "import json, os, re; tick = chr(96); issue = json.loads(os.environ['ISSUE_JSON']); match = re.search('- milestone: ' + tick + '([^' + tick + ']+)' + tick, issue.get('body', '')); print(match.group(1) if match else '')")"
           echo "issue_url=$issue_url" >> "$GITHUB_OUTPUT"
           echo "anchor=$anchor" >> "$GITHUB_OUTPUT"
 
@@ -165,7 +168,7 @@ jobs:
             --json number,title,labels,url,updatedAt \
             > reports/architecture-audits/open-issues.json
           audit_args+=(--open-issues-file reports/architecture-audits/open-issues.json)
-          python3 scripts/release/architecture_audit_trigger.py \
+          "$ARCHITECTURE_AUDIT_PYTHON" scripts/release/architecture_audit_trigger.py \
             "${audit_args[@]}"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -267,12 +270,12 @@ jobs:
             --description "Release and compliance claim-safety boundary" \
             --color "ededed" \
             --force
-          python3 scripts/release/plan_to_issues.py \
+          "$ARCHITECTURE_AUDIT_PYTHON" scripts/release/plan_to_issues.py \
             --plan-file accepted-architecture-plan.md \
             --source-issue "$PLANNING_ISSUE" \
             --create \
             --json > planned-task-issues.json
-          python3 - <<'PY' > planned-task-summary.md
+          "$ARCHITECTURE_AUDIT_PYTHON" - <<'PY' > planned-task-summary.md
           import json
 
           issues = json.load(open("planned-task-issues.json", encoding="utf-8"))
