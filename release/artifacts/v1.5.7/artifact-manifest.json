@@ -44,7 +44,7 @@
   "schema": "attestplane_release_artifact_manifest.v1",
   "source_state": {
     "prepared_by": "autodev_train_stable_release_prep",
-    "target_commit": "ccc1e42769e52a45bab2014964216ce5bb97d673"
+    "target_commit": "6b3e59a3de3bc902d768e741e460b10cbdca9bfd"
   },
   "upload_plan_file": "release/artifacts/v1.5.7/upload-plan.md"
 }
