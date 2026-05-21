@@ -98,7 +98,6 @@ This document resolves the verifier-independence part of issue #7: auditors
 should be able to verify complete exports offline using OSS verifier code and
 versioned schemas. APIs are helpful, but not authoritative.
 
-
 ## Related: OM World Execution Proof
 
 The verifier-independence rule converged independently with the OM World

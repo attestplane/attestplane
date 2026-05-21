@@ -109,7 +109,6 @@ This ADR resolves the retention/deletion proof portion of issue #7 as an
 architecture decision. Follow-up implementation can add concrete event schemas
 and verifier predicates under this boundary.
 
-
 ## References
 
 - OM World Execution Proof — [`docs/execution-proof.md` §Deletion evidence
