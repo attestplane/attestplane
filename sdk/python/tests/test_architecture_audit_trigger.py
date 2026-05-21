@@ -251,35 +251,88 @@ def test_render_auto_plan_contains_issue_ready_sections_for_each_level() -> None
     assert "planned-task" in architecture_plan
 
 
-def test_consult_opus_for_plan_uses_issue_ready_fake_response(monkeypatch) -> None:
-    manifest = {
-        "milestone_tag": "v1.5.9",
-        "anchor_tag": "v1.5.8",
-        "head_sha": "abc123",
-        "plan_level": "daily",
-        "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve daily task source"}],
-    }
-    fake_plan = """
-## Opus Daily Plan
+def test_consult_opus_for_plan_uses_issue_ready_fake_response_for_all_plan_levels(monkeypatch) -> None:
+    cases = [
+        ("daily", "v1.5.9", "[P1][automation] Wire daily task source to open issues"),
+        ("medium", "v1.10.0", "[P1][compatibility] Wire medium task source to open issues"),
+        ("architecture", "v2.0.0", "[P1][architecture] Wire architecture task source to open issues"),
+    ]
+    for plan_level, milestone_tag, title in cases:
+        monkeypatch.setenv(
+            architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV,
+            f"""
+## Opus {plan_level.title()} Plan
 
-**ISSUE 1 · [P1][automation] Wire daily task source to open issues**
+**ISSUE 1 · {title}**
 - Priority: P1
 - Affected modules: release train
 - Acceptance criteria:
-  1. Daily tasks are generated from current open issues.
+  1. {plan_level} tasks are generated from current open issues.
 - Validation commands:
   - `git diff --check`
 - Rollout / migration notes: no release bypass.
-""".strip()
-    monkeypatch.setenv(architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV, fake_plan)
+""".strip(),
+        )
+        manifest = {
+            "milestone_tag": milestone_tag,
+            "anchor_tag": "v1.5.8",
+            "head_sha": "abc123",
+            "plan_level": plan_level,
+            "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve plan source"}],
+        }
 
-    accepted = architecture_audit_trigger.consult_opus_for_plan(manifest, "request body")
+        accepted = architecture_audit_trigger.consult_opus_for_plan(manifest, "request body")
 
-    assert accepted.source == "opus-fake-response"
+        assert accepted.source == "opus-fake-response"
+        assert accepted.fallback_reason == ""
+        assert "Plan source: opus-fake-response" in accepted.body
+        assert title in accepted.body
+        assert "ATT_PLAN_SCHEMA_V1_START" not in accepted.body
+
+
+def test_consult_opus_for_plan_passes_consultation_level_to_command(monkeypatch, tmp_path: Path) -> None:
+    command = tmp_path / "capture_opus.py"
+    output = tmp_path / "prompt.txt"
+    command.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import pathlib, sys",
+                f"pathlib.Path({str(output)!r}).write_text(sys.argv[1], encoding='utf-8')",
+                "print('**ISSUE 1 · [P1][architecture] Review architecture task source**')",
+                "print('- Priority: P1')",
+                "print('- Affected modules: release train')",
+                "print('- Acceptance criteria:')",
+                "print('  1. Architecture task source is Opus-derived.')",
+                "print('- Validation commands:')",
+                "print('  - `git diff --check`')",
+                "print('- Rollout / migration notes: no release bypass.')",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    command.chmod(0o755)
+    manifest = {
+        "milestone_tag": "v2.0.0",
+        "anchor_tag": "v1.5.8",
+        "head_sha": "abc123",
+        "plan_level": "architecture",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve architecture task source"}],
+    }
+    monkeypatch.delenv(architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV, raising=False)
+
+    accepted = architecture_audit_trigger.consult_opus_for_plan(
+        manifest,
+        "request body",
+        command=str(command),
+        timeout_seconds=10,
+    )
+
+    assert accepted.source == "opus-live"
     assert accepted.fallback_reason == ""
-    assert "Plan source: opus-fake-response" in accepted.body
-    assert "[P1][automation] Wire daily task source to open issues" in accepted.body
-    assert "ATT_PLAN_SCHEMA_V1_START" not in accepted.body
+    prompt = output.read_text(encoding="utf-8")
+    assert "Attestplane stable autodev architecture development planning." in prompt
+    assert "Consultation level: architecture" in prompt
 
 
 def test_consult_opus_for_plan_falls_back_when_opus_unconfigured(monkeypatch) -> None:
