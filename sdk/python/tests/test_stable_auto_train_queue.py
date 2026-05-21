@@ -696,3 +696,115 @@ def test_trigger_slsa_provenance_returns_false_on_timeout(monkeypatch: pytest.Mo
     monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
 
     assert stable_auto_train.trigger_slsa_provenance("v1.3.9") is False
+
+
+def test_cadence_limiter_skips_when_only_release_prep_commits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    subjects = (
+        "chore(release): prepare v1.4.0\n"
+        "chore(release): prepare v1.3.10\n"
+        "chore(release): prepare v1.3.9"
+    )
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v1.3.8") is False
+
+
+def test_cadence_limiter_proceeds_when_real_feat_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    subjects = (
+        "chore(release): prepare v1.4.0\n"
+        "feat(release): autorelease cadence limiter — skip cycles with only release-prep commits\n"
+        "chore(release): prepare v1.3.10"
+    )
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v1.3.8") is True
+
+
+def test_cadence_limiter_proceeds_when_real_fix_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    subjects = (
+        "chore(release): prepare v1.4.0\n"
+        "fix(release): wait for push CI before publishing stable train\n"
+        "chore(release): prepare v1.3.10"
+    )
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v1.3.8") is True
+
+
+def test_cadence_limiter_returns_false_on_empty_range(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: "")
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v1.3.8") is False
+
+
+def test_cadence_limiter_returns_true_conservatively_on_missing_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        raise subprocess.CalledProcessError(128, argv, output="", stderr="unknown revision")
+
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v999.999.999") is True
+
+
+def test_cadence_limiter_handles_force_env_var(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.4.1", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    version = stable_auto_train.StableVersion.parse("1.4.1")
+    previous = stable_auto_train.StableVersion.parse("1.4.0")
+    calls: list[str] = []
+
+    monkeypatch.setenv(stable_auto_train.FORCE_CADENCE_ENV, "1")
+    monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: previous)
+    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: previous)
+    monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=True, npm_visible=True, npm_latest=True, github_release=True
+        ),
+    )
+    # If the cadence limiter were applied (it should NOT be, under force env),
+    # the cycle would short-circuit. We sentinel by asserting the dry-run path
+    # actually runs (returns the new tag, not the previous tag).
+    def fake_commits_since(tag: str) -> bool:
+        calls.append(f"cadence_called_for_{tag}")
+        return False
+
+    monkeypatch.setattr(stable_auto_train, "commits_since_tag_have_real_work", fake_commits_since)
+
+    result = stable_auto_train.run_once(publish=False, wait=False, target_queue=queue, dry_run=True)
+
+    assert result == version.tag
+    assert calls == []

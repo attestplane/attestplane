@@ -128,6 +128,50 @@ is preserved — no retroactive signing of pre-ADR tags.
 Verification recipes are owned by users, not by Attestplane; see
 [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md).
 
+## Cadence Limiter
+
+The stable train applies a velocity gate before cutting a new tag in
+each cycle. The gate inspects the commits between the latest published
+stable tag and `HEAD` (excluding merge commits) and compares each
+subject line against the train's own release-prep regex:
+
+```text
+^chore\(release\): prepare v\d+\.\d+\.\d+(-\S+)?$
+```
+
+If every subject in the range matches that regex, the only work the
+train would be tagging is its own previous prepare commits. In that
+case the train logs:
+
+```text
+autodev-train stable: no real work since vX.Y.Z; skipping cadence cycle
+```
+
+and sleeps the normal poll interval. The train keeps polling — it does
+not stop — but it does not manufacture a new tag without real human
+work landing in the range. If at least one `feat`, `fix`, `docs`,
+`test`, `ci`, or non-release `chore` subject is present, the cycle
+proceeds as before.
+
+The empty-range case (no commits at all since the latest tag) is
+treated as "nothing to cut" and also skips the cycle.
+
+### Force-cadence override
+
+Set `ATTESTPLANE_AUTODEV_TRAIN_FORCE_CADENCE=1` in the train's
+environment to bypass the gate and cut the next queued tag regardless
+of whether real human work landed. Use this only for:
+
+- v1.0 GA day, where the marketed release is the point and the diff
+  may be small;
+- a hotfix re-cut after a same-tag publication failure that needs a
+  fresh tag without intervening feature work; or
+- an operator-authorized re-cut documented in release validation
+  evidence.
+
+The override is per-process: unset the variable on the next run to
+return to the normal velocity gate.
+
 ## Permission Audit
 
 Before using `autodev-train` for an RC or GA preparation window, inspect the
