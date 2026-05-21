@@ -321,6 +321,98 @@ def test_run_once_resumes_locally_tagged_unpublished_release(
     assert calls == ["resume:v1.0.9:wait=True"]
 
 
+def test_reconcile_unpublished_local_stable_tag_deletes_superseded_local_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    version = stable_auto_train.StableVersion.parse("1.0.9")
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.9")
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
+    monkeypatch.setattr(stable_auto_train, "local_tag_points_to_head", lambda tag: False)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=False,
+            npm_visible=False,
+            npm_latest=False,
+            github_release=False,
+        ),
+    )
+    monkeypatch.setattr(stable_auto_train, "git_ref_is_ancestor", lambda ancestor, descendant: True)
+    monkeypatch.setattr(stable_auto_train, "run", calls.append)
+
+    stable_auto_train.reconcile_unpublished_local_stable_tag()
+
+    assert calls == [["git", "tag", "-d", "v1.0.9"]]
+
+
+def test_reconcile_unpublished_local_stable_tag_keeps_remote_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    version = stable_auto_train.StableVersion.parse("1.0.9")
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.9")
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: True)
+    monkeypatch.setattr(stable_auto_train, "run", calls.append)
+
+    stable_auto_train.reconcile_unpublished_local_stable_tag()
+
+    assert calls == []
+
+
+def test_run_once_reconciles_superseded_local_tag_before_target_selection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.0.9", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    calls: list[str] = []
+
+    monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: calls.append("sync"))
+    monkeypatch.setattr(stable_auto_train, "reconcile_unpublished_local_stable_tag", lambda: calls.append("reconcile"))
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: stable_auto_train.StableVersion.parse("1.0.8"))
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=True,
+            npm_visible=True,
+            npm_latest=True,
+            github_release=True,
+        ),
+    )
+    monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "commits_since_tag_have_real_work",
+        lambda tag: calls.append(f"cadence:{tag}") or True,
+    )
+
+    result = stable_auto_train.run_once(publish=False, wait=False, target_queue=queue, dry_run=True)
+
+    assert result == "v1.0.9"
+    assert calls[:2] == ["sync", "reconcile"]
+
+
 def test_run_once_refuses_unknown_status_for_existing_tag(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

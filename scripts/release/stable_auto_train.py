@@ -456,6 +456,40 @@ def local_tag_points_to_head(tag: str) -> bool:
     return tag_commit == head_commit
 
 
+def reconcile_unpublished_local_stable_tag() -> None:
+    """Drop a local-only stable tag if a later main commit superseded it.
+
+    A release-prep commit can be pushed, then followed by a fix-forward commit
+    before all push CI finishes. GitHub cancels some CI runs for the older
+    commit, and the train must not publish that old commit. If the tag was only
+    created locally, has not reached the remote, and registries/GitHub Release
+    are incomplete, deleting the local tag lets the next cycle prepare the same
+    version again on current main. Remote tags are never deleted or moved here.
+    """
+    try:
+        version = latest_stable()
+    except RuntimeError:
+        return
+    tag = version.tag
+    if not git_ref_exists(f"refs/tags/{tag}"):
+        return
+    if remote_tag_exists(tag):
+        return
+    if local_tag_points_to_head(tag):
+        return
+    status = publication_status(version)
+    if status.unknown or status.complete:
+        return
+    if not git_ref_is_ancestor(tag, "HEAD"):
+        return
+    print(
+        f"autodev-train stable: deleting unpublished local tag {tag} after main advanced; "
+        "will re-prepare on current HEAD",
+        flush=True,
+    )
+    run(["git", "tag", "-d", tag])
+
+
 def best_effort_fetch_tags() -> None:
     try:
         run(
@@ -1403,6 +1437,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     assert_on_main()
     best_effort_fetch_tags()
     sync_main_with_origin()
+    reconcile_unpublished_local_stable_tag()
     target = select_target(target_queue)
     assert_release_gate_allows_target(target)
     previous = latest_stable_before(target.version)
