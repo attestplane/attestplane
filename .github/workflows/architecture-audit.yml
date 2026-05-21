@@ -209,6 +209,67 @@ jobs:
           printf '%s\n' "$AUTO_ISSUE_PLAN" > accepted-architecture-plan.md
           gh issue comment "$PLANNING_ISSUE" --body-file accepted-architecture-plan.md
 
+      - name: Create planned-task issues from generated plan
+        if: steps.audit.outputs.should_open_issue == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLANNING_ISSUE: ${{ steps.planning_issue.outputs.number }}
+        run: |
+          set -euo pipefail
+          gh label create priority-P0 \
+            --description "Must be resolved before the milestone can be accepted" \
+            --color "d73a4a" \
+            --force
+          gh label create priority:P1 \
+            --description "High-priority milestone task" \
+            --color "fbca04" \
+            --force
+          gh label create priority:P2 \
+            --description "Normal-priority milestone task" \
+            --color "ededed" \
+            --force
+          gh label create area:release-integrity \
+            --description "Release integrity automation and policy" \
+            --color "0052cc" \
+            --force
+          gh label create area:docs \
+            --description "Documentation" \
+            --color "0052cc" \
+            --force
+          gh label create area:governance \
+            --description "Project governance and policy" \
+            --color "0052cc" \
+            --force
+          gh label create type:docs \
+            --description "Documentation only" \
+            --color "0075ca" \
+            --force
+          gh label create type:security \
+            --description "Security-sensitive planning or hardening" \
+            --color "b60205" \
+            --force
+          gh label create claim-safety \
+            --description "Release and compliance claim-safety boundary" \
+            --color "ededed" \
+            --force
+          python3 scripts/release/plan_to_issues.py \
+            --plan-file accepted-architecture-plan.md \
+            --source-issue "$PLANNING_ISSUE" \
+            --create \
+            --json > planned-task-issues.json
+          python3 - <<'PY' > planned-task-summary.md
+          import json
+
+          issues = json.load(open("planned-task-issues.json", encoding="utf-8"))
+          print("Accepted plan converted into `planned-task` issues:")
+          print()
+          for issue in issues:
+              print(f"- {issue['url']} {issue['title']}")
+          print()
+          print("Implementation must start from these task issues, one issue at a time.")
+          PY
+          gh issue comment "$PLANNING_ISSUE" --body-file planned-task-summary.md
+
       - name: Summary
         run: |
           {
