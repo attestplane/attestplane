@@ -14,6 +14,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -36,6 +37,11 @@ ARCHITECTURE_UPGRADE_LABEL = "upgrade-architecture"
 AUDITED_LABEL = "audited"
 MILESTONE_STABLE_RELEASES = 50
 OPEN_ISSUE_CONTEXT_LIMIT = 100
+OPUS_PLAN_COMMAND_ENV = "ATTESTPLANE_OPUS_PLAN_COMMAND"
+OPUS_PLAN_FAKE_RESPONSE_ENV = "ATTESTPLANE_OPUS_PLAN_FAKE_RESPONSE"
+OPUS_PLAN_TIMEOUT_ENV = "ATTESTPLANE_OPUS_PLAN_TIMEOUT_SECONDS"
+DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS = 180
+ISSUE_READY_PLAN_RE = re.compile(r"(?im)^\s*(?:#+\s*)?(?:\*\*)?\s*ISSUE\s+\d+\s*[.:·-]\s*\[P[0-2]\]")
 
 
 @dataclass(frozen=True, order=True)
@@ -111,6 +117,13 @@ class AuditDecision:
         if self.plan_level == "medium":
             return MEDIUM_UPGRADE_LABEL
         return "upgrade-daily"
+
+
+@dataclass(frozen=True)
+class AcceptedPlan:
+    body: str
+    source: str
+    fallback_reason: str = ""
 
 
 def run_git(args: list[str]) -> str:
@@ -340,6 +353,139 @@ def render_open_issues_block(open_issues: object, *, limit: int = 30) -> str:
                 label_text = f" [{', '.join(label_names)}]"
         lines.append(f"- #{number} {title}{label_text}")
     return "\n".join(lines) if lines else "- none"
+
+
+def issue_ready_plan(text: str) -> bool:
+    return bool(ISSUE_READY_PLAN_RE.search(text))
+
+
+def build_opus_plan_prompt(manifest: dict[str, object], issue_body: str) -> str:
+    plan_level = str(manifest.get("plan_level", "daily"))
+    consultation_level = consultation_level_for(plan_level)
+    return "\n".join(
+        [
+            f"Attestplane stable autodev {plan_level} development planning.",
+            "",
+            f"Consultation level: {consultation_level}",
+            "Goal: generate the accepted development plan for this milestone.",
+            "",
+            "Return Markdown only. Include 1-5 issue-ready sections. Each section must start exactly like:",
+            "",
+            "**ISSUE 1 · [P1][module] Concrete task title**",
+            "",
+            "For every issue include:",
+            "- Priority: P0 | P1 | P2",
+            "- Affected modules:",
+            "- Acceptance criteria:",
+            "- Validation commands:",
+            "- Rollout / migration notes:",
+            "",
+            "Rules:",
+            "- Consider all open GitHub issues in the request.",
+            "- Avoid duplicate planned-task issues; extend or reference existing issues when overlapping.",
+            "- Do not include secrets.",
+            "- Do not move tags, publish packages, merge PRs, or bypass release gates.",
+            "- Daily plans must produce small executable product/code/doc/test tasks, not only release-boundary checks.",
+            "",
+            issue_body,
+        ]
+    )
+
+
+def render_fallback_notice(reason: str) -> str:
+    return "\n".join(
+        [
+            "> Plan source: deterministic-template",
+            f"> Opus consultation fallback reason: {reason}",
+            "",
+        ]
+    )
+
+
+def normalize_opus_plan(raw_output: str) -> str:
+    return raw_output.strip() + "\n"
+
+
+def consult_opus_for_plan(
+    manifest: dict[str, object],
+    issue_body: str,
+    *,
+    command: str | None = None,
+    timeout_seconds: int = DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS,
+) -> AcceptedPlan:
+    fake = os.environ.get(OPUS_PLAN_FAKE_RESPONSE_ENV)
+    if fake is not None:
+        plan = normalize_opus_plan(fake)
+        if issue_ready_plan(plan):
+            return AcceptedPlan(body=f"> Plan source: opus-fake-response\n\n{plan}", source="opus-fake-response")
+        return AcceptedPlan(
+            body=render_fallback_notice("fake_response_not_issue_ready") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="fake_response_not_issue_ready",
+        )
+
+    resolved_command = command or os.environ.get(OPUS_PLAN_COMMAND_ENV, "").strip()
+    if not resolved_command:
+        return AcceptedPlan(
+            body=render_fallback_notice("opus_command_not_configured") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="opus_command_not_configured",
+        )
+
+    try:
+        argv = shlex.split(resolved_command)
+    except ValueError:
+        return AcceptedPlan(
+            body=render_fallback_notice("opus_command_invalid") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="opus_command_invalid",
+        )
+    if not argv:
+        return AcceptedPlan(
+            body=render_fallback_notice("opus_command_empty") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="opus_command_empty",
+        )
+
+    prompt = build_opus_plan_prompt(manifest, issue_body)
+    try:
+        completed = subprocess.run(
+            [*argv, prompt],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return AcceptedPlan(
+            body=render_fallback_notice("opus_timeout") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="opus_timeout",
+        )
+    except FileNotFoundError:
+        return AcceptedPlan(
+            body=render_fallback_notice("opus_command_not_found") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="opus_command_not_found",
+        )
+
+    if completed.returncode != 0:
+        return AcceptedPlan(
+            body=render_fallback_notice(f"opus_failed_rc_{completed.returncode}") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason=f"opus_failed_rc_{completed.returncode}",
+        )
+
+    plan = normalize_opus_plan(completed.stdout)
+    if not issue_ready_plan(plan):
+        return AcceptedPlan(
+            body=render_fallback_notice("opus_output_not_issue_ready") + render_auto_plan(manifest),
+            source="deterministic-template",
+            fallback_reason="opus_output_not_issue_ready",
+        )
+    return AcceptedPlan(body=f"> Plan source: opus-live\n\n{plan}", source="opus-live")
 
 
 def build_manifest(
@@ -628,8 +774,10 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         "",
         "The review should first produce a concise plan, then decompose the",
         "plan into issue-ready P0/P1/P2 sections. The workflow posts that plan",
-        "back as a comment on this issue, including a structured `ATT_PLAN_SCHEMA_V1`",
-        "block; the `plan-to-issues` workflow converts",
+        "back as a comment on this issue. Opus-authored plans are parsed",
+        "directly from their issue-ready Markdown; deterministic fallback plans",
+        "also include a structured `ATT_PLAN_SCHEMA_V1` block. The",
+        "`plan-to-issues` workflow converts",
         f"those sections into GitHub issues with `{TASK_LABEL}` plus the",
         "appropriate priority/module labels. No planned task should be",
         "implemented directly from this planning issue, the Opus output, or",
@@ -959,6 +1107,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--previous-audit-issue")
     parser.add_argument("--previous-audit-anchor")
     parser.add_argument("--open-issues-file", type=Path)
+    parser.add_argument(
+        "--opus-plan-command",
+        help="Optional local command prefix used to generate the accepted plan. The prompt is appended as the final argument.",
+    )
+    parser.add_argument(
+        "--opus-timeout-seconds",
+        type=int,
+        default=int(os.environ.get(OPUS_PLAN_TIMEOUT_ENV, str(DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS))),
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("reports/architecture-audits"))
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -996,6 +1153,7 @@ def main(argv: list[str] | None = None) -> int:
     issue_body = ""
     auto_issue_plan = ""
     plan_payload: dict[str, object] = {}
+    accepted_plan = AcceptedPlan(body="", source="", fallback_reason="")
     if decision.should_upload_artifact:
         args.output_dir.mkdir(parents=True, exist_ok=True)
         stem = f"architecture-gap-audit-{milestone.tag}"
@@ -1005,7 +1163,16 @@ def main(argv: list[str] | None = None) -> int:
         issue_body = render_issue_body(manifest)
         if decision.should_open_issue:
             plan_payload = with_plan_id(build_plan_payload(manifest))
-            auto_issue_plan = append_plan_block(render_auto_plan(manifest), plan_payload)
+            accepted_plan = consult_opus_for_plan(
+                manifest,
+                issue_body,
+                command=args.opus_plan_command,
+                timeout_seconds=args.opus_timeout_seconds,
+            )
+            if accepted_plan.source == "deterministic-template":
+                auto_issue_plan = append_plan_block(accepted_plan.body, plan_payload)
+            else:
+                auto_issue_plan = accepted_plan.body
             auto_plan_path.write_text(auto_issue_plan, encoding="utf-8")
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
         report_path.write_text(issue_body, encoding="utf-8")
@@ -1021,6 +1188,8 @@ def main(argv: list[str] | None = None) -> int:
             "issue_body": issue_body,
             "auto_issue_plan": auto_issue_plan,
             "plan_id": str(plan_payload.get("plan_id", "")),
+            "plan_source": accepted_plan.source,
+            "plan_fallback_reason": accepted_plan.fallback_reason,
             "upgrade_label": decision.upgrade_label,
             "anchor_tag": anchor_tag or "",
         }

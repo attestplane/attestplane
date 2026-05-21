@@ -251,6 +251,73 @@ def test_render_auto_plan_contains_issue_ready_sections_for_each_level() -> None
     assert "planned-task" in architecture_plan
 
 
+def test_consult_opus_for_plan_uses_issue_ready_fake_response(monkeypatch) -> None:
+    manifest = {
+        "milestone_tag": "v1.5.9",
+        "anchor_tag": "v1.5.8",
+        "head_sha": "abc123",
+        "plan_level": "daily",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve daily task source"}],
+    }
+    fake_plan = """
+## Opus Daily Plan
+
+**ISSUE 1 · [P1][automation] Wire daily task source to open issues**
+- Priority: P1
+- Affected modules: release train
+- Acceptance criteria:
+  1. Daily tasks are generated from current open issues.
+- Validation commands:
+  - `git diff --check`
+- Rollout / migration notes: no release bypass.
+""".strip()
+    monkeypatch.setenv(architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV, fake_plan)
+
+    accepted = architecture_audit_trigger.consult_opus_for_plan(manifest, "request body")
+
+    assert accepted.source == "opus-fake-response"
+    assert accepted.fallback_reason == ""
+    assert "Plan source: opus-fake-response" in accepted.body
+    assert "[P1][automation] Wire daily task source to open issues" in accepted.body
+    assert "ATT_PLAN_SCHEMA_V1_START" not in accepted.body
+
+
+def test_consult_opus_for_plan_falls_back_when_opus_unconfigured(monkeypatch) -> None:
+    manifest = {
+        "milestone_tag": "v1.5.9",
+        "anchor_tag": "v1.5.8",
+        "head_sha": "abc123",
+        "plan_level": "daily",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve daily task source"}],
+    }
+    monkeypatch.delenv(architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV, raising=False)
+    monkeypatch.delenv(architecture_audit_trigger.OPUS_PLAN_COMMAND_ENV, raising=False)
+
+    accepted = architecture_audit_trigger.consult_opus_for_plan(manifest, "request body")
+
+    assert accepted.source == "deterministic-template"
+    assert accepted.fallback_reason == "opus_command_not_configured"
+    assert "Opus consultation fallback reason: opus_command_not_configured" in accepted.body
+    assert "Auto-Generated Daily Plan" in accepted.body
+
+
+def test_consult_opus_for_plan_rejects_non_issue_ready_output(monkeypatch) -> None:
+    manifest = {
+        "milestone_tag": "v1.5.9",
+        "anchor_tag": "v1.5.8",
+        "head_sha": "abc123",
+        "plan_level": "daily",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve daily task source"}],
+    }
+    monkeypatch.setenv(architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV, "Looks good, no tasks.")
+
+    accepted = architecture_audit_trigger.consult_opus_for_plan(manifest, "request body")
+
+    assert accepted.source == "deterministic-template"
+    assert accepted.fallback_reason == "fake_response_not_issue_ready"
+    assert "Auto-Generated Daily Plan" in accepted.body
+
+
 def test_build_plan_payload_produces_structured_plan_block() -> None:
     manifest = {
         "milestone_tag": "v1.5.0",

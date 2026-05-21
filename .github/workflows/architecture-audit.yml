@@ -2,8 +2,9 @@ name: architecture-audit
 
 # Sidecar workflow for milestone development planning. It listens to
 # successful release-cd runs and prepares a read-only audit bundle at every
-# medium or architecture-level stable milestone. It never blocks package publication, never
-# creates or moves git tags, and never calls external AI services.
+# medium or architecture-level stable milestone. It never blocks package publication,
+# never creates or moves git tags, and only consults Opus when an explicit
+# OPUS_PLAN_COMMAND repository variable is configured for this workflow.
 
 on:
   workflow_run:
@@ -137,6 +138,7 @@ jobs:
           INPUT_ANCHOR: ${{ inputs.anchor_tag }}
           PREVIOUS_ANCHOR: ${{ steps.previous.outputs.anchor }}
           PREVIOUS_ISSUE: ${{ steps.previous.outputs.issue_url }}
+          OPUS_PLAN_COMMAND: ${{ vars.OPUS_PLAN_COMMAND }}
         run: |
           set -euo pipefail
           anchor="${INPUT_ANCHOR:-$PREVIOUS_ANCHOR}"
@@ -150,6 +152,9 @@ jobs:
           fi
           if [ -n "$PREVIOUS_ISSUE" ]; then
             audit_args+=(--previous-audit-issue "$PREVIOUS_ISSUE")
+          fi
+          if [ -n "${OPUS_PLAN_COMMAND:-}" ]; then
+            audit_args+=(--opus-plan-command "$OPUS_PLAN_COMMAND")
           fi
           mkdir -p reports/architecture-audits
           gh issue list \
@@ -287,6 +292,8 @@ jobs:
             echo "- action: \`${{ steps.audit.outputs.action }}\`"
             echo "- reason: \`${{ steps.audit.outputs.reason }}\`"
             echo "- consultation_level: \`${{ steps.audit.outputs.consultation_level }}\`"
+            echo "- plan_source: \`${{ steps.audit.outputs.plan_source }}\`"
+            echo "- plan_fallback_reason: \`${{ steps.audit.outputs.plan_fallback_reason }}\`"
             echo "- plan_id: \`${{ steps.audit.outputs.plan_id }}\`"
             echo "- upgrade_label: \`${{ steps.audit.outputs.upgrade_label }}\`"
             echo "- anchor: \`${{ steps.audit.outputs.anchor_tag }}\`"

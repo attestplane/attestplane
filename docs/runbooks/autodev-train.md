@@ -192,19 +192,19 @@ then emits a plan issue, then fans out `planned-task` issues from the plan:
 | Integer major releases, for example `v2.0.0`, `v3.0.0` | Architecture-level major upgrade | Consult Opus at architecture level, create a `development-plan` issue with `upgrade-architecture`, then convert the plan into `planned-task` issues. |
 
 The workflow does not block `release-cd`, `sign-release`, or
-`slsa-provenance`; it does not create or move git tags; and it does not
-call Opus from GitHub Actions. Instead,
-`scripts/release/architecture_audit_trigger.py` builds an artifact under
-`reports/architecture-audits/` with the milestone tag, the prior audited
-anchor, commit classification, and a local `ask_opus.sh architect`
-prompt. The planning issue is the entry point: run the Opus consultation,
-post the generated issue-ready plan back as a planning-issue comment with a
-structured `ATT_PLAN_SCHEMA_V1` block and `plan_id`, and let
-`.github/workflows/plan-to-issues.yml` convert every accepted P0/P1/P2 section
-into its own GitHub issue with `planned-task`. The workflow links the
-generated issues back to the planning issue and uses `plan_id` for idempotent
-re-runs. Execution then starts only from those generated task issues. A task
-listed in a plan but not yet represented by a GitHub issue is not executable.
+`slsa-provenance`, and it does not create or move git tags. During bundle
+preparation, `scripts/release/architecture_audit_trigger.py` first attempts
+to use the configured Opus planning command (`OPUS_PLAN_COMMAND` repository
+variable, or `ATTESTPLANE_OPUS_PLAN_COMMAND` in local dry-runs). The milestone
+request includes the milestone tag, prior audited anchor, commit
+classification, and current open GitHub issues. If Opus returns an
+issue-ready plan, that Markdown is posted as the accepted plan and decomposed
+directly into `planned-task` issues. If Opus is unavailable, times out, or
+returns text without issue-ready P0/P1/P2 sections, the workflow records the
+fallback reason and uses the deterministic template plan instead. The workflow
+links generated issues back to the planning issue; execution then starts only
+from those generated task issues. A task listed in a plan but not yet
+represented by a GitHub issue is not executable.
 
 The audit anchor is tracked through closed issues carrying
 `development-plan`, `architecture-audit`, and `audited`. After the plan has
