@@ -13,7 +13,7 @@ See the [project README][project-readme] for background, governance, and
 trademark policy. The full design rationale for this SDK lives in [ADR-0002][adr2].
 
 [project-readme]: https://github.com/attestplane/attestplane
-[adr2]: https://github.com/attestplane/attestplane/blob/main/docs/adr/0002-substrate-data-model-and-hash-chain-v0.md
+[adr2]: ../../docs/adr/0002-substrate-data-model-and-hash-chain-v0.md
 
 ## Install
 
