@@ -24,7 +24,7 @@ Commits type and labels train-generated commits as `release-prep`:
 | Class          | Matches                                              | Counts as "real"? |
 | -------------- | ---------------------------------------------------- | ----------------- |
 | `release-prep` | exactly `chore(release): prepare vX.Y.Z[-pre]`       | no                |
-| `merge`        | starts with `Merge `                                 | no                |
+| `merge`        | subject starts with `Merge` followed by space        | no                |
 | `feat`, `fix`, `docs`, `test`, `ci`, `chore`, `refactor`, `revert` | their Conventional Commits prefix | yes |
 | `other`        | anything not matching the above                      | yes               |
 
