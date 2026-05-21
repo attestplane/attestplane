@@ -581,6 +581,30 @@ def test_push_and_dispatch_uses_timed_pushes_before_release_cd(monkeypatch: pyte
     ]
 
 
+def test_git_remote_env_bypasses_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(stable_auto_train.GIT_PROXY_MODE_ENV, "bypass")
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:7897")
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:7897")
+
+    env = stable_auto_train.git_remote_env()
+
+    assert env is not None
+    assert "http_proxy" not in env
+    assert "HTTPS_PROXY" not in env
+
+
+def test_git_remote_env_forces_proxy_without_printing_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(stable_auto_train.GIT_PROXY_MODE_ENV, "force")
+    monkeypatch.setenv(stable_auto_train.GIT_PROXY_URL_ENV, "http://user:secret@127.0.0.1:7897")
+
+    env = stable_auto_train.git_remote_env()
+
+    assert env is not None
+    assert env["http_proxy"] == "http://user:secret@127.0.0.1:7897"
+    assert env["HTTPS_PROXY"] == "http://user:secret@127.0.0.1:7897"
+    assert stable_auto_train.git_remote_proxy_label() == "force"
+
+
 def test_run_git_push_skips_when_remote_already_converged(monkeypatch: pytest.MonkeyPatch) -> None:
     attempts: list[list[str]] = []
 
@@ -619,7 +643,8 @@ def test_run_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(stable_auto_train, "git_push_remote_status", lambda argv: (False, None))
     monkeypatch.setattr(stable_auto_train, "git_push_remote_converged", lambda argv: False)
-    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+    sleeps: list[int] = []
+    monkeypatch.setattr(stable_auto_train.time, "sleep", sleeps.append)
 
     def fake_attempt(argv: list[str]) -> object:
         calls["attempts"] += 1
@@ -633,6 +658,32 @@ def test_run_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert result.returncode == 0
     assert calls["attempts"] == 2
+    assert sleeps == [stable_auto_train.REMOTE_PUSH_RETRY_SECONDS]
+
+
+def test_run_git_push_uses_exponential_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"attempts": 0}
+    sleeps: list[int] = []
+
+    monkeypatch.setattr(stable_auto_train, "git_push_remote_status", lambda argv: (False, None))
+    monkeypatch.setattr(stable_auto_train, "git_push_remote_converged", lambda argv: False)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", sleeps.append)
+
+    def fake_attempt(argv: list[str]) -> object:
+        calls["attempts"] += 1
+        if calls["attempts"] < 3:
+            raise subprocess.TimeoutExpired(argv, stable_auto_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(stable_auto_train, "attempt_git_push_once", fake_attempt)
+
+    result = stable_auto_train.run_git_push(["git", "push", "origin", "v1.1.3"])
+
+    assert result.returncode == 0
+    assert sleeps == [
+        stable_auto_train.REMOTE_PUSH_RETRY_SECONDS,
+        stable_auto_train.REMOTE_PUSH_RETRY_SECONDS * 2,
+    ]
 
 
 def test_wait_for_push_ci_blocks_failed_required_workflow(monkeypatch: pytest.MonkeyPatch) -> None:

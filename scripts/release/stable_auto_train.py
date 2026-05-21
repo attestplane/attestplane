@@ -68,6 +68,18 @@ REMOTE_PROBE_TIMEOUT_SECONDS = 30
 REMOTE_PUSH_ATTEMPTS = 3
 REMOTE_PUSH_RETRY_SECONDS = 10
 REMOTE_PUSH_TIMEOUT_SECONDS = 120
+REMOTE_PROBE_ATTEMPTS = 3
+REMOTE_PROBE_BASE_RETRY_SECONDS = 5
+GIT_PROXY_MODE_ENV = "ATTESTPLANE_GIT_PROXY_MODE"
+GIT_PROXY_URL_ENV = "ATTESTPLANE_GIT_PROXY_URL"
+GIT_PROXY_ENV_KEYS = (
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+)
 PATCH_ROLLOVER = 10
 PUSH_CI_WORKFLOWS = (
     "ci",
@@ -223,6 +235,41 @@ def capture(argv: list[str], *, timeout: int | None = None) -> str:
     return result.stdout.strip()
 
 
+def run_git_remote_probe(argv: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run a GitHub-facing git probe with classified retries."""
+    last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None
+    for attempt in range(1, REMOTE_PROBE_ATTEMPTS + 1):
+        try:
+            return run_process(
+                argv,
+                env=git_remote_env(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            last_error = exc
+            reason = classify_git_push_failure(exc)
+            if attempt == REMOTE_PROBE_ATTEMPTS:
+                break
+            delay = REMOTE_PROBE_BASE_RETRY_SECONDS * (2 ** (attempt - 1))
+            print(
+                "autodev-train stable: warning: git remote probe "
+                f"attempt {attempt}/{REMOTE_PROBE_ATTEMPTS} failed "
+                f"({reason}, proxy_mode={git_remote_proxy_label()}); retrying in {delay}s",
+                flush=True,
+            )
+            time.sleep(delay)
+    assert last_error is not None
+    raise last_error
+
+
+def capture_git_remote(argv: list[str]) -> str:
+    result = run_git_remote_probe(argv)
+    return result.stdout.strip()
+
+
 def run_process(
     argv: list[str],
     *,
@@ -252,6 +299,37 @@ def run_process(
     if check and result.returncode:
         raise subprocess.CalledProcessError(result.returncode, argv, output=out, stderr=err)
     return result
+
+
+def git_remote_env() -> dict[str, str] | None:
+    """Return the environment for GitHub-facing git commands.
+
+    The train defaults to inheriting the operator's proxy setup. Operators can
+    make the release train deterministic under flaky local proxy/TUN setups with
+    ``ATTESTPLANE_GIT_PROXY_MODE=bypass`` or force a specific HTTP(S) proxy with
+    ``ATTESTPLANE_GIT_PROXY_MODE=force`` plus ``ATTESTPLANE_GIT_PROXY_URL``.
+    """
+    mode = os.environ.get(GIT_PROXY_MODE_ENV, "inherit").strip().lower()
+    if mode in {"", "inherit"}:
+        return None
+    env = os.environ.copy()
+    if mode == "bypass":
+        for key in GIT_PROXY_ENV_KEYS:
+            env.pop(key, None)
+        return env
+    if mode == "force":
+        proxy_url = os.environ.get(GIT_PROXY_URL_ENV, "").strip()
+        if not proxy_url:
+            raise RuntimeError(f"{GIT_PROXY_URL_ENV} must be set when {GIT_PROXY_MODE_ENV}=force")
+        for key in GIT_PROXY_ENV_KEYS:
+            env[key] = proxy_url
+        return env
+    raise RuntimeError(f"unsupported {GIT_PROXY_MODE_ENV}={mode!r}; expected inherit, bypass, or force")
+
+
+def git_remote_proxy_label() -> str:
+    mode = os.environ.get(GIT_PROXY_MODE_ENV, "inherit").strip().lower()
+    return mode or "inherit"
 
 
 def terminate_process_group(process: subprocess.Popen[str]) -> None:
@@ -289,7 +367,8 @@ def run_git_push(argv: list[str]) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(argv, 0, "", "")
     if preflight_reason is not None:
         print(
-            f"git push preflight remote probe failed ({preflight_reason}); attempting push anyway",
+            "git push preflight remote probe failed "
+            f"({preflight_reason}, proxy_mode={git_remote_proxy_label()}); attempting push anyway",
             flush=True,
         )
 
@@ -304,12 +383,14 @@ def run_git_push(argv: list[str]) -> subprocess.CompletedProcess[str]:
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if attempt == REMOTE_PUSH_ATTEMPTS:
                 break
+            reason = classify_git_push_failure(exc)
+            delay = REMOTE_PUSH_RETRY_SECONDS * (2 ** (attempt - 1))
             print(
                 f"git push attempt {attempt}/{REMOTE_PUSH_ATTEMPTS} failed or timed out; "
-                f"retrying in {REMOTE_PUSH_RETRY_SECONDS}s",
+                f"reason={reason}, proxy_mode={git_remote_proxy_label()}; retrying in {delay}s",
                 flush=True,
             )
-            time.sleep(REMOTE_PUSH_RETRY_SECONDS)
+            time.sleep(delay)
     assert last_error is not None
     raise last_error
 
@@ -318,6 +399,7 @@ def attempt_git_push_once(argv: list[str]) -> subprocess.CompletedProcess[str]:
     argv = normalize_git_push_argv(argv)
     result = run_process(
         argv,
+        env=git_remote_env(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -354,10 +436,10 @@ def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
     try:
         if ref == "main":
             local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
-            remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            remote_head = capture_git_remote(["git", "ls-remote", "origin", "refs/heads/main"])
             return bool(remote_head) and remote_head.split()[0] == local_head, None
         if STABLE_TAG_RE.fullmatch(ref):
-            remote_tag = capture(["git", "ls-remote", "origin", f"refs/tags/{ref}"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            remote_tag = capture_git_remote(["git", "ls-remote", "origin", f"refs/tags/{ref}"])
             return bool(remote_tag), None
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
         return False, classify_git_push_failure(exc)
@@ -382,8 +464,14 @@ def classify_git_push_failure(exc: BaseException) -> str:
             "couldn't connect",
             "connection timed out",
             "operation timed out",
+            "operation too slow",
+            "less than 1000 bytes/sec",
+            "curl 28",
             "could not resolve host",
             "network is unreachable",
+            "empty reply from server",
+            "expected flush after ref listing",
+            "remote end hung up unexpectedly",
         )
     ):
         return "git_push_network_unavailable"
@@ -434,18 +522,60 @@ def git_ref_exists(ref: str) -> bool:
 
 
 def remote_tag_exists(tag: str) -> bool:
-    try:
-        result = run_process(
-            ["git", "ls-remote", "--exit-code", "--tags", "origin", tag],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+    argv = ["git", "ls-remote", "--exit-code", "--tags", "origin", tag]
+    for attempt in range(1, REMOTE_PROBE_ATTEMPTS + 1):
+        try:
+            result = run_process(
+                argv,
+                env=git_remote_env(),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as exc:
+            if attempt == REMOTE_PROBE_ATTEMPTS:
+                print(
+                    "autodev-train stable: warning: remote tag probe timed out "
+                    f"for {tag} after {attempt} attempts "
+                    f"(proxy_mode={git_remote_proxy_label()}): {exc}",
+                    flush=True,
+                )
+                return False
+            delay = REMOTE_PROBE_BASE_RETRY_SECONDS * (2 ** (attempt - 1))
+            print(
+                "autodev-train stable: warning: remote tag probe "
+                f"attempt {attempt}/{REMOTE_PROBE_ATTEMPTS} timed out for {tag} "
+                f"(proxy_mode={git_remote_proxy_label()}); retrying in {delay}s",
+                flush=True,
+            )
+            time.sleep(delay)
+            continue
+        if result.returncode == 0:
+            return True
+        if result.returncode == 2:
+            return False
+        if attempt == REMOTE_PROBE_ATTEMPTS:
+            reason = classify_git_push_failure(
+                subprocess.CalledProcessError(result.returncode, argv, stderr=result.stderr)
+            )
+            print(
+                "autodev-train stable: warning: remote tag probe failed "
+                f"for {tag} after {attempt} attempts "
+                f"({reason}, proxy_mode={git_remote_proxy_label()})",
+                flush=True,
+            )
+            return False
+        delay = REMOTE_PROBE_BASE_RETRY_SECONDS * (2 ** (attempt - 1))
+        reason = classify_git_push_failure(subprocess.CalledProcessError(result.returncode, argv, stderr=result.stderr))
+        print(
+            "autodev-train stable: warning: remote tag probe "
+            f"attempt {attempt}/{REMOTE_PROBE_ATTEMPTS} failed for {tag} "
+            f"({reason}, proxy_mode={git_remote_proxy_label()}); retrying in {delay}s",
+            flush=True,
         )
-    except subprocess.TimeoutExpired as exc:
-        print(f"autodev-train stable: warning: remote tag probe timed out for {tag}: {exc}", flush=True)
-        return False
-    return result.returncode == 0
+        time.sleep(delay)
+    return False
 
 
 def local_tag_points_to_head(tag: str) -> bool:
@@ -493,12 +623,18 @@ def reconcile_unpublished_local_stable_tag() -> None:
 
 def best_effort_fetch_tags() -> None:
     try:
-        run(
-            ["git", *GIT_HTTP_CONFIG_ARGS, "fetch", "origin", "main", "--tags"],
-            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
-        )
+        argv = ["git", *GIT_HTTP_CONFIG_ARGS, "fetch", "origin", "main", "--tags"]
+        print("+ " + " ".join(argv), flush=True)
+        result = run_git_remote_probe(argv)
+        echo_subprocess_output(result.stdout)
+        echo_subprocess_output(result.stderr)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        print(f"autodev-train stable: warning: best-effort origin fetch failed or timed out: {exc}", flush=True)
+        reason = classify_git_push_failure(exc)
+        print(
+            "autodev-train stable: warning: best-effort origin fetch failed "
+            f"or timed out ({reason}, proxy_mode={git_remote_proxy_label()}): {exc}",
+            flush=True,
+        )
 
 
 def git_ref_is_ancestor(ancestor: str, descendant: str) -> bool:
