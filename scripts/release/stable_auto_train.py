@@ -234,10 +234,9 @@ def run_git_push(argv: list[str]) -> subprocess.CompletedProcess[str]:
         print("git push remote state already converged; skipping push", flush=True)
         return subprocess.CompletedProcess(argv, 0, "", "")
     if preflight_reason is not None:
-        raise subprocess.CalledProcessError(
-            128,
-            argv,
-            stderr=f"preflight git remote probe failed: {preflight_reason}",
+        print(
+            f"git push preflight remote probe failed ({preflight_reason}); attempting push anyway",
+            flush=True,
         )
 
     last_error: subprocess.CalledProcessError | subprocess.TimeoutExpired | None = None

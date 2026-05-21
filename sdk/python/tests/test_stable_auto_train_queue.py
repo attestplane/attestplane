@@ -382,6 +382,23 @@ def test_run_git_push_skips_when_remote_already_converged(monkeypatch: pytest.Mo
     assert attempts == []
 
 
+def test_run_git_push_attempts_push_when_preflight_probe_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "git_push_remote_status", lambda argv: (False, "git_push_timeout"))
+
+    def fake_attempt(argv: list[str]) -> subprocess.CompletedProcess[str]:
+        attempts.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(stable_auto_train, "attempt_git_push_once", fake_attempt)
+
+    result = stable_auto_train.run_git_push(["git", "push", "origin", "main"])
+
+    assert result.returncode == 0
+    assert attempts == [["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]]
+
+
 def test_run_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = {"attempts": 0}
 
