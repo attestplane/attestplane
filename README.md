@@ -67,7 +67,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 ### Release status
 
 > 🚀 New here? See [docs/quickstart.md](docs/quickstart.md) for a 5-minute walkthrough.
-
+>
 > A user-facing roadmap covering current capabilities (v1.0.x pre-GA), the v1.0 GA target (2026-08-15), and stability gates is published at [`docs/roadmap/USER_ROADMAP.md`](docs/roadmap/USER_ROADMAP.md). It complements the engineering-internal [`docs/roadmap/p3_release_roadmap.md`](docs/roadmap/p3_release_roadmap.md).
 
 v0.0.1-alpha shipped foundational Python and TypeScript SDKs (deterministic serialization, SHA-256 hash chain, cross-language conformance vectors). **v0.8.0-beta.0** opened the beta prerelease line; the project is now on the **v1.0.x pre-GA tag line** — not GA, not production-ready, not a compliance certification. v1.0 GA target 2026-08-15 per [SECURITY.md](SECURITY.md). The public API and wire-format freeze is documented in [ADR-0016](docs/adr/0016-rc-api-freeze.md). Supply-chain evidence (Sigstore keyless + SLSA Build L3) has been live since **v1.0.9** per [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md); cosign+SLSA verification recipes in [docs/release/verifying-signatures.md](docs/release/verifying-signatures.md). The current pre-GA line ships:
