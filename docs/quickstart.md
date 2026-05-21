@@ -19,7 +19,6 @@ No certification claimed; no compliance opinion issued.
 ## Install
 
 ```bash
-pip install attestplane                # latest from PyPI
 pip install attestplane==1.4.6         # pinned to current pre-GA (recommended)
 ```
 
@@ -97,7 +96,7 @@ path: chain.jsonl
 event_count: 3
 head_seq: 2
 head_hash_hex: <64-hex-chars>
-event_type_histogram: {'lease.lifecycle': 1, 'policy.check': 1, 'state.transition': 1}
+event_type_histogram: {'lease_lifecycle_event': 1, 'policy_check_event': 1, 'state_transition_event': 1}
 verify: OK first_bad_index=None reason=None
 ```
 
