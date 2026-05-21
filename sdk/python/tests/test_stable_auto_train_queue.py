@@ -106,6 +106,68 @@ def test_next_stable_after_rolls_post_one_patch_ten_to_next_minor_zero() -> None
     assert stable_auto_train.next_stable_after(current).tag == "v1.1.0"
 
 
+def test_sync_main_with_origin_fast_forwards_when_local_is_behind(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        del timeout
+        if argv == ["git", "rev-parse", "HEAD"]:
+            return "local"
+        if argv == ["git", "rev-parse", "origin/main"]:
+            return "remote"
+        raise AssertionError(argv)
+
+    def fake_is_ancestor(ancestor: str, descendant: str) -> bool:
+        return (ancestor, descendant) == ("HEAD", "origin/main")
+
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+    monkeypatch.setattr(stable_auto_train, "git_ref_is_ancestor", fake_is_ancestor)
+    monkeypatch.setattr(stable_auto_train, "run", calls.append)
+
+    stable_auto_train.sync_main_with_origin()
+
+    assert calls == [["git", "merge", "--ff-only", "origin/main"]]
+
+
+def test_sync_main_with_origin_allows_local_ahead(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        del timeout
+        if argv == ["git", "rev-parse", "HEAD"]:
+            return "local"
+        if argv == ["git", "rev-parse", "origin/main"]:
+            return "remote"
+        raise AssertionError(argv)
+
+    def fake_is_ancestor(ancestor: str, descendant: str) -> bool:
+        return (ancestor, descendant) == ("origin/main", "HEAD")
+
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+    monkeypatch.setattr(stable_auto_train, "git_ref_is_ancestor", fake_is_ancestor)
+    monkeypatch.setattr(stable_auto_train, "run", calls.append)
+
+    stable_auto_train.sync_main_with_origin()
+
+    assert calls == []
+
+
+def test_sync_main_with_origin_blocks_divergence(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        del timeout
+        if argv == ["git", "rev-parse", "HEAD"]:
+            return "local"
+        if argv == ["git", "rev-parse", "origin/main"]:
+            return "remote"
+        raise AssertionError(argv)
+
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+    monkeypatch.setattr(stable_auto_train, "git_ref_is_ancestor", lambda ancestor, descendant: False)
+
+    with pytest.raises(RuntimeError, match="have diverged"):
+        stable_auto_train.sync_main_with_origin()
+
+
 def test_select_target_recovers_latest_incomplete_tag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     queue.write_text(
@@ -225,6 +287,7 @@ def test_run_once_resumes_locally_tagged_unpublished_release(
     monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
     monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
     monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: None)
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
     monkeypatch.setattr(
         stable_auto_train,
@@ -278,6 +341,7 @@ def test_run_once_refuses_unknown_status_for_existing_tag(
     monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
     monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
     monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: None)
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: version)
     monkeypatch.setattr(
         stable_auto_train,

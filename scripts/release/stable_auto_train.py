@@ -421,11 +421,40 @@ def local_tag_points_to_head(tag: str) -> bool:
 def best_effort_fetch_tags() -> None:
     try:
         run(
-            ["git", *GIT_HTTP_CONFIG_ARGS, "fetch", "origin", "--tags"],
+            ["git", *GIT_HTTP_CONFIG_ARGS, "fetch", "origin", "main", "--tags"],
             timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        print(f"autodev-train stable: warning: best-effort tag fetch failed or timed out: {exc}", flush=True)
+        print(f"autodev-train stable: warning: best-effort origin fetch failed or timed out: {exc}", flush=True)
+
+
+def git_ref_is_ancestor(ancestor: str, descendant: str) -> bool:
+    result = run_process(
+        ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+    )
+    return result.returncode == 0
+
+
+def sync_main_with_origin() -> None:
+    """Fast-forward local main to origin/main before preparing a release."""
+    try:
+        local_head = capture(["git", "rev-parse", "HEAD"])
+        origin_main = capture(["git", "rev-parse", "origin/main"])
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError("cannot inspect origin/main before stable release train cycle") from exc
+
+    if local_head == origin_main:
+        return
+    if git_ref_is_ancestor("HEAD", "origin/main"):
+        run(["git", "merge", "--ff-only", "origin/main"])
+        return
+    if git_ref_is_ancestor("origin/main", "HEAD"):
+        return
+    raise RuntimeError("local main and origin/main have diverged; rebase required before stable autodev train")
 
 
 def list_stable_tags() -> list[StableVersion]:
@@ -1194,6 +1223,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     assert_clean_tree()
     assert_on_main()
     best_effort_fetch_tags()
+    sync_main_with_origin()
     target = select_target(target_queue)
     assert_release_gate_allows_target(target)
     previous = latest_stable_before(target.version)
