@@ -10,7 +10,8 @@ SPDX-License-Identifier: Apache-2.0
 Alpha — evidence-supporting alignment mapping, NOT compliance certification.
 
 This document maps Attestplane's substrate primitives to NIST AI Risk
-Management Framework 1.0 (AI RMF) function families. It is not a conformity
+Management Framework 1.0 ([NIST AI 100-1](https://doi.org/10.6028/NIST.AI.100-1),
+January 2023) (AI RMF) function families. It is not a conformity
 assessment, not a NIST endorsement, and not a statement that any deployed
 system satisfies AI RMF objectives.
 
@@ -58,7 +59,7 @@ release.
 
 | AI RMF function / outcome | Attestplane primitive providing supporting evidence | Citation file |
 |---|---|---|
-| Govern 1.5 — accountability structures, transparent oversight | append-only hash chain, signed events, RFC 3161 / Sigstore anchors that make oversight reviewable offline | `docs/adr/0002-substrate-data-model-and-hash-chain-v0.md`, `docs/adr/0003-tsa-rfc-3161-anchoring.md`, `docs/adr/0006-sigstore-rekor-redundant-anchor.md` |
+| Govern 1.4[^govern-1-4] — accountability structures, transparent policies and oversight | append-only hash chain, signed events, RFC 3161 / Sigstore anchors that make oversight reviewable offline | `docs/adr/0002-substrate-data-model-and-hash-chain-v0.md`, `docs/adr/0003-tsa-rfc-3161-anchoring.md`, `docs/adr/0006-sigstore-rekor-redundant-anchor.md` |
 | Govern 2.x — culture of risk management, documented policy linkage | `policy_trace_refs` field links each event to the policy or guardrail revision active at decision time | `docs/adr/0012-proof-bundle-policy-trace-refs.md` |
 | Map 3.x — system context, AI requirements, role-bound responsibilities | role-bound event fields (provider / deployer / operator / auditor) recommended by the AIA-12 aligned profile | `docs/spec/aia-12-aligned-profile.md` (sibling, unmodified) |
 | Map 5.2 — system, model, and policy version references for impact tracking | continuity checkpoints in the hash chain plus `system_ref`, `model_ref`, `policy_ref` carried per event | `docs/adr/0002-substrate-data-model-and-hash-chain-v0.md`, `docs/spec/aia-12-aligned-profile.md` |
@@ -123,8 +124,8 @@ This mapping does not address:
 - forward-looking guarantees about future AI RMF releases or NIST publications
   beyond the alpha mapping,
 - conformity assessment, accreditation, or certification of any kind,
-- AI RMF Generative AI Profile (NIST AI 600-1) extensions; those would be a
-  separate sibling overlay if drafted in future.
+- `NIST AI 600-1` (Generative AI Profile) — separate companion document;
+  alignment mapping not provided in this profile.
 
 ## Relationship to AIA-12 aligned profile
 
@@ -153,3 +154,14 @@ than mutating this one in place. A new mapping is required when:
 
 This versioning rule preserves the alpha boundary: the mapping is alignment
 scaffolding, never a certification claim.
+
+## References
+
+- NIST AI RMF 1.0, January 2023, <https://doi.org/10.6028/NIST.AI.100-1>
+  (NIST AI 100-1, *Artificial Intelligence Risk Management Framework
+  (AI RMF 1.0)*, including Appendix A core function outcomes referenced by
+  this mapping).
+
+[^govern-1-4]: Mapping aligns with GOVERN-1.4 (transparent
+    policies/accountability); reviewers should validate against NIST AI 100-1
+    Appendix A outcome statements.
