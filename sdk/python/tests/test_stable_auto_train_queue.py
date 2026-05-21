@@ -378,7 +378,7 @@ def test_run_git_push_skips_when_remote_already_converged(monkeypatch: pytest.Mo
     result = stable_auto_train.run_git_push(["git", "push", "origin", "main"])
 
     assert result.returncode == 0
-    assert result.args == ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]
+    assert result.args == ["git", *stable_auto_train.GIT_HTTP_CONFIG_ARGS, "push", "origin", "main"]
     assert attempts == []
 
 
@@ -396,7 +396,7 @@ def test_run_git_push_attempts_push_when_preflight_probe_fails(monkeypatch: pyte
     result = stable_auto_train.run_git_push(["git", "push", "origin", "main"])
 
     assert result.returncode == 0
-    assert attempts == [["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"]]
+    assert attempts == [["git", *stable_auto_train.GIT_HTTP_CONFIG_ARGS, "push", "origin", "main"]]
 
 
 def test_run_git_push_retries_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
