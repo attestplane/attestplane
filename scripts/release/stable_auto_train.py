@@ -44,6 +44,25 @@ DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
+# Low-speed cut-off so a stalled curl tunnel (proxy/GFW flake during long
+# HTTPS push) bails in ~20s instead of waiting the default 75s before
+# `curl 28` fires. Pairs with REMOTE_PUSH_RETRY_SECONDS so a 3-attempt
+# cycle finishes in ~70s under a flaky tunnel instead of ~240s.
+GIT_HTTP_LOW_SPEED_LIMIT = 1000
+GIT_HTTP_LOW_SPEED_TIME = 20
+# 500 MB post buffer — fewer chunked-transfer round-trips, less surface
+# for the MITM tunnel to drop a chunk mid-push.
+GIT_HTTP_POST_BUFFER = 524_288_000
+GIT_HTTP_CONFIG_ARGS: tuple[str, ...] = (
+    "-c",
+    f"http.version={GIT_HTTP_VERSION}",
+    "-c",
+    f"http.lowSpeedLimit={GIT_HTTP_LOW_SPEED_LIMIT}",
+    "-c",
+    f"http.lowSpeedTime={GIT_HTTP_LOW_SPEED_TIME}",
+    "-c",
+    f"http.postBuffer={GIT_HTTP_POST_BUFFER}",
+)
 REMOTE_PROBE_TIMEOUT_SECONDS = 30
 REMOTE_PUSH_ATTEMPTS = 3
 REMOTE_PUSH_RETRY_SECONDS = 10
@@ -212,16 +231,12 @@ def terminate_process_group(process: subprocess.Popen[str]) -> None:
 
 
 def normalize_git_push_argv(argv: list[str]) -> list[str]:
-    if (
-        len(argv) >= 5
-        and argv[0] == "git"
-        and argv[1] == "-c"
-        and argv[2] == f"http.version={GIT_HTTP_VERSION}"
-        and argv[3] == "push"
-    ):
+    """Inject the canonical ``http.*`` ``-c`` overrides ahead of ``push origin <ref>``."""
+    canonical_prefix = ["git", *GIT_HTTP_CONFIG_ARGS, "push"]
+    if argv[: len(canonical_prefix)] == canonical_prefix:
         return argv
     if len(argv) >= 4 and argv[:3] == ["git", "push", "origin"]:
-        return ["git", "-c", f"http.version={GIT_HTTP_VERSION}", *argv[1:]]
+        return ["git", *GIT_HTTP_CONFIG_ARGS, "push", *argv[2:]]
     return argv
 
 
@@ -288,9 +303,15 @@ def git_push_remote_converged(argv: list[str]) -> bool:
 
 def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
     argv = normalize_git_push_argv(argv)
-    if len(argv) != 6 or argv[:4] != ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "push"] or argv[4] != "origin":
+    canonical_prefix = ["git", *GIT_HTTP_CONFIG_ARGS, "push"]
+    expected_len = len(canonical_prefix) + 2  # "origin" + ref
+    if len(argv) != expected_len:
         return False, None
-    ref = argv[5]
+    if argv[: len(canonical_prefix)] != canonical_prefix:
+        return False, None
+    if argv[len(canonical_prefix)] != "origin":
+        return False, None
+    ref = argv[len(canonical_prefix) + 1]
     try:
         if ref == "main":
             local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
@@ -400,7 +421,7 @@ def local_tag_points_to_head(tag: str) -> bool:
 def best_effort_fetch_tags() -> None:
     try:
         run(
-            ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "fetch", "origin", "--tags"],
+            ["git", *GIT_HTTP_CONFIG_ARGS, "fetch", "origin", "--tags"],
             timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
