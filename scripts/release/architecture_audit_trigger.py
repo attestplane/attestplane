@@ -101,7 +101,7 @@ class AuditDecision:
 
     @property
     def should_upload_artifact(self) -> bool:
-        return self.action in {"medium-plan", "architecture-plan", "manifest-only"}
+        return self.action in {"daily-plan", "medium-plan", "architecture-plan", "manifest-only"}
 
     @property
     def upgrade_label(self) -> str:
@@ -109,7 +109,7 @@ class AuditDecision:
             return ARCHITECTURE_UPGRADE_LABEL
         if self.plan_level == "medium":
             return MEDIUM_UPGRADE_LABEL
-        return ""
+        return "upgrade-daily"
 
 
 def run_git(args: list[str]) -> str:

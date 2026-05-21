@@ -60,6 +60,8 @@ def test_decide_audit_skips_daily_small_upgrade() -> None:
     assert decision.action == "daily-plan"
     assert decision.reason == "daily_small_upgrade"
     assert decision.should_open_issue is True
+    assert decision.should_upload_artifact is True
+    assert decision.upgrade_label == "upgrade-daily"
 
 
 def test_decide_audit_skips_daily_small_upgrade_when_no_real_work_exists() -> None:
