@@ -8,11 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 This document is the pre-prepared submission text for adding
 Attestplane to the
 [reproducible-builds.org](https://reproducible-builds.org/) public
-projects directory. The submission itself is a community pull request
-to the
-[`reproducible-builds/reproducible-website`](https://github.com/reproducible-builds/reproducible-website)
-repository (or its current `_projects/` directory equivalent); this
-file holds the prepared text so the maintainer can submit when ready.
+projects directory. The submission itself is a community merge request
+to the upstream website source repository on Salsa (Debian's GitLab),
+[`reproducible-builds/reproducible-website`](https://salsa.debian.org/reproducible-builds/reproducible-website)
+(linked from [reproducible-builds.org/contribute/](https://reproducible-builds.org/contribute/)
+under "Patches for this website welcome via our Git repository") — or
+its current `_projects/` directory equivalent; this file holds the
+prepared text so the maintainer can submit when ready.
 
 ## Scope of this document
 
@@ -84,7 +86,9 @@ The maintainer's submission steps (to be performed after this prep doc
 merges, when ready — no date promised here):
 
 1. Fork
-   [`reproducible-builds/reproducible-website`](https://github.com/reproducible-builds/reproducible-website).
+   [`reproducible-builds/reproducible-website`](https://salsa.debian.org/reproducible-builds/reproducible-website)
+   on Salsa (Debian's GitLab — sign-up via
+   [reproducible-builds.org/contribute/salsa/](https://reproducible-builds.org/contribute/salsa/)).
 2. Add a `_projects/attestplane.md` (or whatever path the upstream
    layout currently expects — verify against the
    `CONTRIBUTING.md` / `README.md` of the upstream repo at submission
@@ -109,8 +113,9 @@ merges, when ready — no date promised here):
 
 ## Out of scope for this PR
 
-- The actual upstream PR to `reproducible-builds/reproducible-website`
-  — a maintainer task afterwards, not in this PR.
+- The actual upstream merge request to
+  `reproducible-builds/reproducible-website` (on Salsa) —
+  a maintainer task afterwards, not in this PR.
 - TypeScript SDK reproducible-build coverage — currently tracked
   separately; the upstream listing covers only what the workflow
   actually enforces today (Python wheel).
