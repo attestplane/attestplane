@@ -1457,7 +1457,19 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     assert_release_gate_allows_target(target)
     previous = latest_stable_before(target.version)
     version = target.version
-    if git_ref_exists(f"refs/tags/{version.tag}") or remote_tag_exists(version.tag):
+    local_target_tag_exists = git_ref_exists(f"refs/tags/{version.tag}")
+    if (
+        not local_target_tag_exists
+        and not truthy_env(os.environ.get(FORCE_CADENCE_ENV, ""))
+        and not commits_since_tag_have_real_work(previous.tag)
+    ):
+        print(
+            f"autodev-train stable: no real work since {previous.tag}; skipping cadence cycle",
+            flush=True,
+        )
+        return previous.tag
+
+    if local_target_tag_exists or remote_tag_exists(version.tag):
         if publish:
             status = publication_status(version)
             if status.unknown:
@@ -1468,13 +1480,6 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
                 recover_existing_release(version)
             return version.tag
         raise RuntimeError(f"stable tag already exists: {version.tag}")
-
-    if not truthy_env(os.environ.get(FORCE_CADENCE_ENV, "")) and not commits_since_tag_have_real_work(previous.tag):
-        print(
-            f"autodev-train stable: no real work since {previous.tag}; skipping cadence cycle",
-            flush=True,
-        )
-        return previous.tag
 
     print(
         f"autodev-train stable: preparing {version.tag} from {previous.tag}; channel={target.channel}",

@@ -418,6 +418,60 @@ def test_run_once_reconciles_superseded_local_tag_before_target_selection(
     assert calls[:2] == ["sync", "reconcile"]
 
 
+def test_run_once_skips_generated_target_before_remote_probe_when_no_real_work(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.0.8", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    latest = stable_auto_train.StableVersion.parse("1.0.8")
+    calls: list[str] = []
+
+    monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "reconcile_unpublished_local_stable_tag", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: latest)
+    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: latest)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=True,
+            npm_visible=True,
+            npm_latest=True,
+            github_release=True,
+        ),
+    )
+    monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.0.8")
+    monkeypatch.setattr(
+        stable_auto_train,
+        "remote_tag_exists",
+        lambda tag: (_ for _ in ()).throw(AssertionError(f"unexpected remote probe for {tag}")),
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
+        "commits_since_tag_have_real_work",
+        lambda tag: calls.append(f"cadence:{tag}") or False,
+    )
+
+    result = stable_auto_train.run_once(publish=True, wait=True, target_queue=queue, dry_run=False)
+
+    assert result == "v1.0.8"
+    assert calls == ["cadence:v1.0.8"]
+
+
 def test_run_once_refuses_unknown_status_for_existing_tag(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
