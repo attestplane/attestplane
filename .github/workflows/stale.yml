@@ -1,0 +1,44 @@
+name: stale
+
+on:
+  schedule:
+    - cron: "13 6 * * 1"  # Monday 06:13 UTC, conservative cadence
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: stale-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639  # v9.1.0 — pin to SHA per repo convention
+        with:
+          days-before-stale: 90
+          days-before-close: 30
+          stale-issue-label: "stale"
+          stale-pr-label: "stale"
+          exempt-issue-labels: "type:security,risk:high,pinned,priority:critical"
+          exempt-pr-labels: "type:security,risk:high,pinned,priority:critical"
+          stale-issue-message: |
+            This issue has been inactive for 90 days. It will be closed in 30 days if no further activity occurs.
+
+            Reopen at any time, including post-close, if the situation changes.
+          stale-pr-message: |
+            This PR has been inactive for 90 days. It will be closed in 30 days if no further activity occurs.
+
+            Rebase or push to keep it open.
+          close-issue-message: |
+            Closing as stale after 120 days of inactivity. Reopen if the issue is still relevant.
+          close-pr-message: |
+            Closing as stale after 120 days of inactivity. Reopen and rebase if you want to continue.
+          remove-stale-when-updated: true
+          operations-per-run: 60
