@@ -198,12 +198,13 @@ call Opus from GitHub Actions. Instead,
 `reports/architecture-audits/` with the milestone tag, the prior audited
 anchor, commit classification, and a local `ask_opus.sh architect`
 prompt. The planning issue is the entry point: run the Opus consultation,
-post the generated issue-ready plan back as a planning-issue comment, and let
+post the generated issue-ready plan back as a planning-issue comment with a
+structured `ATT_PLAN_SCHEMA_V1` block and `plan_id`, and let
 `.github/workflows/plan-to-issues.yml` convert every accepted P0/P1/P2 section
 into its own GitHub issue with `planned-task`. The workflow links the
-generated issues back to the planning issue. Execution then starts only from
-those generated task issues. A task listed in a plan but not yet represented
-by a GitHub issue is not executable.
+generated issues back to the planning issue and uses `plan_id` for idempotent
+re-runs. Execution then starts only from those generated task issues. A task
+listed in a plan but not yet represented by a GitHub issue is not executable.
 
 The audit anchor is tracked through closed issues carrying
 `development-plan`, `architecture-audit`, and `audited`. After the plan has
@@ -215,9 +216,9 @@ unaffected.
 
 The execution rule is strict: implementation starts from generated task issues,
 not from the planning issue body or chat. Each task issue should include the
-source planning issue, priority, affected modules, acceptance criteria,
-validation commands, and rollout or migration notes. Close the task issue only
-after its validation evidence is recorded there.
+source planning issue, `plan_id`, priority, affected modules, acceptance
+criteria, validation commands, and rollout or migration notes. Close the task
+issue only after its validation evidence is recorded there.
 
 ## Permission Audit
 

@@ -79,3 +79,24 @@ def test_parse_architecture_module_labels() -> None:
     assert "priority-P0" in tasks[0].labels
     assert "architecture-audit" in tasks[0].labels
     assert "area:conformance" in tasks[0].labels
+
+
+def test_parse_structured_plan_payload_into_planned_tasks() -> None:
+    markdown = """
+## Auto-Generated Medium Plan
+
+<!-- ATT_PLAN_SCHEMA_V1_START -->
+```json
+{"anchor_tag":"v1.4.9","consultation_level":"feature","head_sha":"abc123","issues":[{"acceptance_criteria":["Document the user-visible boundary."],"modules":["release notes","release train"],"ordinal":1,"priority":"P0","rollout_notes":"Keep the release boundary explicit and small.","title":"[P0][release] Define the v1.5.0 release boundary and scope","validation_commands":["git diff --check"]}],"milestone_tag":"v1.5.0","plan_id":"deadbeef","plan_level":"medium","recent_real_commits":[],"schema":"attestplane.plan.v1","schema_version":1}
+```
+<!-- ATT_PLAN_SCHEMA_V1_END -->
+"""
+
+    tasks = plan_to_issues.parse_plan(markdown, source_issue=61)
+
+    assert len(tasks) == 1
+    assert tasks[0].plan_id == "deadbeef"
+    assert "Plan ID: `deadbeef`" in tasks[0].body
+    assert "Plan schema: `attestplane.plan.v1`" in tasks[0].body
+    assert "priority-P0" in tasks[0].labels
+    assert "area:release-integrity" in tasks[0].labels

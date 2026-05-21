@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from scripts.release.plan_schema import PlanIssue, append_plan_block, with_plan_id
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 RE_RELEASE_PREP = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.\d+(-\w+)?$")
@@ -306,6 +308,233 @@ def build_manifest(
     }
 
 
+def consultation_level_for(plan_level: str) -> str:
+    if plan_level == "architecture":
+        return "architecture"
+    if plan_level == "medium":
+        return "feature"
+    return "diff"
+
+
+def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
+    milestone_tag = str(manifest["milestone_tag"])
+    anchor_tag = manifest.get("anchor_tag") or "repository start"
+    plan_level = str(manifest.get("plan_level", "daily"))
+    recent = manifest.get("recent_real_commits")
+    issue_specs: list[PlanIssue]
+
+    if plan_level == "daily":
+        issue_specs = [
+            PlanIssue(
+                ordinal=1,
+                title=f"[P0][release] Confirm the {milestone_tag} real-change boundary",
+                priority="P0",
+                modules=("release train", "release notes", "release-cd policy"),
+                acceptance_criteria=(
+                    f"Verify the range from {anchor_tag} to {milestone_tag} contains real human work.",
+                    "Confirm the release train should publish rather than skip.",
+                    "Record any remaining idle-cadence risk as a follow-up issue before close.",
+                ),
+                validation_commands=(
+                    "git log --no-merges --pretty=tformat:%s $(git rev-list --max-parents=0 HEAD)..HEAD",
+                    "git diff --stat $(git rev-list --max-parents=0 HEAD)..HEAD",
+                    "git diff --check $(git rev-list --max-parents=0 HEAD)..HEAD",
+                ),
+                rollout_notes="No tag or registry movement without a real diff.",
+            ),
+            PlanIssue(
+                ordinal=2,
+                title="[P1][test] Expand regression coverage for the real commits",
+                priority="P1",
+                modules=("SDK tests", "release gate coverage", "release-prep fixtures"),
+                acceptance_criteria=(
+                    "Add or update regression coverage for the real commits in this range.",
+                    "Confirm the release-prep diff is not only train-generated metadata.",
+                    "Record the validation evidence on the task issue before close.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'release_gate or stable_auto_train' -x",
+                    "git diff --check",
+                ),
+                rollout_notes="Keep the scope tight; daily work should stay small and direct.",
+            ),
+            PlanIssue(
+                ordinal=3,
+                title=f"[P2][docs] Summarize the user-visible delta for {milestone_tag}",
+                priority="P2",
+                modules=("docs/release-notes", "docs/runbooks", "release metadata"),
+                acceptance_criteria=(
+                    "Record the user-visible change in the release notes or runbook.",
+                    "Link the release note to the source planning issue and task issues.",
+                    "Keep wording within claim boundaries and avoid secrets.",
+                ),
+                validation_commands=("git diff --check",),
+                rollout_notes="This should never be the only task if the diff contains real product work.",
+            ),
+        ]
+    elif plan_level == "medium":
+        issue_specs = [
+            PlanIssue(
+                ordinal=1,
+                title=f"[P0][release] Define the {milestone_tag} release boundary and scope",
+                priority="P0",
+                modules=("release notes", "release train", "package metadata"),
+                acceptance_criteria=(
+                    f"Document the user-visible boundary for {milestone_tag}.",
+                    "Enumerate the intentional scope change and any backward-compatibility notes.",
+                    "Link the plan back to the source planning issue before implementation starts.",
+                ),
+                validation_commands=("git diff --check", "markdown-link-check docs/**/*.md"),
+                rollout_notes="Keep the release boundary explicit and small.",
+            ),
+            PlanIssue(
+                ordinal=2,
+                title="[P0][compatibility] Review compatibility and migration impact",
+                priority="P0",
+                modules=("SDK compatibility", "schema fixtures", "verifier behavior"),
+                acceptance_criteria=(
+                    "Identify any compatibility or migration impact introduced by the milestone.",
+                    "Add fixtures or tests that pin the intended contract.",
+                    "Record unresolved compatibility gaps as follow-up issues.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'compat or conformance or verifier' -x",
+                    "git diff --check",
+                ),
+                rollout_notes="Prefer incremental compatibility work over broad rewrites.",
+            ),
+            PlanIssue(
+                ordinal=3,
+                title=f"[P1][docs] Publish the milestone note set",
+                priority="P1",
+                modules=("docs/release-notes", "docs/runbooks"),
+                acceptance_criteria=(
+                    "Summarize the milestone in release-facing documentation.",
+                    "Link the release note to the planning issue and task issues.",
+                    "Keep claim wording within documented evidence boundaries.",
+                ),
+                validation_commands=("git diff --check",),
+                rollout_notes="Documentation can land independently once the plan is accepted.",
+            ),
+            PlanIssue(
+                ordinal=4,
+                title="[P1][test] Expand coverage for the milestone change",
+                priority="P1",
+                modules=("SDK tests", "release gate coverage", "regression fixtures"),
+                acceptance_criteria=(
+                    "Add regression coverage for the real commits in this range.",
+                    "Confirm the release path still behaves forward-only.",
+                    "Record the validation evidence on the task issue before close.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'release_gate or stable_auto_train or conformance' -x",
+                    "git diff --check",
+                ),
+                rollout_notes="Coverage should target the specific milestone change.",
+            ),
+        ]
+    else:
+        issue_specs = [
+            PlanIssue(
+                ordinal=1,
+                title=f"[P0][architecture][compatibility] Define the {milestone_tag} compatibility and migration contract",
+                priority="P0",
+                modules=("SDK public APIs", "storage formats", "proof bundle schema", "verifier behavior", "release notes"),
+                acceptance_criteria=(
+                    f"Document backward compatibility guarantees from {anchor_tag} to {milestone_tag}.",
+                    "List intentional breaking changes, migration steps, and unsupported historical behavior.",
+                    "Add or update compatibility fixtures covering the prior audited anchor and the milestone.",
+                    "Release notes link to the migration contract before any implementation issue closes.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'compat or proof_bundle or verifier' -x",
+                    "npm test --prefix sdk/typescript -- --runInBand",
+                    "git diff --check",
+                ),
+                rollout_notes="Do not break existing stable artifacts without a documented migration path.",
+            ),
+            PlanIssue(
+                ordinal=2,
+                title="[P0][security][boundary] Review architecture-level security and trust boundaries",
+                priority="P0",
+                modules=("signing", "anchoring", "verifier trust roots", "release provenance", "SECURITY.md", "threat model"),
+                acceptance_criteria=(
+                    "Identify all trust boundaries affected by the architecture milestone.",
+                    "Update threat model claims, arguments, and evidence for new or changed boundaries.",
+                    "Verify signing/provenance workflows remain forward-only and do not expose secrets.",
+                    "Record any deferred security boundary work as follow-up issues before close.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'signing or anchoring or trust or provenance' -x",
+                    "git diff --check",
+                ),
+                rollout_notes="No secrets in issue bodies, logs, PR descriptions, or commits.",
+            ),
+            PlanIssue(
+                ordinal=3,
+                title=f"[P0][release] Prove release rollback and forward-only recovery for {milestone_tag}",
+                priority="P0",
+                modules=("release train", "release-cd", "sign-release", "slsa-provenance", "artifact manifests"),
+                acceptance_criteria=(
+                    "Document safe recovery paths for failed tag publication, failed signing, failed provenance, and registry lag.",
+                    "Add regression coverage for prepared-but-unpublished major versions.",
+                    "Confirm the release train never force-pushes, retags, or publishes around failed gates.",
+                    "Validate npm latest and PyPI latest only advance after release-cd success.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'stable_auto_train or release_cd' -x",
+                    "scripts/check-release-assets-prep.sh",
+                    "git diff --check",
+                ),
+                rollout_notes="Treat GitHub/network/registry propagation as external blockers, not reasons to bypass gates.",
+            ),
+            PlanIssue(
+                ordinal=4,
+                title=f"[P1][docs][governance] Publish the {milestone_tag} architecture decision record set",
+                priority="P1",
+                modules=("docs/adr", "docs/architecture", "docs/runbooks", "governance docs"),
+                acceptance_criteria=(
+                    "Add an architecture milestone overview that explains what changed and why.",
+                    "Link ADRs to generated P0/P1/P2 planned-task issues.",
+                    "Mark unresolved architectural risks explicitly, with owner issue links.",
+                    "Keep claim wording within alpha/stable evidence boundaries.",
+                ),
+                validation_commands=("markdown-link-check docs/**/*.md", "git diff --check"),
+                rollout_notes="Documentation can land incrementally, but every architecture claim needs evidence or a gap link.",
+            ),
+            PlanIssue(
+                ordinal=5,
+                title=f"[P1][test][conformance] Expand cross-SDK and verifier conformance for {milestone_tag}",
+                priority="P1",
+                modules=("Python SDK", "TypeScript SDK", "verifier conformance fixtures", "cross-SDK roundtrip tests"),
+                acceptance_criteria=(
+                    "Add conformance vectors that exercise new or changed architecture behavior.",
+                    "Verify Python and TypeScript SDKs agree on canonical serialization and verification results.",
+                    "Ensure failing vectors produce stable, documented error codes.",
+                    "Record unsupported edge cases as planned follow-up issues.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'conformance or canonical or roundtrip' -x",
+                    "npm test --prefix sdk/typescript -- --runInBand",
+                    "git diff --check",
+                ),
+                rollout_notes="Conformance expansion should precede feature implementation where practical.",
+            ),
+        ]
+
+    return {
+        "schema": "attestplane.plan.v1",
+        "schema_version": 1,
+        "milestone_tag": milestone_tag,
+        "anchor_tag": anchor_tag,
+        "head_sha": str(manifest["head_sha"]),
+        "plan_level": plan_level,
+        "consultation_level": consultation_level_for(plan_level),
+        "recent_real_commits": manifest.get("recent_real_commits", []),
+        "issues": [issue.as_dict() for issue in issue_specs],
+    }
+
+
 def render_issue_body(manifest: dict[str, object]) -> str:
     milestone_tag = str(manifest["milestone_tag"])
     anchor_tag = manifest.get("anchor_tag") or "repository start"
@@ -334,7 +563,8 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         "",
         "The review should first produce a concise plan, then decompose the",
         "plan into issue-ready P0/P1/P2 sections. The workflow posts that plan",
-        "back as a comment on this issue; the `plan-to-issues` workflow converts",
+        "back as a comment on this issue, including a structured `ATT_PLAN_SCHEMA_V1`",
+        "block; the `plan-to-issues` workflow converts",
         f"those sections into GitHub issues with `{TASK_LABEL}` plus the",
         "appropriate priority/module labels. No planned task should be",
         "implemented directly from this planning issue, the Opus output, or",
@@ -676,6 +906,7 @@ def main(argv: list[str] | None = None) -> int:
 
     issue_body = ""
     auto_issue_plan = ""
+    plan_payload: dict[str, object] = {}
     if decision.should_upload_artifact:
         args.output_dir.mkdir(parents=True, exist_ok=True)
         stem = f"architecture-gap-audit-{milestone.tag}"
@@ -684,7 +915,8 @@ def main(argv: list[str] | None = None) -> int:
         auto_plan_path = args.output_dir / f"architecture-task-plan-{milestone.tag}.md"
         issue_body = render_issue_body(manifest)
         if decision.should_open_issue:
-            auto_issue_plan = render_auto_plan(manifest)
+            plan_payload = with_plan_id(build_plan_payload(manifest))
+            auto_issue_plan = append_plan_block(render_auto_plan(manifest), plan_payload)
             auto_plan_path.write_text(auto_issue_plan, encoding="utf-8")
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
         report_path.write_text(issue_body, encoding="utf-8")
@@ -693,11 +925,13 @@ def main(argv: list[str] | None = None) -> int:
         {
             "action": decision.action,
             "reason": decision.reason,
+            "consultation_level": consultation_level_for(decision.plan_level),
             "should_open_issue": str(decision.should_open_issue).lower(),
             "should_upload_artifact": str(decision.should_upload_artifact).lower(),
             "issue_title": decision.issue_title,
             "issue_body": issue_body,
             "auto_issue_plan": auto_issue_plan,
+            "plan_id": str(plan_payload.get("plan_id", "")),
             "upgrade_label": decision.upgrade_label,
             "anchor_tag": anchor_tag or "",
         }

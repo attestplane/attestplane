@@ -217,6 +217,8 @@ jobs:
             echo "- tag: \`${{ steps.milestone.outputs.tag }}\`"
             echo "- action: \`${{ steps.audit.outputs.action }}\`"
             echo "- reason: \`${{ steps.audit.outputs.reason }}\`"
+            echo "- consultation_level: \`${{ steps.audit.outputs.consultation_level }}\`"
+            echo "- plan_id: \`${{ steps.audit.outputs.plan_id }}\`"
             echo "- upgrade_label: \`${{ steps.audit.outputs.upgrade_label }}\`"
             echo "- anchor: \`${{ steps.audit.outputs.anchor_tag }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

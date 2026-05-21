@@ -238,3 +238,23 @@ def test_render_auto_plan_contains_issue_ready_sections_for_each_level() -> None
     assert "ISSUE 5" in architecture_plan
     assert "[P0][architecture][compatibility]" in architecture_plan
     assert "planned-task" in architecture_plan
+
+
+def test_build_plan_payload_produces_structured_plan_block() -> None:
+    manifest = {
+        "milestone_tag": "v1.5.0",
+        "anchor_tag": "v1.4.9",
+        "head_sha": "abc123",
+        "plan_level": "medium",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: x"}],
+    }
+
+    payload = architecture_audit_trigger.build_plan_payload(manifest)
+    plan_with_id = architecture_audit_trigger.with_plan_id(payload)
+    block = architecture_audit_trigger.append_plan_block("## Auto-Generated Medium Plan", plan_with_id)
+
+    assert payload["consultation_level"] == "feature"
+    assert payload["schema"] == "attestplane.plan.v1"
+    assert plan_with_id["plan_id"]
+    assert "ATT_PLAN_SCHEMA_V1_START" in block
+    assert "plan_id" in block

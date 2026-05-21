@@ -18,8 +18,13 @@ jobs:
       github.event.issue.pull_request == null &&
       contains(join(github.event.issue.labels.*.name, ','), 'development-plan') &&
       contains(join(github.event.issue.labels.*.name, ','), 'architecture-audit') &&
-      contains(github.event.comment.body, 'ISSUE 1') &&
-      contains(github.event.comment.body, 'Acceptance criteria')
+      (
+        contains(github.event.comment.body, 'ATT_PLAN_SCHEMA_V1') ||
+        (
+          contains(github.event.comment.body, 'ISSUE 1') &&
+          contains(github.event.comment.body, 'Acceptance criteria')
+        )
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
