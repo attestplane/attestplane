@@ -133,6 +133,7 @@ jobs:
       - name: Prepare bundle
         id: audit
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_ANCHOR: ${{ inputs.anchor_tag }}
           PREVIOUS_ANCHOR: ${{ steps.previous.outputs.anchor }}
           PREVIOUS_ISSUE: ${{ steps.previous.outputs.issue_url }}
@@ -150,6 +151,13 @@ jobs:
           if [ -n "$PREVIOUS_ISSUE" ]; then
             audit_args+=(--previous-audit-issue "$PREVIOUS_ISSUE")
           fi
+          mkdir -p reports/architecture-audits
+          gh issue list \
+            --state open \
+            --limit 100 \
+            --json number,title,labels,url,updatedAt \
+            > reports/architecture-audits/open-issues.json
+          audit_args+=(--open-issues-file reports/architecture-audits/open-issues.json)
           python3 scripts/release/architecture_audit_trigger.py \
             "${audit_args[@]}"
 

@@ -35,6 +35,7 @@ MEDIUM_UPGRADE_LABEL = "upgrade-medium"
 ARCHITECTURE_UPGRADE_LABEL = "upgrade-architecture"
 AUDITED_LABEL = "audited"
 MILESTONE_STABLE_RELEASES = 50
+OPEN_ISSUE_CONTEXT_LIMIT = 100
 
 
 @dataclass(frozen=True, order=True)
@@ -285,15 +286,73 @@ def recent_real_commits(commits: list[CommitInfo], limit: int = 20) -> list[dict
     return [commit.as_dict() for commit in substantive_commits(commits)[:limit]]
 
 
+def load_open_issues(path: Path | None) -> list[dict[str, object]]:
+    if path is None:
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError("open issues payload must be a JSON list")
+    issues: list[dict[str, object]] = []
+    for item in payload[:OPEN_ISSUE_CONTEXT_LIMIT]:
+        if not isinstance(item, dict):
+            continue
+        raw_labels = item.get("labels", [])
+        labels: list[str] = []
+        if isinstance(raw_labels, list):
+            for label in raw_labels:
+                if isinstance(label, dict) and isinstance(label.get("name"), str):
+                    labels.append(label["name"])
+                elif isinstance(label, str):
+                    labels.append(label)
+        number = item.get("number")
+        title = item.get("title")
+        if not isinstance(number, int) or not isinstance(title, str):
+            continue
+        issue: dict[str, object] = {
+            "number": number,
+            "title": title,
+            "labels": labels,
+        }
+        for key in ("url", "updatedAt"):
+            value = item.get(key)
+            if isinstance(value, str):
+                issue[key] = value
+        issues.append(issue)
+    return issues
+
+
+def render_open_issues_block(open_issues: object, *, limit: int = 30) -> str:
+    if not isinstance(open_issues, list) or not open_issues:
+        return "- none"
+    lines: list[str] = []
+    for item in open_issues[:limit]:
+        if not isinstance(item, dict):
+            continue
+        number = item.get("number")
+        title = item.get("title")
+        labels = item.get("labels", [])
+        if not isinstance(number, int) or not isinstance(title, str):
+            continue
+        label_text = ""
+        if isinstance(labels, list) and labels:
+            label_names = [label for label in labels if isinstance(label, str)]
+            if label_names:
+                label_text = f" [{', '.join(label_names)}]"
+        lines.append(f"- #{number} {title}{label_text}")
+    return "\n".join(lines) if lines else "- none"
+
+
 def build_manifest(
     *,
     decision: AuditDecision,
     commits: list[CommitInfo],
     head_sha: str,
     previous_audit_issue: str | None,
+    open_issues: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     release_prep_count = sum(1 for commit in commits if commit.kind == "release-prep")
     real_commits = substantive_commits(commits)
+    issue_context = open_issues or []
     return {
         "schema": "attestplane_architecture_gap_audit.v1",
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -308,6 +367,8 @@ def build_manifest(
         "real_commit_count": len(real_commits),
         "release_prep_commit_count": release_prep_count,
         "recent_real_commits": recent_real_commits(commits),
+        "open_issue_count": len(issue_context),
+        "open_issues": issue_context,
     }
 
 
@@ -533,6 +594,7 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
         "plan_level": plan_level,
         "consultation_level": consultation_level_for(plan_level),
         "recent_real_commits": manifest.get("recent_real_commits", []),
+        "open_issues": manifest.get("open_issues", []),
         "issues": [issue.as_dict() for issue in issue_specs],
     }
 
@@ -542,6 +604,7 @@ def render_issue_body(manifest: dict[str, object]) -> str:
     anchor_tag = manifest.get("anchor_tag") or "repository start"
     plan_level = str(manifest.get("plan_level", "medium"))
     recent = manifest.get("recent_real_commits")
+    open_issues_block = render_open_issues_block(manifest.get("open_issues"))
     lines: list[str] = [
         "## Development Plan Request",
         "",
@@ -594,6 +657,14 @@ def render_issue_body(manifest: dict[str, object]) -> str:
     lines.extend(
         [
             "",
+            "## Current Open GitHub Issues",
+            "",
+            "The plan must consider all currently open issues, not only tasks generated",
+            "from this milestone. Avoid duplicating open work; extend or reference",
+            "existing issues when the new plan overlaps.",
+            "",
+            open_issues_block,
+            "",
             "## Issue-First Completion Contract",
             "",
             "1. Run the Opus consultation for the milestone-level plan.",
@@ -633,6 +704,7 @@ def render_auto_plan(manifest: dict[str, object]) -> str:
     head_sha = str(manifest["head_sha"])
     plan_level = str(manifest.get("plan_level", "daily"))
     recent = manifest.get("recent_real_commits")
+    open_issues_block = render_open_issues_block(manifest.get("open_issues"), limit=20)
     recent_lines: list[str] = []
     if isinstance(recent, list):
         for item in recent[:10]:
@@ -653,6 +725,10 @@ planning issues only; implementation still starts from the generated
 Recent real commits considered:
 
 {recent_block}
+
+Open GitHub issues considered:
+
+{open_issues_block}
 
 **ISSUE 1 · [P0][release] Confirm the {milestone_tag} real-change boundary**
 - Priority: P0
@@ -705,6 +781,10 @@ planning issues only; implementation still starts from the generated
 Recent real commits considered:
 
 {recent_block}
+
+Open GitHub issues considered:
+
+{open_issues_block}
 
 **ISSUE 1 · [P0][release] Define the {milestone_tag} release boundary and scope**
 - Priority: P0
@@ -767,6 +847,10 @@ starts from the generated `planned-task` issues, one issue at a time.
 Recent real commits considered:
 
 {recent_block}
+
+Open GitHub issues considered:
+
+{open_issues_block}
 
 **ISSUE 1 · [P0][architecture][compatibility] Define the {milestone_tag} compatibility and migration contract**
 - Priority: P0
@@ -874,6 +958,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--anchor-tag")
     parser.add_argument("--previous-audit-issue")
     parser.add_argument("--previous-audit-anchor")
+    parser.add_argument("--open-issues-file", type=Path)
     parser.add_argument("--output-dir", type=Path, default=Path("reports/architecture-audits"))
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -899,11 +984,13 @@ def main(argv: list[str] | None = None) -> int:
         commits=commits,
     )
     head_sha = run_git(["rev-list", "-n", "1", milestone.tag])
+    open_issues = load_open_issues(args.open_issues_file)
     manifest = build_manifest(
         decision=decision,
         commits=commits,
         head_sha=head_sha,
         previous_audit_issue=args.previous_audit_issue,
+        open_issues=open_issues,
     )
 
     issue_body = ""

@@ -192,6 +192,13 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
         "reason": "half_version_medium_upgrade",
         "plan_level": "medium",
         "recent_real_commits": [{"sha": "abc123", "time": "2026-05-21", "subject": "feat: x"}],
+        "open_issues": [
+            {
+                "number": 62,
+                "title": "[P0][release] Existing release train regression suite",
+                "labels": ["planned-task", "priority-P0"],
+            }
+        ],
     }
 
     body = architecture_audit_trigger.render_issue_body(manifest)
@@ -202,6 +209,8 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
     assert "The workflow posts that plan" in body
     assert "`planned-task`" in body
     assert "Execution rule: work only starts from those generated task issues" in body
+    assert "Current Open GitHub Issues" in body
+    assert "#62 [P0][release] Existing release train regression suite" in body
 
 
 def test_render_auto_plan_contains_issue_ready_sections_for_each_level() -> None:
@@ -249,6 +258,13 @@ def test_build_plan_payload_produces_structured_plan_block() -> None:
         "head_sha": "abc123",
         "plan_level": "medium",
         "recent_real_commits": [{"sha": "abc123", "subject": "feat: x"}],
+        "open_issues": [
+            {
+                "number": 62,
+                "title": "[P0][release] Existing release train regression suite",
+                "labels": ["planned-task", "priority-P0"],
+            }
+        ],
     }
 
     payload = architecture_audit_trigger.build_plan_payload(manifest)
@@ -258,5 +274,37 @@ def test_build_plan_payload_produces_structured_plan_block() -> None:
     assert payload["consultation_level"] == "feature"
     assert payload["schema"] == "attestplane.plan.v1"
     assert plan_with_id["plan_id"]
+    assert plan_with_id["open_issues"] == manifest["open_issues"]
     assert "ATT_PLAN_SCHEMA_V1_START" in block
     assert "plan_id" in block
+
+
+def test_load_open_issues_normalizes_github_issue_json(tmp_path: Path) -> None:
+    issues_path = tmp_path / "open-issues.json"
+    issues_path.write_text(
+        """
+[
+  {
+    "number": 62,
+    "title": "[P0][release] Existing work",
+    "labels": [{"name": "planned-task"}, {"name": "priority-P0"}],
+    "url": "https://github.example/issues/62",
+    "updatedAt": "2026-05-21T00:00:00Z"
+  },
+  {"number": "bad", "title": "ignored", "labels": []}
+]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    issues = architecture_audit_trigger.load_open_issues(issues_path)
+
+    assert issues == [
+        {
+            "number": 62,
+            "title": "[P0][release] Existing work",
+            "labels": ["planned-task", "priority-P0"],
+            "url": "https://github.example/issues/62",
+            "updatedAt": "2026-05-21T00:00:00Z",
+        }
+    ]
