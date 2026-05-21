@@ -141,6 +141,22 @@ notes are the authoritative reference for supply-chain verification.
 
 ### Supply-chain evidence regime
 
+- Wired `sign-release.yml` (`execute=true`) and
+  `slsa-provenance.yml` (`execute=true`) into the autodev-train
+  publish flow in `scripts/release/stable_auto_train.py`, immediately
+  after release-cd registry visibility is confirmed. Every new
+  autodev-train release now auto-attaches Sigstore keyless cosign
+  bundles and a SLSA Build L3 `.intoto.jsonl` attestation to the
+  GitHub Release without manual workflow dispatch. Failure-tolerant:
+  a signing or provenance failure logs a warning, marks
+  `PublicationStatus.signed` / `.slsa` separately from registry
+  visibility, and does not block the cycle (forward-only per
+  [ADR-0018](docs/adr/0018-keyless-signing-and-slsa-provenance.md));
+  a follow-up cycle can re-trigger signing without re-publishing the
+  registry artifacts. Closes the gap that left `v1.0.x` → `v1.3.x`
+  autoreleases shipping without signatures even though the manual
+  `v1.0.8` / `v1.0.9` runs proved the workflows end-to-end. No
+  retroactive signing of any earlier tag.
 - Added ADR-0018 committing to Sigstore keyless cosign signing and
   SLSA Build L3 provenance via the upstream
   `slsa-framework/slsa-github-generator` for new releases. The
