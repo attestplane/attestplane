@@ -1,8 +1,10 @@
 ---
 source: "[SECURITY.md](./SECURITY.md)"
 source_sha: ff04817ec4405ca57c90998240c6ae09f8c1270c
-translation_status: draft
+translation_status: reviewed
 translator: "@merchloubna70-dot"
+reviewed_at: 2026-05-21
+reviewed_by: native-speaker (AI-assisted, fluency + normative-equivalence sweep)
 ---
 
 > **Source / 英文原文：** [SECURITY.md](./SECURITY.md) @ `ff04817e`
