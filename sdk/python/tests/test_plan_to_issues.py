@@ -123,3 +123,57 @@ def test_parse_structured_plan_payload_into_planned_tasks() -> None:
     assert "Plan schema: `attestplane.plan.v1`" in tasks[0].body
     assert "priority-P0" in tasks[0].labels
     assert "area:release-integrity" in tasks[0].labels
+
+
+def test_create_issues_fetches_uploaded_github_issues(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    task = plan_to_issues.PlannedTask(
+        title="[P0][release] Existing work",
+        body="Source planning issue: #61\nPlan ID: `deadbeef`\n",
+        priority="P0",
+        labels=("planned-task", "priority-P0"),
+        plan_id="deadbeef",
+    )
+
+    def fake_run_gh(args: list[str], *, retries: int = 0, retry_delay: float = 2.0) -> str:
+        calls.append(args)
+        if args[:2] == ["issue", "list"] and "--state" in args and "all" in args:
+            return "[]"
+        if args[:2] == ["issue", "create"]:
+            return "https://github.example/issues/62"
+        if args[:2] == ["issue", "list"] and "planned-task" in args:
+            return json.dumps(
+                [
+                    {
+                        "number": 62,
+                        "title": "[P0][release] Existing work",
+                        "url": "https://github.example/issues/62",
+                        "labels": [{"name": "planned-task"}, {"name": "priority-P0"}],
+                        "body": "Source planning issue: #61\nPlan ID: `deadbeef`\n",
+                    },
+                    {
+                        "number": 63,
+                        "title": "[P0][release] Other plan",
+                        "url": "https://github.example/issues/63",
+                        "labels": [{"name": "planned-task"}],
+                        "body": "Source planning issue: #99\nPlan ID: `deadbeef`\n",
+                    },
+                ]
+            )
+        raise AssertionError(args)
+
+    monkeypatch.setattr(plan_to_issues, "run_gh", fake_run_gh)
+
+    uploaded = plan_to_issues.create_issues([task], source_issue=61)
+
+    assert uploaded == [
+        {
+            "number": 62,
+            "title": "[P0][release] Existing work",
+            "url": "https://github.example/issues/62",
+            "labels": ["planned-task", "priority-P0"],
+        }
+    ]
+    assert any(call[:2] == ["issue", "create"] for call in calls)
+    assert calls[-1][:2] == ["issue", "list"]

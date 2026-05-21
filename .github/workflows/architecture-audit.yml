@@ -269,7 +269,7 @@ jobs:
           import json
 
           issues = json.load(open("planned-task-issues.json", encoding="utf-8"))
-          print("Accepted plan converted into `planned-task` issues:")
+          print("Accepted plan uploaded to GitHub and reloaded as `planned-task` issues:")
           print()
           for issue in issues:
               print(f"- {issue['url']} {issue['title']}")

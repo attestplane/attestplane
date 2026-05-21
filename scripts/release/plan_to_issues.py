@@ -229,12 +229,61 @@ def create_issue(task: PlannedTask, source_issue: int) -> str:
     return run_gh(args)
 
 
+def issue_payload_from_github(item: dict[str, object]) -> dict[str, object]:
+    labels: list[str] = []
+    raw_labels = item.get("labels", [])
+    if isinstance(raw_labels, list):
+        for label in raw_labels:
+            if isinstance(label, dict) and isinstance(label.get("name"), str):
+                labels.append(label["name"])
+            elif isinstance(label, str):
+                labels.append(label)
+    return {
+        "number": item.get("number"),
+        "title": item.get("title"),
+        "url": item.get("url"),
+        "labels": labels,
+    }
+
+
+def fetch_uploaded_issues(source_issue: int, plan_ids: set[str]) -> list[dict[str, object]]:
+    stdout = run_gh(
+        [
+            "issue",
+            "list",
+            "--state",
+            "open",
+            "--label",
+            TASK_LABEL,
+            "--limit",
+            "100",
+            "--json",
+            "number,title,labels,url,body",
+        ],
+        retries=3,
+    )
+    uploaded: list[dict[str, object]] = []
+    source_marker = f"Source planning issue: #{source_issue}"
+    for item in json.loads(stdout or "[]"):
+        if not isinstance(item, dict):
+            continue
+        body = item.get("body", "")
+        if not isinstance(body, str) or source_marker not in body:
+            continue
+        if plan_ids and not any(f"Plan ID: `{plan_id}`" in body for plan_id in plan_ids):
+            continue
+        uploaded.append(issue_payload_from_github(item))
+    return sorted(uploaded, key=lambda issue: int(issue.get("number") or 0))
+
+
 def create_issues(tasks: list[PlannedTask], source_issue: int) -> list[dict[str, object]]:
-    created: list[dict[str, object]] = []
     for task in tasks:
-        url = create_issue(task, source_issue)
-        created.append({**task.as_dict(), "url": url})
-    return created
+        create_issue(task, source_issue)
+    plan_ids = {task.plan_id for task in tasks if task.plan_id}
+    uploaded = fetch_uploaded_issues(source_issue, plan_ids)
+    if not uploaded:
+        raise RuntimeError("planned-task issues were created but could not be fetched back from GitHub")
+    return uploaded
 
 
 def main(argv: list[str] | None = None) -> int:
