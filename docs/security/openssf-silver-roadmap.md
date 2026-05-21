@@ -230,7 +230,7 @@ applicable to this project's surface, with reason.
 |---|---|---|---|
 | `input_validation` | Met | Auditor-API input validation per the FastAPI / Pydantic surface; canonical-text v1 enforces strict structural validation at chain ingress per [ADR-0011](../adr/0011-canonical-text-v1.md). | None. |
 | `hardening` (SHOULD) | Met | [`SECURITY.md`](../../SECURITY.md) "Hardening Guidance for Operators" (7 controls); CI uses pinned action SHAs; `permissions: read-all` baseline in workflows. | None. |
-| `assurance_case` | unmet | No consolidated assurance-case document yet. Pieces exist (threat model, ADR set, [`docs/architecture/verifier_independence.md`](../architecture/verifier_independence.md)) but no document that structures them as claims → arguments → evidence. | An "assurance case" document at `docs/security/assurance-case.md` is a tractable addition; see "Items requiring future commitments". |
+| `assurance_case` | partial | [`docs/security/threat-model-v1.md`](threat-model-v1.md) restructures the threat list as GSN-style claims → arguments → evidence (AT-01..AT-14) with explicit residuals; sibling artifacts ([ADR set](../adr/), [`docs/architecture/verifier_independence.md`](../architecture/verifier_independence.md)) are cited from §10. A consolidated `docs/security/assurance-case.md` aggregating non-threat claims (release, supply-chain, governance) remains future work. | Aggregating the non-threat-model claims into a single assurance-case document is the remaining step to lift this from partial to Met. |
 
 ### Analysis — Static code analysis
 
