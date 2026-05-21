@@ -31,6 +31,20 @@ A trusted contributor granted merge access and decision-making authority. Mainta
 
 The current Lead Maintainer is the project founder: a China-licensed Business and Compliance lawyer and sole engineer, serving as the primary decision-maker, release authority, and security contact. The Lead Maintainer role carries no special veto beyond what is granted by supermajority mechanics — it is a designation of accountability, not a grant of unilateral authority. See §8 for continuity obligations.
 
+### 2.5 Reviewer
+
+A bridge role between Contributor (§2.2) and Maintainer (§2.3). A Reviewer is a Contributor who has earned triage authority and advisory review weight through sustained, substantive review participation, but who does **not** yet hold merge access or release authority.
+
+- **Read access** — the repository is public, so this is already granted to everyone; the tier name simply marks formal recognition.
+- **Triage authority** — apply and remove labels, close issues as duplicate or out-of-scope, link related issues and PRs, request reproduction details from issue authors. No power to close substantive issues without owner consensus.
+- **Advisory `/lgtm`** — Reviewers may post `/lgtm` on a PR as a signal that the change looks correct from the perspective of the area in which they have been reviewing. The `/lgtm` is **advisory**, not binding; a Maintainer's `approve` is still required for merge.
+- **No merge access** — the GitHub `write` or `maintain` permission is **not** granted by this tier; merge access remains a Maintainer-only privilege under §2.3.
+- **No release authority** — Reviewers do not cut releases, sign artifacts, or hold any of the §8 succession responsibilities.
+- **No voting rights in §4 RFCs** — Reviewer status confers no vote in §4.1 lazy consensus or §4.2 supermajority decisions. Reviewers may participate in RFC discussion; only Maintainers (§2.3, §2.4) vote.
+- **Bridge requirement** — serving as a Reviewer for at least three months is a precondition for Maintainer nomination under the revised §5.1 path below.
+
+Full Reviewer-tier specification, including the nomination procedure and revocation, is in [`docs/governance/reviewer-tier.md`](docs/governance/reviewer-tier.md).
+
 ---
 
 ## 3. Maintainer Responsibilities
@@ -78,13 +92,20 @@ The following decisions require an explicit vote with **≥ 2/3 of active Mainta
 
 ### 5.1 Adding a Maintainer
 
+The advancement path is:
+
+> **Contributor (≥ 1 merged PR + ≥ 3 months active) → Reviewer (§2.5: ≥ 3 substantive PR reviews + 1 Maintainer nomination + 72-hour lazy consensus) → Maintainer (≥ 3 months sustained Reviewer service + §4.2 supermajority).**
+
 A Contributor may be nominated for Maintainer status if they meet all of the following:
 
 1. **Six months of sustained, substantive contributions** — not volume of commits, but evidence of judgment: thoughtful reviews, architecture input, security awareness, or community stewardship.
-2. **Nomination** by any existing Maintainer, with a written nomination posted publicly in GitHub Discussions.
-3. **30-day RFC period** for community comment.
-4. **Supermajority approval** (≥ 2/3 of active Maintainers).
-5. **Public announcement** once approved, including the new Maintainer's disclosure per §9.
+2. **At least three months of service as a Reviewer** (§2.5). The Reviewer bridge tier exists specifically so that Maintainer candidates can demonstrate review judgment under public, lower-stakes conditions before merge access is granted.
+3. **Nomination** by any existing Maintainer, with a written nomination posted publicly in GitHub Discussions.
+4. **30-day RFC period** for community comment.
+5. **Supermajority approval** (≥ 2/3 of active Maintainers).
+6. **Public announcement** once approved, including the new Maintainer's disclosure per §9.
+
+The Reviewer-service precondition (item 2) does **not** apply retroactively to anyone already serving as a Maintainer at the time §2.5 is adopted; existing Maintainers are grandfathered without further action.
 
 ### 5.2 Removing a Maintainer
 
