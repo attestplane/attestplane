@@ -1,6 +1,6 @@
 {
   "name": "@attestplane/attestplane",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Apache-2.0 attestation and audit substrate for AI agent evidence chains.",
   "keywords": [
     "audit",
