@@ -1,8 +1,11 @@
 [codespell]
-skip = .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,scripts/check-policy.sh
+skip = .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,scripts/check-policy.sh,sdk/typescript/dist
+# Keep this list in sync with .github/workflows/ci.yml `ignore_words_list`.
 # recuse: legal term ("to disqualify oneself", used in GOVERNANCE.md conflict-of-interest section)
 # BaFin: German Federal Financial Supervisory Authority
-# intoto: in-toto attestation standard (SLSA / Sigstore ecosystem). Appears
+# intoto / Intoto: in-toto attestation standard (SLSA / Sigstore ecosystem). Appears
 # in filenames (`*.intoto.jsonl`) and as a sub-module identifier; not "into".
-ignore-words-list = BaFin,attestplane,nd,recuse,recused,recusal,intoto
+# afterAll: vitest test-lifecycle API.
+# CNA / CNAs: CVE Numbering Authority (MITRE CVE Program term). Not "CAN".
+ignore-words-list = BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll,cna,CNA,CNAs
 check-hidden = true

@@ -51,8 +51,10 @@ jobs:
       - uses: codespell-project/actions-codespell@8f01853be192eb0f849a5c7d721450e7a467c579 # v2.2
         with:
           # in-toto is the attestation-format standard (SLSA/Sigstore ecosystem).
-          # afterAll is a vitest API name. Both are valid project terms.
-          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll
+          # afterAll is a vitest API name. CNA/CNAs = CVE Numbering Authority
+          # (MITRE CVE Program term, appears in docs/security/mitre-cna-application.md).
+          # All are valid project terms.
+          ignore_words_list: BaFin,attestplane,nd,recuse,recused,recusal,intoto,Intoto,afterAll,cna,CNA,CNAs
           skip: .git,LICENSE,DCO.txt,*.lock,_typos.toml,.codespellrc,.lycheeignore,sdk/typescript/dist
 
   link-check:

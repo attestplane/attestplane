@@ -17,6 +17,10 @@ mis = "mis"
 anc = "anc"
 # `certifi` is the real Python trust-store package name and appears in generated SBOMs.
 certifi = "certifi"
+# CNA = CVE Numbering Authority (MITRE CVE Program term). Not "CAN".
+CNA = "CNA"
+cna = "cna"
+CNAs = "CNAs"
 
 [default.extend-identifiers]
 # BaFin = Bundesanstalt fur Finanzdienstleistungsaufsicht (German Federal Financial Supervisory Authority).
