@@ -14,7 +14,12 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.release.plan_schema import (
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.release.plan_schema import (  # noqa: E402
     PLAN_SCHEMA_NAME,
     compute_plan_id,
     extract_plan_payload,

@@ -20,7 +20,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from scripts.release.plan_schema import PlanIssue, append_plan_block, with_plan_id
+if str(Path(__file__).resolve().parents[2]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts.release.plan_schema import PlanIssue, append_plan_block, with_plan_id  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
@@ -320,7 +323,6 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
     milestone_tag = str(manifest["milestone_tag"])
     anchor_tag = manifest.get("anchor_tag") or "repository start"
     plan_level = str(manifest.get("plan_level", "daily"))
-    recent = manifest.get("recent_real_commits")
     issue_specs: list[PlanIssue]
 
     if plan_level == "daily":
@@ -405,7 +407,7 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
             ),
             PlanIssue(
                 ordinal=3,
-                title=f"[P1][docs] Publish the milestone note set",
+                title="[P1][docs] Publish the milestone note set",
                 priority="P1",
                 modules=("docs/release-notes", "docs/runbooks"),
                 acceptance_criteria=(
