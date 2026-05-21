@@ -1,0 +1,169 @@
+name: architecture-audit
+
+# Sidecar workflow for architecture/functionality gap reviews. It listens to
+# successful release-cd runs and prepares a read-only audit bundle at every
+# 50-stable-release milestone. It never blocks package publication, never
+# creates or moves git tags, and never calls external AI services.
+
+on:
+  workflow_run:
+    workflows: ["release-cd"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      milestone_tag:
+        description: "Stable milestone tag to inspect, e.g. v1.5.0"
+        required: true
+        type: string
+      anchor_tag:
+        description: "Optional prior audit anchor tag"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+concurrency:
+  group: architecture-audit-${{ github.event.workflow_run.id || inputs.milestone_tag }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  prepare:
+    name: Prepare architecture audit bundle
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Ensure audit labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh label create architecture-audit \
+            --description "Architecture gap audit milestone" \
+            --color "5319e7" \
+            --force
+          gh label create audited \
+            --description "Architecture audit reviewed and accepted" \
+            --color "0e8a16" \
+            --force
+
+      - name: Resolve milestone tag
+        id: milestone
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          INPUT_TAG: ${{ inputs.milestone_tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$(gh run view "$WORKFLOW_RUN_ID" \
+              --json displayTitle \
+              --jq '.displayTitle | capture("release-cd (?<tag>v[0-9]+\\.[0-9]+\\.[0-9]+)$").tag')"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Architecture audit candidate: $tag"
+
+      - name: Find latest closed audited architecture issue
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          issue_json="$(gh issue list \
+            --state closed \
+            --label architecture-audit \
+            --label audited \
+            --limit 1 \
+            --json number,url,body \
+            --jq '.[0] // {}')"
+          issue_url="$(ISSUE_JSON="$issue_json" python3 -c "import json, os; issue = json.loads(os.environ['ISSUE_JSON']); print(issue.get('url', ''))")"
+          anchor="$(ISSUE_JSON="$issue_json" python3 -c "import json, os, re; tick = chr(96); issue = json.loads(os.environ['ISSUE_JSON']); match = re.search('- milestone: ' + tick + '([^' + tick + ']+)' + tick, issue.get('body', '')); print(match.group(1) if match else '')")"
+          echo "issue_url=$issue_url" >> "$GITHUB_OUTPUT"
+          echo "anchor=$anchor" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare bundle
+        id: audit
+        env:
+          INPUT_ANCHOR: ${{ inputs.anchor_tag }}
+          PREVIOUS_ANCHOR: ${{ steps.previous.outputs.anchor }}
+          PREVIOUS_ISSUE: ${{ steps.previous.outputs.issue_url }}
+        run: |
+          set -euo pipefail
+          anchor="${INPUT_ANCHOR:-$PREVIOUS_ANCHOR}"
+          python3 scripts/release/architecture_audit_trigger.py \
+            --milestone-tag "${{ steps.milestone.outputs.tag }}" \
+            ${anchor:+--anchor-tag "$anchor"} \
+            ${PREVIOUS_ISSUE:+--previous-audit-issue "$PREVIOUS_ISSUE"} \
+            --output-dir reports/architecture-audits \
+            --json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: steps.audit.outputs.should_upload_artifact == 'true'
+        with:
+          name: architecture-gap-audit-${{ steps.milestone.outputs.tag }}
+          path: reports/architecture-audits/
+          retention-days: 90
+
+      - name: Open architecture audit issue
+        if: steps.audit.outputs.should_open_issue == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TITLE: ${{ steps.audit.outputs.issue_title }}
+          ISSUE_BODY: ${{ steps.audit.outputs.issue_body }}
+        run: |
+          set -euo pipefail
+          existing="$(gh issue list \
+            --state open \
+            --label architecture-audit \
+            --search "$ISSUE_TITLE in:title" \
+            --json number \
+            --jq '.[0].number // ""')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$ISSUE_BODY"
+          else
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --label architecture-audit \
+              --body "$ISSUE_BODY"
+          fi
+
+      - name: Summary
+        run: |
+          {
+            echo "## Architecture audit"
+            echo ""
+            echo "- tag: \`${{ steps.milestone.outputs.tag }}\`"
+            echo "- action: \`${{ steps.audit.outputs.action }}\`"
+            echo "- reason: \`${{ steps.audit.outputs.reason }}\`"
+            echo "- anchor: \`${{ steps.audit.outputs.anchor_tag }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: File follow-up on audit workflow failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Architecture audit workflow failed for ${{ steps.milestone.outputs.tag || github.run_id }}" \
+            --label architecture-audit \
+            --body "The sidecar architecture-audit workflow failed after release-cd. This does not block the published release. Inspect run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}."

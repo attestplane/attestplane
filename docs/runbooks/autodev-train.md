@@ -172,6 +172,39 @@ of whether real human work landed. Use this only for:
 The override is per-process: unset the variable on the next run to
 return to the normal velocity gate.
 
+## Architecture Gap Audit Milestones
+
+Architecture and product-functionality gap reviews run out-of-band from
+package publication. The sidecar GitHub workflow is:
+
+```text
+.github/workflows/architecture-audit.yml
+```
+
+It listens for successful `release-cd` runs on `main` and prepares a
+read-only audit bundle at every 50 suffix-free stable releases. With the
+current stable numbering policy, those boundaries are represented by
+minor versions divisible by five at patch zero, for example `v1.5.0`,
+`v1.10.0`, and `v2.5.0`.
+
+The workflow does not block `release-cd`, `sign-release`, or
+`slsa-provenance`; it does not create or move git tags; and it does not
+call Opus from GitHub Actions. Instead,
+`scripts/release/architecture_audit_trigger.py` builds an artifact under
+`reports/architecture-audits/` with the milestone tag, the prior audited
+anchor, commit classification, and a local `ask_opus.sh architect`
+prompt. If the 50-release window contains enough substantive
+non-release-prep work, the workflow opens an `architecture-audit` issue
+for the maintainer/Opus review. Small windows are downgraded to
+artifact-only, and pure release-prep windows are skipped.
+
+The audit anchor is tracked through closed issues carrying both
+`architecture-audit` and `audited`. After the Opus/maintainer review is
+accepted and follow-up work is captured, close the issue with both
+labels intact. The next milestone uses that issue's milestone tag as
+its anchor. If the sidecar workflow fails, it files a follow-up issue;
+published packages remain forward-only and unaffected.
+
 ## Permission Audit
 
 Before using `autodev-train` for an RC or GA preparation window, inspect the

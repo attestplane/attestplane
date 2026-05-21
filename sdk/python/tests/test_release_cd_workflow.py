@@ -11,6 +11,7 @@ def test_release_cd_delegates_real_pypi_publish_to_direct_workflow() -> None:
         encoding="utf-8",
     )
 
+    assert "run-name: release-cd ${{ inputs.release_tag }}" in release_cd
     assert "gh workflow run publish-python.yml" in release_cd
     assert "-f caller_run_id=\"${CALLER_RUN_ID}\"" in release_cd
     assert "gh run watch \"$run_id\" --exit-status" in release_cd
@@ -35,3 +36,15 @@ def test_release_cd_enforces_verified_audit_for_audit_track() -> None:
     assert "--enforce" in release_cd
     assert "--audit-verified" in release_cd
     assert "--audit-plan-url" in release_cd
+
+
+def test_architecture_audit_is_release_cd_sidecar_not_release_blocker() -> None:
+    architecture_audit = (REPO_ROOT / ".github/workflows/architecture-audit.yml").read_text(
+        encoding="utf-8",
+    )
+
+    assert 'workflows: ["release-cd"]' in architecture_audit
+    assert "gh label create architecture-audit" in architecture_audit
+    assert "scripts/release/architecture_audit_trigger.py" in architecture_audit
+    assert "issues: write" in architecture_audit
+    assert "release-cd" not in architecture_audit.split("permissions:", 1)[1].split("jobs:", 1)[0]

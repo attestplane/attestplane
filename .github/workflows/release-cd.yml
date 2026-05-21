@@ -1,4 +1,5 @@
 name: release-cd
+run-name: release-cd ${{ inputs.release_tag }}
 
 on:
   workflow_dispatch:
