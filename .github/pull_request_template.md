@@ -27,6 +27,12 @@ Closes #
 - [ ] Refactor (no behavior change)
 - [ ] Test / tooling only
 
+## Risk and ADR classification
+
+- **Risk level** (check one): `[ ]` low (docs / typos / single-file fix) `[ ]` medium (cross-file refactor / dependency bump / CI change) `[ ]` high (release / signing / security / governance / breaking API)
+- **Needs ADR?**: `[ ]` no `[ ]` yes — link to the ADR draft `[ ]` already linked above
+- **Impact surface**: `[ ]` python-sdk `[ ]` ts-sdk `[ ]` verifier `[ ]` docs `[ ]` ci `[ ]` release/signing `[ ]` governance
+
 ## Compliance / security impact
 
 <!--

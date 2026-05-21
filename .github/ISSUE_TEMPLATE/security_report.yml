@@ -1,0 +1,23 @@
+name: Security vulnerability — DO NOT use this template
+description: Security issues MUST go through the private channels in SECURITY.md, NOT through public issues.
+title: "[security-misroute] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## STOP — Do not file public security issues
+
+        If you have found a security vulnerability in attestplane:
+
+        1. Read [SECURITY.md](../../blob/main/SECURITY.md) for the private disclosure process.
+        2. Use the email channel at `security@attestplane.com` or GitHub Security Advisories.
+        3. Do NOT continue submitting this public issue.
+
+        If you continue, the public issue will be redirected and the report will be treated as if filed through the private channel. There is no penalty for a misroute — but the timeline starts when the maintainer can act on the private channel.
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Acknowledgement
+      options:
+        - label: I have read SECURITY.md and will use the private disclosure channel.
+          required: true

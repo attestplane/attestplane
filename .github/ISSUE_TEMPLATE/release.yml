@@ -1,0 +1,39 @@
+name: Release cycle task
+description: Tracking item for release prep, gate, hotfix, or post-release cleanup.
+title: "[release] "
+labels: ["type:release", "triage"]
+body:
+  - type: input
+    id: target-tag
+    attributes:
+      label: Target tag (or N/A)
+      placeholder: vX.Y.Z or vX.Y.Z-rc.N or N/A
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Release phase
+      options:
+        - prep (pre-cut)
+        - cut (tag pushed, awaiting publication)
+        - publish (release-cd in flight)
+        - verify (post-publish QA)
+        - post-release (cleanup / hotfix)
+        - GA-specific (v1.0 GA at 2026-08-15)
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One-paragraph description of the release-cycle work item.
+    validations:
+      required: true
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Pre-merge gates (where applicable)
+      options:
+        - label: ADR-0017 release-cd policy reviewed
+        - label: ADR-0018 forward-only signing invariant preserved
+        - label: SECURITY.md Supported Versions consistent
+        - label: docs/release/verifying-signatures.md updated (if signing path changed)
