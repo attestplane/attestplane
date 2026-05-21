@@ -48,6 +48,30 @@ workflow, and verifying registry state.
 
 ---
 
+## Your first contribution
+
+New here? Welcome. We aim to make the contribution path as low-friction as
+possible while keeping the audit-chain discipline this project depends on.
+
+- Read the worked end-to-end example in
+  [`docs/contributor/first-pr-walkthrough.md`](docs/contributor/first-pr-walkthrough.md).
+  It reconstructs a real merged PR (PR #32, the SLSA generator tag-ref fix)
+  step-by-step from branch creation through merge, and is the canonical
+  reference for the "small fix with proper discipline" shape.
+- Browse newcomer-friendly work under the
+  [`good first issue`](https://github.com/attestplane/attestplane/labels/good%20first%20issue)
+  label.
+- The full label schema lives at
+  [`.github/labels.yml`](.github/labels.yml) — it is the canonical source.
+- Stuck? Comment on the issue, open a draft PR with a question in the
+  description, or start a
+  [GitHub Discussion](https://github.com/attestplane/attestplane/discussions).
+- **Security issues do not go through public issues.** Follow
+  [`SECURITY.md`](SECURITY.md) and use the private channels documented
+  there.
+
+---
+
 ## 2. Local Dev Setup
 
 ### Prerequisites
