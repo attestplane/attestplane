@@ -5,6 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 # v0.0.5-alpha Threat Model Snapshot
 
+> **Status**: Superseded by [`threat-model-v1.md`](threat-model-v1.md) 2026-05-21.
+> Kept here for historical reference.
+
 ## Scope
 
 This snapshot covers the open-source verifier and proof-bundle surfaces in
