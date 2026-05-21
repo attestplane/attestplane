@@ -32,12 +32,21 @@ def test_is_milestone_release_matches_50_stable_release_boundaries() -> None:
 
     assert architecture_audit_trigger.is_milestone_release(parse("v1.5.0")) is True
     assert architecture_audit_trigger.is_milestone_release(parse("v1.10.0")) is True
+    assert architecture_audit_trigger.is_milestone_release(parse("v2.0.0")) is True
     assert architecture_audit_trigger.is_milestone_release(parse("v1.4.10")) is False
     assert architecture_audit_trigger.is_milestone_release(parse("v1.5.1")) is False
     assert architecture_audit_trigger.is_milestone_release(parse("v0.5.0")) is False
 
 
-def test_decide_audit_skips_non_milestone_release() -> None:
+def test_classify_upgrade_level_separates_daily_medium_and_architecture() -> None:
+    parse = architecture_audit_trigger.StableVersion.parse
+
+    assert architecture_audit_trigger.classify_upgrade_level(parse("v1.4.9")) == "daily"
+    assert architecture_audit_trigger.classify_upgrade_level(parse("v1.5.0")) == "medium"
+    assert architecture_audit_trigger.classify_upgrade_level(parse("v2.0.0")) == "architecture"
+
+
+def test_decide_audit_skips_daily_small_upgrade() -> None:
     stable_tags = versions(51)
     commits = [commit("feat: add meaningful product work")]
 
@@ -49,7 +58,7 @@ def test_decide_audit_skips_non_milestone_release() -> None:
     )
 
     assert decision.action == "skip"
-    assert decision.reason == "not_architecture_audit_milestone"
+    assert decision.reason == "daily_small_upgrade"
 
 
 def test_fallback_anchor_prefers_prior_five_minor_boundary() -> None:
@@ -59,9 +68,15 @@ def test_fallback_anchor_prefers_prior_five_minor_boundary() -> None:
     assert architecture_audit_trigger.fallback_anchor_tag(tags, parse("v1.5.0")) == "v1.0.0"
 
 
-def test_decide_audit_skips_before_50_stable_releases() -> None:
+def test_decide_audit_requests_medium_plan_even_before_50_stable_releases() -> None:
     stable_tags = [architecture_audit_trigger.StableVersion(1, 5, 0)]
-    commits = [commit("feat: add meaningful product work")]
+    commits = [
+        commit("feat: capability one"),
+        commit("fix: edge case two"),
+        commit("docs: explain three"),
+        commit("test: cover four"),
+        commit("refactor: simplify five"),
+    ]
 
     decision = architecture_audit_trigger.decide_audit(
         milestone_tag="v1.5.0",
@@ -70,8 +85,9 @@ def test_decide_audit_skips_before_50_stable_releases() -> None:
         commits=commits,
     )
 
-    assert decision.action == "skip"
-    assert decision.reason == "stable_release_count_below_50"
+    assert decision.action == "medium-plan"
+    assert decision.reason == "half_version_medium_upgrade"
+    assert decision.upgrade_label == "upgrade-medium"
 
 
 def test_decide_audit_skips_pure_release_prep_window() -> None:
@@ -109,7 +125,7 @@ def test_decide_audit_downgrades_small_real_windows_to_manifest_only() -> None:
     assert decision.should_open_issue is False
 
 
-def test_decide_audit_requests_full_audit_for_milestone_with_real_work() -> None:
+def test_decide_audit_requests_medium_plan_for_half_version_with_real_work() -> None:
     stable_tags = versions(51)
     commits = [
         commit("feat: capability one"),
@@ -126,9 +142,25 @@ def test_decide_audit_requests_full_audit_for_milestone_with_real_work() -> None
         commits=commits,
     )
 
-    assert decision.action == "full-audit"
-    assert decision.reason == "milestone_and_substantive_changes"
+    assert decision.action == "medium-plan"
+    assert decision.reason == "half_version_medium_upgrade"
     assert decision.should_open_issue is True
+
+
+def test_decide_audit_requests_architecture_plan_for_integer_version() -> None:
+    stable_tags = versions(60)
+    commits = [commit("feat: major architecture surface")]
+
+    decision = architecture_audit_trigger.decide_audit(
+        milestone_tag="v2.0.0",
+        anchor_tag=None,
+        stable_tags=stable_tags,
+        commits=commits,
+    )
+
+    assert decision.action == "architecture-plan"
+    assert decision.reason == "integer_version_architecture_upgrade"
+    assert decision.upgrade_label == "upgrade-architecture"
 
 
 def test_render_issue_body_contains_local_opus_prompt() -> None:
@@ -139,8 +171,9 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
         "stable_release_count": 50,
         "real_commit_count": 5,
         "release_prep_commit_count": 45,
-        "action": "full-audit",
-        "reason": "milestone_and_substantive_changes",
+        "action": "medium-plan",
+        "reason": "half_version_medium_upgrade",
+        "plan_level": "medium",
         "recent_real_commits": [{"sha": "abc123", "time": "2026-05-21", "subject": "feat: x"}],
     }
 
@@ -148,4 +181,4 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
 
     assert "ask_opus.sh architect" in body
     assert "architecture-gap-audit-v1.5.0.md" in body
-    assert "Close this issue" in body
+    assert "Create concrete follow-up GitHub issues" in body

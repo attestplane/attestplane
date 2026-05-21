@@ -1,8 +1,8 @@
 name: architecture-audit
 
-# Sidecar workflow for architecture/functionality gap reviews. It listens to
+# Sidecar workflow for milestone development planning. It listens to
 # successful release-cd runs and prepares a read-only audit bundle at every
-# 50-stable-release milestone. It never blocks package publication, never
+# medium or architecture-level stable milestone. It never blocks package publication, never
 # creates or moves git tags, and never calls external AI services.
 
 on:
@@ -56,9 +56,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          gh label create development-plan \
+            --description "Milestone planning issue generated from release cadence" \
+            --color "1d76db" \
+            --force
           gh label create architecture-audit \
             --description "Architecture gap audit milestone" \
             --color "5319e7" \
+            --force
+          gh label create upgrade-medium \
+            --description "Medium upgrade planning milestone" \
+            --color "fbca04" \
+            --force
+          gh label create upgrade-architecture \
+            --description "Architecture-level upgrade planning milestone" \
+            --color "b60205" \
             --force
           gh label create audited \
             --description "Architecture audit reviewed and accepted" \
@@ -130,6 +142,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_TITLE: ${{ steps.audit.outputs.issue_title }}
           ISSUE_BODY: ${{ steps.audit.outputs.issue_body }}
+          UPGRADE_LABEL: ${{ steps.audit.outputs.upgrade_label }}
         run: |
           set -euo pipefail
           existing="$(gh issue list \
@@ -143,18 +156,21 @@ jobs:
           else
             gh issue create \
               --title "$ISSUE_TITLE" \
+              --label development-plan \
               --label architecture-audit \
+              --label "$UPGRADE_LABEL" \
               --body "$ISSUE_BODY"
           fi
 
       - name: Summary
         run: |
           {
-            echo "## Architecture audit"
+            echo "## Development plan"
             echo ""
             echo "- tag: \`${{ steps.milestone.outputs.tag }}\`"
             echo "- action: \`${{ steps.audit.outputs.action }}\`"
             echo "- reason: \`${{ steps.audit.outputs.reason }}\`"
+            echo "- upgrade_label: \`${{ steps.audit.outputs.upgrade_label }}\`"
             echo "- anchor: \`${{ steps.audit.outputs.anchor_tag }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 

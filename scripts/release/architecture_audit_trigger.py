@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 The Attestplane Authors
 # SPDX-License-Identifier: Apache-2.0
-"""Prepare architecture-gap audit artifacts for stable release milestones.
+"""Prepare development-plan artifacts for stable release milestones.
 
 This script is intentionally read-only unless the GitHub workflow passes its
 outputs to ``gh issue create``. It never creates or moves git tags, never
@@ -24,6 +24,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 RE_RELEASE_PREP = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.\d+(-\w+)?$")
 AUDIT_LABEL = "architecture-audit"
+PLAN_LABEL = "development-plan"
+MEDIUM_UPGRADE_LABEL = "upgrade-medium"
+ARCHITECTURE_UPGRADE_LABEL = "upgrade-architecture"
 AUDITED_LABEL = "audited"
 FULL_AUDIT_MIN_REAL_COMMITS = 5
 MILESTONE_STABLE_RELEASES = 50
@@ -80,6 +83,7 @@ class CommitInfo:
 class AuditDecision:
     action: str
     reason: str
+    plan_level: str
     milestone_tag: str
     anchor_tag: str | None
     stable_release_count: int
@@ -88,11 +92,19 @@ class AuditDecision:
 
     @property
     def should_open_issue(self) -> bool:
-        return self.action == "full-audit"
+        return self.action in {"medium-plan", "architecture-plan"}
 
     @property
     def should_upload_artifact(self) -> bool:
-        return self.action in {"full-audit", "manifest-only"}
+        return self.action in {"medium-plan", "architecture-plan", "manifest-only"}
+
+    @property
+    def upgrade_label(self) -> str:
+        if self.plan_level == "architecture":
+            return ARCHITECTURE_UPGRADE_LABEL
+        if self.plan_level == "medium":
+            return MEDIUM_UPGRADE_LABEL
+        return ""
 
 
 def run_git(args: list[str]) -> str:
@@ -122,11 +134,19 @@ def read_stable_tags() -> list[StableVersion]:
 
 
 def is_milestone_release(version: StableVersion) -> bool:
-    return version.major >= 1 and version.minor > 0 and version.minor % 5 == 0 and version.patch == 0
+    return classify_upgrade_level(version) in {"medium", "architecture"}
 
 
 def is_audit_anchor_release(version: StableVersion) -> bool:
     return version.major >= 1 and version.patch == 0 and version.minor % 5 == 0
+
+
+def classify_upgrade_level(version: StableVersion) -> str:
+    if version.major >= 1 and version.minor == 0 and version.patch == 0:
+        return "architecture"
+    if version.major >= 1 and version.minor > 0 and version.minor % 5 == 0 and version.patch == 0:
+        return "medium"
+    return "daily"
 
 
 def tag_index(tags: list[StableVersion], tag: str) -> int | None:
@@ -197,22 +217,14 @@ def decide_audit(
     milestone = StableVersion.parse(milestone_tag)
     real_commits = substantive_commits(commits)
     stable_release_count = count_stable_releases(stable_tags, anchor_tag, milestone)
-    issue_title = f"Architecture gap audit for {milestone_tag}"
+    plan_level = classify_upgrade_level(milestone)
+    issue_title = f"{plan_level.title()} development plan for {milestone_tag}"
 
-    if not is_milestone_release(milestone):
+    if plan_level == "daily":
         return AuditDecision(
             action="skip",
-            reason="not_architecture_audit_milestone",
-            milestone_tag=milestone_tag,
-            anchor_tag=anchor_tag,
-            stable_release_count=stable_release_count,
-            real_commit_count=len(real_commits),
-            issue_title=issue_title,
-        )
-    if stable_release_count < MILESTONE_STABLE_RELEASES:
-        return AuditDecision(
-            action="skip",
-            reason="stable_release_count_below_50",
+            reason="daily_small_upgrade",
+            plan_level=plan_level,
             milestone_tag=milestone_tag,
             anchor_tag=anchor_tag,
             stable_release_count=stable_release_count,
@@ -223,16 +235,29 @@ def decide_audit(
         return AuditDecision(
             action="skip",
             reason="no_substantive_changes_since_anchor",
+            plan_level=plan_level,
             milestone_tag=milestone_tag,
             anchor_tag=anchor_tag,
             stable_release_count=stable_release_count,
             real_commit_count=0,
             issue_title=issue_title,
         )
-    if len(real_commits) < FULL_AUDIT_MIN_REAL_COMMITS:
+    if plan_level == "medium" and len(real_commits) < FULL_AUDIT_MIN_REAL_COMMITS:
         return AuditDecision(
             action="manifest-only",
             reason="substantive_changes_below_full_audit_threshold",
+            plan_level=plan_level,
+            milestone_tag=milestone_tag,
+            anchor_tag=anchor_tag,
+            stable_release_count=stable_release_count,
+            real_commit_count=len(real_commits),
+            issue_title=issue_title,
+        )
+    if plan_level == "architecture":
+        return AuditDecision(
+            action="architecture-plan",
+            reason="integer_version_architecture_upgrade",
+            plan_level=plan_level,
             milestone_tag=milestone_tag,
             anchor_tag=anchor_tag,
             stable_release_count=stable_release_count,
@@ -240,8 +265,9 @@ def decide_audit(
             issue_title=issue_title,
         )
     return AuditDecision(
-        action="full-audit",
-        reason="milestone_and_substantive_changes",
+        action="medium-plan",
+        reason="half_version_medium_upgrade",
+        plan_level=plan_level,
         milestone_tag=milestone_tag,
         anchor_tag=anchor_tag,
         stable_release_count=stable_release_count,
@@ -272,6 +298,7 @@ def build_manifest(
         "previous_audit_issue": previous_audit_issue,
         "action": decision.action,
         "reason": decision.reason,
+        "plan_level": decision.plan_level,
         "stable_release_count": decision.stable_release_count,
         "real_commit_count": len(real_commits),
         "release_prep_commit_count": release_prep_count,
@@ -282,11 +309,13 @@ def build_manifest(
 def render_issue_body(manifest: dict[str, object]) -> str:
     milestone_tag = str(manifest["milestone_tag"])
     anchor_tag = manifest.get("anchor_tag") or "repository start"
+    plan_level = str(manifest.get("plan_level", "medium"))
     recent = manifest.get("recent_real_commits")
     lines: list[str] = [
-        "## Architecture Gap Audit Request",
+        "## Development Plan Request",
         "",
         f"- milestone: `{milestone_tag}`",
+        f"- plan_level: `{plan_level}`",
         f"- anchor: `{anchor_tag}`",
         f"- head_sha: `{manifest['head_sha']}`",
         f"- stable releases since anchor: `{manifest['stable_release_count']}`",
@@ -303,11 +332,15 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         f"architecture-gap-audit-{milestone_tag}.md)\"",
         "```",
         "",
-        "The review should identify architecture and product-functionality gaps",
-        "introduced or revealed over this 50-stable-release window. Return P0/P1/P2",
-        "items, concrete affected modules, and validation or migration work needed",
-        "before the next milestone. Do not include secrets, do not move release",
-        "tags, and do not block already published packages.",
+        "The review should first produce a concise plan, then decompose the",
+        "accepted plan into GitHub issues. Daily small upgrades stay on the",
+        "release train; `x.5.0` milestones should focus on medium product and",
+        "architecture gaps; integer `x.0.0` milestones should focus on",
+        "architecture-level redesign, compatibility, security boundaries, and",
+        "migration risk. Return issue-ready P0/P1/P2 tasks with owners, affected",
+        "modules, acceptance criteria, and validation commands. Do not include",
+        "secrets, do not move release tags, and do not block already published",
+        "packages.",
         "",
         "## Recent Real Commits",
         "",
@@ -325,10 +358,14 @@ def render_issue_body(manifest: dict[str, object]) -> str:
     lines.extend(
         [
             "",
-            "## Completion Contract",
+            "## Issue-First Completion Contract",
             "",
-            f"Close this issue and keep labels `{AUDIT_LABEL}` + `{AUDITED_LABEL}`",
-            "after the Opus/maintainer audit has produced accepted follow-up work.",
+            "1. Run the Opus/maintainer plan review from this issue.",
+            "2. Create concrete follow-up GitHub issues for accepted P0/P1/P2 work.",
+            "3. Link those issues back here.",
+            "4. Close this planning issue with labels "
+            f"`{PLAN_LABEL}`, `{AUDIT_LABEL}`, and `{AUDITED_LABEL}` only after",
+            "the follow-up issue set is created and the milestone owner accepts the plan.",
         ],
     )
     return "\n".join(lines) + "\n"
@@ -416,6 +453,7 @@ def main(argv: list[str] | None = None) -> int:
             "should_upload_artifact": str(decision.should_upload_artifact).lower(),
             "issue_title": decision.issue_title,
             "issue_body": issue_body,
+            "upgrade_label": decision.upgrade_label,
             "anchor_tag": anchor_tag or "",
         }
     )

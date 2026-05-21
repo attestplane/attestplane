@@ -44,7 +44,10 @@ def test_architecture_audit_is_release_cd_sidecar_not_release_blocker() -> None:
     )
 
     assert 'workflows: ["release-cd"]' in architecture_audit
+    assert "gh label create development-plan" in architecture_audit
     assert "gh label create architecture-audit" in architecture_audit
+    assert "gh label create upgrade-medium" in architecture_audit
+    assert "gh label create upgrade-architecture" in architecture_audit
     assert "scripts/release/architecture_audit_trigger.py" in architecture_audit
     assert "issues: write" in architecture_audit
     assert "release-cd" not in architecture_audit.split("permissions:", 1)[1].split("jobs:", 1)[0]
