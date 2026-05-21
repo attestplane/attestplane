@@ -176,6 +176,12 @@ review and bisect.
 - Review comments should cite specific code lines, not only say "this is wrong."
 - Follow the existing ADR files for format; ADR numbers must increase without
   gaps.
+- If two reviewers reach a substantive deadlock on a single PR, follow the
+  PR-level procedure in
+  [`docs/governance/conflict-resolution.md`](docs/governance/conflict-resolution.md)
+  (third reviewer within 24h → `[DECISION]` lazy-consensus thread within 72h →
+  `GOVERNANCE.md` §4.2 supermajority vote if still unresolved). Broader policy
+  disputes still use `GOVERNANCE.md` §4.3 directly.
 
 ---
 
