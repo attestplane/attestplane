@@ -108,6 +108,17 @@ SIGN_RELEASE_WORKFLOW = "sign-release.yml"
 SLSA_PROVENANCE_WORKFLOW = "slsa-provenance.yml"
 SIGN_WAIT_TIMEOUT_SECONDS = 300
 SLSA_WAIT_TIMEOUT_SECONDS = 600
+# Cadence limiter — skip cycles whose only commits since the previous
+# stable tag are the train's own release-prep commits. The train was
+# cutting ~150 patches/day with ~33% of commits being its own
+# chore(release): prepare vX.Y.Z noise. The limiter is a velocity gate:
+# the train keeps polling, but does not manufacture a new tag without
+# real human work in the range.
+RELEASE_PREP_SUBJECT_REGEX = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.\d+(-\S+)?$")
+# Operator override: cut the next tag even when the only commits in
+# range are release-prep commits. Documented in
+# docs/runbooks/autodev-train.md ("Cadence limiter").
+FORCE_CADENCE_ENV = "ATTESTPLANE_AUTODEV_TRAIN_FORCE_CADENCE"
 
 
 @dataclass(frozen=True, order=True)
@@ -515,6 +526,42 @@ def next_stable_after(version: StableVersion) -> StableVersion:
     if version.patch >= PATCH_ROLLOVER:
         return StableVersion(version.major, version.minor + 1, 0)
     return StableVersion(version.major, version.minor, version.patch + 1)
+
+
+def commits_since_tag_have_real_work(tag: str) -> bool:
+    """Return True if the range ``tag..HEAD`` contains any non-release-prep commit.
+
+    Velocity gate for the autodev-train: if every commit subject in the
+    range matches ``RELEASE_PREP_SUBJECT_REGEX`` (or the range is empty),
+    the next cadence cycle has no human work to ship and the caller
+    should skip cutting a new tag. ``--no-merges`` excludes merge commits
+    so a PR-merge into main does not by itself count as real work.
+
+    Returns ``True`` (proceed) when:
+      - at least one commit subject does NOT match the release-prep regex; or
+      - the git log probe fails (e.g. missing tag) — conservative fall-through
+        to the normal cycle, which has its own guards.
+
+    Returns ``False`` (skip) when:
+      - every subject in the range matches the release-prep regex; or
+      - the range is empty (no commits since tag — nothing new to cut).
+    """
+    try:
+        raw = capture(
+            ["git", "log", "--pretty=tformat:%s", f"{tag}..HEAD", "--no-merges"],
+            timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as exc:
+        print(
+            f"autodev-train stable: warning: cadence probe failed for {tag}: {exc}; "
+            "falling through to normal cycle",
+            flush=True,
+        )
+        return True
+    subjects = [line for line in raw.splitlines() if line.strip()]
+    if not subjects:
+        return False
+    return any(RELEASE_PREP_SUBJECT_REGEX.fullmatch(subject) is None for subject in subjects)
 
 
 def load_target_queue(path: Path) -> list[ReleaseTarget]:
@@ -1371,6 +1418,13 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
                 recover_existing_release(version)
             return version.tag
         raise RuntimeError(f"stable tag already exists: {version.tag}")
+
+    if not truthy_env(os.environ.get(FORCE_CADENCE_ENV, "")) and not commits_since_tag_have_real_work(previous.tag):
+        print(
+            f"autodev-train stable: no real work since {previous.tag}; skipping cadence cycle",
+            flush=True,
+        )
+        return previous.tag
 
     print(
         f"autodev-train stable: preparing {version.tag} from {previous.tag}; channel={target.channel}",

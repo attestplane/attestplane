@@ -11,6 +11,21 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### Release automation
+
+- Autodev-train now applies a cadence limiter before cutting a new
+  stable tag. The train inspects commits in
+  `latest_published_tag..HEAD` (excluding merges); if every subject
+  matches `^chore\(release\): prepare v\d+\.\d+\.\d+(-\S+)?$`, the
+  cycle is skipped and the train keeps polling without manufacturing a
+  new tag. Operators can bypass the gate with
+  `ATTESTPLANE_AUTODEV_TRAIN_FORCE_CADENCE=1` for v1.0 GA day or
+  hotfix re-cuts. The limiter is operational tuning only — no change
+  to ADR-0017 release-cd policy, ADR-0018 forward-only signing, or any
+  date commitment. See
+  [docs/runbooks/autodev-train.md](docs/runbooks/autodev-train.md)
+  ("Cadence limiter").
+
 ### Maturity language
 
 - Unified the project's external version-stage language across
