@@ -80,6 +80,22 @@ jobs:
             --description "Architecture audit reviewed and accepted" \
             --color "0e8a16" \
             --force
+          gh label create auto-accepted \
+            --description "Architecture plan was generated and accepted automatically" \
+            --color "0e8a16" \
+            --force
+          gh label create auto-accept-failed \
+            --description "Automatic architecture plan issue creation failed" \
+            --color "d73a4a" \
+            --force
+          gh label create area:conformance \
+            --description "Conformance test and fixture coverage" \
+            --color "0052cc" \
+            --force
+          gh label create area:verifier \
+            --description "Verifier behavior and validation" \
+            --color "0052cc" \
+            --force
 
       - name: Resolve milestone tag
         id: milestone
@@ -149,6 +165,7 @@ jobs:
           retention-days: 90
 
       - name: Open architecture audit issue
+        id: planning_issue
         if: steps.audit.outputs.should_open_issue == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -165,14 +182,54 @@ jobs:
             --jq '.[0].number // ""')"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$ISSUE_BODY"
+            issue="$existing"
           else
-            gh issue create \
+            created_url="$(gh issue create \
               --title "$ISSUE_TITLE" \
               --label development-plan \
               --label architecture-audit \
               --label "$UPGRADE_LABEL" \
-              --body "$ISSUE_BODY"
+              --body "$ISSUE_BODY")"
+            issue="${created_url##*/}"
           fi
+          echo "number=$issue" >> "$GITHUB_OUTPUT"
+
+      - name: Auto-accept architecture plan into task issues
+        if: steps.audit.outputs.should_auto_accept_plan == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLANNING_ISSUE: ${{ steps.planning_issue.outputs.number }}
+          AUTO_ISSUE_PLAN: ${{ steps.audit.outputs.auto_issue_plan }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PLANNING_ISSUE" ]; then
+            echo "planning issue number was not resolved" >&2
+            exit 1
+          fi
+          printf '%s\n' "$AUTO_ISSUE_PLAN" > accepted-architecture-plan.md
+          if ! python3 scripts/release/plan_to_issues.py \
+            --plan-file accepted-architecture-plan.md \
+            --source-issue "$PLANNING_ISSUE" \
+            --create \
+            --json > planned-task-issues.json; then
+            gh issue edit "$PLANNING_ISSUE" --add-label auto-accept-failed
+            exit 1
+          fi
+          python3 - <<'PY' > planned-task-summary.md
+          import json
+
+          issues = json.load(open("planned-task-issues.json", encoding="utf-8"))
+          print("Architecture plan generated and auto-accepted into `planned-task` issues:")
+          print()
+          for issue in issues:
+              print(f"- {issue['url']} {issue['title']}")
+          print()
+          print("Implementation must start from these task issues, one issue at a time.")
+          PY
+          gh issue comment "$PLANNING_ISSUE" --body-file planned-task-summary.md
+          gh issue edit "$PLANNING_ISSUE" --add-label auto-accepted --add-label audited
+          gh issue close "$PLANNING_ISSUE" \
+            --comment "Auto-accepted architecture plan was decomposed into planned-task issues. Closing this planning issue; execution continues from the generated task issues."
 
       - name: Summary
         run: |

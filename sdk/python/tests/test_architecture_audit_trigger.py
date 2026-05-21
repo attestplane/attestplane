@@ -184,3 +184,20 @@ def test_render_issue_body_contains_local_opus_prompt() -> None:
     assert "Paste the accepted issue-ready plan as a comment" in body
     assert "`planned-task`" in body
     assert "Execution rule: work only starts from those generated task issues" in body
+
+
+def test_render_auto_architecture_plan_contains_issue_ready_sections() -> None:
+    manifest = {
+        "milestone_tag": "v2.0.0",
+        "anchor_tag": "v1.5.0",
+        "head_sha": "abc123",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: architecture surface"}],
+    }
+
+    plan = architecture_audit_trigger.render_auto_architecture_plan(manifest)
+
+    assert "Auto-Accepted Architecture Plan" in plan
+    assert "ISSUE 1" in plan
+    assert "[P0][architecture][compatibility]" in plan
+    assert "ISSUE 5" in plan
+    assert "planned-task" in plan

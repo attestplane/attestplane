@@ -67,6 +67,14 @@ jobs:
             --description "Project governance and policy" \
             --color "0052cc" \
             --force
+          gh label create area:conformance \
+            --description "Conformance test and fixture coverage" \
+            --color "0052cc" \
+            --force
+          gh label create area:verifier \
+            --description "Verifier behavior and validation" \
+            --color "0052cc" \
+            --force
           gh label create type:docs \
             --description "Documentation only" \
             --color "0075ca" \

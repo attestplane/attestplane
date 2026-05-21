@@ -21,8 +21,12 @@ FALLBACK_TITLE_RE = re.compile(r"^(?:#+\s*)?(?:\*\*)?(?P<title>\[[Pp][0-2]\].+?)
 PRIORITY_RE = re.compile(r"\[(P[0-2])\]", re.IGNORECASE)
 
 MODULE_LABELS = {
+    "architecture": ["architecture-audit"],
     "audit": ["architecture-audit", "area:release-integrity"],
+    "boundary": ["type:security"],
     "compliance": ["area:docs", "claim-safety"],
+    "compatibility": ["area:conformance"],
+    "conformance": ["area:conformance", "area:verifier"],
     "docs": ["area:docs", "type:docs"],
     "release": ["area:release-integrity"],
     "security": ["type:security", "area:governance"],

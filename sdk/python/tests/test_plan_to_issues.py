@@ -63,3 +63,19 @@ Acceptance criteria:
     assert "priority:P2" in tasks[0].labels
     assert "type:security" in tasks[0].labels
     assert "Source planning issue: #99" in tasks[0].body
+
+
+def test_parse_architecture_module_labels() -> None:
+    markdown = """
+**ISSUE 1 · [P0][architecture][compatibility] Define compatibility contract**
+- Acceptance criteria:
+  1. Adds migration contract.
+"""
+
+    tasks = plan_to_issues.parse_plan(markdown, source_issue=123)
+
+    assert tasks[0].title == "[P0][architecture][compatibility] Define compatibility contract"
+    assert "planned-task" in tasks[0].labels
+    assert "priority-P0" in tasks[0].labels
+    assert "architecture-audit" in tasks[0].labels
+    assert "area:conformance" in tasks[0].labels

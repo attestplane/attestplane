@@ -384,6 +384,101 @@ def render_issue_body(manifest: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def render_auto_architecture_plan(manifest: dict[str, object]) -> str:
+    milestone_tag = str(manifest["milestone_tag"])
+    anchor_tag = manifest.get("anchor_tag") or "repository start"
+    head_sha = str(manifest["head_sha"])
+    recent = manifest.get("recent_real_commits")
+    recent_lines: list[str] = []
+    if isinstance(recent, list):
+        for item in recent[:10]:
+            if isinstance(item, dict):
+                recent_lines.append(f"- `{str(item.get('sha', ''))[:12]}` {item.get('subject', '')}")
+    recent_block = "\n".join(recent_lines) if recent_lines else "- none"
+    return f"""## Auto-Accepted Architecture Plan
+
+Milestone: `{milestone_tag}`
+Anchor: `{anchor_tag}`
+Head SHA: `{head_sha}`
+
+This plan was generated and accepted automatically for an integer-version
+architecture milestone. It creates planning issues only; implementation still
+starts from the generated `planned-task` issues, one issue at a time.
+
+Recent real commits considered:
+
+{recent_block}
+
+**ISSUE 1 · [P0][architecture][compatibility] Define the {milestone_tag} compatibility and migration contract**
+- Priority: P0
+- Affected modules: SDK public APIs, storage formats, proof bundle schema, verifier behavior, release notes
+- Acceptance criteria:
+  1. Document backward compatibility guarantees from `{anchor_tag}` to `{milestone_tag}`.
+  2. List intentional breaking changes, migration steps, and unsupported historical behavior.
+  3. Add or update compatibility fixtures covering the prior audited anchor and `{milestone_tag}`.
+  4. Release notes link to the migration contract before any implementation issue closes.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "compat or proof_bundle or verifier" -x`
+  - `npm test --prefix sdk/typescript -- --runInBand`
+  - `git diff --check`
+- Rollout / migration notes: Do not break existing stable artifacts without a documented migration path.
+
+**ISSUE 2 · [P0][security][boundary] Review architecture-level security and trust boundaries**
+- Priority: P0
+- Affected modules: signing, anchoring, verifier trust roots, release provenance, SECURITY.md, threat model
+- Acceptance criteria:
+  1. Identify all trust boundaries affected by the architecture milestone.
+  2. Update threat model claims, arguments, and evidence for new or changed boundaries.
+  3. Verify signing/provenance workflows remain forward-only and do not expose secrets.
+  4. Record any deferred security boundary work as follow-up issues before close.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "signing or anchoring or trust or provenance" -x`
+  - `git diff --check`
+- Rollout / migration notes: No secrets in issue bodies, logs, PR descriptions, or commits.
+
+**ISSUE 3 · [P0][release] Prove release rollback and forward-only recovery for {milestone_tag}**
+- Priority: P0
+- Affected modules: release train, release-cd, sign-release, slsa-provenance, artifact manifests
+- Acceptance criteria:
+  1. Document safe recovery paths for failed tag publication, failed signing, failed provenance, and registry lag.
+  2. Add regression coverage for prepared-but-unpublished major versions.
+  3. Confirm the release train never force-pushes, retags, or publishes around failed gates.
+  4. Validate npm latest and PyPI latest only advance after release-cd success.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "stable_auto_train or release_cd" -x`
+  - `scripts/check-release-assets-prep.sh`
+  - `git diff --check`
+- Rollout / migration notes: Treat GitHub/network/registry propagation as external blockers, not reasons to bypass gates.
+
+**ISSUE 4 · [P1][docs][governance] Publish the {milestone_tag} architecture decision record set**
+- Priority: P1
+- Affected modules: docs/adr, docs/architecture, docs/runbooks, governance docs
+- Acceptance criteria:
+  1. Add an architecture milestone overview that explains what changed and why.
+  2. Link ADRs to generated P0/P1/P2 planned-task issues.
+  3. Mark unresolved architectural risks explicitly, with owner issue links.
+  4. Keep claim wording within alpha/stable evidence boundaries.
+- Validation commands:
+  - `markdown-link-check docs/**/*.md`
+  - `git diff --check`
+- Rollout / migration notes: Documentation can land incrementally, but every architecture claim needs evidence or a gap link.
+
+**ISSUE 5 · [P1][test][conformance] Expand cross-SDK and verifier conformance for {milestone_tag}**
+- Priority: P1
+- Affected modules: Python SDK, TypeScript SDK, verifier conformance fixtures, cross-SDK roundtrip tests
+- Acceptance criteria:
+  1. Add conformance vectors that exercise new or changed architecture behavior.
+  2. Verify Python and TypeScript SDKs agree on canonical serialization and verification results.
+  3. Ensure failing vectors produce stable, documented error codes.
+  4. Record unsupported edge cases as planned follow-up issues.
+- Validation commands:
+  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "conformance or canonical or roundtrip" -x`
+  - `npm test --prefix sdk/typescript -- --runInBand`
+  - `git diff --check`
+- Rollout / migration notes: Conformance expansion should precede feature implementation where practical.
+"""
+
+
 def write_outputs(outputs: dict[str, str]) -> None:
     output_path = os.environ.get("GITHUB_OUTPUT")
     if not output_path:
@@ -449,12 +544,17 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     issue_body = ""
+    auto_issue_plan = ""
     if decision.should_upload_artifact:
         args.output_dir.mkdir(parents=True, exist_ok=True)
         stem = f"architecture-gap-audit-{milestone.tag}"
         manifest_path = args.output_dir / f"{stem}.json"
         report_path = args.output_dir / f"{stem}.md"
+        auto_plan_path = args.output_dir / f"architecture-task-plan-{milestone.tag}.md"
         issue_body = render_issue_body(manifest)
+        if decision.action == "architecture-plan":
+            auto_issue_plan = render_auto_architecture_plan(manifest)
+            auto_plan_path.write_text(auto_issue_plan, encoding="utf-8")
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
         report_path.write_text(issue_body, encoding="utf-8")
 
@@ -464,8 +564,10 @@ def main(argv: list[str] | None = None) -> int:
             "reason": decision.reason,
             "should_open_issue": str(decision.should_open_issue).lower(),
             "should_upload_artifact": str(decision.should_upload_artifact).lower(),
+            "should_auto_accept_plan": str(decision.action == "architecture-plan").lower(),
             "issue_title": decision.issue_title,
             "issue_body": issue_body,
+            "auto_issue_plan": auto_issue_plan,
             "upgrade_label": decision.upgrade_label,
             "anchor_tag": anchor_tag or "",
         }
