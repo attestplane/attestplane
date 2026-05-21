@@ -12,8 +12,8 @@
       "kind": "python-sdist",
       "name": "attestplane",
       "path": "sdk/python/dist/attestplane-1.5.5.tar.gz",
-      "sha256": "c283da69357151bd7ac5d3c346d3ab9caaea912ed8fb02c12feecaa94c84dff2",
-      "size_bytes": 232177,
+      "sha256": "f52a2724f5140e27dce21664cffda44422140833b65ecf0142eddc0dd1eab71f",
+      "size_bytes": 232173,
       "version": "1.5.5"
     },
     {
@@ -44,7 +44,7 @@
   "schema": "attestplane_release_artifact_manifest.v1",
   "source_state": {
     "prepared_by": "autodev_train_stable_release_prep",
-    "target_commit": "ba569a9fa5f0d7e5edb77460852557b37c84d3b5"
+    "target_commit": "42119e46507c18da0baf86e074c9a39294a4d5eb"
   },
   "upload_plan_file": "release/artifacts/v1.5.5/upload-plan.md"
 }
