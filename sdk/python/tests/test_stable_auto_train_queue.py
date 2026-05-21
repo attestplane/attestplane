@@ -390,6 +390,11 @@ def test_run_once_reconciles_superseded_local_tag_before_target_selection(
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: stable_auto_train.StableVersion.parse("1.0.8"))
     monkeypatch.setattr(
         stable_auto_train,
+        "latest_stable_before",
+        lambda target: stable_auto_train.StableVersion.parse("1.0.8"),
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
         "publication_status",
         lambda target: stable_auto_train.PublicationStatus(
             python_visible=True,
