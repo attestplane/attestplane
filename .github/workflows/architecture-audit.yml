@@ -127,12 +127,19 @@ jobs:
         run: |
           set -euo pipefail
           anchor="${INPUT_ANCHOR:-$PREVIOUS_ANCHOR}"
-          python3 scripts/release/architecture_audit_trigger.py \
-            --milestone-tag "${{ steps.milestone.outputs.tag }}" \
-            ${anchor:+--anchor-tag "$anchor"} \
-            ${PREVIOUS_ISSUE:+--previous-audit-issue "$PREVIOUS_ISSUE"} \
-            --output-dir reports/architecture-audits \
+          audit_args=(
+            --milestone-tag "${{ steps.milestone.outputs.tag }}"
+            --output-dir reports/architecture-audits
             --json
+          )
+          if [ -n "$anchor" ]; then
+            audit_args+=(--anchor-tag "$anchor")
+          fi
+          if [ -n "$PREVIOUS_ISSUE" ]; then
+            audit_args+=(--previous-audit-issue "$PREVIOUS_ISSUE")
+          fi
+          python3 scripts/release/architecture_audit_trigger.py \
+            "${audit_args[@]}"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: steps.audit.outputs.should_upload_artifact == 'true'
