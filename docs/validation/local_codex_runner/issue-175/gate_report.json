@@ -1,0 +1,12 @@
+{
+  "commands": [
+    {
+      "command": "/Users/macworkers/Projects/attestplane-local-runner/sdk/python/.venv/bin/python -m compileall scripts",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Listing 'scripts'...\nListing 'scripts/api'...\nListing 'scripts/conformance'...\nListing 'scripts/dev'...\nListing 'scripts/fault'...\nListing 'scripts/local_codex_runner'...\nListing 'scripts/local_codex_runner/launchd'...\nListing 'scripts/local_codex_runner/prompts'...\nListing 'scripts/observability'...\nListing 'scripts/release'...\nListing 'scripts/security'...\nListing 'scripts/storage'...\n"
+    }
+  ],
+  "selected_gate": "type:docs",
+  "status": "PASS"
+}
