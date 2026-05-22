@@ -1,0 +1,27 @@
+{
+  "status": "WARN",
+  "blocking_reasons": [],
+  "warnings": [
+    "Required v1.6.2 proxy-enabled and proxy-disabled architecture-audit dry-runs were not produced in this runner phase; local evidence records GitHub CLI authentication/network/dispatch blockers instead.",
+    "scripts/ci/opus_runner_selftest.sh is absent in this checkout, so the requested local runner selftest could not be executed.",
+    "The issue-required dispatch spelling uses -f milestone=v1.6.2, while the local architecture-audit workflow declares workflow_dispatch input milestone_tag.",
+    "Remote validation depends on external GitHub Actions, GitHub CLI authentication, and runner network/proxy state that were unavailable from this local sandbox."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text supplied in the prompt.",
+    "Reviewed git status, git diff --stat, git diff --name-status, and the patch for tests/local_codex_runner/test_git_ops.py.",
+    "Reviewed local evidence files under docs/validation/local_codex_runner/issue-116/, including plan.md, code.md, test.md, gate_report.md, and gate_report.json.",
+    "Reviewed scripts/local_codex_runner/git_ops.py to confirm the test fixture now models status --porcelain --untracked-files=all used by GitOps.status_paths().",
+    "Ran sdk/python/.venv/bin/pytest -q tests/local_codex_runner/test_git_ops.py: 8 passed in 0.08s.",
+    "Ran git diff --check: passed with no whitespace errors.",
+    "Existing gate_report.json records compileall scripts exit=0 and pytest -q exit=0 with 1228 passed in 25.38s.",
+    "The current tracked diff only changes a local Codex runner test fixture; it does not edit release gates, workflow files, publish/tag logic, package metadata, or secrets files."
+  ],
+  "residual_risks": [
+    "Issue #116 acceptance remains unresolved until two green v1.6.2 architecture-audit dry-runs are dispatched and watched successfully with proxy-enabled and proxy-disabled evidence.",
+    "Because remote dry-runs were blocked, this review cannot validate the active self-hosted runner's real network and interpreter behavior.",
+    "The local checkout lacks scripts/ci/opus_runner_selftest.sh, leaving selftest coverage dependent on future hardening or remote workflow logs.",
+    "Untracked issue evidence files are present and should be reviewed before any commit to ensure only durable reports are retained."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
