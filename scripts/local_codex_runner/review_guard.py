@@ -98,17 +98,22 @@ def has_test_or_evidence_change(paths: list[str]) -> bool:
 
 
 def has_test_deletion(diff: str) -> bool:
+    removed_tests = 0
+    added_tests = 0
     for line in diff.splitlines():
         if line.startswith("diff --git ") or line.startswith("--- ") or line.startswith("+++ "):
             continue
-        if not line.startswith("-"):
+        if not line.startswith(("-", "+")):
             continue
-        removed = line[1:].lstrip()
-        if removed.startswith(("#", "//", "/*", "*")):
+        body = line[1:].lstrip()
+        if body.startswith(("#", "//", "/*", "*")):
             continue
-        if re.search(r"^(def\s+test_|(?:it|test)\s*\()", removed):
-            return True
-    return False
+        if re.search(r"^(def\s+test_|(?:it|test)\s*\()", body):
+            if line.startswith("-"):
+                removed_tests += 1
+            else:
+                added_tests += 1
+    return removed_tests > added_tests
 
 
 def codex_review_status(report: str) -> str | None:

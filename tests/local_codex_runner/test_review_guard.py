@@ -63,6 +63,35 @@ def test_removed_test_reference_in_comment_is_not_test_deletion(tmp_path: Path) 
     assert report.status == "PASS"
 
 
+def test_renamed_test_definition_is_not_test_deletion(tmp_path: Path) -> None:
+    report = run_review_guard(
+        diff=(
+            "-def test_old_contract() -> None:\n"
+            "+def test_new_contract() -> None:\n"
+            "-    assert old_result is False\n"
+            "+    assert new_result is True\n"
+        ),
+        codex_review_report="PASS",
+        issue_labels=[],
+        changed_files=["tests/verifier/test_contract.py"],
+        evidence_dir=tmp_path,
+    )
+
+    assert report.status == "PASS"
+
+
+def test_net_removed_test_definition_is_blocked(tmp_path: Path) -> None:
+    report = run_review_guard(
+        diff="-def test_old_contract() -> None:\n-    assert old_result is False\n",
+        codex_review_report="PASS",
+        issue_labels=[],
+        changed_files=["tests/verifier/test_contract.py"],
+        evidence_dir=tmp_path,
+    )
+
+    assert report.status == "FAIL"
+
+
 def test_pass_review_with_no_blocking_findings_is_not_blocked(tmp_path: Path) -> None:
     report = run_review_guard(
         diff="+ product code\n",
