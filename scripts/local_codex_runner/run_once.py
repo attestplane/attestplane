@@ -33,6 +33,8 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
             mode="all",
             pr_limit=20,
             issue_limit=50,
+            include_label=[],
+            exclude_label=[],
             comment=False,
         )
         advance_summary = advance_queue(advance_args)

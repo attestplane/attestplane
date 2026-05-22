@@ -182,13 +182,15 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
     gh = GitHubCLI(dry_run=config.dry_run)
     decisions: list[AdvanceDecision] = []
     writes = 0
+    include_label = getattr(args, "include_label", []) or []
+    exclude_label = getattr(args, "exclude_label", []) or []
 
     if args.mode in {"all", "prs"}:
-        pr_fetch_limit = max(args.pr_limit, 50) if args.include_label or args.exclude_label else args.pr_limit
+        pr_fetch_limit = max(args.pr_limit, 50) if include_label or exclude_label else args.pr_limit
         raw_prs = [
             raw_pr
             for raw_pr in gh.list_pull_requests(config.repo or "", config.base_branch, limit=pr_fetch_limit)
-            if matches_label_filters(raw_pr, args.include_label, args.exclude_label)
+            if matches_label_filters(raw_pr, include_label, exclude_label)
         ][: args.pr_limit]
         for raw_pr in raw_prs:
             pr_number = str(raw_pr["number"])
