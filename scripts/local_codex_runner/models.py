@@ -127,6 +127,24 @@ def first_label_value(labels: list[str], prefix: str) -> str | None:
     return None
 
 
+def issue_priority_rank(task: IssueTask) -> int:
+    """Return a stable queue rank where lower numbers are more urgent."""
+    candidates = list(task.labels)
+    if task.title.startswith("[") and "]" in task.title:
+        candidates.append(task.title[1 : task.title.index("]")])
+    for candidate in candidates:
+        normalized = candidate.lower().replace("_", "-")
+        if normalized in {"priority-p0", "priority:p0", "p0"}:
+            return 0
+        if normalized in {"priority-p1", "priority:p1", "p1"}:
+            return 1
+        if normalized in {"priority-p2", "priority:p2", "p2"}:
+            return 2
+        if normalized in {"priority-p3", "priority:p3", "p3"}:
+            return 3
+    return 99
+
+
 def infer_category(labels: list[str]) -> str | None:
     known = ("claim-safety", "verifier", "test-gap", "docs", "release-blocker", "feature-gap")
     for label in labels:
@@ -191,4 +209,5 @@ def processable_issues(
             exclude_labels=exclude_labels,
         )
     ]
+    queue.sort(key=lambda issue: (issue_priority_rank(issue), issue.number))
     return queue[: max(0, max_issues_per_run)]
