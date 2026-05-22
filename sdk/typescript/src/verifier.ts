@@ -28,9 +28,9 @@ import {
 } from './hashchain.js';
 import type {
   ProofBundle,
-  SerializedSignatureRecord,
   SerializedAuditEvent,
   SerializedChainedEvent,
+  SerializedSignatureRecord,
   SerializedSubjectRef,
 } from './proof_bundle.js';
 import { DEFAULT_FORBIDDEN_FIELDS } from './proof_bundle.js';
@@ -309,7 +309,10 @@ function isValidBase64(value: unknown): value is string {
   return /^[A-Za-z0-9+/]*={0,2}$/.test(value);
 }
 
-function validateSignatureRecordShape(raw: SerializedSignatureRecord, index: number): string | null {
+function validateSignatureRecordShape(
+  raw: SerializedSignatureRecord,
+  index: number,
+): string | null {
   const obj = raw as unknown as Record<string, unknown>;
   const required = [
     'signature_schema_version',
@@ -390,7 +393,10 @@ function validateMinimumSignedAttestationSchema(
       continue;
     }
     const record = raw as unknown as SerializedSignatureRecord;
-    if (typeof record.signed_event_hash_hex !== 'string' || !HEX64.test(record.signed_event_hash_hex)) {
+    if (
+      typeof record.signed_event_hash_hex !== 'string' ||
+      !HEX64.test(record.signed_event_hash_hex)
+    ) {
       malformedReasons.push(`signatures[${i}].signed_event_hash_hex must be lowercase 64-hex`);
       continue;
     }
@@ -409,7 +415,8 @@ function validateMinimumSignedAttestationSchema(
   }
   return {
     ok: false,
-    reason: malformedReasons.length > 0 ? malformedReasons.join('; ') : 'no usable signature record',
+    reason:
+      malformedReasons.length > 0 ? malformedReasons.join('; ') : 'no usable signature record',
   };
 }
 
