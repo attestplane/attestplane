@@ -1,0 +1,23 @@
+{
+  "case_id": "canonicalization-negative-nfd-payload-string",
+  "description": "Hand-crafted bundle mutates an NFC helper payload string to NFD; canonicalization must reject.",
+  "expected_error_code": "canonicalization.nfc",
+  "expected_ok": false,
+  "mutation": {
+    "kind": "replace_path",
+    "path": [
+      "events",
+      0,
+      "event",
+      "payload",
+      "payload_text"
+    ],
+    "value": "café"
+  },
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-nfc-payload-string",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from base64 import b64decode
 from dataclasses import dataclass
 from datetime import datetime
@@ -500,6 +501,39 @@ def verify_proof_bundle_file(
     )
 
 
+def main(argv: list[str] | None = None) -> int:
+    """Small module entrypoint for ``python -m attestplane.verifier``.
+
+    Reads one JSON bundle from stdin. ``--strict`` applies the minimum signed
+    proof-bundle contract used by SDK examples and conformance vectors.
+    """
+    args = list(sys.argv[1:] if argv is None else argv)
+    strict = False
+    if args == ["--strict"]:
+        strict = True
+    elif args:
+        sys.stderr.write("usage: python -m attestplane.verifier [--strict]\n")
+        return 2
+
+    try:
+        raw = sys.stdin.read()
+        bundle = json.loads(raw)
+        result = verify_proof_bundle(
+            bundle,
+            require_non_empty=strict,
+            require_signed_attestation=strict,
+        )
+    except (BundleVerificationError, json.JSONDecodeError) as exc:
+        sys.stderr.write(f"FAIL: {exc}\n")
+        return 2
+
+    if result.ok:
+        sys.stdout.write(result.short_summary() + "\n")
+        return 0
+    sys.stderr.write(result.short_summary() + "\n")
+    return 2
+
+
 __all__ = [
     "BundleSchemaError",
     "BundleVerificationError",
@@ -507,3 +541,7 @@ __all__ = [
     "verify_proof_bundle",
     "verify_proof_bundle_file",
 ]
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())

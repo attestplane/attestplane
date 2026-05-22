@@ -1,0 +1,21 @@
+{
+  "assertions": [
+    "payload_strings_are_nfc"
+  ],
+  "case_id": "canonicalization-positive-nfc-payload-string",
+  "description": "Helper-emitted minimum bundle with an NFC payload string that remains strict-valid.",
+  "event_id": "00000000-0000-7000-8000-000000137002",
+  "expected_ok": true,
+  "extra_payload": {
+    "payload_text": "café"
+  },
+  "helper": "ProofBundleBuilder.minimal",
+  "now": "2026-05-22T00:00:01.000000Z",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.positive.v1",
+  "seed_hex": "1370000000000000000000000000000000000000000000000000000000000002",
+  "subject_digest": "1370000000000000000000000000000000000000000000000000000000000002",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}

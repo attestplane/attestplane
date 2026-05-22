@@ -1,0 +1,23 @@
+{
+  "case_id": "canonicalization-negative-int64-overflow-timestamp-payload",
+  "description": "Hand-crafted bundle mutates a timestamp-style payload integer past the signed 64-bit boundary; canonicalization must reject.",
+  "expected_error_code": "canonicalization.int64",
+  "expected_ok": false,
+  "mutation": {
+    "kind": "replace_path",
+    "path": [
+      "events",
+      0,
+      "event",
+      "payload",
+      "boundary_timestamp_us"
+    ],
+    "value": 9223372036854775808
+  },
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-int64-boundary-timestamp-payload",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}
