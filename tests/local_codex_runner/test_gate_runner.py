@@ -14,6 +14,19 @@ def test_label_to_gate_mapping(tmp_path: Path) -> None:
     assert commands == ["pytest tests/sentinel -q"]
 
 
+def test_label_mapping_allows_colon_in_key(tmp_path: Path) -> None:
+    matrix = tmp_path / "gates.yml"
+    matrix.write_text(
+        'default:\n  - "pytest -q"\narea:verifier:\n  - "pytest tests/verifier -q"\n',
+        encoding="utf-8",
+    )
+
+    gate, commands = GateRunner(tmp_path, matrix).select_gate(["area:verifier"])
+
+    assert gate == "area:verifier"
+    assert commands == ["pytest tests/verifier -q"]
+
+
 def test_command_failure_is_captured(monkeypatch, tmp_path: Path) -> None:
     def fake_run(*args, **kwargs):
         assert args[0] == ["pytest", "-q"]

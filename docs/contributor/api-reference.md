@@ -53,6 +53,10 @@ Artifacts are retained for 60 days.
 - **Public surface only.** TypeScript rendering starts from `src/index.ts`, so anything not
   re-exported there is invisible. Python rendering starts at the `attestplane` package, so
   underscore-prefixed names are excluded.
+- **SDK convenience namespace.** Python also exposes additive convenience imports from
+  `attestplane.sdk`, including `ProofBundleBuilder`, `EmptyProofBundleError`, and
+  `IncompleteProofBundleError`. These names render from their source docstrings and must stay
+  listed in the relevant module `__all__` values when changed.
 
 ## Future work
 

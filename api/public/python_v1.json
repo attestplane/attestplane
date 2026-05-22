@@ -240,6 +240,14 @@
       "documented": false,
       "kind": "class",
       "module": "attestplane",
+      "name": "EmptyProofBundleError",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
       "name": "EnvKeyProvider",
       "notes": "",
       "stability": "alpha_public"
@@ -313,6 +321,14 @@
       "kind": "class",
       "module": "attestplane",
       "name": "InMemoryKeyProvider",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "IncompleteProofBundleError",
       "notes": "",
       "stability": "alpha_public"
     },
@@ -497,6 +513,14 @@
       "kind": "class",
       "module": "attestplane",
       "name": "ProofBundleBuilder",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "ProofBundleError",
       "notes": "",
       "stability": "alpha_public"
     },

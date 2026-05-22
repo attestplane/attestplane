@@ -1199,6 +1199,30 @@
       "review_by": "v0.0.5-alpha",
       "symbol": "verify_retention_proofs",
       "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
+      "review_by": "v1.7.0",
+      "symbol": "EmptyProofBundleError",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
+      "review_by": "v1.7.0",
+      "symbol": "IncompleteProofBundleError",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
+      "review_by": "v1.7.0",
+      "symbol": "ProofBundleError",
+      "typescript": false
     }
   ],
   "baseline_release": "v0.0.2-alpha",

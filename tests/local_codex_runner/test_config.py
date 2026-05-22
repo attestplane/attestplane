@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.local_codex_runner.config import ConfigError, load_config
+from scripts.local_codex_runner.config import ConfigError, load_config, parse_simple_yaml
 
 
 def test_config_defaults_to_dry_run(tmp_path: Path) -> None:
@@ -39,3 +39,13 @@ def test_auto_merge_requires_author_whitelist(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigError, match="allowed_pr_authors"):
         load_config(config_path)
+
+
+def test_simple_yaml_parser_allows_colon_in_mapping_key(tmp_path: Path) -> None:
+    config_path = tmp_path / "gates.yml"
+    parsed = parse_simple_yaml(
+        'default:\n  - "pytest -q"\narea:verifier:\n  - "pytest tests/verifier -q"\n',
+        config_path,
+    )
+
+    assert parsed["area:verifier"] == ["pytest tests/verifier -q"]

@@ -6,6 +6,12 @@ claim-safety:
   - "pytest tests/release -q"
 verifier:
   - "pytest tests/verifier -q"
+area:verifier:
+  - "env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q"
+  - "env PYTHONPATH=sdk/python/src pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_conformance_fixtures.py -q"
+area:conformance:
+  - "env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q"
+  - "npm run test --workspace sdk/typescript -- verifier.test.ts"
 test-gap:
   - "pytest tests -q"
 docs:
