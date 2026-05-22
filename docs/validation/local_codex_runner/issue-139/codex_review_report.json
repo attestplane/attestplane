@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "The local runner does not have a lychee executable installed, so the lychee command could not be reproduced without fetching external tooling. No network fetch was attempted under the runner red lines."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text supplied in the prompt.",
+    "`git status --short --untracked-files=all` showed the scoped CI-fix edits under docs/validation/local_codex_runner/issue-139/ and tests/conformance/.",
+    "Renamed the conformance selector from tests/conformance/test_signed_schema_roundtrip.py to tests/conformance/test_signed_schema_conformance_roundtrip.py so combined pytest collection no longer collides with tests/verifier/test_signed_schema_roundtrip.py.",
+    "Inspected tests/verifier/test_signed_schema_roundtrip.py and tests/conformance/test_signed_schema_conformance_roundtrip.py directly from the working tree.",
+    "Inspected existing local verifier tests and fixture: tests/verifier/test_proof_bundle_schema.py, tests/sdk/test_bundle_builder.py, and tests/fixtures/bundles/valid_signed_attestation.json.",
+    "`PYTHONPATH=sdk/python/src pytest tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_conformance_roundtrip.py -q` passed with 3 tests.",
+    "`PYTHONPATH=sdk/python/src pytest tests/verifier/test_signed_schema_roundtrip.py -x -vv` passed with 2 tests.",
+    "`PYTHONPATH=sdk/python/src pytest tests/conformance -k signed_schema -x -vv` passed with 1 selected test.",
+    "`ruff check tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_conformance_roundtrip.py` passed.",
+    "`/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 '**/*.md' '!.github/**'` passed with 0 errors.",
+    "Local evidence file docs/validation/local_codex_runner/issue-139/test.md records the CI-fix validation and the lychee local tooling blocker."
+  ],
+  "residual_risks": [
+    "The review did not contact GitHub or any external service; it relied on the issue text in the prompt and local repository evidence only.",
+    "Local lychee reproduction remains blocked because lychee is not installed in this runner."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
