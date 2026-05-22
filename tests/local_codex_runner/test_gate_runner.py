@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from scripts.local_codex_runner.gate_runner import GateRunner
+from scripts.local_codex_runner.gate_runner import GateCommandResult, GateReport, GateRunner
 
 
 def test_label_to_gate_mapping(tmp_path: Path) -> None:
@@ -51,7 +51,10 @@ def test_gate_command_uses_argv_list(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    result = GateRunner(tmp_path, tmp_path / "missing.yml").run_command("python -m compileall scripts", live_allowed=False)
+    result = GateRunner(tmp_path, tmp_path / "missing.yml").run_command(
+        "python -m compileall scripts",
+        live_allowed=False,
+    )
 
     assert result.exit_code == 0
     assert observed["argv"] == ["python", "-m", "compileall", "scripts"]
@@ -63,3 +66,21 @@ def test_no_live_tests_by_default(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "blocked" in result.stderr
+
+
+def test_gate_summary_is_markdownlint_friendly() -> None:
+    report = GateReport(
+        status="PASS",
+        selected_gate="area:verifier",
+        commands=[GateCommandResult("pytest -q", 0, "", "")],
+    )
+
+    assert report.summary() == (
+        "# Gate Report: PASS\n"
+        "\n"
+        "Gate: `area:verifier`\n"
+        "\n"
+        "## Commands\n"
+        "\n"
+        "- `pytest -q`: exit=0"
+    )

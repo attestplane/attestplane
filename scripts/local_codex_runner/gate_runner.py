@@ -15,7 +15,6 @@ from pathlib import Path
 from scripts.local_codex_runner.config import load_yaml_mapping
 from scripts.local_codex_runner.github_cli import redact, truncate
 
-
 FORBIDDEN_COMMAND_WORDS = ("publish", "twine upload", "npm publish", "git tag", "gh release upload")
 LIVE_COMMAND_WORDS = ("--live", "live-test", "external-live")
 
@@ -35,9 +34,9 @@ class GateReport:
     commands: list[GateCommandResult]
 
     def summary(self) -> str:
-        lines = [f"{self.status}: gate={self.selected_gate}"]
+        lines = [f"# Gate Report: {self.status}", "", f"Gate: `{self.selected_gate}`", "", "## Commands", ""]
         for result in self.commands:
-            lines.append(f"- {result.command}: exit={result.exit_code}")
+            lines.append(f"- `{result.command}`: exit={result.exit_code}")
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, object]:
@@ -86,11 +85,16 @@ class GateRunner:
         if any(word in lowered for word in FORBIDDEN_COMMAND_WORDS):
             return GateCommandResult(command, 2, "", "Forbidden publish/tag/release command blocked by gate runner")
         if not live_allowed and any(word in lowered for word in LIVE_COMMAND_WORDS):
-            return GateCommandResult(command, 2, "", "Live external test command blocked without live-test-approved label")
+            return GateCommandResult(
+                command,
+                2,
+                "",
+                "Live external test command blocked without live-test-approved label",
+            )
         argv = shlex.split(command)
         if not argv:
             return GateCommandResult(command, 2, "", "Empty gate command blocked")
-        completed = subprocess.run(
+        completed = subprocess.run(  # noqa: S603 - configured gate commands are executed as argv, never shell.
             argv,
             cwd=self.workdir,
             capture_output=True,
