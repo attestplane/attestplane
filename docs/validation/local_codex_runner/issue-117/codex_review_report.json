@@ -1,0 +1,24 @@
+{
+  "status": "WARN",
+  "blocking_reasons": [],
+  "warnings": [
+    "Non-blocking observability semantics gap: scripts/release/plan_to_issues.py sets planned_issue_post_create_fetch ok to true whenever the post-create refetch returns at least one issue. If created_count is greater than refetched_count but refetched_count is non-zero, the mismatch is visible in the counts but ok remains true. This preserves the existing non-blocking partial-refetch behavior, so it is not a hard red-line failure for Issue #117."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the provided issue text.",
+    "Reviewed tracked diff in scripts/release/plan_to_issues.py and untracked files under scripts/observability, tests/observability, docs/observability, and docs/validation/local_codex_runner/issue-117.",
+    "No release gate weakening found: the post-create empty-refetch path still raises RuntimeError after emitting the new event when enabled.",
+    "No severity lowering found.",
+    "No secret leakage or secret logging found in the changed code or docs reviewed.",
+    "No publish, tag, package publish, or PyPI push logic modified.",
+    "No key tests deleted; new observability tests were added.",
+    "Behavior has local evidence: sdk/python/.venv/bin/pytest tests/observability/test_events.py -q passed with 10 tests; sdk/python/.venv/bin/python -m compileall scripts/observability scripts/release/plan_to_issues.py passed; sdk/python/.venv/bin/python -m scripts.release.plan_to_issues --dry-run --emit-events --milestone v1.6.2 emitted the structured planned_issue_post_create_fetch JSON line.",
+    "No uncertain external dependency introduced; the new helper uses Python standard library JSON/stdout behavior and existing local release automation paths."
+  ],
+  "residual_risks": [
+    "The narrow validation does not run the full release gate or exercise live GitHub CLI issue creation/refetch.",
+    "Partial post-create refetch cardinality is not explicitly tested; counts expose the condition, but ok remains true for any non-empty refetch.",
+    "The dry-run evidence command emits the event shape without a plan file and without exercising parse_plan."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
