@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Checklist 0: PASS. This review used only local repository files, local command output, and the issue text provided in the prompt. No web search, remote GitHub lookup, external advisory service, merge, tag, publish, or registry operation was used.",
+    "Checklist 1: PASS. The tracked diff only changes scripts/local_codex_runner/models.py queue ordering; added issue-92 evidence files do not weaken release gates, release workflows, artifact checks, or policy checks.",
+    "Checklist 2: PASS. No issue severity, priority labels, release severity policy, or gate severity handling was lowered.",
+    "Checklist 3: PASS. No secrets were leaked or logged. Local pattern search found only guardrail text and git tag listing commands, not credential values.",
+    "Checklist 4: PASS. No publish or tag creation logic was modified. No release artifact manifest, checksum, upload plan, workflow publish step, package version, or registry path was changed.",
+    "Checklist 5: PASS. No tests were deleted. The queue-ordering behavior is covered by existing local runner tests.",
+    "Checklist 6: PASS. The code behavior change has local test evidence: sdk/python/.venv/bin/pytest -q sdk/python/tests/test_local_codex_runner_queue.py tests/local_codex_runner/test_models.py returned 12 passed. The recorded gate report also shows 1306 passed.",
+    "Checklist 7: PASS. No uncertain external dependency was introduced; the implementation uses existing local Python code and local git evidence.",
+    "Checklist 8: PASS. The diff avoided merge, tag, package publish, and PyPI push operations. The evidence explicitly records that no such operations were performed.",
+    "Whitespace validation: PASS. git diff --check exited 0 for the current tracked diff."
+  ],
+  "residual_risks": [
+    "The issue-provided root-to-HEAD validation range is broader than the v1.5.0..v1.5.9 release boundary and reports historical whitespace findings; the boundary-specific git diff --check v1.5.0..v1.5.9 passed and the local follow-up draft records this risk.",
+    "The validation evidence directory is untracked in the current worktree, so git diff --check does not cover those files until they are staged or added with intent; local fallback checks in test.md report no trailing whitespace and newline-at-EOF coverage for the Markdown evidence files."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
