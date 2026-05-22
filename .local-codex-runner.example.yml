@@ -18,3 +18,13 @@ codex_sandbox: "workspace-write"
 state_path: ".local_codex_runner/state.json"
 evidence_dir: "docs/validation/local_codex_runner"
 gate_matrix_path: ".local-codex-gates.yml"
+cleanup_stale_state: true
+
+# Optional lane settings for multi-worktree runner deployments.
+# Each lane should use its own workdir, state_path, and tmux session.
+# `lane_include_labels` is OR-matched; pair it with `lane_exclude_labels`
+# when a lane must avoid higher-priority work.
+lane_name: null
+lane_slot: null
+lane_include_labels: []
+lane_exclude_labels: []

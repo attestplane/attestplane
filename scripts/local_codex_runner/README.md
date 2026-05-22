@@ -40,6 +40,46 @@ python -m scripts.local_codex_runner.run_once --config .local-codex-runner.yml
 Only open issues with `auto-codex-approved` are eligible. Issues with
 `codex-pr-opened` or `codex-needs-human` are skipped by default.
 
+Set `cleanup_stale_state: true` to prune local active/branch mappings for issues
+that GitHub already reports as closed before each poll cycle. This lets the
+runner recover from stale local state such as closed issues that were previously
+left in `active_issue_ids`.
+
+## Multi-Lane Operation
+
+The runner can be deployed as several independent lanes by giving each lane its
+own worktree, state file, and tmux session. The tracked example configs are:
+
+- `.local-codex-runner.p0.example.yml`: P0 release/security/verifier lane,
+  one worker, strict gates.
+- `.local-codex-runner.p1.example.yml`: P1 SDK/CLI/test lane, copy this config
+  for a second P1 slot if needed.
+- `.local-codex-runner.p2-docs.example.yml`: P2 docs/release-note lane.
+
+Copy the examples into ignored `.local/` files and set each `workdir` to a
+separate `git worktree`. Keep each lane's `state_path` unique.
+
+```bash
+git worktree add /Users/YOUR_USER/dev/attestplane-p0 main
+git worktree add /Users/YOUR_USER/dev/attestplane-p1-1 main
+git worktree add /Users/YOUR_USER/dev/attestplane-p1-2 main
+git worktree add /Users/YOUR_USER/dev/attestplane-p2-docs main
+```
+
+Then start the configured lanes:
+
+```bash
+ATTESTPLANE_REPO_DIR=/Users/YOUR_USER/dev/attestplane \
+  scripts/local_codex_runner/run_lanes.sh
+```
+
+The launcher starts tmux sessions named `local-codex-runner-p0-1`,
+`local-codex-runner-p1-1`, `local-codex-runner-p1-2`, and
+`local-codex-runner-p2-docs-1` for config files that exist. Missing configs are
+skipped. Keep `allow_auto_merge: false` during canary rollout; after branch
+protection and check freshness are verified, enable it only on lanes whose merge
+quota fits the global 2-3 merges per cycle budget.
+
 ## Label State Machine
 
 - Eligible: open issue with `auto-codex-approved`.

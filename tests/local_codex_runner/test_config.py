@@ -70,6 +70,41 @@ def test_auto_merge_requires_author_whitelist(tmp_path: Path) -> None:
         load_config(config_path)
 
 
+def test_lane_config_accepts_label_filters(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\n'
+        'workdir: "/tmp/attestplane-p0"\n'
+        'lane_name: "p0"\n'
+        "lane_slot: 1\n"
+        "lane_include_labels:\n"
+        '  - "priority-P0"\n'
+        "lane_exclude_labels:\n"
+        '  - "codex-needs-human"\n',
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.lane_name == "p0"
+    assert config.lane_slot == 1
+    assert config.lane_include_labels == ["priority-P0"]
+    assert config.lane_exclude_labels == ["codex-needs-human"]
+
+
+def test_lane_slot_must_be_positive(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\n'
+        'workdir: "/tmp/attestplane-p0"\n'
+        "lane_slot: 0\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="lane_slot"):
+        load_config(config_path)
+
+
 def test_simple_yaml_parser_allows_colon_in_mapping_key(tmp_path: Path) -> None:
     config_path = tmp_path / "gates.yml"
     parsed = parse_simple_yaml(

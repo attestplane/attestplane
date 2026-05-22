@@ -17,6 +17,28 @@ CI, retrying bounded failures, and writing issue comments.
 The runner never merges `main`, creates tags, publishes packages, or pushes to
 PyPI. It creates PRs for human review only.
 
+## Lane Topology
+
+Backlog processing can run as independent lanes. Each lane is a normal
+`run_once` loop with its own config, worktree, state file, and tmux session:
+
+- P0 lane: one worker, `priority-P0` / `priority:P0`, for release integrity,
+  security, and verifier work.
+- P1 lane: one or two workers, `priority-P1` / `priority:P1`, for SDK, CLI, and
+  regression-test work.
+- P2 docs lane: one worker, `priority-P2` / `priority:P2`, for docs and release
+  note work that should not block P0/P1 execution.
+
+Lane filters are advisory queue filters, not locks. Duplicate prevention still
+comes from the shared GitHub label state machine: `codex-pr-opened` and
+`codex-needs-human` make an issue ineligible, and `codex-in-progress` guards
+work that a lane already owns locally. Each lane must use a separate state file
+so stale or failed work in one lane does not block another lane.
+
+Every cycle may prune local state for issues that GitHub already reports as
+closed. The cleanup removes stale `active_issue_ids` and branch mappings while
+leaving processed history intact.
+
 ## Label State Machine
 
 Only open issues with `auto-codex-approved` are eligible. `codex-pr-opened` and
@@ -44,7 +66,7 @@ Dry-run mode records these actions in local evidence without changing GitHub.
 
 ## Safety Red Lines
 
-- No automatic merge.
+- No automatic merge unless explicitly enabled and all merge gates pass.
 - No automatic tag.
 - No package publish.
 - No PyPI push.
@@ -57,6 +79,10 @@ Dry-run mode records these actions in local evidence without changing GitHub.
 
 Claim-safety and P0 issues must include tests or evidence changes. Publish and
 release workflow changes require explicit labels.
+
+When multiple lanes are enabled, keep the aggregate automatic merge budget at
+2-3 green PRs per cycle. Do not treat a lane's green CI result as permission to
+merge around branch protection, stale checks, blocked labels, or release gates.
 
 ## Known Limitations
 

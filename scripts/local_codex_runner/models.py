@@ -115,6 +115,14 @@ class State:
             self.processed_issue_ids.append(issue_number)
         self.last_result = result.to_dict()
 
+    def prune_issue(self, issue_number: int) -> bool:
+        """Remove stale active/branch state for an issue that no longer needs work."""
+        before_active = list(self.active_issue_ids)
+        before_branch = dict(self.branch_mappings)
+        self.active_issue_ids = [item for item in self.active_issue_ids if item != issue_number]
+        self.branch_mappings.pop(str(issue_number), None)
+        return before_active != self.active_issue_ids or before_branch != self.branch_mappings
+
     def increment_retry(self, key: str) -> int:
         self.retry_counts[key] = self.retry_counts.get(key, 0) + 1
         return self.retry_counts[key]
