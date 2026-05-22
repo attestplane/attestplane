@@ -43,6 +43,7 @@ RELEASE_GATE_PATH = ROOT / "scripts" / "release" / "release_gate.py"
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
+DEFAULT_ABANDONED_STABLE_TAGS = ROOT / "release" / "abandoned-stable-tags.json"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
 # Low-speed cut-off so a stalled curl tunnel (proxy/GFW flake during long
@@ -132,6 +133,10 @@ RELEASE_PREP_SUBJECT_REGEX = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.
 # range are release-prep commits. Documented in
 # docs/runbooks/autodev-train.md ("Cadence limiter").
 FORCE_CADENCE_ENV = "ATTESTPLANE_AUTODEV_TRAIN_FORCE_CADENCE"
+ABANDONED_STABLE_TAG_REQUIRED_FIELDS = frozenset({"commit", "reason", "abandoned_at", "evidence"})
+ABANDONED_STABLE_TAG_ALLOWED_FIELDS = ABANDONED_STABLE_TAG_REQUIRED_FIELDS | frozenset(
+    {"successor_candidate"}
+)
 
 
 @dataclass(frozen=True, order=True)
@@ -677,8 +682,62 @@ def list_stable_tags() -> list[StableVersion]:
     return sorted(versions)
 
 
+def abandoned_stable_tags(path: Path = DEFAULT_ABANDONED_STABLE_TAGS) -> set[str]:
+    """Return stable tags that are immutable but intentionally not publishable.
+
+    ``successor_candidate`` is advisory only: it documents the next version the
+    train should try after a failed, unpublished tag. It is not a claim that the
+    successor has already been published.
+    """
+    if not path.is_file():
+        return set()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema") != "attestplane_abandoned_stable_tags.v1":
+        raise RuntimeError(f"unsupported abandoned stable tags schema in {path}")
+    raw_tags = payload.get("tags", {})
+    if not isinstance(raw_tags, dict):
+        raise RuntimeError(f"abandoned stable tags must be an object in {path}")
+    tags: set[str] = set()
+    for tag, details in raw_tags.items():
+        StableVersion.parse_tag(str(tag))
+        if not isinstance(details, dict):
+            raise RuntimeError(f"abandoned stable tag entry must be an object: {tag}")
+        missing = ABANDONED_STABLE_TAG_REQUIRED_FIELDS - set(details)
+        if missing:
+            raise RuntimeError(f"abandoned stable tag {tag} missing required fields: {sorted(missing)}")
+        unknown = set(details) - ABANDONED_STABLE_TAG_ALLOWED_FIELDS
+        if unknown:
+            raise RuntimeError(f"abandoned stable tag {tag} contains unknown fields: {sorted(unknown)}")
+        successor = details.get("successor_candidate")
+        if successor is not None:
+            StableVersion.parse_tag(str(successor))
+            if str(successor) == str(tag):
+                raise RuntimeError(f"abandoned stable tag {tag} successor_candidate must not reference itself")
+        if not isinstance(details["commit"], str) or not details["commit"]:
+            raise RuntimeError(f"abandoned stable tag {tag} commit must be a non-empty string")
+        if not isinstance(details["reason"], str) or not details["reason"]:
+            raise RuntimeError(f"abandoned stable tag {tag} reason must be a non-empty string")
+        if not isinstance(details["abandoned_at"], str) or not details["abandoned_at"]:
+            raise RuntimeError(f"abandoned stable tag {tag} abandoned_at must be a non-empty string")
+        if not details["abandoned_at"].endswith("Z"):
+            raise RuntimeError(f"abandoned stable tag {tag} abandoned_at must be a UTC timestamp ending in Z")
+        try:
+            datetime.fromisoformat(details["abandoned_at"].replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise RuntimeError(f"abandoned stable tag {tag} abandoned_at must be ISO 8601") from exc
+        if not isinstance(details["evidence"], dict):
+            raise RuntimeError(f"abandoned stable tag {tag} evidence must be an object")
+        tags.add(str(tag))
+    return tags
+
+
+def is_abandoned_stable_tag(tag: str) -> bool:
+    return tag in abandoned_stable_tags()
+
+
 def latest_stable_before(target: StableVersion) -> StableVersion:
-    candidates = [version for version in list_stable_tags() if version < target]
+    abandoned = abandoned_stable_tags()
+    candidates = [version for version in list_stable_tags() if version < target and version.tag not in abandoned]
     if not candidates:
         raise RuntimeError(f"no stable release tag found before {target.tag}")
     return max(candidates)
@@ -697,6 +756,18 @@ def next_stable_after(version: StableVersion) -> StableVersion:
     if version.patch >= PATCH_ROLLOVER:
         return StableVersion(version.major, version.minor + 1, 0)
     return StableVersion(version.major, version.minor, version.patch + 1)
+
+
+def next_unabandoned_stable_after(version: StableVersion) -> StableVersion:
+    abandoned = abandoned_stable_tags()
+    candidate = next_stable_after(version)
+    while candidate.tag in abandoned or git_ref_exists(f"refs/tags/{candidate.tag}"):
+        if candidate.tag in abandoned:
+            print(f"autodev-train stable: generated target {candidate.tag} is abandoned; skipping", flush=True)
+        else:
+            print(f"autodev-train stable: generated target {candidate.tag} already has stable tag; skipping", flush=True)
+        candidate = next_stable_after(candidate)
+    return candidate
 
 
 def commits_since_tag_have_real_work(tag: str) -> bool:
@@ -774,17 +845,24 @@ def select_target(path: Path) -> ReleaseTarget:
         base = latest_stable()
     except RuntimeError:
         base = None
+    if base is not None and is_abandoned_stable_tag(base.tag):
+        print(f"autodev-train stable: latest tag {base.tag} is abandoned; skipping recovery", flush=True)
+        base = latest_stable_before(base)
     if base is not None and not publication_status(base).complete:
         print(f"autodev-train stable: latest tag {base.tag} is not fully published; recovering before advancing", flush=True)
         return ReleaseTarget(version=base, channel="latest", min_soak_hours=0)
 
     for target in load_target_queue(path):
+        if is_abandoned_stable_tag(target.version.tag):
+            print(f"autodev-train stable: target {target.version.tag} is abandoned; skipping", flush=True)
+            continue
         if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(target.version.tag):
             print(f"autodev-train stable: target {target.version.tag} already has stable tag; skipping", flush=True)
             continue
         return target
-    base = latest_stable()
-    generated = next_stable_after(base)
+    if base is None:
+        base = latest_stable()
+    generated = next_unabandoned_stable_after(base)
     print(
         f"autodev-train stable: target queue exhausted; generated next target {generated.tag} after {base.tag}",
         flush=True,
@@ -889,10 +967,15 @@ def update_versions(version: StableVersion) -> None:
     )
 
 
+def markdown_escape_release_subject(subject: str) -> str:
+    """Escape commit subjects before embedding them as markdown list text."""
+    return subject.replace("[", r"\[").replace("]", r"\]")
+
+
 def write_release_notes(previous: StableVersion, version: StableVersion) -> None:
     path = ROOT / "docs" / "release-notes" / f"{version.tag}.draft.md"
     commits = capture(["git", "log", "--format=%s", f"{previous.tag}..HEAD"])
-    changes = [f"- {line}" for line in commits.splitlines()[:20]]
+    changes = [f"- {markdown_escape_release_subject(line)}" for line in commits.splitlines()[:20]]
     if not changes:
         changes = [f"- Queue advancement from `{previous.tag}` to `{version.tag}`."]
     path.write_text(
