@@ -16,6 +16,9 @@ interface VectorCase {
   readonly case_id: string;
   readonly expected_error_code: VerifyErrorCode;
   readonly expected_ok: boolean;
+  readonly verify_options?: {
+    readonly require_non_empty?: boolean;
+  };
 }
 
 const fixture = JSON.parse(
@@ -94,13 +97,22 @@ function caseBundle(caseId: string): Record<string, unknown> {
     bundle.policy_trace_refs = [];
     return bundle;
   }
+  if (caseId === 'empty_bundle_require_non_empty') {
+    const builder = new ProofBundleBuilder({ chain_id: 'empty-conf', producer_runtime: 'test' });
+    return builder.build({ now: new Date('2026-05-19T00:00:00.000Z') }) as unknown as Record<
+      string,
+      unknown
+    >;
+  }
   throw new Error(`unknown caseId=${caseId}`);
 }
 
 describe('verifier conformance vectors', () => {
   for (const vector of fixture.cases) {
     it(vector.case_id, () => {
-      const result = verifyProofBundle(caseBundle(vector.case_id));
+      const result = verifyProofBundle(caseBundle(vector.case_id), {
+        requireNonEmpty: vector.verify_options?.require_non_empty,
+      });
       expect(result.ok).toBe(vector.expected_ok);
       expect(result.error_code).toBe(vector.expected_error_code);
     });

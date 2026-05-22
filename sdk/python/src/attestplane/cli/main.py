@@ -77,6 +77,11 @@ def build_parser() -> argparse.ArgumentParser:
         description=VERIFY_SCOPE_NOTICE,
     )
     p_verify.add_argument("bundle", type=Path, help="path to bundle.json")
+    p_verify.add_argument(
+        "--require-events",
+        action="store_true",
+        help="fail closed when the proof bundle contains zero events",
+    )
     _add_format_flag(p_verify)
 
     p_verify_pb = sub.add_parser(
@@ -154,7 +159,10 @@ def cmd_verify(args: argparse.Namespace) -> int:
     )
 
     try:
-        result = verify_proof_bundle_file(args.bundle)
+        result = verify_proof_bundle_file(
+            args.bundle,
+            require_non_empty=getattr(args, "require_events", False),
+        )
     except BundleSchemaError as exc:
         _emit(
             {
@@ -186,6 +194,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "ok": result.ok,
         "chain_id": result.chain_id,
         "event_count": result.event_count,
+        "require_events": getattr(args, "require_events", False),
         "head_hash_hex": result.head_hash_hex,
         "bundle_version": result.bundle_version,
         "agreement": result.agreement,

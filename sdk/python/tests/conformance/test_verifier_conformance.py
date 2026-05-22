@@ -65,11 +65,15 @@ def _case_bundle(case_id: str) -> dict:
     if case_id == "malformed_policy_trace_refs_empty":
         bundle["policy_trace_refs"] = []
         return bundle
+    if case_id == "empty_bundle_require_non_empty":
+        return ProofBundleBuilder(chain_id="empty-conf", producer_runtime="test").build(
+            now=datetime(2026, 5, 19, tzinfo=UTC)
+        )
     raise AssertionError(f"unknown case_id={case_id}")
 
 
 @pytest.mark.parametrize("case", json.loads(VECTORS.read_text(encoding="utf-8"))["cases"])
 def test_verifier_conformance_vectors(case: dict) -> None:
-    result = verify_proof_bundle(_case_bundle(case["case_id"]))
+    result = verify_proof_bundle(_case_bundle(case["case_id"]), **case.get("verify_options", {}))
     assert result.ok is case["expected_ok"]
     assert result.error_code == case["expected_error_code"]

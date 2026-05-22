@@ -70,6 +70,20 @@ def test_build_empty_bundle() -> None:
     assert bundle["chain_metadata"]["head_hash_hex"] == "0" * 64
 
 
+def test_verify_proof_bundle_can_require_non_empty_events() -> None:
+    builder = ProofBundleBuilder(chain_id="empty", producer_runtime="test")
+    bundle = builder.build()
+
+    default_result = verify_proof_bundle(bundle)
+    strict_result = verify_proof_bundle(bundle, require_non_empty=True)
+
+    assert default_result.ok is True
+    assert strict_result.ok is False
+    assert strict_result.event_count == 0
+    assert strict_result.error_code == "VERIFY_REQUIRED_FIELDS_MISSING"
+    assert "at least one event" in (strict_result.metadata_reason or "")
+
+
 def test_build_bundle_with_chain() -> None:
     builder = ProofBundleBuilder(chain_id="my-chain", producer_runtime="test-runtime v1.0")
     builder.extend(_build_good_chain(3))
@@ -228,6 +242,18 @@ def test_verify_proof_bundle_file_round_trips(tmp_path: Path) -> None:
     result = verify_proof_bundle_file(out)
     assert result.ok is True
     assert result.event_count == 2
+
+
+def test_verify_proof_bundle_file_can_require_non_empty_events(tmp_path: Path) -> None:
+    builder = ProofBundleBuilder(chain_id="empty-file", producer_runtime="test")
+    bundle = builder.build()
+    out = tmp_path / "empty.json"
+    out.write_text(json.dumps(bundle), encoding="utf-8")
+
+    result = verify_proof_bundle_file(out, require_non_empty=True)
+
+    assert result.ok is False
+    assert result.error_code == "VERIFY_REQUIRED_FIELDS_MISSING"
 
 
 def test_verify_proof_bundle_file_missing_path(tmp_path: Path) -> None:

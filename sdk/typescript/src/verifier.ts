@@ -39,6 +39,7 @@ import {
   VERIFY_METADATA_CLOSURE_FAILED,
   VERIFY_OK,
   VERIFY_POLICY_TRACE_REFS_FAILED,
+  VERIFY_REQUIRED_FIELDS_MISSING,
   VERIFY_RETENTION_PROOF_FAILED,
   type VerifyErrorCode,
 } from './verify_errors.js';
@@ -73,6 +74,10 @@ export interface BundleVerificationResult {
   readonly retention_proofs_ok: boolean;
   readonly retention_proofs_reason: string | null;
   readonly error_code: VerifyErrorCode;
+}
+
+export interface VerifyProofBundleOptions {
+  readonly requireNonEmpty?: boolean;
 }
 
 export function shortSummary(result: BundleVerificationResult): string {
@@ -295,9 +300,16 @@ function verifyMetadataClosure(
   bundle: ProofBundle,
   events: readonly ChainedEvent[],
   chainResult: VerificationResult,
+  options: VerifyProofBundleOptions = {},
 ): { ok: boolean; reason: string | null } {
   const metadata = bundle.chain_metadata;
   const report = bundle.verification_report;
+  if (options.requireNonEmpty === true && events.length === 0) {
+    return {
+      ok: false,
+      reason: 'events must contain at least one event when requireNonEmpty=true',
+    };
+  }
   if (metadata.schema_version !== SCHEMA_VERSION) {
     return {
       ok: false,
@@ -416,14 +428,17 @@ function verifyPolicyTraceRefs(
   return { ok: true, reason: null };
 }
 
-export function verifyProofBundle(raw: unknown): BundleVerificationResult {
+export function verifyProofBundle(
+  raw: unknown,
+  options: VerifyProofBundleOptions = {},
+): BundleVerificationResult {
   validateShape(raw);
   const bundle = raw;
   const events = rehydrateEvents(bundle.events);
   const chainResult = verifyChain(events);
   const bundleReportedOk = Boolean(bundle.verification_report.ok);
   const agreement = bundleReportedOk === chainResult.ok;
-  const metadata = verifyMetadataClosure(bundle, events, chainResult);
+  const metadata = verifyMetadataClosure(bundle, events, chainResult, options);
   const policyTraceRefs = verifyPolicyTraceRefs(bundle, events);
   const retentionProofs = verifyRetentionProofs(
     bundle.retention_proofs,
@@ -432,6 +447,8 @@ export function verifyProofBundle(raw: unknown): BundleVerificationResult {
   let errorCode: VerifyErrorCode = VERIFY_OK;
   if (!chainResult.ok || !agreement) {
     errorCode = VERIFY_CHAIN_RECOMPUTE_FAILED;
+  } else if (options.requireNonEmpty === true && events.length === 0) {
+    errorCode = VERIFY_REQUIRED_FIELDS_MISSING;
   } else if (!metadata.ok) {
     errorCode = VERIFY_METADATA_CLOSURE_FAILED;
   } else if (!policyTraceRefs.ok) {
@@ -459,7 +476,10 @@ export function verifyProofBundle(raw: unknown): BundleVerificationResult {
   };
 }
 
-export async function verifyProofBundleFile(path: string): Promise<BundleVerificationResult> {
+export async function verifyProofBundleFile(
+  path: string,
+  options: VerifyProofBundleOptions = {},
+): Promise<BundleVerificationResult> {
   let text: string;
   try {
     text = await fs.readFile(path, 'utf-8');
@@ -476,5 +496,5 @@ export async function verifyProofBundleFile(path: string): Promise<BundleVerific
     const msg = exc instanceof Error ? exc.message : String(exc);
     throw new BundleSchemaError(`${path}: not valid JSON: ${msg}`);
   }
-  return verifyProofBundle(parsed);
+  return verifyProofBundle(parsed, options);
 }

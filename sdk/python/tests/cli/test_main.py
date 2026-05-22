@@ -129,6 +129,25 @@ def test_export_then_verify_json_output(
     assert "not a full verifier" in payload["warning"]
 
 
+def test_verify_require_events_rejects_empty_bundle(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    chain_path = tmp_path / "empty.jsonl"
+    bundle_path = tmp_path / "empty-bundle.json"
+    chain_path.write_text("", encoding="utf-8")
+
+    assert main(["export", str(chain_path), "--out", str(bundle_path)]) == 0
+    capsys.readouterr()
+
+    rc = main(["verify", str(bundle_path), "--require-events", "--json"])
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is False
+    assert payload["require_events"] is True
+    assert payload["event_count"] == 0
+    assert payload["error_code"] == "VERIFY_REQUIRED_FIELDS_MISSING"
+
+
 def test_verify_detects_tampered_bundle(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

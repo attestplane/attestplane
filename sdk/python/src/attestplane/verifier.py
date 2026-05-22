@@ -30,6 +30,7 @@ from attestplane.verify_errors import (
     VERIFY_METADATA_CLOSURE_FAILED,
     VERIFY_OK,
     VERIFY_POLICY_TRACE_REFS_FAILED,
+    VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_RETENTION_PROOF_FAILED,
     VerifyErrorCode,
 )
@@ -199,9 +200,13 @@ def _verify_metadata_closure(
     bundle: dict[str, Any],
     events: list[ChainedEvent],
     chain_result: VerificationResult,
+    *,
+    require_non_empty: bool = False,
 ) -> tuple[bool, str | None]:
     metadata = bundle["chain_metadata"]
     report = bundle["verification_report"]
+    if require_non_empty and not events:
+        return False, "events must contain at least one event when require_non_empty=True"
     if metadata["schema_version"] != SCHEMA_VERSION:
         return False, (
             f"chain_metadata.schema_version={metadata['schema_version']!r}; "
@@ -269,20 +274,30 @@ def _verify_policy_trace_refs(bundle: dict[str, Any], events: list[ChainedEvent]
     return True, None
 
 
-def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
+def verify_proof_bundle(
+    bundle: dict[str, Any],
+    *,
+    require_non_empty: bool = False,
+) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
     Raises :class:`BundleSchemaError` if the shape is invalid. Otherwise
     returns a :class:`BundleVerificationResult`; ``result.ok`` is
     ``True`` only if the chain re-verifies AND the embedded report
-    agreed.
+    agreed. Set ``require_non_empty=True`` for audit/regulatory workflows
+    where an empty-but-well-formed bundle should fail closed.
     """
     _validate_shape(bundle)
     events = _rehydrate_events(bundle["events"])
     chain_result = verify_chain(events)
     bundle_reported_ok = bool(bundle["verification_report"]["ok"])
     agreement = bundle_reported_ok == chain_result.ok
-    metadata_ok, metadata_reason = _verify_metadata_closure(bundle, events, chain_result)
+    metadata_ok, metadata_reason = _verify_metadata_closure(
+        bundle,
+        events,
+        chain_result,
+        require_non_empty=require_non_empty,
+    )
     policy_ok, policy_reason = _verify_policy_trace_refs(bundle, events)
     retention_result = verify_retention_proofs(
         bundle.get("retention_proofs"),
@@ -291,6 +306,8 @@ def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
     error_code: VerifyErrorCode = VERIFY_OK
     if not chain_result.ok or not agreement:
         error_code = VERIFY_CHAIN_RECOMPUTE_FAILED
+    elif require_non_empty and not events:
+        error_code = VERIFY_REQUIRED_FIELDS_MISSING
     elif not metadata_ok:
         error_code = VERIFY_METADATA_CLOSURE_FAILED
     elif not policy_ok:
@@ -316,7 +333,11 @@ def verify_proof_bundle(bundle: dict[str, Any]) -> BundleVerificationResult:
     )
 
 
-def verify_proof_bundle_file(path: str | Path) -> BundleVerificationResult:
+def verify_proof_bundle_file(
+    path: str | Path,
+    *,
+    require_non_empty: bool = False,
+) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
     try:
@@ -325,7 +346,7 @@ def verify_proof_bundle_file(path: str | Path) -> BundleVerificationResult:
         raise BundleVerificationError(f"bundle file not found: {p}") from exc
     except json.JSONDecodeError as exc:
         raise BundleSchemaError(f"{p}: not valid JSON: {exc.msg}") from exc
-    return verify_proof_bundle(bundle)
+    return verify_proof_bundle(bundle, require_non_empty=require_non_empty)
 
 
 __all__ = [

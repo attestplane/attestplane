@@ -139,6 +139,19 @@ describe('verifyProofBundle', () => {
     expect(result.policy_trace_refs_ok).toBe(true);
   });
 
+  it('can require non-empty event evidence', () => {
+    const builder = new ProofBundleBuilder({ chain_id: 'empty', producer_runtime: 'test' });
+    const bundle = builder.build();
+    const defaultResult = verifyProofBundle(bundle);
+    const strictResult = verifyProofBundle(bundle, { requireNonEmpty: true });
+
+    expect(defaultResult.ok).toBe(true);
+    expect(strictResult.ok).toBe(false);
+    expect(strictResult.event_count).toBe(0);
+    expect(strictResult.error_code).toBe('VERIFY_REQUIRED_FIELDS_MISSING');
+    expect(strictResult.metadata_reason).toContain('at least one event');
+  });
+
   it('is read-only', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'readonly', producer_runtime: 'test' });
     builder.extend(buildGoodChain(3));
@@ -258,6 +271,17 @@ describe('verifyProofBundleFile', () => {
     const result = await verifyProofBundleFile(filePath);
     expect(result.ok).toBe(true);
     expect(result.event_count).toBe(2);
+  });
+
+  it('can require non-empty events when reading from file', async () => {
+    const builder = new ProofBundleBuilder({ chain_id: 'empty-file', producer_runtime: 'test' });
+    const filePath = path.join(tmpDir, 'empty.json');
+    await fs.writeFile(filePath, JSON.stringify(builder.build()), 'utf-8');
+
+    const result = await verifyProofBundleFile(filePath, { requireNonEmpty: true });
+
+    expect(result.ok).toBe(false);
+    expect(result.error_code).toBe('VERIFY_REQUIRED_FIELDS_MISSING');
   });
 
   it('rejects a missing file with BundleVerificationError', async () => {

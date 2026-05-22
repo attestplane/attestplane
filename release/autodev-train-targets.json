@@ -36,6 +36,12 @@
       "status": "queued",
       "channel": "latest",
       "min_soak_hours": 0
+    },
+    {
+      "version": "1.7.0",
+      "status": "queued",
+      "channel": "latest",
+      "min_soak_hours": 0
     }
   ]
 }
