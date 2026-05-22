@@ -4,6 +4,7 @@
 
 import subprocess
 
+from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI
 from scripts.local_codex_runner.models import IssueTask, candidate_fetch_limit, processable_issues
 
@@ -50,3 +51,34 @@ def test_pr_checks_treats_missing_checks_as_empty(monkeypatch) -> None:
     gh = GitHubCLI(dry_run=False)
 
     assert gh.pr_checks("attestplane/attestplane", "151") == []
+
+
+def test_git_ops_recovers_detached_head_before_issue_commit(monkeypatch, tmp_path) -> None:
+    branch = "codex/issue-154-example"
+    current_branch = {"name": ""}
+    commands: list[list[str]] = []
+
+    def fake_run(command, *, cwd, capture_output, text, check):  # noqa: ANN001
+        assert cwd == tmp_path
+        assert capture_output is True
+        assert text is True
+        assert check is False
+        args = command[1:]
+        commands.append(args)
+        if args == ["branch", "--show-current"]:
+            return subprocess.CompletedProcess(command, 0, stdout=current_branch["name"] + "\n", stderr="")
+        if args == ["switch", "-C", branch]:
+            current_branch["name"] = branch
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if args == ["status", "--porcelain"]:
+            return subprocess.CompletedProcess(command, 0, stdout=" M tests/example.py\n", stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    git = GitOps(tmp_path)
+    git.commit_all(154, "Fix #154: example", expected_branch=branch)
+    git.push_branch(branch)
+
+    assert ["switch", "-C", branch] in commands
+    assert ["push", "-u", "origin", f"HEAD:refs/heads/{branch}"] in commands

@@ -150,7 +150,7 @@ def run_issue(
             result.status = RunnerStatus.DRY_RUN
             return write_result(result.finish(), evidence_dir, state, config)
 
-        git.commit_all(task.number, f"Fix #{task.number}: {task.title}")
+        git.commit_all(task.number, f"Fix #{task.number}: {task.title}", expected_branch=branch)
         git.push_branch(branch)
         if config.create_pr:
             pr_url = gh.create_pr(
@@ -182,7 +182,11 @@ def run_issue(
                 if gate.status != "PASS":
                     result.status = RunnerStatus.LOCAL_FAILED
                     return fail_issue(config, gh, task, result, evidence_dir, state)
-                git.commit_all(task.number, f"Fix #{task.number}: CI follow-up round {round_index + 1}")
+                git.commit_all(
+                    task.number,
+                    f"Fix #{task.number}: CI follow-up round {round_index + 1}",
+                    expected_branch=branch,
+                )
                 git.push_branch(branch)
                 ci = wait_for_ci_round(config, gh, branch)
             result.ci_summary = ci.summary
