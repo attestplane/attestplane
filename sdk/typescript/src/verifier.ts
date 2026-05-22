@@ -555,8 +555,7 @@ export function verifyProofBundle(
   const chainResult = verifyChain(events);
   const bundleReportedOk = Boolean(bundle.verification_report.ok);
   const agreement = bundleReportedOk === chainResult.ok;
-  const requireSignedAttestation =
-    options.requireSignedAttestation === true || options.requireNonEmpty === true;
+  const requireSignedAttestation = options.requireSignedAttestation === true;
   const signedAttestationSchema = requireSignedAttestation
     ? validateMinimumSignedAttestationSchema(bundle, events)
     : { ok: true, reason: null };

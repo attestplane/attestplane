@@ -83,6 +83,15 @@ describe('verifyProofBundle strict schema options', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error_code).toBe('VERIFY_REQUIRED_FIELDS_MISSING');
-    expect(result.signed_attestation_schema_ok).toBe(false);
+    expect(result.signed_attestation_schema_ok).toBe(true);
+  });
+
+  it('does not require signed attestations when only requireNonEmpty is enabled', () => {
+    const result = verifyProofBundle(bundleWithOneEvent(), { requireNonEmpty: true });
+
+    expect(result.ok).toBe(true);
+    expect(result.error_code).toBe('VERIFY_OK');
+    expect(result.signed_attestation_schema_ok).toBe(true);
+    expect(result.signed_attestation_schema_reason).toBeNull();
   });
 });

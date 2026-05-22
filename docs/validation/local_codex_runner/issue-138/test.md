@@ -44,7 +44,7 @@ PYTHONPATH=sdk/python/src python -c 'import sys; from attestplane.cli.main impor
 Result:
 
 ```text
-OK chain_id='p3-cli-proofbundle' events=1 head=f43a6afd0ba426d1…
+OK chain_id='p3-cli-proofbundle' events=1 head=<hex elided>
 MODE: chain/report-oriented, not a full verifier. This command replays bundle events, compares the embedded verification_report with the recomputed chain result, and fails closed on malformed ProofBundle metadata and policy_trace_refs closure. It does not perform signature verification, anchor verification, or compliance certification.
 exit=0
 ```
@@ -143,4 +143,56 @@ npm run test --workspace sdk/typescript -- verifier.test.ts: 2 files passed, 21 
 npm run test --workspace sdk/typescript -- verifier_conformance.test.ts: 1 file passed, 8 tests passed
 npm run typecheck --workspace sdk/typescript: passed
 tests/cli/test_verify_flags.py: 5 passed in 0.05s
+```
+
+## Test-Fix Round 2
+
+The local CI-fix round found two issue-related problems:
+
+- TypeScript `requireNonEmpty` incorrectly enabled signed-attestation schema
+  enforcement; the options are now independent.
+- An import-path fragility in
+`tests/conformance/test_signed_schema_conformance_roundtrip.py`: when pytest
+selected `sdk/python` as the session root, `tests.verifier` was not importable.
+The conformance test now loads the existing helper by file path.
+
+Commands:
+
+```bash
+env PYTHONPATH=sdk/python/src pytest tests/conformance/test_signed_schema_conformance_roundtrip.py -q
+env PYTHONPATH=sdk/python/src pytest tests/cli/test_verify_flags.py sdk/python/tests/conformance/test_verifier_conformance.py tests/conformance/test_negative_minimum_schema_vectors.py tests/conformance/test_signed_schema_conformance_roundtrip.py -q
+npm run test --workspace sdk/typescript -- verifier.test.ts verifier_conformance.test.ts
+ruff check tests/conformance/test_signed_schema_conformance_roundtrip.py
+npm run test --workspace sdk/typescript
+npm run typecheck --workspace sdk/typescript
+npm run build --workspace sdk/typescript
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 'docs/validation/local_codex_runner/issue-138/*.md'
+typos --config _typos.toml docs/validation/local_codex_runner/issue-138 tests/conformance/test_signed_schema_conformance_roundtrip.py
+codespell tests/conformance/test_signed_schema_conformance_roundtrip.py docs/validation/local_codex_runner/issue-138 --skip='*.json'
+git diff --check
+```
+
+Results:
+
+```text
+tests/conformance/test_signed_schema_conformance_roundtrip.py: 1 passed in 0.04s
+focused issue/conformance selector: 23 passed in 0.08s
+focused TypeScript verifier selector: 3 files passed, 30 tests passed
+ruff: All checks passed
+TypeScript vitest: 31 files passed, 520 tests passed
+TypeScript typecheck: passed
+TypeScript tsc emit: passed
+markdownlint issue-138 evidence: Summary: 0 errors
+typos: passed
+codespell: passed
+git diff --check: passed
+```
+
+Local blocker:
+
+```text
+npm run lint --workspace sdk/typescript: failed because the local Biome binary is
+not installed.
+cd sdk/typescript && npx --no-install biome check src test: attempted blocked
+registry access to registry.npmjs.org and exited with EPERM.
 ```

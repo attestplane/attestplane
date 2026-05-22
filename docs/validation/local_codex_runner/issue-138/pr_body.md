@@ -2,7 +2,7 @@ Fixes #138
 
 ## Summary
 
-Local Codex runner repair for: [P1][cli] Expose `verify --require-non-empty` and `--strict-schema` flags
+Local Codex runner repair for: \[P1\]\[cli\] Expose `verify --require-non-empty` and `--strict-schema` flags
 
 Labels: priority:P1, area:conformance, planned-task, auto-codex-approved
 
