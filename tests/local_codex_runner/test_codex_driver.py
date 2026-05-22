@@ -9,10 +9,12 @@ from scripts.local_codex_runner.github_cli import RunnerCommandError
 
 def test_codex_command_construction(tmp_path: Path) -> None:
     prompt = tmp_path / "prompt.md"
+    prompt.write_text("x", encoding="utf-8")
 
-    command = CodexDriver(command="codex", sandbox="workspace-write").build_command(prompt, tmp_path)
+    command, prompt_stdin = CodexDriver(command="codex", sandbox="workspace-write").build_command(prompt, tmp_path)
 
-    assert command == ["codex", "exec", "--cd", str(tmp_path), "--sandbox", "workspace-write", "--prompt-file", str(prompt)]
+    assert command == ["codex", "exec", "--ignore-user-config", "--ephemeral", "--cd", str(tmp_path), "--sandbox", "workspace-write", "-"]
+    assert prompt_stdin == "x"
 
 
 def test_codex_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -44,4 +46,3 @@ def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path:
         CodexDriver(dry_run=False).run_codex(prompt, tmp_path, tmp_path / "codex.log")
 
     assert "github_pat" not in str(excinfo.value)
-

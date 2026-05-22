@@ -184,8 +184,9 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
 
     if args.mode in {"all", "deps"}:
         issues = gh.list_issues(config.repo or "", config.planned_task_label, args.issue_limit)
+        sibling_issues = gh.list_issues(config.repo or "", config.planned_task_label, args.issue_limit, state="all")
         siblings_by_source: dict[int | None, list[IssueTask]] = {}
-        for issue in issues:
+        for issue in sibling_issues:
             siblings_by_source.setdefault(source_planning_issue(issue.body), []).append(issue)
         issue_dependencies = {
             issue.number: dependencies_for_issue(issue, siblings_by_source.get(source_planning_issue(issue.body), [issue])) for issue in issues

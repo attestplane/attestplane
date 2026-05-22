@@ -77,7 +77,7 @@ class GitHubCLI:
                 exc.stderr + "\nRun `gh auth login` locally; do not store tokens in runner config.",
             ) from exc
 
-    def list_issues(self, repo: str, label: str, limit: int) -> list[IssueTask]:
+    def list_issues(self, repo: str, label: str, limit: int, *, state: str = "open") -> list[IssueTask]:
         completed = self._run(
             [
                 "gh",
@@ -86,7 +86,7 @@ class GitHubCLI:
                 "--repo",
                 repo,
                 "--state",
-                "open",
+                state,
                 "--label",
                 label,
                 "--json",
