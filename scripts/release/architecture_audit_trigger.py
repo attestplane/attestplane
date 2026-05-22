@@ -42,6 +42,45 @@ OPUS_PLAN_FAKE_RESPONSE_ENV = "ATTESTPLANE_OPUS_PLAN_FAKE_RESPONSE"
 OPUS_PLAN_TIMEOUT_ENV = "ATTESTPLANE_OPUS_PLAN_TIMEOUT_SECONDS"
 DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS = 180
 ISSUE_READY_PLAN_RE = re.compile(r"(?im)^\s*(?:#+\s*)?(?:\*\*)?\s*ISSUE\s+\d+\s*[.:·-]\s*\[P[0-2]\]")
+PRODUCT_DELTA_KEYWORDS = (
+    "sdk",
+    "python sdk",
+    "typescript sdk",
+    "verifier",
+    "verification",
+    "proof bundle",
+    "proof-bundle",
+    "canonical",
+    "canonicalization",
+    "conformance",
+    "signature",
+    "signing",
+    "anchoring",
+    "attestation",
+    "evidence",
+    "public api",
+    "api contract",
+    "cli",
+    "schema",
+    "roundtrip",
+    "trust boundary",
+)
+SUPPORT_ONLY_ISSUE_KEYWORDS = (
+    "release train",
+    "release-cd",
+    "sign-release",
+    "slsa-provenance",
+    "github actions",
+    "workflow",
+    "runner",
+    "pypi",
+    "npm",
+    "dist-tag",
+    "observability",
+    "telemetry",
+    "docs",
+    "release notes",
+)
 
 
 @dataclass(frozen=True, order=True)
@@ -338,7 +377,24 @@ def render_open_issues_block(open_issues: object, *, limit: int = 30) -> str:
     if not isinstance(open_issues, list) or not open_issues:
         return "- none"
     lines: list[str] = []
-    for item in open_issues[:limit]:
+
+    def issue_context_sort_key(indexed_item: tuple[int, object]) -> tuple[int, int]:
+        index, item = indexed_item
+        if not isinstance(item, dict):
+            return (3, index)
+        text_parts = [str(item.get("title", ""))]
+        labels = item.get("labels", [])
+        if isinstance(labels, list):
+            text_parts.extend(str(label) for label in labels if isinstance(label, str))
+        issue_text = " ".join(text_parts).lower()
+        if plan_has_product_delta(issue_text):
+            return (0, index)
+        if any(keyword in issue_text for keyword in SUPPORT_ONLY_ISSUE_KEYWORDS):
+            return (2, index)
+        return (1, index)
+
+    ranked_issues = [item for _, item in sorted(enumerate(open_issues), key=issue_context_sort_key)]
+    for item in ranked_issues[:limit]:
         if not isinstance(item, dict):
             continue
         number = item.get("number")
@@ -357,6 +413,19 @@ def render_open_issues_block(open_issues: object, *, limit: int = 30) -> str:
 
 def issue_ready_plan(text: str) -> bool:
     return bool(ISSUE_READY_PLAN_RE.search(text))
+
+
+def plan_has_product_delta(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in PRODUCT_DELTA_KEYWORDS)
+
+
+def fallback_plan(manifest: dict[str, object], reason: str) -> AcceptedPlan:
+    return AcceptedPlan(
+        body=render_fallback_notice(reason) + render_auto_plan(manifest),
+        source="deterministic-template",
+        fallback_reason=reason,
+    )
 
 
 def build_opus_plan_prompt(manifest: dict[str, object], issue_body: str) -> str:
@@ -385,7 +454,11 @@ def build_opus_plan_prompt(manifest: dict[str, object], issue_body: str) -> str:
             "- Avoid duplicate planned-task issues; extend or reference existing issues when overlapping.",
             "- Do not include secrets.",
             "- Do not move tags, publish packages, merge PRs, or bypass release gates.",
-            "- Daily plans must produce small executable product/code/doc/test tasks, not only release-boundary checks.",
+            "- Product increment is mandatory for daily, medium, and architecture plans.",
+            "- At least one P0/P1 issue must touch an Attestplane product module: SDK public APIs, verifier behavior, proof bundle schema/fixtures, canonicalization, conformance vectors, signing/anchoring, or CLI behavior.",
+            "- Release train, CI, runner, docs, observability, and package metadata tasks may appear only as support tasks or when the request shows an active blocker.",
+            "- Do not return a plan consisting only of release-boundary, docs, observability, workflow, or registry tasks.",
+            "- If open issues are release/docs-only, still generate or extend at least one product implementation or conformance task.",
             "",
             issue_body,
         ]
@@ -417,35 +490,21 @@ def consult_opus_for_plan(
     if fake is not None:
         plan = normalize_opus_plan(fake)
         if issue_ready_plan(plan):
+            if not plan_has_product_delta(plan):
+                return fallback_plan(manifest, "fake_response_without_product_delta")
             return AcceptedPlan(body=f"> Plan source: opus-fake-response\n\n{plan}", source="opus-fake-response")
-        return AcceptedPlan(
-            body=render_fallback_notice("fake_response_not_issue_ready") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="fake_response_not_issue_ready",
-        )
+        return fallback_plan(manifest, "fake_response_not_issue_ready")
 
     resolved_command = command or os.environ.get(OPUS_PLAN_COMMAND_ENV, "").strip()
     if not resolved_command:
-        return AcceptedPlan(
-            body=render_fallback_notice("opus_command_not_configured") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="opus_command_not_configured",
-        )
+        return fallback_plan(manifest, "opus_command_not_configured")
 
     try:
         argv = shlex.split(resolved_command)
     except ValueError:
-        return AcceptedPlan(
-            body=render_fallback_notice("opus_command_invalid") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="opus_command_invalid",
-        )
+        return fallback_plan(manifest, "opus_command_invalid")
     if not argv:
-        return AcceptedPlan(
-            body=render_fallback_notice("opus_command_empty") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="opus_command_empty",
-        )
+        return fallback_plan(manifest, "opus_command_empty")
 
     prompt = build_opus_plan_prompt(manifest, issue_body)
     try:
@@ -459,32 +518,18 @@ def consult_opus_for_plan(
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return AcceptedPlan(
-            body=render_fallback_notice("opus_timeout") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="opus_timeout",
-        )
+        return fallback_plan(manifest, "opus_timeout")
     except FileNotFoundError:
-        return AcceptedPlan(
-            body=render_fallback_notice("opus_command_not_found") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="opus_command_not_found",
-        )
+        return fallback_plan(manifest, "opus_command_not_found")
 
     if completed.returncode != 0:
-        return AcceptedPlan(
-            body=render_fallback_notice(f"opus_failed_rc_{completed.returncode}") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason=f"opus_failed_rc_{completed.returncode}",
-        )
+        return fallback_plan(manifest, f"opus_failed_rc_{completed.returncode}")
 
     plan = normalize_opus_plan(completed.stdout)
     if not issue_ready_plan(plan):
-        return AcceptedPlan(
-            body=render_fallback_notice("opus_output_not_issue_ready") + render_auto_plan(manifest),
-            source="deterministic-template",
-            fallback_reason="opus_output_not_issue_ready",
-        )
+        return fallback_plan(manifest, "opus_output_not_issue_ready")
+    if not plan_has_product_delta(plan):
+        return fallback_plan(manifest, "opus_output_without_product_delta")
     return AcceptedPlan(body=f"> Plan source: opus-live\n\n{plan}", source="opus-live")
 
 
@@ -536,183 +581,170 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
         issue_specs = [
             PlanIssue(
                 ordinal=1,
-                title=f"[P0][release] Confirm the {milestone_tag} real-change boundary",
-                priority="P0",
-                modules=("release train", "release notes", "release-cd policy"),
+                title=f"[P1][sdk][verifier] Add a verifier-facing product increment for {milestone_tag}",
+                priority="P1",
+                modules=("Python SDK verifier", "TypeScript SDK verifier", "proof bundle fixtures"),
                 acceptance_criteria=(
-                    f"Verify the range from {anchor_tag} to {milestone_tag} contains real human work.",
-                    "Confirm the release train should publish rather than skip.",
-                    "Record any remaining idle-cadence risk as a follow-up issue before close.",
+                    "Implement one small verifier or proof-bundle behavior that is visible to SDK users.",
+                    "Keep the change backward compatible with the current stable proof bundle contract.",
+                    "Record the product-facing behavior and validation evidence on the task issue before close.",
                 ),
                 validation_commands=(
-                    "git log --no-merges --pretty=tformat:%s $(git rev-list --max-parents=0 HEAD)..HEAD",
-                    "git diff --stat $(git rev-list --max-parents=0 HEAD)..HEAD",
-                    "git diff --check $(git rev-list --max-parents=0 HEAD)..HEAD",
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'verifier or proof_bundle or conformance' -x",
+                    "npm test --prefix sdk/typescript -- --runInBand",
+                    "git diff --check",
                 ),
-                rollout_notes="No tag or registry movement without a real diff.",
+                rollout_notes="Daily work should land a real Attestplane product delta before any release-train-only task.",
             ),
             PlanIssue(
                 ordinal=2,
-                title="[P1][test] Expand regression coverage for the real commits",
+                title="[P1][test][conformance] Pin cross-SDK coverage for the daily product change",
                 priority="P1",
-                modules=("SDK tests", "release gate coverage", "release-prep fixtures"),
+                modules=("Python SDK tests", "TypeScript SDK tests", "conformance fixtures"),
                 acceptance_criteria=(
-                    "Add or update regression coverage for the real commits in this range.",
-                    "Confirm the release-prep diff is not only train-generated metadata.",
+                    "Add or update conformance coverage for the product behavior from issue 1.",
+                    "Confirm Python and TypeScript validation expectations stay aligned.",
                     "Record the validation evidence on the task issue before close.",
                 ),
                 validation_commands=(
-                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'release_gate or stable_auto_train' -x",
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'conformance or canonical or roundtrip' -x",
+                    "npm test --prefix sdk/typescript -- --runInBand",
                     "git diff --check",
                 ),
-                rollout_notes="Keep the scope tight; daily work should stay small and direct.",
+                rollout_notes="Coverage must follow the product change, not release metadata churn.",
             ),
             PlanIssue(
                 ordinal=3,
-                title=f"[P2][docs] Summarize the user-visible delta for {milestone_tag}",
+                title=f"[P2][docs][api] Document the user-visible product delta for {milestone_tag}",
                 priority="P2",
-                modules=("docs/release-notes", "docs/runbooks", "release metadata"),
+                modules=("docs", "SDK API docs", "release notes"),
                 acceptance_criteria=(
-                    "Record the user-visible change in the release notes or runbook.",
-                    "Link the release note to the source planning issue and task issues.",
+                    "Document the verifier or proof-bundle behavior added by issue 1.",
+                    "Link the documentation to the source planning issue and task issues.",
                     "Keep wording within claim boundaries and avoid secrets.",
                 ),
                 validation_commands=("git diff --check",),
-                rollout_notes="This should never be the only task if the diff contains real product work.",
+                rollout_notes="Docs-only work cannot satisfy the daily plan unless issue 1 lands a product change.",
             ),
         ]
     elif plan_level == "medium":
         issue_specs = [
             PlanIssue(
                 ordinal=1,
-                title=f"[P0][release] Define the {milestone_tag} release boundary and scope",
+                title=f"[P0][sdk][api] Define the {milestone_tag} feature-level product contract",
                 priority="P0",
-                modules=("release notes", "release train", "package metadata"),
+                modules=("SDK public APIs", "verifier behavior", "proof bundle schema", "CLI behavior"),
                 acceptance_criteria=(
-                    f"Document the user-visible boundary for {milestone_tag}.",
-                    "Enumerate the intentional scope change and any backward-compatibility notes.",
+                    f"Document the intended Attestplane product capability for {milestone_tag}.",
+                    "Define compatibility expectations for SDK, verifier, proof bundle, and CLI users.",
                     "Link the plan back to the source planning issue before implementation starts.",
                 ),
-                validation_commands=("git diff --check", "markdown-link-check docs/**/*.md"),
-                rollout_notes="Keep the release boundary explicit and small.",
+                validation_commands=("git diff --check",),
+                rollout_notes="The feature boundary must describe product behavior, not release automation housekeeping.",
             ),
             PlanIssue(
                 ordinal=2,
-                title="[P0][compatibility] Review compatibility and migration impact",
-                priority="P0",
-                modules=("SDK compatibility", "schema fixtures", "verifier behavior"),
+                title="[P1][verifier][proof-bundle] Implement the feature-sized verifier/proof-bundle increment",
+                priority="P1",
+                modules=("Python SDK verifier", "TypeScript SDK verifier", "proof bundle schema", "fixtures"),
                 acceptance_criteria=(
-                    "Identify any compatibility or migration impact introduced by the milestone.",
-                    "Add fixtures or tests that pin the intended contract.",
-                    "Record unresolved compatibility gaps as follow-up issues.",
+                    "Implement the product contract from issue 1 in a compatibility-safe way.",
+                    "Add or update proof bundle fixtures that exercise the new behavior.",
+                    "Record unresolved compatibility gaps as explicit follow-up issues.",
                 ),
                 validation_commands=(
                     "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'compat or conformance or verifier' -x",
+                    "npm test --prefix sdk/typescript -- --runInBand",
                     "git diff --check",
                 ),
-                rollout_notes="Prefer incremental compatibility work over broad rewrites.",
+                rollout_notes="Prefer incremental product work over broad rewrites or release-only cleanup.",
             ),
             PlanIssue(
                 ordinal=3,
-                title="[P1][docs] Publish the milestone note set",
+                title="[P1][test][conformance] Pin Python and TypeScript conformance vectors",
                 priority="P1",
-                modules=("docs/release-notes", "docs/runbooks"),
+                modules=("Python SDK tests", "TypeScript SDK tests", "conformance vectors"),
                 acceptance_criteria=(
-                    "Summarize the milestone in release-facing documentation.",
-                    "Link the release note to the planning issue and task issues.",
-                    "Keep claim wording within documented evidence boundaries.",
+                    "Add cross-SDK vectors for the feature behavior implemented in issue 2.",
+                    "Verify canonical serialization and verification results match across SDKs.",
+                    "Document unsupported edge cases as planned follow-up issues.",
                 ),
-                validation_commands=("git diff --check",),
-                rollout_notes="Documentation can land independently once the plan is accepted.",
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'conformance or canonical or roundtrip' -x",
+                    "npm test --prefix sdk/typescript -- --runInBand",
+                    "git diff --check",
+                ),
+                rollout_notes="Conformance evidence is required before treating the feature plan as complete.",
             ),
             PlanIssue(
                 ordinal=4,
-                title="[P1][test] Expand coverage for the milestone change",
+                title=f"[P2][docs][runbook] Document migration and SDK usage for {milestone_tag}",
                 priority="P1",
-                modules=("SDK tests", "release gate coverage", "regression fixtures"),
+                modules=("docs", "SDK API docs", "release notes", "runbooks"),
                 acceptance_criteria=(
-                    "Add regression coverage for the real commits in this range.",
-                    "Confirm the release path still behaves forward-only.",
-                    "Record the validation evidence on the task issue before close.",
+                    "Summarize the feature-level product delta and migration notes.",
+                    "Link the documentation to the accepted plan and generated task issues.",
+                    "Keep claim wording within documented evidence boundaries.",
                 ),
-                validation_commands=(
-                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'release_gate or stable_auto_train or conformance' -x",
-                    "git diff --check",
-                ),
-                rollout_notes="Coverage should target the specific milestone change.",
+                validation_commands=("git diff --check", "markdown-link-check docs/**/*.md"),
+                rollout_notes="Documentation supports the product increment; it is not the primary medium task.",
             ),
         ]
     else:
         issue_specs = [
             PlanIssue(
                 ordinal=1,
-                title=f"[P0][architecture][compatibility] Define the {milestone_tag} compatibility and migration contract",
+                title=f"[P0][architecture][product-contract] Define the {milestone_tag} Attestplane product contract",
                 priority="P0",
-                modules=("SDK public APIs", "storage formats", "proof bundle schema", "verifier behavior", "release notes"),
+                modules=("SDK public APIs", "verifier behavior", "proof bundle schema", "canonicalization", "CLI behavior"),
                 acceptance_criteria=(
-                    f"Document backward compatibility guarantees from {anchor_tag} to {milestone_tag}.",
+                    f"Define the architecture-level product capability from {anchor_tag} to {milestone_tag}.",
+                    "Document compatibility guarantees for SDK APIs, proof bundles, canonicalization, and verifier behavior.",
                     "List intentional breaking changes, migration steps, and unsupported historical behavior.",
-                    "Add or update compatibility fixtures covering the prior audited anchor and the milestone.",
-                    "Release notes link to the migration contract before any implementation issue closes.",
+                    "Link the contract to generated P0/P1/P2 planned-task issues before implementation starts.",
                 ),
                 validation_commands=(
-                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'compat or proof_bundle or verifier' -x",
+                    "git diff --check",
+                ),
+                rollout_notes="Architecture plans must start from Attestplane product behavior, not train/release maintenance.",
+            ),
+            PlanIssue(
+                ordinal=2,
+                title="[P0][sdk][schema] Implement compatibility-safe proof-bundle and SDK schema migration",
+                priority="P0",
+                modules=("Python SDK", "TypeScript SDK", "proof bundle schema", "canonical serialization"),
+                acceptance_criteria=(
+                    "Implement the schema or canonicalization migration described by issue 1.",
+                    "Preserve verification of existing stable proof bundles unless issue 1 documents a migration path.",
+                    "Add fixtures that cover the prior audited anchor and the new milestone behavior.",
+                    "Record unresolved compatibility gaps as planned follow-up issues.",
+                ),
+                validation_commands=(
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'compat or proof_bundle or verifier or canonical' -x",
                     "npm test --prefix sdk/typescript -- --runInBand",
                     "git diff --check",
                 ),
                 rollout_notes="Do not break existing stable artifacts without a documented migration path.",
             ),
             PlanIssue(
-                ordinal=2,
-                title="[P0][security][boundary] Review architecture-level security and trust boundaries",
+                ordinal=3,
+                title="[P0][security][verifier] Review product trust boundaries for verifier, signing, and anchoring",
                 priority="P0",
-                modules=("signing", "anchoring", "verifier trust roots", "release provenance", "SECURITY.md", "threat model"),
+                modules=("verifier trust roots", "signing", "anchoring", "attestation evidence", "SECURITY.md"),
                 acceptance_criteria=(
-                    "Identify all trust boundaries affected by the architecture milestone.",
+                    "Identify all product trust boundaries affected by the architecture milestone.",
                     "Update threat model claims, arguments, and evidence for new or changed boundaries.",
-                    "Verify signing/provenance workflows remain forward-only and do not expose secrets.",
+                    "Verify signing and anchoring behavior remains forward-only and does not expose secrets.",
                     "Record any deferred security boundary work as follow-up issues before close.",
                 ),
                 validation_commands=(
-                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'signing or anchoring or trust or provenance' -x",
+                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'signing or anchoring or trust or provenance or verifier' -x",
                     "git diff --check",
                 ),
                 rollout_notes="No secrets in issue bodies, logs, PR descriptions, or commits.",
             ),
             PlanIssue(
-                ordinal=3,
-                title=f"[P0][release] Prove release rollback and forward-only recovery for {milestone_tag}",
-                priority="P0",
-                modules=("release train", "release-cd", "sign-release", "slsa-provenance", "artifact manifests"),
-                acceptance_criteria=(
-                    "Document safe recovery paths for failed tag publication, failed signing, failed provenance, and registry lag.",
-                    "Add regression coverage for prepared-but-unpublished major versions.",
-                    "Confirm the release train never force-pushes, retags, or publishes around failed gates.",
-                    "Validate npm latest and PyPI latest only advance after release-cd success.",
-                ),
-                validation_commands=(
-                    "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'stable_auto_train or release_cd' -x",
-                    "scripts/check-release-assets-prep.sh",
-                    "git diff --check",
-                ),
-                rollout_notes="Treat GitHub/network/registry propagation as external blockers, not reasons to bypass gates.",
-            ),
-            PlanIssue(
                 ordinal=4,
-                title=f"[P1][docs][governance] Publish the {milestone_tag} architecture decision record set",
-                priority="P1",
-                modules=("docs/adr", "docs/architecture", "docs/runbooks", "governance docs"),
-                acceptance_criteria=(
-                    "Add an architecture milestone overview that explains what changed and why.",
-                    "Link ADRs to generated P0/P1/P2 planned-task issues.",
-                    "Mark unresolved architectural risks explicitly, with owner issue links.",
-                    "Keep claim wording within alpha/stable evidence boundaries.",
-                ),
-                validation_commands=("markdown-link-check docs/**/*.md", "git diff --check"),
-                rollout_notes="Documentation can land incrementally, but every architecture claim needs evidence or a gap link.",
-            ),
-            PlanIssue(
-                ordinal=5,
                 title=f"[P1][test][conformance] Expand cross-SDK and verifier conformance for {milestone_tag}",
                 priority="P1",
                 modules=("Python SDK", "TypeScript SDK", "verifier conformance fixtures", "cross-SDK roundtrip tests"),
@@ -727,7 +759,21 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                     "npm test --prefix sdk/typescript -- --runInBand",
                     "git diff --check",
                 ),
-                rollout_notes="Conformance expansion should precede feature implementation where practical.",
+                rollout_notes="Conformance expansion should precede release-train or docs-only architecture work.",
+            ),
+            PlanIssue(
+                ordinal=5,
+                title=f"[P2][docs][adr] Publish the {milestone_tag} product architecture ADR and migration docs",
+                priority="P2",
+                modules=("docs/adr", "docs/architecture", "docs/runbooks", "SDK API docs"),
+                acceptance_criteria=(
+                    "Add an architecture milestone overview that explains the product contract and migration path.",
+                    "Link ADRs to generated P0/P1/P2 planned-task issues.",
+                    "Mark unresolved architectural risks explicitly, with owner issue links.",
+                    "Keep claim wording within alpha/stable evidence boundaries.",
+                ),
+                validation_commands=("markdown-link-check docs/**/*.md", "git diff --check"),
+                rollout_notes="Documentation supports product architecture decisions and cannot replace product implementation tasks.",
             ),
         ]
 
@@ -789,6 +835,13 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         "validation commands. Do not include secrets, do not move release tags,",
         "and do not block already published packages.",
         "",
+        "Product increment is mandatory: every accepted daily, medium, or",
+        "architecture plan must include at least one P0/P1 task that changes",
+        "Attestplane SDK, verifier, proof-bundle, canonicalization, conformance,",
+        "signing, anchoring, CLI, or API behavior. Release train, CI, runner,",
+        "docs, observability, and package metadata tasks are support work only",
+        "unless the request shows an active blocker.",
+        "",
         "## Recent Real Commits",
         "",
     ]
@@ -846,11 +899,10 @@ def render_issue_body(manifest: dict[str, object]) -> str:
 
 def render_auto_plan(manifest: dict[str, object]) -> str:
     milestone_tag = str(manifest["milestone_tag"])
-    anchor_value = manifest.get("anchor_tag")
-    anchor_tag = anchor_value or "repository start"
-    anchor_ref = anchor_value or "$(git rev-list --max-parents=0 HEAD)"
+    anchor_tag = manifest.get("anchor_tag") or "repository start"
     head_sha = str(manifest["head_sha"])
     plan_level = str(manifest.get("plan_level", "daily"))
+    consultation_level = consultation_level_for(plan_level)
     recent = manifest.get("recent_real_commits")
     open_issues_block = render_open_issues_block(manifest.get("open_issues"), limit=20)
     recent_lines: list[str] = []
@@ -859,215 +911,55 @@ def render_auto_plan(manifest: dict[str, object]) -> str:
             if isinstance(item, dict):
                 recent_lines.append(f"- `{str(item.get('sha', ''))[:12]}` {item.get('subject', '')}")
     recent_block = "\n".join(recent_lines) if recent_lines else "- none"
-    if plan_level == "daily":
-        return f"""## Auto-Generated Daily Plan
-
-Milestone: `{milestone_tag}`
-Anchor: `{anchor_tag}`
-Head SHA: `{head_sha}`
-
-This plan was generated after a diff-level Opus consultation. It creates
-planning issues only; implementation still starts from the generated
-`planned-task` issues, one issue at a time.
-
-Recent real commits considered:
-
-{recent_block}
-
-Open GitHub issues considered:
-
-{open_issues_block}
-
-**ISSUE 1 · [P0][release] Confirm the {milestone_tag} real-change boundary**
-- Priority: P0
-- Affected modules: release train, release notes, release-cd policy
-- Acceptance criteria:
-  1. Verify the range from `{anchor_tag}` to `{milestone_tag}` contains real human work.
-  2. Confirm the release train should publish rather than skip.
-  3. Record any remaining idle-cadence risk as a follow-up issue before close.
-- Validation commands:
-  - `git log --no-merges --pretty=tformat:%s {anchor_ref}..HEAD`
-  - `git diff --stat {anchor_ref}..HEAD`
-  - `git diff --check {anchor_ref}..HEAD`
-- Rollout / migration notes: No tag or registry movement without a real diff.
-
-**ISSUE 2 · [P1][test] Expand regression coverage for the real commits**
-- Priority: P1
-- Affected modules: SDK tests, release gate coverage, release-prep fixtures
-- Acceptance criteria:
-  1. Add or update regression coverage for the real commits in this range.
-  2. Confirm the release-prep diff is not only train-generated metadata.
-  3. Record the validation evidence on the task issue before close.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k \"release_gate or stable_auto_train\" -x`
-  - `git diff --check`
-- Rollout / migration notes: Keep the scope tight; daily work should stay small and direct.
-
-**ISSUE 3 · [P2][docs] Summarize the user-visible delta for {milestone_tag}**
-- Priority: P2
-- Affected modules: docs/release-notes, docs/runbooks, release metadata
-- Acceptance criteria:
-  1. Record the user-visible change in the release notes or runbook.
-  2. Link the release note to the source planning issue and task issues.
-  3. Keep wording within claim boundaries and avoid secrets.
-- Validation commands:
-  - `git diff --check`
-- Rollout / migration notes: This should never be the only task if the diff contains real product work.
-"""
-
-    if plan_level == "medium":
-        return f"""## Auto-Generated Medium Plan
-
-Milestone: `{milestone_tag}`
-Anchor: `{anchor_tag}`
-Head SHA: `{head_sha}`
-
-This plan was generated after a feature-level Opus consultation. It creates
-planning issues only; implementation still starts from the generated
-`planned-task` issues, one issue at a time.
-
-Recent real commits considered:
-
-{recent_block}
-
-Open GitHub issues considered:
-
-{open_issues_block}
-
-**ISSUE 1 · [P0][release] Define the {milestone_tag} release boundary and scope**
-- Priority: P0
-- Affected modules: release notes, release train, package metadata
-- Acceptance criteria:
-  1. Document the user-visible boundary for `{milestone_tag}`.
-  2. Enumerate the intentional scope change and any backward-compatibility notes.
-  3. Link the plan back to the source planning issue before implementation starts.
-- Validation commands:
-  - `git diff --check`
-  - `markdown-link-check docs/**/*.md`
-- Rollout / migration notes: Keep the release boundary explicit and small.
-
-**ISSUE 2 · [P0][compatibility] Review compatibility and migration impact**
-- Priority: P0
-- Affected modules: SDK compatibility, schema fixtures, verifier behavior
-- Acceptance criteria:
-  1. Identify any compatibility or migration impact introduced by the milestone.
-  2. Add fixtures or tests that pin the intended contract.
-  3. Record unresolved compatibility gaps as follow-up issues.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k \"compat or conformance or verifier\" -x`
-  - `git diff --check`
-- Rollout / migration notes: Prefer incremental compatibility work over broad rewrites.
-
-**ISSUE 3 · [P1][docs] Publish the milestone note set**
-- Priority: P1
-- Affected modules: docs/release-notes, docs/runbooks
-- Acceptance criteria:
-  1. Summarize the milestone in release-facing documentation.
-  2. Link the release note to the planning issue and task issues.
-  3. Keep claim wording within documented evidence boundaries.
-- Validation commands:
-  - `git diff --check`
-- Rollout / migration notes: Documentation can land independently once the plan is accepted.
-
-**ISSUE 4 · [P1][test] Expand coverage for the milestone change**
-- Priority: P1
-- Affected modules: SDK tests, release gate coverage, regression fixtures
-- Acceptance criteria:
-  1. Add regression coverage for the real commits in this range.
-  2. Confirm the release path still behaves forward-only.
-  3. Record the validation evidence on the task issue before close.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k \"release_gate or stable_auto_train or conformance\" -x`
-  - `git diff --check`
-- Rollout / migration notes: Scope should stay feature-sized and reviewable.
-"""
-
-    return f"""## Auto-Generated Architecture Plan
-
-Milestone: `{milestone_tag}`
-Anchor: `{anchor_tag}`
-Head SHA: `{head_sha}`
-
-This plan was generated and accepted automatically for an integer-version
-architecture milestone. It creates planning issues only; implementation still
-starts from the generated `planned-task` issues, one issue at a time.
-
-Recent real commits considered:
-
-{recent_block}
-
-Open GitHub issues considered:
-
-{open_issues_block}
-
-**ISSUE 1 · [P0][architecture][compatibility] Define the {milestone_tag} compatibility and migration contract**
-- Priority: P0
-- Affected modules: SDK public APIs, storage formats, proof bundle schema, verifier behavior, release notes
-- Acceptance criteria:
-  1. Document backward compatibility guarantees from `{anchor_tag}` to `{milestone_tag}`.
-  2. List intentional breaking changes, migration steps, and unsupported historical behavior.
-  3. Add or update compatibility fixtures covering the prior audited anchor and `{milestone_tag}`.
-  4. Release notes link to the migration contract before any implementation issue closes.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "compat or proof_bundle or verifier" -x`
-  - `npm test --prefix sdk/typescript -- --runInBand`
-  - `git diff --check`
-- Rollout / migration notes: Do not break existing stable artifacts without a documented migration path.
-
-**ISSUE 2 · [P0][security][boundary] Review architecture-level security and trust boundaries**
-- Priority: P0
-- Affected modules: signing, anchoring, verifier trust roots, release provenance, SECURITY.md, threat model
-- Acceptance criteria:
-  1. Identify all trust boundaries affected by the architecture milestone.
-  2. Update threat model claims, arguments, and evidence for new or changed boundaries.
-  3. Verify signing/provenance workflows remain forward-only and do not expose secrets.
-  4. Record any deferred security boundary work as follow-up issues before close.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "signing or anchoring or trust or provenance" -x`
-  - `git diff --check`
-- Rollout / migration notes: No secrets in issue bodies, logs, PR descriptions, or commits.
-
-**ISSUE 3 · [P0][release] Prove release rollback and forward-only recovery for {milestone_tag}**
-- Priority: P0
-- Affected modules: release train, release-cd, sign-release, slsa-provenance, artifact manifests
-- Acceptance criteria:
-  1. Document safe recovery paths for failed tag publication, failed signing, failed provenance, and registry lag.
-  2. Add regression coverage for prepared-but-unpublished major versions.
-  3. Confirm the release train never force-pushes, retags, or publishes around failed gates.
-  4. Validate npm latest and PyPI latest only advance after release-cd success.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "stable_auto_train or release_cd" -x`
-  - `scripts/check-release-assets-prep.sh`
-  - `git diff --check`
-- Rollout / migration notes: Treat GitHub/network/registry propagation as external blockers, not reasons to bypass gates.
-
-**ISSUE 4 · [P1][docs][governance] Publish the {milestone_tag} architecture decision record set**
-- Priority: P1
-- Affected modules: docs/adr, docs/architecture, docs/runbooks, governance docs
-- Acceptance criteria:
-  1. Add an architecture milestone overview that explains what changed and why.
-  2. Link ADRs to generated P0/P1/P2 planned-task issues.
-  3. Mark unresolved architectural risks explicitly, with owner issue links.
-  4. Keep claim wording within alpha/stable evidence boundaries.
-- Validation commands:
-  - `markdown-link-check docs/**/*.md`
-  - `git diff --check`
-- Rollout / migration notes: Documentation can land incrementally, but every architecture claim needs evidence or a gap link.
-
-**ISSUE 5 · [P1][test][conformance] Expand cross-SDK and verifier conformance for {milestone_tag}**
-- Priority: P1
-- Affected modules: Python SDK, TypeScript SDK, verifier conformance fixtures, cross-SDK roundtrip tests
-- Acceptance criteria:
-  1. Add conformance vectors that exercise new or changed architecture behavior.
-  2. Verify Python and TypeScript SDKs agree on canonical serialization and verification results.
-  3. Ensure failing vectors produce stable, documented error codes.
-  4. Record unsupported edge cases as planned follow-up issues.
-- Validation commands:
-  - `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k "conformance or canonical or roundtrip" -x`
-  - `npm test --prefix sdk/typescript -- --runInBand`
-  - `git diff --check`
-- Rollout / migration notes: Conformance expansion should precede feature implementation where practical.
-"""
+    title_level = {"daily": "Daily", "medium": "Medium", "architecture": "Architecture"}.get(
+        plan_level, "Daily"
+    )
+    payload = build_plan_payload(manifest)
+    lines = [
+        f"## Auto-Generated {title_level} Plan",
+        "",
+        f"Milestone: `{milestone_tag}`",
+        f"Anchor: `{anchor_tag}`",
+        f"Head SHA: `{head_sha}`",
+        "",
+        f"This plan was generated after a {consultation_level}-level Opus consultation. It creates",
+        "planning issues only; implementation still starts from the generated",
+        "`planned-task` issues, one issue at a time.",
+        "",
+        "Product increment policy: at least one P0/P1 task must change Attestplane",
+        "SDK, verifier, proof-bundle, canonicalization, conformance, signing,",
+        "anchoring, CLI, or API behavior. Release/train/docs-only work is support",
+        "work and cannot satisfy this plan by itself.",
+        "",
+        "Recent real commits considered:",
+        "",
+        recent_block,
+        "",
+        "Open GitHub issues considered:",
+        "",
+        open_issues_block,
+        "",
+    ]
+    issues = payload.get("issues", [])
+    for issue in issues:
+        if not isinstance(issue, dict):
+            continue
+        lines.append(f"**ISSUE {issue.get('ordinal')} · {issue.get('title', '')}**")
+        lines.append(f"- Priority: {issue.get('priority', 'P2')}")
+        modules = issue.get("modules", [])
+        if isinstance(modules, list):
+            lines.append(f"- Affected modules: {', '.join(str(module) for module in modules)}")
+        else:
+            lines.append("- Affected modules:")
+        lines.append("- Acceptance criteria:")
+        for index, criterion in enumerate(issue.get("acceptance_criteria", []), start=1):
+            lines.append(f"  {index}. {criterion}")
+        lines.append("- Validation commands:")
+        for command in issue.get("validation_commands", []):
+            lines.append(f"  - `{command}`")
+        lines.append(f"- Rollout / migration notes: {issue.get('rollout_notes', '')}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def render_auto_architecture_plan(manifest: dict[str, object]) -> str:

@@ -242,20 +242,22 @@ def test_render_auto_plan_contains_issue_ready_sections_for_each_level() -> None
 
     assert "Auto-Generated Daily Plan" in daily_plan
     assert "ISSUE 1" in daily_plan
-    assert "[P0][release]" in daily_plan
+    assert "[P1][sdk][verifier]" in daily_plan
+    assert "Product increment policy" in daily_plan
     assert "Auto-Generated Medium Plan" in medium_plan
     assert "ISSUE 4" in medium_plan
+    assert "[P0][sdk][api]" in medium_plan
     assert "Auto-Generated Architecture Plan" in architecture_plan
     assert "ISSUE 5" in architecture_plan
-    assert "[P0][architecture][compatibility]" in architecture_plan
+    assert "[P0][architecture][product-contract]" in architecture_plan
     assert "planned-task" in architecture_plan
 
 
 def test_consult_opus_for_plan_uses_issue_ready_fake_response_for_all_plan_levels(monkeypatch) -> None:
     cases = [
-        ("daily", "v1.5.9", "[P1][automation] Wire daily task source to open issues"),
-        ("medium", "v1.10.0", "[P1][compatibility] Wire medium task source to open issues"),
-        ("architecture", "v2.0.0", "[P1][architecture] Wire architecture task source to open issues"),
+        ("daily", "v1.5.9", "[P1][sdk][verifier] Add daily verifier product increment"),
+        ("medium", "v1.10.0", "[P1][sdk][api] Add feature-level SDK product increment"),
+        ("architecture", "v2.0.0", "[P1][architecture][proof-bundle] Define proof bundle product contract"),
     ]
     for plan_level, milestone_tag, title in cases:
         monkeypatch.setenv(
@@ -265,9 +267,9 @@ def test_consult_opus_for_plan_uses_issue_ready_fake_response_for_all_plan_level
 
 **ISSUE 1 · {title}**
 - Priority: P1
-- Affected modules: release train
+- Affected modules: Python SDK verifier, proof bundle fixtures
 - Acceptance criteria:
-  1. {plan_level} tasks are generated from current open issues.
+  1. {plan_level} tasks improve Attestplane SDK verification behavior.
 - Validation commands:
   - `git diff --check`
 - Rollout / migration notes: no release bypass.
@@ -299,11 +301,11 @@ def test_consult_opus_for_plan_passes_consultation_level_to_command(monkeypatch,
                 "#!/usr/bin/env python3",
                 "import pathlib, sys",
                 f"pathlib.Path({str(output)!r}).write_text(sys.argv[1], encoding='utf-8')",
-                "print('**ISSUE 1 · [P1][architecture] Review architecture task source**')",
+                "print('**ISSUE 1 · [P1][architecture][proof-bundle] Review proof bundle product contract**')",
                 "print('- Priority: P1')",
-                "print('- Affected modules: release train')",
+                "print('- Affected modules: Python SDK verifier, proof bundle fixtures')",
                 "print('- Acceptance criteria:')",
-                "print('  1. Architecture task source is Opus-derived.')",
+                "print('  1. Architecture task source improves SDK verification behavior.')",
                 "print('- Validation commands:')",
                 "print('  - `git diff --check`')",
                 "print('- Rollout / migration notes: no release bypass.')",
@@ -333,6 +335,7 @@ def test_consult_opus_for_plan_passes_consultation_level_to_command(monkeypatch,
     prompt = output.read_text(encoding="utf-8")
     assert "Attestplane stable autodev architecture development planning." in prompt
     assert "Consultation level: architecture" in prompt
+    assert "Product increment is mandatory" in prompt
 
 
 def test_consult_opus_for_plan_falls_back_when_opus_unconfigured(monkeypatch) -> None:
@@ -369,6 +372,35 @@ def test_consult_opus_for_plan_rejects_non_issue_ready_output(monkeypatch) -> No
     assert accepted.source == "deterministic-template"
     assert accepted.fallback_reason == "fake_response_not_issue_ready"
     assert "Auto-Generated Daily Plan" in accepted.body
+
+
+def test_consult_opus_for_plan_rejects_issue_ready_output_without_product_delta(monkeypatch) -> None:
+    manifest = {
+        "milestone_tag": "v1.5.9",
+        "anchor_tag": "v1.5.8",
+        "head_sha": "abc123",
+        "plan_level": "daily",
+        "recent_real_commits": [{"sha": "abc123", "subject": "feat: improve daily task source"}],
+    }
+    monkeypatch.setenv(
+        architecture_audit_trigger.OPUS_PLAN_FAKE_RESPONSE_ENV,
+        """
+**ISSUE 1 · [P1][release] Tune release train cadence logging**
+- Priority: P1
+- Affected modules: release train, GitHub Actions
+- Acceptance criteria:
+  1. Release cadence logs are clearer.
+- Validation commands:
+  - `git diff --check`
+- Rollout / migration notes: no release bypass.
+""".strip(),
+    )
+
+    accepted = architecture_audit_trigger.consult_opus_for_plan(manifest, "request body")
+
+    assert accepted.source == "deterministic-template"
+    assert accepted.fallback_reason == "fake_response_without_product_delta"
+    assert "[P1][sdk][verifier]" in accepted.body
 
 
 def test_build_plan_payload_produces_structured_plan_block() -> None:
