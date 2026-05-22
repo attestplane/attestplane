@@ -12,8 +12,9 @@ Plan ID: `2e8af61f69ea41f4`
   - Compares rebuilt vs locked JSON with field-level JSON-pointer diagnostics before asserting canonical byte equality.
   - Verifies the rebuilt bundle with `require_non_empty=True` and `require_signed_attestation=True`.
 
-- `tests/conformance/test_signed_schema_roundtrip.py`
+- `tests/conformance/test_signed_schema_conformance_roundtrip.py`
   - Added a positive `signed_schema` conformance selector so `pytest tests/conformance -k signed_schema -x` exercises the strict positive fixture path.
+  - Renamed from the original same-basename selector to avoid pytest import-file mismatch when collected with `tests/verifier/test_signed_schema_roundtrip.py`.
 
 ## Scope Notes
 

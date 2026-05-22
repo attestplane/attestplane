@@ -2,7 +2,7 @@ Fixes #139
 
 ## Summary
 
-Local Codex runner repair for: [P1][verifier] Add signed-schema round-trip regression locking #126 behavior
+Local Codex runner repair for: `[P1][verifier] Add signed-schema round-trip regression locking #126 behavior`
 
 Labels: priority:P1, area:verifier, planned-task, auto-codex-approved
 

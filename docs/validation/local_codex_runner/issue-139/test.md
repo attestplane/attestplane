@@ -42,10 +42,25 @@ Plan ID: `2e8af61f69ea41f4`
 - Result: `16 passed, 1 skipped in 0.06s`
 - Skip: local runner does not have `jsonschema`, so one schema-validation test in `test_proof_bundle_signatures.py` was skipped by its existing `pytest.importorskip("jsonschema")`.
 
-`ruff check tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_roundtrip.py`
+`ruff check tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_conformance_roundtrip.py`
 
 - Exit: 0
 - Result: `All checks passed!`
+
+`PYTHONPATH=sdk/python/src pytest tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_conformance_roundtrip.py -q`
+
+- Exit: 0
+- Result: `3 passed in 0.04s`
+
+`/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 '**/*.md' '!.github/**'`
+
+- Exit: 0
+- Result: `Summary: 0 error(s)`
+
+`lychee --no-progress --max-concurrency 4 --accept 200,204,206,301,302,308 --exclude '^mailto:' './**/*.md'`
+
+- Exit: 127
+- Result: local `lychee` executable is not installed in this runner. No network fetch was attempted because this fix phase is restricted to local repository files and local command output.
 
 ## Local Gate
 
