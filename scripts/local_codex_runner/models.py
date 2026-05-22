@@ -10,6 +10,10 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+DEFAULT_CANDIDATE_FETCH_FLOOR = 20
+DEFAULT_CANDIDATE_FETCH_MULTIPLIER = 10
+DEFAULT_CANDIDATE_FETCH_CEILING = 100
+
 
 class RunnerStatus(StrEnum):
     SUCCESS = "SUCCESS"
@@ -149,3 +153,42 @@ def should_process_issue(
         return False
     return not (exclude_labels and labels.intersection(exclude_labels))
 
+
+def candidate_fetch_limit(max_issues_per_run: int) -> int:
+    """Fetch a candidate pool larger than the per-cycle processing limit.
+
+    GitHub issue queries are label-only. The runner must filter out already-opened
+    PRs and human-blocked issues locally, so fetching only the per-cycle limit can
+    starve ready issues behind an ineligible queue head.
+    """
+    if max_issues_per_run < 1:
+        return DEFAULT_CANDIDATE_FETCH_FLOOR
+    return min(
+        DEFAULT_CANDIDATE_FETCH_CEILING,
+        max(DEFAULT_CANDIDATE_FETCH_FLOOR, max_issues_per_run * DEFAULT_CANDIDATE_FETCH_MULTIPLIER),
+    )
+
+
+def processable_issues(
+    issues: list[IssueTask],
+    *,
+    approved_label: str,
+    pr_opened_label: str,
+    needs_human_label: str,
+    max_issues_per_run: int,
+    include_labels: set[str] | None = None,
+    exclude_labels: set[str] | None = None,
+) -> list[IssueTask]:
+    queue = [
+        issue
+        for issue in issues
+        if should_process_issue(
+            issue,
+            approved_label=approved_label,
+            pr_opened_label=pr_opened_label,
+            needs_human_label=needs_human_label,
+            include_labels=include_labels,
+            exclude_labels=exclude_labels,
+        )
+    ]
+    return queue[: max(0, max_issues_per_run)]
