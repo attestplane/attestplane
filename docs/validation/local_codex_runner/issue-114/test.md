@@ -63,8 +63,8 @@ git show --name-status --oneline f181c6d
 
 ```text
 f181c6d fix: fetch opus planned issues after creation
-M	scripts/release/plan_to_issues.py
-M	sdk/python/tests/test_plan_to_issues.py
+M  scripts/release/plan_to_issues.py
+M  sdk/python/tests/test_plan_to_issues.py
 ```
 
 ```bash
@@ -73,17 +73,17 @@ git show --name-status --oneline fa2ee99
 
 ```text
 fa2ee99 chore(release): prepare v1.6.2
-A	docs/release-notes/v1.6.2.draft.md
-A	release/artifacts/v1.6.2/artifact-manifest.json
-A	release/artifacts/v1.6.2/checksums.sha256
-A	release/artifacts/v1.6.2/upload-plan.md
-M	sdk/python/pyproject.toml
-M	sdk/python/src/attestplane/__init__.py
-M	sdk/python/tests/test_import_surface.py
-M	sdk/python/uv.lock
-M	sdk/typescript/package-lock.json
-M	sdk/typescript/package.json
-M	sdk/typescript/src/index_version.ts
+A  docs/release-notes/v1.6.2.draft.md
+A  release/artifacts/v1.6.2/artifact-manifest.json
+A  release/artifacts/v1.6.2/checksums.sha256
+A  release/artifacts/v1.6.2/upload-plan.md
+M  sdk/python/pyproject.toml
+M  sdk/python/src/attestplane/__init__.py
+M  sdk/python/tests/test_import_surface.py
+M  sdk/python/uv.lock
+M  sdk/typescript/package-lock.json
+M  sdk/typescript/package.json
+M  sdk/typescript/src/index_version.ts
 ```
 
 ```bash
@@ -110,17 +110,17 @@ git diff --name-status v1.6.1..v1.6.2 -- ':!CHANGELOG.md' ':!**/package*.json' '
 ```
 
 ```text
-A	docs/release-notes/v1.6.2.draft.md
-A	release/artifacts/v1.6.2/artifact-manifest.json
-A	release/artifacts/v1.6.2/checksums.sha256
-A	release/artifacts/v1.6.2/upload-plan.md
-M	scripts/release/plan_to_issues.py
-M	sdk/python/pyproject.toml
-M	sdk/python/src/attestplane/__init__.py
-M	sdk/python/tests/test_import_surface.py
-M	sdk/python/tests/test_plan_to_issues.py
-M	sdk/python/uv.lock
-M	sdk/typescript/src/index_version.ts
+A  docs/release-notes/v1.6.2.draft.md
+A  release/artifacts/v1.6.2/artifact-manifest.json
+A  release/artifacts/v1.6.2/checksums.sha256
+A  release/artifacts/v1.6.2/upload-plan.md
+M  scripts/release/plan_to_issues.py
+M  sdk/python/pyproject.toml
+M  sdk/python/src/attestplane/__init__.py
+M  sdk/python/tests/test_import_surface.py
+M  sdk/python/tests/test_plan_to_issues.py
+M  sdk/python/uv.lock
+M  sdk/typescript/src/index_version.ts
 ```
 
 ```bash
@@ -158,3 +158,33 @@ post-create fetch behavior.
 `source_state.target_commit` as
 `f181c6d4af6d6b792e53b17c8d5426cb2c9d805f`.
 
+## Markdown Lint Fix Validation
+
+```bash
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 'docs/validation/local_codex_runner/issue-114/*.md' '!.github/**'
+```
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Finding: docs/validation/local_codex_runner/issue-114/*.md !.github/**
+Linting: 7 file(s)
+Summary: 0 error(s)
+```
+
+```bash
+git ls-files '*.md' ':(exclude).github/**' > /tmp/attestplane-md-files.txt
+printf '%s\n' docs/validation/local_codex_runner/issue-114/03_fix_ci_round_1.prompt.md >> /tmp/attestplane-md-files.txt
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 $(cat /tmp/attestplane-md-files.txt)
+```
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Linting: 608 file(s)
+Summary: 0 error(s)
+```
+
+The raw local CI glob also traversed ignored dependency installs under
+`sdk/python/.venv/` and `sdk/typescript/node_modules/`, which are not tracked
+repository files. `git check-ignore -v` confirmed both sample dependency
+README paths are ignored, and `git ls-files` confirmed zero tracked markdown
+files under those dependency directories.

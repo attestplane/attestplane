@@ -47,8 +47,8 @@ f181c6d fix: fetch opus planned issues after creation
 - `git show --name-status --oneline f181c6d` is limited to:
 
 ```text
-M	scripts/release/plan_to_issues.py
-M	sdk/python/tests/test_plan_to_issues.py
+M  scripts/release/plan_to_issues.py
+M  sdk/python/tests/test_plan_to_issues.py
 ```
 
 - `git show --name-status --oneline fa2ee99` is limited to v1.6.2 release-prep

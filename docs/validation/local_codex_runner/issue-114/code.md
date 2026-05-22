@@ -102,4 +102,3 @@ present in this checkout:
 This task did not add or modify release tooling to manufacture a pass. The
 boundary decision above is based on the local git evidence recorded in
 `test.md`.
-
