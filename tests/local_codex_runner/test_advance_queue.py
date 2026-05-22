@@ -190,3 +190,19 @@ def test_dependency_unlock_adds_approval_when_dependencies_closed() -> None:
     decision = decide_dependency_unlock(issue, {121: "CLOSED", 127: "CLOSED"}, config)
 
     assert decision.action == "unlock"
+
+
+def test_dependency_unlock_approves_tasks_without_dependencies() -> None:
+    config = RunnerConfig(repo="o/r", workdir="/tmp/r", allow_dependency_unlock=True)
+    issue = IssueTask(
+        number=139,
+        title="task",
+        body="No dependency line.",
+        url="https://example/issues/139",
+        labels=["planned-task"],
+    )
+
+    decision = decide_dependency_unlock(issue, {}, config)
+
+    assert decision.action == "unlock"
+    assert decision.reason == "no_dependencies"

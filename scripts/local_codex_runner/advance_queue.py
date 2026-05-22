@@ -142,7 +142,9 @@ def decide_dependency_unlock(
         return AdvanceDecision("skip", "issue", issue.number, "already_approved")
     dependencies = dependencies if dependencies is not None else parse_dependencies(issue.body)
     if not dependencies:
-        return AdvanceDecision("skip", "issue", issue.number, "no_explicit_dependencies")
+        if not config.allow_dependency_unlock:
+            return AdvanceDecision("skip", "issue", issue.number, "dependency_unlock_disabled")
+        return AdvanceDecision("unlock", "issue", issue.number, "no_dependencies")
 
     waiting_on = [f"issue:{number}:{dependency_states.get(number, 'UNKNOWN')}" for number in dependencies if dependency_states.get(number) != "CLOSED"]
     if waiting_on:
