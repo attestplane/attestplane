@@ -5,6 +5,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -1232,3 +1233,48 @@ def test_cadence_limiter_handles_force_env_var(
 
     assert result == version.tag
     assert calls == []
+
+
+def test_run_once_soft_skips_support_only_delta(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.4.1", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    previous = stable_auto_train.StableVersion.parse("1.4.0")
+
+    monkeypatch.delenv(stable_auto_train.FORCE_CADENCE_ENV, raising=False)
+    monkeypatch.setattr(stable_auto_train, "assert_clean_tree", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: previous)
+    monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
+    monkeypatch.setattr(stable_auto_train, "commits_since_tag_have_real_work", lambda tag: True)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "product_delta_for_target",
+        lambda target, previous: SimpleNamespace(
+            allowed=False,
+            reason="product_support_delta_without_implementation",
+            product_files=[],
+            product_support_files=["sdk/python/tests/test_verifier_negative.py"],
+            support_only_files=[],
+            ignored_files=[],
+        ),
+    )
+
+    result = stable_auto_train.run_once(publish=False, wait=False, target_queue=queue, dry_run=True)
+
+    assert result == previous.tag

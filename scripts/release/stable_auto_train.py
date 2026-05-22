@@ -903,13 +903,17 @@ def assert_release_gate_allows_target(target: ReleaseTarget) -> None:
         )
 
 
-def assert_product_delta_allows_target(target: ReleaseTarget, previous: StableVersion) -> None:
+def product_delta_for_target(target: ReleaseTarget, previous: StableVersion) -> Any:
     release_gate = load_release_gate_module()
-    product_delta = release_gate.classify_product_delta(
+    return release_gate.classify_product_delta(
         release_gate.changed_files_between(previous.tag, "HEAD"),
         labels=[],
         env=os.environ,
     )
+
+
+def assert_product_delta_allows_target(target: ReleaseTarget, previous: StableVersion) -> None:
+    product_delta = product_delta_for_target(target, previous)
     if not product_delta.allowed:
         raise RuntimeError(
             "release product delta gate blocked stable autodev target "
@@ -1735,7 +1739,24 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
         )
         return previous.tag
     if not local_target_tag_exists:
-        assert_product_delta_allows_target(target, previous)
+        product_delta = product_delta_for_target(target, previous)
+        if not product_delta.allowed:
+            emit_event(
+                "product_delta_skipped",
+                previous_tag=previous.tag,
+                target_tag=version.tag,
+                reason=product_delta.reason,
+                product_files=product_delta.product_files,
+                product_support_files=product_delta.product_support_files,
+                support_only_files=product_delta.support_only_files,
+                ignored_files=product_delta.ignored_files,
+            )
+            print(
+                "autodev-train stable: no product implementation delta since "
+                f"{previous.tag}; skipping {version.tag} ({product_delta.reason})",
+                flush=True,
+            )
+            return previous.tag
 
     if local_target_tag_exists or remote_tag_exists(version.tag):
         if publish:
