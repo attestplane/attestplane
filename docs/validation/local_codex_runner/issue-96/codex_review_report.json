@@ -1,0 +1,26 @@
+{
+  "status": "WARN",
+  "blocking_reasons": [],
+  "warnings": [
+    "The diff is mostly evidence-only, but the new root pytest.ini changes default pytest collection to testpaths = tests. That makes the local runner default gate pass while excluding sdk/python/tests from a root pytest -q run. The SDK has its own pytest configuration in sdk/python/pyproject.toml, so this is not a confirmed release-gate weakening, but it is a gate-coverage risk that should be reviewed before merge.",
+    "The issue is P0 release-integrity and the local evidence notes that Opus consultation was not executed because the runner prompt constrained the phase to local files, local command output, and issue text. This is consistent with the prompt, but remains a project-process exception to record.",
+    "Root-to-HEAD git diff --check still reports historical whitespace and EOF findings outside the focused v1.5.0..v1.5.10 boundary. The focused boundary check passes, but the broader hygiene failure remains residual risk."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text provided in the prompt; no web, GitHub API, external advisory service, registry, or secret source was used.",
+    "Inspected local status: current untracked changes are docs/validation/local_codex_runner/issue-96/ and pytest.ini; there is no tracked git diff or staged diff.",
+    "Inspected Issue 96 evidence files: plan.md, code.md, test.md, followup_idle_cadence.md, gate_report.md, and gate_report.json.",
+    "Inspected project instructions in AGENTS.md and release publication policy in docs/runbooks/github-cd-release.md.",
+    "Verified no publish/tag/registry command execution is recorded in the reviewed evidence; reports explicitly avoid merge, tag creation, release-CD dispatch, npm publish, twine upload, PyPI push, and remote push.",
+    "Checked for secret-sensitive terms and publish/tag commands in the Issue 96 evidence and pytest.ini with ripgrep; matches are prompt redlines and negative safety statements, not leaked credentials or executed publication commands.",
+    "Focused boundary evidence records git log, git diff --stat, and git diff --check for v1.5.0..v1.5.10; focused git diff --check exits 0 and the range contains non-release-prep work.",
+    "gate_report.json records selected_gate default with python -m compileall scripts exit 0 and pytest -q exit 0, 314 passed."
+  ],
+  "residual_risks": [
+    "pytest.ini may unintentionally reduce what the default local runner gate covers by excluding sdk/python/tests from root pytest collection; the SDK test suite should remain covered by an explicit SDK/package gate.",
+    "This self-review did not run a full release gate; it reviewed existing local evidence and the current untracked diff.",
+    "Root-to-HEAD git diff --check remains failing on historical files outside the v1.5.10 focused release boundary.",
+    "The report accepts local evidence that no merge, tag, publish, PyPI push, or remote push occurred; it does not inspect remote service state."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
