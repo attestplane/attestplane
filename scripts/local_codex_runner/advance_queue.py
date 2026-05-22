@@ -11,10 +11,14 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
+from scripts.local_codex_runner.config import (
+    RunnerConfig,
+    add_common_args,
+    load_config,
+    overrides_from_args,
+)
 from scripts.local_codex_runner.github_cli import CheckStatus, GitHubCLI
 from scripts.local_codex_runner.models import IssueTask
-
 
 DEPENDENCY_LINE_RE = re.compile(r"(?im)^\s*(?:depends\s+on|depends-on|dependencies)\s*:\s*(?P<refs>.+)$")
 ISSUE_REF_RE = re.compile(r"#(?P<number>[1-9][0-9]*)")
@@ -164,6 +168,15 @@ def pr_state_from_gh_json(data: dict[str, Any], checks: list[CheckStatus]) -> Pu
     )
 
 
+def raw_labels(data: dict[str, Any]) -> set[str]:
+    return {str(label.get("name", label)) for label in data.get("labels", []) if label.get("name", label)}
+
+
+def matches_label_filters(data: dict[str, Any], include: list[str], exclude: list[str]) -> bool:
+    labels = raw_labels(data)
+    return all(label in labels for label in include) and not labels.intersection(exclude)
+
+
 def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
@@ -171,7 +184,13 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
     writes = 0
 
     if args.mode in {"all", "prs"}:
-        for raw_pr in gh.list_pull_requests(config.repo or "", config.base_branch, limit=args.pr_limit):
+        pr_fetch_limit = max(args.pr_limit, 50) if args.include_label or args.exclude_label else args.pr_limit
+        raw_prs = [
+            raw_pr
+            for raw_pr in gh.list_pull_requests(config.repo or "", config.base_branch, limit=pr_fetch_limit)
+            if matches_label_filters(raw_pr, args.include_label, args.exclude_label)
+        ][: args.pr_limit]
+        for raw_pr in raw_prs:
             pr_number = str(raw_pr["number"])
             pr = pr_state_from_gh_json(raw_pr, gh.pr_checks(config.repo or "", pr_number))
             decision = decide_pr_action(pr, config)

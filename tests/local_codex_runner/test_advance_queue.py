@@ -3,6 +3,7 @@ from scripts.local_codex_runner.advance_queue import (
     decide_dependency_unlock,
     decide_pr_action,
     dependencies_for_issue,
+    matches_label_filters,
     parse_dependencies,
 )
 from scripts.local_codex_runner.config import RunnerConfig
@@ -134,6 +135,14 @@ def test_pr_gate_merges_only_when_config_allows() -> None:
     decision = decide_pr_action(pr, config)
 
     assert decision.action == "merge"
+
+
+def test_pr_label_filters_require_includes_and_apply_excludes() -> None:
+    raw_pr = {"labels": [{"name": "codex-ci-green"}, {"name": "ready"}]}
+
+    assert matches_label_filters(raw_pr, ["codex-ci-green"], [])
+    assert not matches_label_filters(raw_pr, ["auto-merge-ready"], [])
+    assert not matches_label_filters(raw_pr, ["codex-ci-green"], ["ready"])
 
 
 def test_dependency_unlock_waits_until_all_dependencies_closed() -> None:
