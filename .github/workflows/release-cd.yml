@@ -60,6 +60,8 @@ jobs:
       release_gate_reasons: ${{ steps.release_gate.outputs.reasons }}
       audit_gate_allowed: ${{ steps.release_gate.outputs.audit_gate_allowed }}
       audit_gate_reason: ${{ steps.release_gate.outputs.audit_gate_reason }}
+      product_delta_allowed: ${{ steps.release_gate.outputs.product_delta_allowed }}
+      product_delta_reason: ${{ steps.release_gate.outputs.product_delta_reason }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -87,11 +89,28 @@ jobs:
           ATTESTPLANE_RELEASE_AUDIT: ${{ vars.ATTESTPLANE_RELEASE_AUDIT }}
         run: |
           set -euo pipefail
+          product_delta_args=()
+          if [ "${{ inputs.channel }}" = "latest" ]; then
+            previous_stable_tag="$(
+              git describe \
+                --tags \
+                --match 'v[0-9]*.[0-9]*.[0-9]*' \
+                --exclude '*-*' \
+                --abbrev=0 \
+                "${{ inputs.release_tag }}^"
+            )"
+            product_delta_args=(
+              --require-product-delta
+              --product-delta-base "${previous_stable_tag}"
+              --product-delta-head "${{ inputs.release_tag }}"
+            )
+          fi
           python scripts/release/release_gate.py \
             --release-tag "${{ inputs.release_tag }}" \
             --channel "${{ inputs.channel }}" \
             --audit-verified "${{ inputs.audit_verified }}" \
             --audit-plan-url "${{ inputs.audit_plan_url }}" \
+            "${product_delta_args[@]}" \
             --enforce
 
       - name: Release CD summary
@@ -110,6 +129,8 @@ jobs:
             echo "- audit_gate_allowed: \`${{ steps.release_gate.outputs.audit_gate_allowed }}\`"
             echo "- audit_gate_reason: \`${{ steps.release_gate.outputs.audit_gate_reason }}\`"
             echo "- audit_plan_url: \`${{ steps.release_gate.outputs.audit_plan_url }}\`"
+            echo "- product_delta_allowed: \`${{ steps.release_gate.outputs.product_delta_allowed }}\`"
+            echo "- product_delta_reason: \`${{ steps.release_gate.outputs.product_delta_reason }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   python-gate:

@@ -404,6 +404,7 @@ def test_run_once_reconciles_superseded_local_tag_before_target_selection(
         ),
     )
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "assert_product_delta_allows_target", lambda target, previous: None)
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
     monkeypatch.setattr(
@@ -529,13 +530,14 @@ def test_stable_train_blocks_unverified_major_boundary() -> None:
         stable_auto_train.assert_release_gate_allows_target(target)
 
 
-def test_stable_train_allows_minor_zero_after_major_boundary() -> None:
+def test_stable_train_allows_minor_zero_after_major_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
     target = stable_auto_train.ReleaseTarget(
         version=stable_auto_train.StableVersion.parse("1.1.0"),
         channel="latest",
         min_soak_hours=0,
     )
 
+    monkeypatch.setenv("ATTESTPLANE_PRODUCT_DELTA_BYPASS", "1")
     stable_auto_train.assert_release_gate_allows_target(target)
 
 
@@ -1008,6 +1010,7 @@ def test_cadence_limiter_handles_force_env_var(
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: previous)
     monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: previous)
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
+    monkeypatch.setattr(stable_auto_train, "assert_product_delta_allows_target", lambda target, previous: None)
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
     monkeypatch.setattr(

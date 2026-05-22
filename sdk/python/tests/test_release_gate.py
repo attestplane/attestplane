@@ -191,3 +191,74 @@ def test_audit_gate_allows_verified_plan() -> None:
 
     assert result.allowed is True
     assert result.reason == "audit_verified"
+
+
+def test_product_delta_allows_product_implementation_change() -> None:
+    result = release_gate.classify_product_delta(
+        [
+            "sdk/python/src/attestplane/verifier.py",
+            "docs/release-notes/v1.6.3.md",
+            "sdk/python/src/attestplane/__init__.py",
+        ],
+        labels=[],
+        env={},
+    )
+
+    assert result.allowed is True
+    assert result.reason == "product_implementation_delta"
+    assert result.product_files == ["sdk/python/src/attestplane/verifier.py"]
+    assert result.ignored_files == ["sdk/python/src/attestplane/__init__.py"]
+
+
+def test_product_delta_blocks_release_only_change() -> None:
+    result = release_gate.classify_product_delta(
+        [
+            ".github/workflows/release-cd.yml",
+            "scripts/release/stable_auto_train.py",
+            "docs/release-notes/v1.6.3.md",
+        ],
+        labels=[],
+        env={},
+    )
+
+    assert result.allowed is False
+    assert result.reason == "product_delta_required_without_product_change"
+    assert result.support_only_files == [
+        ".github/workflows/release-cd.yml",
+        "docs/release-notes/v1.6.3.md",
+        "scripts/release/stable_auto_train.py",
+    ]
+
+
+def test_product_delta_blocks_tests_without_product_code() -> None:
+    result = release_gate.classify_product_delta(
+        ["sdk/python/tests/test_verifier_negative.py"],
+        labels=[],
+        env={},
+    )
+
+    assert result.allowed is False
+    assert result.reason == "product_support_delta_without_implementation"
+    assert result.product_support_files == ["sdk/python/tests/test_verifier_negative.py"]
+
+
+def test_product_delta_allows_explicit_bypass_label() -> None:
+    result = release_gate.classify_product_delta(
+        ["sdk/python/tests/test_verifier_negative.py"],
+        labels=["test-only"],
+        env={},
+    )
+
+    assert result.allowed is True
+    assert result.reason == "product_support_delta_bypassed"
+
+
+def test_product_delta_allows_explicit_bypass_env() -> None:
+    result = release_gate.classify_product_delta(
+        ["scripts/release/stable_auto_train.py"],
+        labels=[],
+        env={"ATTESTPLANE_PRODUCT_DELTA_BYPASS": "true"},
+    )
+
+    assert result.allowed is True
+    assert result.reason == "product_delta_bypassed"

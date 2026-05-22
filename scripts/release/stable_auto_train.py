@@ -825,6 +825,20 @@ def assert_release_gate_allows_target(target: ReleaseTarget) -> None:
         )
 
 
+def assert_product_delta_allows_target(target: ReleaseTarget, previous: StableVersion) -> None:
+    release_gate = load_release_gate_module()
+    product_delta = release_gate.classify_product_delta(
+        release_gate.changed_files_between(previous.tag, "HEAD"),
+        labels=[],
+        env=os.environ,
+    )
+    if not product_delta.allowed:
+        raise RuntimeError(
+            "release product delta gate blocked stable autodev target "
+            f"{target.version.tag}: {product_delta.reason}; previous_tag={previous.tag}"
+        )
+
+
 def read_python_version() -> str:
     with (ROOT / "sdk/python/pyproject.toml").open("rb") as handle:
         data = tomllib.load(handle)
@@ -1637,6 +1651,8 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
             flush=True,
         )
         return previous.tag
+    if not local_target_tag_exists:
+        assert_product_delta_allows_target(target, previous)
 
     if local_target_tag_exists or remote_tag_exists(version.tag):
         if publish:
