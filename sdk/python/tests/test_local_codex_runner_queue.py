@@ -4,7 +4,7 @@
 
 import subprocess
 
-from scripts.local_codex_runner.git_ops import GitOps
+from scripts.local_codex_runner.git_ops import GitOps, is_transient_evidence_path
 from scripts.local_codex_runner.github_cli import GitHubCLI
 from scripts.local_codex_runner.models import IssueTask, candidate_fetch_limit, processable_issues
 
@@ -82,3 +82,7 @@ def test_git_ops_recovers_detached_head_before_issue_commit(monkeypatch, tmp_pat
 
     assert ["switch", "-C", branch] in commands
     assert ["push", "-u", "origin", f"HEAD:refs/heads/{branch}"] in commands
+
+
+def test_pr_body_is_transient_runner_evidence() -> None:
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-154/pr_body.md")

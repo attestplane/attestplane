@@ -33,6 +33,7 @@ FORBIDDEN_PATTERNS = (
 TRANSIENT_EVIDENCE_PATTERNS = (
     "docs/validation/local_codex_runner/issue-*/*.prompt.md",
     "docs/validation/local_codex_runner/issue-*/codex_*.log",
+    "docs/validation/local_codex_runner/issue-*/pr_body.md",
 )
 
 
