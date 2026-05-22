@@ -4,7 +4,7 @@
 
 The v1.7.0 positive fixture intentionally locks the minimum signed-attestation
 schema accepted by the verifier. Rebuilding it here catches both relaxed schema
-checks and SDK canonicalization drift with field-level diagnostics.
+checks and SDK JSON edge-case drift with field-level diagnostics.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from typing import Any
 import attestplane
 import pytest
 
+from attestplane.canonical import CanonicalizationError
 from attestplane.proof_bundle import (
     FrameworkMapping,
     ProofBundleBuilder,
@@ -28,9 +29,23 @@ from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained
 from attestplane.types import ChainedEvent
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_errors import VERIFY_OK
+from tests.conformance import canonicalization_vectors as vector_manifest
 
 ROOT = Path(__file__).resolve().parents[2]
 SIGNED_FIXTURES = (ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",)
+
+
+@dataclass(frozen=True)
+class _RoundTripCase:
+    case_id: str
+    bundle: dict[str, Any] | None = None
+    fixture_path: Path | None = None
+
+    def load_expected(self) -> dict[str, Any]:
+        if self.bundle is not None:
+            return self.bundle
+        assert self.fixture_path is not None
+        return json.loads(self.fixture_path.read_text(encoding="utf-8"))
 
 
 def _canonical_json_bytes(value: Any) -> bytes:
@@ -103,6 +118,16 @@ def _signed_fixture_paths() -> Iterator[Path]:
         yield path
 
 
+def _signed_schema_round_trip_cases() -> Iterator[_RoundTripCase]:
+    for path in _signed_fixture_paths():
+        yield _RoundTripCase(case_id=path.name, fixture_path=path)
+    for vector in vector_manifest.load_positive_vectors():
+        yield _RoundTripCase(
+            case_id=vector["case_id"],
+            bundle=vector_manifest.emit_positive_bundle(vector),
+        )
+
+
 def _rehydrate_events(bundle: dict[str, Any]) -> list[ChainedEvent]:
     return [_deserialize_chained_event(raw) for raw in bundle["events"]]
 
@@ -148,19 +173,29 @@ def rebuild_signed_schema_fixture(bundle: dict[str, Any]) -> dict[str, Any]:
         attestplane.__version__ = original_version
 
 
-@pytest.mark.parametrize("fixture_path", tuple(_signed_fixture_paths()), ids=lambda path: path.name)
-def test_signed_schema_fixture_round_trips_byte_identically(fixture_path: Path) -> None:
-    expected = json.loads(fixture_path.read_text(encoding="utf-8"))
+@pytest.mark.parametrize(
+    "case",
+    tuple(_signed_schema_round_trip_cases()),
+    ids=lambda case: case.case_id,
+)
+def test_signed_schema_fixture_round_trips_byte_identically(case: _RoundTripCase) -> None:
+    expected = case.load_expected()
     actual = rebuild_signed_schema_fixture(expected)
 
     diff = first_json_diff(expected, actual)
-    assert diff is None, f"{fixture_path.name}: {diff}"
-    assert _canonical_json_bytes(actual) == _canonical_json_bytes(expected)
+    assert diff is None, f"{case.case_id}: {diff}"
+    assert _canonical_json_bytes(actual) == _canonical_json_bytes(expected), (
+        f"{case.case_id}: canonical JSON bytes differ after signed-schema round-trip"
+    )
 
 
-@pytest.mark.parametrize("fixture_path", tuple(_signed_fixture_paths()), ids=lambda path: path.name)
-def test_signed_schema_roundtrip_keeps_strict_verifier_contract(fixture_path: Path) -> None:
-    expected = json.loads(fixture_path.read_text(encoding="utf-8"))
+@pytest.mark.parametrize(
+    "case",
+    tuple(_signed_schema_round_trip_cases()),
+    ids=lambda case: case.case_id,
+)
+def test_signed_schema_roundtrip_keeps_strict_verifier_contract(case: _RoundTripCase) -> None:
+    expected = case.load_expected()
     actual = rebuild_signed_schema_fixture(expected)
 
     result = verify_proof_bundle(
@@ -169,7 +204,33 @@ def test_signed_schema_roundtrip_keeps_strict_verifier_contract(fixture_path: Pa
         require_signed_attestation=True,
     )
 
-    assert result.ok is True
-    assert result.error_code == VERIFY_OK
-    assert result.signed_attestation_schema_ok is True
-    assert result.signed_attestation_schema_reason is None
+    assert result.ok is True, f"{case.case_id}: verifier result was not ok"
+    assert result.error_code == VERIFY_OK, f"{case.case_id}: {result.error_code}"
+    assert result.signed_attestation_schema_ok is True, (
+        f"{case.case_id}: {result.signed_attestation_schema_reason}"
+    )
+    assert result.signed_attestation_schema_reason is None, (
+        f"{case.case_id}: {result.signed_attestation_schema_reason}"
+    )
+
+
+@pytest.mark.parametrize(
+    "vector",
+    vector_manifest.load_negative_vectors(),
+    ids=lambda vector: vector["case_id"],
+)
+def test_signed_schema_roundtrip_rejects_negative_edge_case_vectors(
+    vector: dict[str, Any],
+) -> None:
+    candidate = vector_manifest.materialize_negative_candidate(vector)
+
+    if isinstance(candidate, str):
+        with pytest.raises(
+            (vector_manifest.DuplicateKeyError, json.JSONDecodeError),
+            match=".+",
+        ):
+            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+        return
+
+    with pytest.raises(CanonicalizationError, match=".+"):
+        verify_proof_bundle(candidate, **vector["verify_options"])
