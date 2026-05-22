@@ -8,6 +8,7 @@ from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError,
 def test_issue_list_json_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(command, capture_output, text, check):
         assert command[:3] == ["gh", "issue", "list"]
+        assert "open" in command
         return subprocess.CompletedProcess(command, 0, '[{"number":7,"title":"Fix","url":"u","body":"b","labels":[{"name":"auto-codex-approved"}]}]', "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -16,6 +17,16 @@ def test_issue_list_json_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert issues[0].number == 7
     assert issues[0].labels == ["auto-codex-approved"]
+
+
+def test_issue_list_can_include_closed_siblings(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(command, capture_output, text, check):
+        assert command[command.index("--state") + 1] == "all"
+        return subprocess.CompletedProcess(command, 0, "[]", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert GitHubCLI(dry_run=False).list_issues("o/r", "planned-task", 100, state="all") == []
 
 
 def test_label_add_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch) -> None:
