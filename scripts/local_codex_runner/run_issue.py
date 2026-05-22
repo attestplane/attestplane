@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 from scripts.local_codex_runner.codex_driver import CodexDriver
 from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
@@ -183,7 +184,7 @@ def run_issue(config: RunnerConfig, issue_number: int | None, include_labels: se
         return write_result(result.finish(), evidence_dir, state, config)
     except Exception as exc:
         result.status = RunnerStatus.LOCAL_FAILED
-        result.residual_risks.append(str(exc))
+        append_residual_risk(result, str(exc))
         (evidence_dir / "failure.txt").write_text(str(exc) + "\n", encoding="utf-8")
         return fail_issue(config, gh, task if "task" in locals() else None, result, evidence_dir, state)
     finally:
@@ -237,6 +238,18 @@ def safe_branch_slug(title: str) -> str:
     from scripts.local_codex_runner.git_ops import slugify
 
     return slugify(title)
+
+
+def append_residual_risk(result: RunnerResult, risk: str) -> None:
+    """Append a residual risk while tolerating legacy scalar state values."""
+    existing: Any = result.residual_risks
+    if isinstance(existing, list):
+        existing.append(risk)
+        return
+    if existing is None:
+        result.residual_risks = [risk]
+        return
+    result.residual_risks = [str(existing), risk]
 
 
 def fail_issue(
