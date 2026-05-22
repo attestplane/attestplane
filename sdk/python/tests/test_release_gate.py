@@ -230,6 +230,30 @@ def test_product_delta_blocks_release_only_change() -> None:
     ]
 
 
+def test_product_delta_allows_observability_release_planning_change() -> None:
+    result = release_gate.classify_product_delta(
+        [
+            "docs/observability/events.md",
+            "scripts/observability/events.py",
+            "scripts/release/plan_to_issues.py",
+            "tests/observability/test_events.py",
+        ],
+        labels=[],
+        env={},
+    )
+
+    assert result.allowed is True
+    assert result.reason == "product_implementation_delta"
+    assert result.product_files == [
+        "scripts/observability/events.py",
+        "scripts/release/plan_to_issues.py",
+    ]
+    assert result.support_only_files == [
+        "docs/observability/events.md",
+        "tests/observability/test_events.py",
+    ]
+
+
 def test_product_delta_blocks_tests_without_product_code() -> None:
     result = release_gate.classify_product_delta(
         ["sdk/python/tests/test_verifier_negative.py"],

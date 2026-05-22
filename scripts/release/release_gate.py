@@ -32,6 +32,12 @@ PRODUCT_DELTA_BYPASS_LABELS = frozenset({"release-hotfix", "security-patch", "te
 PRODUCT_IMPLEMENTATION_PREFIXES = (
     "sdk/python/src/attestplane/",
     "sdk/typescript/src/",
+    "scripts/observability/",
+)
+PRODUCT_IMPLEMENTATION_FILES = frozenset(
+    {
+        "scripts/release/plan_to_issues.py",
+    }
 )
 PRODUCT_SUPPORT_PREFIXES = (
     "sdk/python/tests/",
@@ -157,7 +163,7 @@ def classify_product_delta(
             continue
         if path in VERSION_ONLY_FILES:
             ignored_files.append(path)
-        elif _has_prefix(path, PRODUCT_IMPLEMENTATION_PREFIXES):
+        elif path in PRODUCT_IMPLEMENTATION_FILES or _has_prefix(path, PRODUCT_IMPLEMENTATION_PREFIXES):
             product_files.append(path)
         elif _has_prefix(path, PRODUCT_SUPPORT_PREFIXES):
             product_support_files.append(path)
