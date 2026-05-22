@@ -4,6 +4,10 @@
 ProofBundle verification envelopes. It is separate from `attestplane verify`,
 which remains `chain_report_only`.
 
+For the v1.7.1 `attestplane verify` opt-in flags
+`--require-non-empty` and `--strict-schema`, see
+[`docs/changes/v1.7.x.md#v171-sdk--cli-delta`](../changes/v1.7.x.md#v171-sdk--cli-delta).
+
 ## Usage
 
 ```bash
