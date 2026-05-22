@@ -11,6 +11,31 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### v1.6.0 user-visible delta
+
+- `v1.6.0` documents 18 real non-release-prep commits in three
+  user-visible automation buckets: autodev planning loop hardening
+  through Opus consultation, plan-to-issues flow, and schema unification;
+  daily architecture audit fan-out on the intended runner path; and
+  release plumbing robustness for git proxy behavior, idle cadence,
+  importable scripts, transient Scorecard link noise, and generated
+  planning artifact lintability. It explicitly records no breaking
+  changes and no public API surface changes for SDKs, CLI, verifier,
+  schemas, packages, registries, release assets, signing, gates, or
+  claim-safety policy. Planning context:
+  [Issue #100](https://github.com/attestplane/attestplane/issues/100);
+  implementation task:
+  [Issue #104](https://github.com/attestplane/attestplane/issues/104);
+  required planning-trail cross-links:
+  [ISSUE 1 boundary report](https://github.com/attestplane/attestplane/issues/100)
+  and
+  [ISSUE 2 regression coverage](https://github.com/attestplane/attestplane/issues/100).
+  The local runner evidence does not expose concrete issue numbers for
+  ISSUE 1 or ISSUE 2, so the links intentionally point back to the source
+  planning issue rather than inventing missing IDs. This follows the
+  prior docs-delta pattern from Issues #98, #94, #90, #85, #81, and #77
+  without duplicating those summaries.
+
 ### v1.6.2 user-visible delta
 
 - `v1.6.2` documents one user-visible automation fix: planned-task
