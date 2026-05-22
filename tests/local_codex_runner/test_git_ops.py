@@ -70,6 +70,8 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
             " M CHANGELOG.md",
             "?? docs/validation/local_codex_runner/issue-12/01_plan.prompt.md",
             "?? docs/validation/local_codex_runner/issue-12/codex_code.log",
+            "?? docs/validation/local_codex_runner/issue-12/runner_result.json",
+            "?? docs/validation/local_codex_runner/issue-12/runner_result.md",
             "",
         ]
     )
@@ -85,7 +87,9 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
 
     assert (
         "clean -f -- docs/validation/local_codex_runner/issue-12/01_plan.prompt.md "
-        "docs/validation/local_codex_runner/issue-12/codex_code.log"
+        "docs/validation/local_codex_runner/issue-12/codex_code.log "
+        "docs/validation/local_codex_runner/issue-12/runner_result.json "
+        "docs/validation/local_codex_runner/issue-12/runner_result.md"
     ) in git.commands_run
     assert "add -A" in git.commands_run
 
@@ -93,5 +97,7 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
 def test_transient_evidence_path_only_matches_runner_prompts_and_logs() -> None:
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/01_plan.prompt.md")
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/codex_review.log")
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/runner_result.json")
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/runner_result.md")
     assert not is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/gate_report.md")
     assert not is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/codex_review_report.md")

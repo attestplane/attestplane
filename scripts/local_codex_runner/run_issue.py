@@ -66,6 +66,7 @@ def run_issue(
 
         if not config.dry_run:
             gh.add_labels(config.repo or "", task.number, [config.in_progress_label])
+            git.remove_transient_evidence()
             if not config.allow_dirty:
                 git.ensure_clean_worktree()
             git.checkout_base_and_pull(config.checkout_ref())
