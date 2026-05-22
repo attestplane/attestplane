@@ -130,11 +130,11 @@ panic: runtime error: invalid memory address or nil pointer dereference
 
 goroutine 1 [running]:
 github.com/cli/cli/v2/pkg/cmd/workflow/shared.FindWorkflow(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:139 +0x148
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:139 +0x148
 github.com/cli/cli/v2/pkg/cmd/workflow/shared.ResolveWorkflow(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:207 +0x22c
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:207 +0x22c
 github.com/cli/cli/v2/pkg/cmd/workflow/run.runRun(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/run/run.go:273 +0x1d0
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/run/run.go:273 +0x1d0
 ```
 
 Retry with the local workflow's declared input name:
@@ -146,11 +146,11 @@ panic: runtime error: invalid memory address or nil pointer dereference
 
 goroutine 1 [running]:
 github.com/cli/cli/v2/pkg/cmd/workflow/shared.FindWorkflow(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:139 +0x148
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:139 +0x148
 github.com/cli/cli/v2/pkg/cmd/workflow/shared.ResolveWorkflow(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:207 +0x22c
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:207 +0x22c
 github.com/cli/cli/v2/pkg/cmd/workflow/run.runRun(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/run/run.go:273 +0x1d0
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/run/run.go:273 +0x1d0
 ```
 
 Proxy-disabled retry with the local input name:
@@ -162,11 +162,11 @@ panic: runtime error: invalid memory address or nil pointer dereference
 
 goroutine 1 [running]:
 github.com/cli/cli/v2/pkg/cmd/workflow/shared.FindWorkflow(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:139 +0x148
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:139 +0x148
 github.com/cli/cli/v2/pkg/cmd/workflow/shared.ResolveWorkflow(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:207 +0x22c
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/shared/shared.go:207 +0x22c
 github.com/cli/cli/v2/pkg/cmd/workflow/run.runRun(...)
-	/Users/runner/work/cli/cli/pkg/cmd/workflow/run/run.go:273 +0x1d0
+    /Users/runner/work/cli/cli/pkg/cmd/workflow/run/run.go:273 +0x1d0
 ```
 
 No run ID or run URL was created by these attempts, so
@@ -175,7 +175,7 @@ architecture-audit workflow.
 
 ## Issue Updates
 
-#110 was not updated and #86 was not closed in this phase because the required
+\#110 was not updated and #86 was not closed in this phase because the required
 green v1.6.2 proxy-enabled and proxy-disabled dry-run evidence was not produced.
 Any hardening required to make this validation pass should remain owned by #110.
 
@@ -215,4 +215,22 @@ Listing 'scripts/release'...
 Listing 'scripts/security'...
 Listing 'scripts/storage'...
 1227 passed in 118.36s (0:01:58)
+```
+
+## Markdown Lint Fix
+
+The CI markdown-lint failure was reproduced locally against the Issue #116
+evidence markdown files. The failures were confined to markdown formatting in
+`docs/validation/local_codex_runner/issue-116/03_fix_ci_round_1.prompt.md`
+and `docs/validation/local_codex_runner/issue-116/test.md`; no release gate,
+runner, workflow, severity, or release-blocking policy files were changed.
+
+Focused verification:
+
+```text
+$ /Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 'docs/validation/local_codex_runner/issue-116/*.md'
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Finding: docs/validation/local_codex_runner/issue-116/*.md
+Linting: 7 file(s)
+Summary: 0 error(s)
 ```
