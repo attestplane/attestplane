@@ -97,9 +97,37 @@ class GitHubCLI:
         )
         return [IssueTask.from_gh_json(item) for item in json.loads(completed.stdout or "[]")]
 
+    def list_pull_requests(self, repo: str, base: str, limit: int) -> list[dict[str, Any]]:
+        completed = self._run(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--repo",
+                repo,
+                "--state",
+                "open",
+                "--base",
+                base,
+                "--json",
+                "number,title,url,author,baseRefName,headRefName,isDraft,mergeStateStatus,reviewDecision,labels",
+                "--limit",
+                str(limit),
+            ]
+        )
+        loaded = json.loads(completed.stdout or "[]")
+        if not isinstance(loaded, list):
+            return []
+        return [dict(item) for item in loaded]
+
     def view_issue(self, repo: str, issue_number: int) -> IssueTask:
         completed = self._run(["gh", "issue", "view", str(issue_number), "--repo", repo, "--json", "number,title,url,labels,body"])
         return IssueTask.from_gh_json(json.loads(completed.stdout))
+
+    def view_issue_state(self, repo: str, issue_number: int) -> str:
+        completed = self._run(["gh", "issue", "view", str(issue_number), "--repo", repo, "--json", "state"])
+        data = json.loads(completed.stdout or "{}")
+        return str(data.get("state", "UNKNOWN"))
 
     def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
         if labels:
@@ -119,6 +147,9 @@ class GitHubCLI:
         )
         return completed.stdout.strip()
 
+    def merge_pr(self, repo: str, pr_number: int) -> None:
+        self._run(["gh", "pr", "merge", str(pr_number), "--repo", repo, "--squash"], write=True)
+
     def pr_checks(self, repo: str, pr_number_or_branch: str) -> list[CheckStatus]:
         completed = self._run(["gh", "pr", "checks", pr_number_or_branch, "--repo", repo, "--json", "name,state,bucket,link"])
         return [check_from_json(item) for item in json.loads(completed.stdout or "[]")]
@@ -132,4 +163,3 @@ class GitHubCLI:
 
 def check_from_json(data: dict[str, Any]) -> CheckStatus:
     return CheckStatus(name=str(data.get("name", "")), state=str(data.get("state", "")), bucket=str(data.get("bucket", "")), link=data.get("link"))
-

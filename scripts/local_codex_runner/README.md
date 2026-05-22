@@ -53,9 +53,37 @@ If an issue has `codex-in-progress` but local state does not map it to the
 current run, the runner treats it as unsafe to duplicate work and skips or marks
 it for human recovery depending on the orchestrator path.
 
+## Queue Advance
+
+The queue advance command handles two states that otherwise leave the stable
+train correctly idle:
+
+- open Codex PRs that are green but not merged;
+- planned-task issues blocked on explicit dependencies.
+
+It is safe-by-default. PRs are never merged unless `allow_auto_merge: true`,
+`allowed_pr_authors` is non-empty, the PR has `auto-merge-ready`, checks are
+green, the merge state is clean, the base branch matches, and no blocking label
+is present. Planned-task issues are never approved unless
+`allow_dependency_unlock: true` and their `Depends on: #N` dependencies are
+closed. For existing plan-to-issues output, the dependency unlocker also maps
+same-plan prose such as `Issue 1`, `Issues 1-3`, and `extends #115` to concrete
+issue numbers in dry-run output before taking any write action.
+
+```bash
+python -m scripts.local_codex_runner.advance_queue \
+  --config .local-codex-runner.yml \
+  --mode all
+```
+
+Set `auto_advance_before_consume: true` to run queue advance before each
+`run_once` poll. Keep `allow_auto_merge: false` until branch protection,
+required checks, and reviewer policy have been verified in dry-run output.
+
 ## Safety Boundaries
 
-- No automatic merge.
+- No automatic merge without `allow_auto_merge`, an author whitelist, clean
+  merge state, green checks, and `auto-merge-ready`.
 - No tag creation or tag movement.
 - No package publish.
 - No PyPI push.
