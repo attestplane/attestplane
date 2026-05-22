@@ -4,7 +4,10 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
+from pathlib import Path
+import sys
 from typing import Any
 import unicodedata
 
@@ -13,30 +16,39 @@ import pytest
 from attestplane.canonical import CanonicalizationError  # noqa: E402
 from attestplane.verifier import verify_proof_bundle  # noqa: E402
 from attestplane.verify_errors import VERIFY_OK  # noqa: E402
-from tests.conformance.canonicalization_vectors import (  # noqa: E402
-    DuplicateKeyError,
-    canonical_json_text,
-    emit_positive_canonicalization_bundle,
-    load_negative_canonicalization_vectors,
-    load_positive_canonicalization_vectors,
-    materialize_negative_canonicalization_candidate,
-    reject_duplicate_keys,
-)
 
 
-POSITIVE_VECTORS = load_positive_canonicalization_vectors()
-NEGATIVE_VECTORS = load_negative_canonicalization_vectors()
+def _load_vector_manifest() -> Any:
+    module_name = "attestplane_canonicalization_vectors"
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+    helper_path = Path(__file__).with_name("canonicalization_vectors.py")
+    spec = importlib.util.spec_from_file_location(module_name, helper_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load canonicalization vector helper from {helper_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+vector_manifest = _load_vector_manifest()
+DuplicateKeyError = vector_manifest.DuplicateKeyError
+
+
+POSITIVE_VECTORS = vector_manifest.load_positive_canonicalization_vectors()
+NEGATIVE_VECTORS = vector_manifest.load_negative_canonicalization_vectors()
 
 
 def _assert_recursive_unique_keys(raw: str) -> None:
-    json.loads(raw, object_pairs_hook=reject_duplicate_keys)
+    json.loads(raw, object_pairs_hook=vector_manifest.reject_duplicate_keys)
 
 
 @pytest.mark.parametrize("vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"])
 def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]) -> None:
-    bundle = emit_positive_canonicalization_bundle(vector)
+    bundle = vector_manifest.emit_positive_canonicalization_bundle(vector)
     result = verify_proof_bundle(bundle, **vector["verify_options"])
-    raw = canonical_json_text(bundle)
+    raw = vector_manifest.canonical_json_text(bundle)
 
     assert result.ok is vector["expected_ok"]
     assert result.error_code == VERIFY_OK
@@ -58,18 +70,18 @@ def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]
 
 @pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
 def test_canonicalization_minimum_bundle_negative_vectors(vector: dict[str, Any]) -> None:
-    candidate = materialize_negative_canonicalization_candidate(vector)
+    candidate = vector_manifest.materialize_negative_canonicalization_candidate(vector)
 
     if vector["expected_error_code"] == "json.duplicate_key":
         assert isinstance(candidate, str)
         with pytest.raises(DuplicateKeyError):
-            json.loads(candidate, object_pairs_hook=reject_duplicate_keys)
+            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
         return
 
     if vector["expected_error_code"] == "json.non_canonical_envelope":
         assert isinstance(candidate, str)
         with pytest.raises(json.JSONDecodeError):
-            json.loads(candidate, object_pairs_hook=reject_duplicate_keys)
+            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
         return
 
     assert isinstance(candidate, dict)

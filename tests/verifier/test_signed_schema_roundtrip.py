@@ -13,7 +13,9 @@ import json
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import importlib.util
 from pathlib import Path
+import sys
 from typing import Any
 
 import attestplane
@@ -29,10 +31,26 @@ from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained
 from attestplane.types import ChainedEvent
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_errors import VERIFY_OK
-from tests.conformance import canonicalization_vectors as vector_manifest
 
 ROOT = Path(__file__).resolve().parents[2]
 SIGNED_FIXTURES = (ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",)
+CANONICALIZATION_VECTOR_HELPER = ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+
+
+def _load_vector_manifest() -> Any:
+    module_name = "attestplane_canonicalization_vectors"
+    if module_name in sys.modules:
+        return sys.modules[module_name]
+    spec = importlib.util.spec_from_file_location(module_name, CANONICALIZATION_VECTOR_HELPER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+vector_manifest = _load_vector_manifest()
 
 
 @dataclass(frozen=True)
