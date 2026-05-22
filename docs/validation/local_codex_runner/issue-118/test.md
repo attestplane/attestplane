@@ -62,7 +62,7 @@ docs/release-notes/v1.6.2.draft.md:21:## Infrastructure
 ```
 
 ```text
-$ git diff --check -- CHANGELOG.md README.md docs/releases/v1.6.2.md docs/release-notes/v1.6.2.draft.md
+git diff --check -- CHANGELOG.md README.md docs/releases/v1.6.2.md docs/release-notes/v1.6.2.draft.md
 ```
 
 Exit status: `0`.
