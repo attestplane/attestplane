@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from scripts.local_codex_runner.config import ConfigError, load_config, parse_simple_yaml
 
 
@@ -33,9 +32,39 @@ def test_cli_overrides_config(tmp_path: Path) -> None:
     assert config.dry_run is False
 
 
+def test_checkout_ref_defaults_to_pr_base(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text('repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\n', encoding="utf-8")
+
+    config = load_config(config_path)
+
+    assert config.checkout_ref() == "main"
+
+
+def test_checkout_ref_can_use_remote_tracking_ref(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\n'
+        'workdir: "/tmp/attestplane"\n'
+        'base_branch: "main"\n'
+        'base_checkout_ref: "origin/main"\n',
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.base_branch == "main"
+    assert config.checkout_ref() == "origin/main"
+
+
 def test_auto_merge_requires_author_whitelist(tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
-    config_path.write_text('repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\nallow_auto_merge: true\n', encoding="utf-8")
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\n'
+        'workdir: "/tmp/attestplane"\n'
+        "allow_auto_merge: true\n",
+        encoding="utf-8",
+    )
 
     with pytest.raises(ConfigError, match="allowed_pr_authors"):
         load_config(config_path)

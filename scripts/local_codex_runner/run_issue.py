@@ -68,7 +68,7 @@ def run_issue(
             gh.add_labels(config.repo or "", task.number, [config.in_progress_label])
             if not config.allow_dirty:
                 git.ensure_clean_worktree()
-            git.checkout_base_and_pull(config.base_branch)
+            git.checkout_base_and_pull(config.checkout_ref())
             branch = git.create_branch(task.number, task.title)
         else:
             branch = f"codex/issue-{task.number}-{safe_branch_slug(task.title)}"
@@ -78,7 +78,7 @@ def run_issue(
                         "# Dry-Run Planned Actions",
                         "",
                         f"- Would add label `{config.in_progress_label}`.",
-                        f"- Would ensure clean worktree and check out `{config.base_branch}`.",
+                        f"- Would ensure clean worktree and check out `{config.checkout_ref()}`.",
                         f"- Would create branch `{branch}`.",
                         "- Would run Codex plan/code/review prompts.",
                         "- Would run local gates after code changes.",

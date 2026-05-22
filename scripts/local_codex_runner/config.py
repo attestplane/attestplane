@@ -17,6 +17,7 @@ class RunnerConfig:
     repo: str | None = None
     workdir: str | None = None
     base_branch: str = "main"
+    base_checkout_ref: str | None = None
     approved_label: str = "auto-codex-approved"
     candidate_label: str = "auto-codex-candidate"
     in_progress_label: str = "codex-in-progress"
@@ -75,6 +76,9 @@ class RunnerConfig:
 
     def gate_matrix_file(self) -> Path:
         return self.workdir_path() / self.gate_matrix_path
+
+    def checkout_ref(self) -> str:
+        return self.base_checkout_ref or self.base_branch
 
 
 class ConfigError(ValueError):
@@ -170,5 +174,14 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
 
 
 def overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
-    keys = ("repo", "workdir", "dry_run", "max_local_fix_rounds", "max_ci_fix_rounds", "create_pr", "watch_ci", "allow_dirty")
+    keys = (
+        "repo",
+        "workdir",
+        "dry_run",
+        "max_local_fix_rounds",
+        "max_ci_fix_rounds",
+        "create_pr",
+        "watch_ci",
+        "allow_dirty",
+    )
     return {key: getattr(args, key) for key in keys if hasattr(args, key)}

@@ -12,7 +12,6 @@ from pathlib import Path
 
 from scripts.local_codex_runner.github_cli import RunnerCommandError, redact, truncate
 
-
 FORBIDDEN_PATTERNS = (
     ".env",
     "**/.env",
@@ -40,7 +39,13 @@ class GitOps:
     def run(self, args: list[str]) -> str:
         command = ["git", *args]
         self.commands_run.append(" ".join(command))
-        completed = subprocess.run(command, cwd=self.workdir, capture_output=True, text=True, check=False)
+        completed = subprocess.run(  # noqa: S603 - Git command argv is assembled by the runner.
+            command,
+            cwd=self.workdir,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
         completed.stdout = redact(completed.stdout)
         completed.stderr = redact(completed.stderr)
         if completed.returncode != 0:
@@ -51,9 +56,14 @@ class GitOps:
         if self.run(["status", "--porcelain"]).strip():
             raise GitSafetyError("Worktree is not clean; pass --allow-dirty only for supervised local recovery.")
 
-    def checkout_base_and_pull(self, base_branch: str) -> None:
-        self.run(["checkout", base_branch])
-        self.run(["pull", "--ff-only", "origin", base_branch])
+    def checkout_base_and_pull(self, base_ref: str) -> None:
+        if base_ref.startswith("origin/"):
+            remote_branch = base_ref.split("/", 1)[1]
+            self.run(["fetch", "origin", remote_branch])
+            self.run(["checkout", "--detach", base_ref])
+            return
+        self.run(["checkout", base_ref])
+        self.run(["pull", "--ff-only", "origin", base_ref])
 
     def create_branch(self, issue_number: int, title: str) -> str:
         branch = f"codex/issue-{issue_number}-{slugify(title)}"

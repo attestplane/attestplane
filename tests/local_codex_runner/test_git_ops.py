@@ -1,13 +1,12 @@
 from pathlib import Path
 
 import pytest
-
 from scripts.local_codex_runner.git_ops import GitOps, GitSafetyError, is_forbidden_path, slugify
 
 
 class FakeGit(GitOps):
     def __init__(self, outputs):
-        super().__init__(Path("/tmp/fake-attestplane"))
+        super().__init__(Path("fake-attestplane"))
         self.outputs = outputs
 
     def run(self, args):
@@ -45,6 +44,14 @@ def test_commit_uses_dco_signoff() -> None:
     git.commit_all(12, "Fix #12")
 
     assert "commit -s -m Fix #12" in git.commands_run
+
+
+def test_remote_checkout_ref_uses_detached_origin_branch() -> None:
+    git = FakeGit({})
+
+    git.checkout_base_and_pull("origin/main")
+
+    assert git.commands_run == ["fetch origin main", "checkout --detach origin/main"]
 
 
 def test_forbidden_file_changed_is_rejected() -> None:
