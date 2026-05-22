@@ -1,0 +1,27 @@
+{
+  "status": "WARN",
+  "blocking_reasons": [],
+  "warnings": [
+    "The issue-required command `python -m scripts.release.audit_boundary --from v1.6.1 --to v1.6.2` fails locally because `scripts.release.audit_boundary` is not present in this checkout. The evidence records this honestly and uses local git output as substitute evidence, but the missing helper remains a validation gap."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text captured in the local prompt files.",
+    "Current working-tree change for Issue #114 is limited to untracked evidence/report files under `docs/validation/local_codex_runner/issue-114/`; there is no tracked source diff and no staged diff.",
+    "`git log --oneline v1.6.1..v1.6.2` reports exactly `fa2ee99 chore(release): prepare v1.6.2` and `f181c6d fix: fetch opus planned issues after creation`.",
+    "`git diff --stat v1.6.1..v1.6.2` matches the recorded transcript: release note/artifact files, version metadata, `scripts/release/plan_to_issues.py`, and `sdk/python/tests/test_plan_to_issues.py`.",
+    "`git show --name-status --oneline f181c6d` is limited to `scripts/release/plan_to_issues.py` and `sdk/python/tests/test_plan_to_issues.py`.",
+    "`git show --name-status --oneline fa2ee99` is limited to v1.6.2 release-prep metadata, package/version files, lockfiles, and release artifact files.",
+    "No release gate, release_blocking policy, claim-safety policy, publish/tag workflow, package publish logic, or PyPI push logic is modified by the current diff.",
+    "No P0/P1 severity is lowered; the evidence preserves Issue #114 as P0 release-integrity work.",
+    "Secret-pattern scan of the issue-114 evidence directory found only safety-rule wording that names token/key file categories; it did not expose credential material.",
+    "No key tests are deleted. The recorded release boundary includes added/updated tests for the planned-issue fetch behavior, and the current diff only adds evidence/report files.",
+    "The current diff does not implement runtime behavior or introduce external dependencies.",
+    "Recorded local gate evidence reports `compileall scripts` exit 0 and `pytest -q` exit 0 with 1319 tests passed."
+  ],
+  "residual_risks": [
+    "Because the `scripts.release.audit_boundary` helper is absent, the boundary conclusion relies on equivalent local git evidence rather than the named helper command.",
+    "The review did not use external services or GitHub state, by prompt constraint, so it cannot independently confirm remote issue comments, remote tags, or published package indexes.",
+    "The current diff is untracked until added by a later step; this review only assesses the local working-tree content presently visible."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
