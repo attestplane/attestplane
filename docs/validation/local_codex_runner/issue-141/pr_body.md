@@ -2,7 +2,7 @@ Fixes #141
 
 ## Summary
 
-Local Codex runner repair for: [P2][docs] Extend #125 with the v1.7.1 SDK + CLI delta
+Local Codex runner repair for: P2 docs: Extend #125 with the v1.7.1 SDK + CLI delta
 
 Labels: type:docs, area:docs, priority:P2, planned-task, auto-codex-approved
 

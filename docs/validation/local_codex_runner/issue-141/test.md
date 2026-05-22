@@ -167,6 +167,43 @@ Result:
 Summary: 0 error(s)
 ```
 
+## CI Markdownlint Fix Round 1
+
+After the GitHub Markdown lint check failed, the local runner fixed only
+Issue #141 markdown syntax failures in tracked runner evidence and the related
+v1.7.2 draft note: raw bracketed labels such as `[P2][docs]` were rephrased so
+markdownlint does not parse them as undefined reference links, and prompt lists
+were given the required surrounding blank lines.
+
+Targeted command:
+
+```bash
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 'docs/validation/local_codex_runner/issue-141/*.md' docs/release-notes/v1.7.2.draft.md
+```
+
+Result:
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Finding: docs/validation/local_codex_runner/issue-141/*.md docs/release-notes/v1.7.2.draft.md
+Linting: 12 file(s)
+Summary: 0 error(s)
+```
+
+Tracked-file CI equivalent:
+
+```bash
+git ls-files '*.md' ':!:.github/**' | xargs /Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2
+```
+
+Result:
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Linting: 568 file(s)
+Summary: 0 error(s)
+```
+
 Command:
 
 ```bash
