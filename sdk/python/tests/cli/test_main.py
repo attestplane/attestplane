@@ -143,7 +143,7 @@ def test_verify_require_events_rejects_empty_bundle(
     capsys.readouterr()
 
     rc = main(["verify", str(bundle_path), "--require-events", "--json"])
-    assert rc == 1
+    assert rc == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is False
     assert payload["require_events"] is True
@@ -162,7 +162,7 @@ def test_verify_bundle_option_rejects_unsigned_bundle(
 
     rc = main(["verify", "--bundle", str(bundle_path), "--json"])
 
-    assert rc == 1
+    assert rc == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["strict_proof_bundle_schema"] is True
     assert payload["signed_attestation_schema_ok"] is False
@@ -213,7 +213,7 @@ def test_verify_malformed_json(
     bad = tmp_path / "bad.json"
     bad.write_text("not json", encoding="utf-8")
     rc = main(["verify", str(bad)])
-    assert rc == 1
+    assert rc == 2
 
 
 def test_inspect_command(

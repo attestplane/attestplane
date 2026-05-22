@@ -35,7 +35,7 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     rc = main(["verify", "--bundle", str(path), "--json"])
     captured = capsys.readouterr()
 
-    assert rc == 1
+    assert rc == 2
     assert json.loads(captured.out)["error_code"] == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
@@ -53,6 +53,6 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     rc = main(["verify", str(path), "--require-events", "--json"])
     captured = capsys.readouterr()
 
-    assert rc == 1
+    assert rc == 2
     assert json.loads(captured.out)["error_code"] == VERIFY_REQUIRED_FIELDS_MISSING
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"

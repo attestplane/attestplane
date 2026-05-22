@@ -94,5 +94,5 @@ def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:
     rc = main(["verify", "--bundle", str(FIXTURES / "empty_attestations.json")])
     out = capsys.readouterr().out
 
-    assert rc == 1
+    assert rc == 2
     assert "bundle.schema.incomplete" in out
