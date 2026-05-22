@@ -2,7 +2,7 @@
 
 ## Summary
 
-Local Codex runner repair for: [P1][sdk] Extend minimum-bundle helper with canonicalization edge-case conformance vectors
+Local Codex runner repair for: \[P1\]\[sdk\] Extend minimum-bundle helper with canonicalization edge-case conformance vectors
 
 Labels: priority:P1, area:verifier, planned-task, auto-codex-approved
 

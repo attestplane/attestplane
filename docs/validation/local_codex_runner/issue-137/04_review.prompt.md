@@ -2,7 +2,7 @@
 
 You are reviewing the current diff for Issue #137.
 
-Issue title: [P1][sdk] Extend minimum-bundle helper with canonicalization edge-case conformance vectors
+Issue title: \[P1\]\[sdk\] Extend minimum-bundle helper with canonicalization edge-case conformance vectors
 Issue URL: https://github.com/attestplane/attestplane/issues/137
 Labels: priority:P1, area:verifier, planned-task, auto-codex-approved
 
