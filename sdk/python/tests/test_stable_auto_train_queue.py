@@ -19,6 +19,17 @@ sys.modules["stable_auto_train"] = stable_auto_train
 spec.loader.exec_module(stable_auto_train)
 
 
+def _allowed_product_delta() -> SimpleNamespace:
+    return SimpleNamespace(
+        allowed=True,
+        reason="product_implementation_delta",
+        product_files=["sdk/python/src/attestplane/verifier.py"],
+        product_support_files=[],
+        support_only_files=[],
+        ignored_files=[],
+    )
+
+
 def _write_abandoned_tags(path: Path, tags: dict[str, object]) -> None:
     path.write_text(
         json.dumps({"schema": "attestplane_abandoned_stable_tags.v1", "tags": tags}),
@@ -604,7 +615,11 @@ def test_run_once_reconciles_superseded_local_tag_before_target_selection(
         ),
     )
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
-    monkeypatch.setattr(stable_auto_train, "assert_product_delta_allows_target", lambda target, previous: None)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "product_delta_for_target",
+        lambda target, previous: _allowed_product_delta(),
+    )
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
     monkeypatch.setattr(
@@ -1210,7 +1225,11 @@ def test_cadence_limiter_handles_force_env_var(
     monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: previous)
     monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: previous)
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
-    monkeypatch.setattr(stable_auto_train, "assert_product_delta_allows_target", lambda target, previous: None)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "product_delta_for_target",
+        lambda target, previous: _allowed_product_delta(),
+    )
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
     monkeypatch.setattr(
