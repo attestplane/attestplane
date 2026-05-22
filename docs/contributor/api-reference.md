@@ -68,6 +68,14 @@ failures should catch `EmptyProofBundleError` for bundles with no proof events
 and `IncompleteProofBundleError` for bundles that are non-empty but lack the
 minimum signed-attestation schema.
 
+## v1.7.1 SDK delta pointer
+
+The v1.7.1 docs extension keeps the SDK surface on
+`attestplane.sdk.ProofBundleBuilder.minimal(...)` and adds local
+canonicalization conformance coverage for that minimum-bundle path. See
+[`docs/changes/v1.7.x.md#v171-sdk--cli-delta`](../changes/v1.7.x.md#v171-sdk--cli-delta)
+for the SDK snippet and the related CLI flags.
+
 ## Future work
 
 A follow-up PR will publish the rendered HTML to GitHub Pages so the latest `main` reference
