@@ -1,0 +1,24 @@
+{
+  "status": "FAIL",
+  "blocking_reasons": [
+    "The current diff adds both tests/verifier/test_signed_schema_roundtrip.py and tests/conformance/test_signed_schema_roundtrip.py with the same module basename. A local combined pytest collection run fails with an import file mismatch before executing tests: `PYTHONPATH=sdk/python/src pytest tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_roundtrip.py -q` exits 2. This blocks the regression from being safely collected with verifier and conformance tests in one session."
+  ],
+  "warnings": [
+    "The issue-specific evidence in docs/validation/local_codex_runner/issue-139/test.md shows the two new test files passed when run in separate pytest invocations, but that does not cover combined collection."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text supplied in the prompt.",
+    "`git status --short` showed untracked additions under docs/validation/local_codex_runner/issue-139/, tests/conformance/test_signed_schema_roundtrip.py, and tests/verifier/test_signed_schema_roundtrip.py.",
+    "`git diff --stat` and `git diff --name-only` were empty because the relevant changes are untracked.",
+    "Inspected tests/verifier/test_signed_schema_roundtrip.py and tests/conformance/test_signed_schema_roundtrip.py directly from the working tree.",
+    "Inspected existing local verifier tests and fixture: tests/verifier/test_proof_bundle_schema.py, tests/sdk/test_bundle_builder.py, and tests/fixtures/bundles/valid_signed_attestation.json.",
+    "`PYTHONPATH=sdk/python/src pytest tests/verifier/test_signed_schema_roundtrip.py tests/conformance/test_signed_schema_roundtrip.py -q` failed during collection with pytest import file mismatch between the two same-basename test modules.",
+    "Local evidence file docs/validation/local_codex_runner/issue-139/test.md reports passing separate runs for the issue-required verifier and conformance selectors, focused verifier/conformance regressions, fixture hash checks, signing tests, ruff, and a local fast gate."
+  ],
+  "residual_risks": [
+    "Because the review found a collection blocker, broader gate behavior after fixing the basename collision still needs to be re-run.",
+    "The review did not contact GitHub or any external service; it relied on the issue text in the prompt and local repository evidence only.",
+    "Untracked files are not represented by `git diff`; this review inspected them directly, but any later staged diff should be rechecked."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
