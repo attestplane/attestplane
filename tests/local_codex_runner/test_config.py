@@ -32,3 +32,10 @@ def test_cli_overrides_config(tmp_path: Path) -> None:
     assert config.repo == "new/repo"
     assert config.dry_run is False
 
+
+def test_auto_merge_requires_author_whitelist(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text('repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\nallow_auto_merge: true\n', encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="allowed_pr_authors"):
+        load_config(config_path)

@@ -43,6 +43,32 @@ def test_pr_checks_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
     assert checks[0].bucket == "pass"
 
 
+def test_pr_list_json_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_run(command, capture_output, text, check):
+        assert command[:3] == ["gh", "pr", "list"]
+        return subprocess.CompletedProcess(command, 0, '[{"number":126,"title":"Fix","labels":[{"name":"auto-merge-ready"}]}]', "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    prs = GitHubCLI(dry_run=False).list_pull_requests("o/r", "main", 10)
+
+    assert prs[0]["number"] == 126
+
+
+def test_merge_pr_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = False
+
+    def fake_run(*args, **kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    GitHubCLI(dry_run=True).merge_pr("o/r", 126)
+
+    assert called is False
+
+
 def test_secret_redaction() -> None:
     assert "ghp_x" not in redact("ghp_x")
     assert "[REDACTED]" in redact("token=x")
@@ -58,4 +84,3 @@ def test_command_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch) -> None
         GitHubCLI(dry_run=False).current_auth_status()
 
     assert "github_pat" not in str(excinfo.value)
-

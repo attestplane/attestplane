@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import argparse
 import shlex
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +42,16 @@ class RunnerConfig:
     gate_timeout_seconds: int = 900
     ci_timeout_seconds: int = 1800
     ci_poll_seconds: int = 30
+    auto_advance_before_consume: bool = False
+    allow_auto_merge: bool = False
+    allow_dependency_unlock: bool = False
+    auto_merge_ready_label: str = "auto-merge-ready"
+    planned_task_label: str = "planned-task"
+    waiting_deps_label: str = "status:waiting-deps"
+    blocking_pr_labels: list[str] = field(default_factory=lambda: ["do-not-merge", "hold", "wip"])
+    allowed_pr_authors: list[str] = field(default_factory=list)
+    max_pr_merges_per_run: int = 1
+    max_dependency_unlocks_per_run: int = 5
 
     def validate(self) -> None:
         missing = [name for name in ("repo", "workdir") if not getattr(self, name)]
@@ -49,6 +59,8 @@ class RunnerConfig:
             raise ConfigError(f"Missing required local Codex runner config field(s): {', '.join(missing)}")
         if self.codex_sandbox == "danger-full-access" and not self.allow_danger_full_access:
             raise ConfigError("danger-full-access requires allow_danger_full_access=true")
+        if self.allow_auto_merge and not self.allowed_pr_authors:
+            raise ConfigError("allow_auto_merge requires at least one allowed_pr_authors entry")
 
     def workdir_path(self) -> Path:
         if self.workdir is None:
@@ -145,4 +157,3 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
 def overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
     keys = ("repo", "workdir", "dry_run", "max_local_fix_rounds", "max_ci_fix_rounds", "create_pr", "watch_ci", "allow_dirty")
     return {key: getattr(args, key) for key in keys if hasattr(args, key)}
-
