@@ -23,6 +23,15 @@ Plan ID: `89926bf04ae98019`
   - Note: the local shell printed a non-test warning about being unable to
     open a starship session log under `/Users/macworkers/.cache`; Vitest still
     exited 0.
+- `npm run lint && npm run typecheck` from `sdk/typescript`
+  - Initial rerun reproduced the failed GitHub check locally:
+    - Biome import ordering in `sdk/typescript/test/verifier.test.ts`
+    - Biome optional-chain and format findings in `sdk/typescript/src/verifier.ts`
+  - After the scoped fix, PASS:
+    - `biome check src test`: `Checked 63 files ... No fixes applied.`
+    - `tsc --noEmit`: exit 0
+  - Note: the local shell printed the same non-test starship cache warning;
+    `npm run lint && npm run typecheck` still exited 0.
 - `./scripts/check-public-api.sh`
   - PASS: `python=156 symbols, typescript=221 exports, allowlist=157 asymmetries`
 - `python scripts/conformance/verify_fixture_lock.py`

@@ -460,9 +460,10 @@ export function classifyBundleSchemaError(error: Error | string): VerifyReasonCo
   return VERIFY_REASON_SCHEMA_INVALID;
 }
 
-function dedupeReasons(
-  reasons: VerifyReasonCodeV1[],
-): { primary: VerifyReasonCodeV1 | null; secondary: readonly VerifyReasonCodeV1[] } {
+function dedupeReasons(reasons: VerifyReasonCodeV1[]): {
+  primary: VerifyReasonCodeV1 | null;
+  secondary: readonly VerifyReasonCodeV1[];
+} {
   const ordered: VerifyReasonCodeV1[] = [];
   for (const reason of reasons) {
     if (!ordered.includes(reason)) ordered.push(reason);
@@ -493,8 +494,7 @@ function verificationReasons(input: {
   if (!input.signedSchemaOk) reasons.push(signedAttestationReasonCode(input.signedSchemaReason));
   if (!input.metadataOk) {
     if (
-      input.metadataReason !== null &&
-      input.metadataReason.includes('schema_version') &&
+      input.metadataReason?.includes('schema_version') &&
       input.metadataReason.includes('handles')
     ) {
       reasons.push(classifyBundleSchemaError(input.metadataReason));

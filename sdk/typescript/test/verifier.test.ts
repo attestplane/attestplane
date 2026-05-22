@@ -8,8 +8,8 @@ import { type ProofBundle, ProofBundleBuilder } from '../src/proof_bundle.js';
 import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
 import {
-  VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_REQUIRED_FIELD_MISSING,
+  VERIFY_REASON_SIGNATURE_MISSING,
 } from '../src/verify_reason_codes.js';
 
 function buildChain(): ChainedEvent[] {
