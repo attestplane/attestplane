@@ -4,6 +4,7 @@
 
 import subprocess
 
+from scripts.local_codex_runner.gate_runner import GateRunner
 from scripts.local_codex_runner.git_ops import GitOps, is_transient_evidence_path
 from scripts.local_codex_runner.github_cli import GitHubCLI
 from scripts.local_codex_runner.models import IssueTask, candidate_fetch_limit, processable_issues
@@ -108,3 +109,20 @@ def test_status_paths_expands_untracked_evidence_directories(monkeypatch, tmp_pa
 
     assert commands == [["status", "--porcelain", "--untracked-files=all"]]
     assert paths == [("??", "docs/validation/local_codex_runner/issue-118/01_plan.prompt.md")]
+
+
+def test_gate_runner_rewrites_default_python_to_project_venv(tmp_path) -> None:
+    bin_dir = tmp_path / "sdk/python/.venv/bin"
+    bin_dir.mkdir(parents=True)
+    python = bin_dir / "python"
+    pytest = bin_dir / "pytest"
+    python.write_text("", encoding="utf-8")
+    pytest.write_text("", encoding="utf-8")
+
+    runner = GateRunner(tmp_path, tmp_path / "missing.yml")
+
+    assert runner.rewrite_for_project_python("python -m compileall scripts").startswith(str(python))
+    assert runner.rewrite_for_project_python("pytest -q").startswith(str(pytest))
+    assert runner.rewrite_for_project_python("env PYTHONPATH=sdk/python/src pytest tests/observability -q").split()[
+        2
+    ] == str(pytest)

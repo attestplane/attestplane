@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import shlex
-import shutil
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -69,7 +68,7 @@ class GateRunner:
     def run(self, labels: list[str], evidence_dir: Path) -> GateReport:
         gate_name, commands = self.select_gate(labels)
         live_allowed = "live-test-approved" in labels
-        results = [self.run_command(self.rewrite_for_uv(command), live_allowed=live_allowed) for command in commands]
+        results = [self.run_command(self.rewrite_for_project_python(command), live_allowed=live_allowed) for command in commands]
         status = "PASS" if all(result.exit_code == 0 for result in results) else "FAIL"
         report = GateReport(status=status, selected_gate=gate_name, commands=results)
         evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -109,8 +108,26 @@ class GateRunner:
             stderr=truncate(redact(completed.stderr)),
         )
 
-    def rewrite_for_uv(self, command: str) -> str:
-        has_uv_project = (self.workdir / "pyproject.toml").exists() or (self.workdir / "uv.lock").exists()
-        if has_uv_project and shutil.which("uv") and command.startswith("pytest "):
-            return "uv run " + command
-        return command
+    def rewrite_for_project_python(self, command: str) -> str:
+        python = self.workdir / "sdk/python/.venv/bin/python"
+        pytest = self.workdir / "sdk/python/.venv/bin/pytest"
+        if not python.exists() or not pytest.exists():
+            return command
+
+        argv = shlex.split(command)
+        if not argv:
+            return command
+        if argv[0] == "python":
+            argv[0] = str(python)
+        elif argv[0] == "pytest":
+            argv[0] = str(pytest)
+        elif argv[0] == "env":
+            for index, token in enumerate(argv[1:], start=1):
+                if "=" in token:
+                    continue
+                if token == "python":
+                    argv[index] = str(python)
+                elif token == "pytest":
+                    argv[index] = str(pytest)
+                break
+        return shlex.join(argv)
