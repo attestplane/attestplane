@@ -198,7 +198,8 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
             decisions.append(decision)
             if decision.action == "unlock" and writes < config.max_dependency_unlocks_per_run:
                 gh.add_labels(config.repo or "", decision.target_number, [config.approved_label])
-                gh.remove_labels(config.repo or "", decision.target_number, [config.waiting_deps_label])
+                if config.waiting_deps_label in issue.labels:
+                    gh.remove_labels(config.repo or "", decision.target_number, [config.waiting_deps_label])
                 writes += 1
             elif decision.action == "comment" and args.comment:
                 gh.add_labels(config.repo or "", decision.target_number, [config.waiting_deps_label])
