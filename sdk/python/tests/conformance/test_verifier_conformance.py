@@ -15,7 +15,11 @@ from attestplane.retention import build_deletion_proof
 from attestplane.verifier import verify_proof_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = ROOT.parents[1]
 VECTORS = ROOT / "tests" / "conformance" / "verifier_conformance_vectors.json"
+MINIMUM_SCHEMA_NEGATIVE_VECTORS = (
+    ROOT / "tests" / "conformance" / "proof_bundle_minimum_schema_negative_vectors.json"
+)
 
 
 def _base_bundle() -> dict:
@@ -75,5 +79,22 @@ def _case_bundle(case_id: str) -> dict:
 @pytest.mark.parametrize("case", json.loads(VECTORS.read_text(encoding="utf-8"))["cases"])
 def test_verifier_conformance_vectors(case: dict) -> None:
     result = verify_proof_bundle(_case_bundle(case["case_id"]), **case.get("verify_options", {}))
+    assert result.ok is case["expected_ok"]
+    assert result.error_code == case["expected_error_code"]
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads(MINIMUM_SCHEMA_NEGATIVE_VECTORS.read_text(encoding="utf-8"))["cases"],
+)
+def test_minimum_schema_negative_conformance_vectors(case: dict) -> None:
+    vector = json.loads((REPO_ROOT / case["path"]).read_text(encoding="utf-8"))
+    assert vector["case_id"] == case["case_id"]
+    assert vector["expected_ok"] is case["expected_ok"]
+    assert vector["expected_error_code"] == case["expected_error_code"]
+    assert vector["verify_options"] == case["verify_options"]
+
+    result = verify_proof_bundle(vector["bundle"], **case["verify_options"])
+
     assert result.ok is case["expected_ok"]
     assert result.error_code == case["expected_error_code"]

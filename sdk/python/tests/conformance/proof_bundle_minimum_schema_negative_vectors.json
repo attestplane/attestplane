@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "case_id": "empty-bundle",
+      "expected_error_code": "bundle.schema.incomplete",
+      "expected_ok": false,
+      "path": "tests/conformance/vectors/negative/empty-bundle.json",
+      "verify_options": {
+        "require_signed_attestation": true
+      }
+    },
+    {
+      "case_id": "attestations-array-empty",
+      "expected_error_code": "bundle.schema.incomplete",
+      "expected_ok": false,
+      "path": "tests/conformance/vectors/negative/attestations-array-empty.json",
+      "verify_options": {
+        "require_signed_attestation": true
+      }
+    },
+    {
+      "case_id": "attestation-missing-signature",
+      "expected_error_code": "bundle.schema.incomplete",
+      "expected_ok": false,
+      "path": "tests/conformance/vectors/negative/attestation-missing-signature.json",
+      "verify_options": {
+        "require_signed_attestation": true
+      }
+    },
+    {
+      "case_id": "attestation-missing-subject-digest",
+      "expected_error_code": "bundle.schema.incomplete",
+      "expected_ok": false,
+      "path": "tests/conformance/vectors/negative/attestation-missing-subject-digest.json",
+      "verify_options": {
+        "require_signed_attestation": true
+      }
+    }
+  ],
+  "schema_version": "attestplane.proof_bundle.minimum_schema.negative.v1"
+}

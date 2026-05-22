@@ -21,7 +21,12 @@ from scripts.local_codex_runner.review_guard import run_review_guard
 from scripts.local_codex_runner.state_store import load_state, save_state
 
 
-def run_issue(config: RunnerConfig, issue_number: int | None, include_labels: set[str] | None = None, exclude_labels: set[str] | None = None) -> RunnerResult:
+def run_issue(
+    config: RunnerConfig,
+    issue_number: int | None,
+    include_labels: set[str] | None = None,
+    exclude_labels: set[str] | None = None,
+) -> RunnerResult:
     workdir = config.workdir_path()
     gh = GitHubCLI(dry_run=config.dry_run)
     git = GitOps(workdir)
@@ -148,7 +153,13 @@ def run_issue(config: RunnerConfig, issue_number: int | None, include_labels: se
         git.commit_all(task.number, f"Fix #{task.number}: {task.title}")
         git.push_branch(branch)
         if config.create_pr:
-            pr_url = gh.create_pr(config.repo or "", f"Fix #{task.number}: {task.title}", pr_body, config.base_branch, branch)
+            pr_url = gh.create_pr(
+                config.repo or "",
+                f"Fix #{task.number}: {task.title}",
+                pr_body,
+                config.base_branch,
+                branch,
+            )
             result.pr_url = pr_url
             gh.add_labels(config.repo or "", task.number, [config.pr_opened_label])
             gh.remove_labels(config.repo or "", task.number, [config.in_progress_label])
@@ -206,7 +217,12 @@ def fetch_task(gh: GitHubCLI, config: RunnerConfig, issue_number: int | None) ->
 
 
 def run_local_gate(config: RunnerConfig, task: IssueTask, evidence_dir: Path) -> GateReport:
-    return GateRunner(config.workdir_path(), config.gate_matrix_file(), timeout_seconds=config.gate_timeout_seconds).run(
+    runner = GateRunner(
+        config.workdir_path(),
+        config.gate_matrix_file(),
+        timeout_seconds=config.gate_timeout_seconds,
+    )
+    return runner.run(
         task.labels,
         evidence_dir,
     )
@@ -263,20 +279,20 @@ def fail_issue(
     if task is not None and not config.dry_run:
         gh.add_labels(config.repo or "", task.number, [config.needs_human_label])
         gh.remove_labels(config.repo or "", task.number, [config.in_progress_label])
-        gh.comment_issue(config.repo or "", task.number, f"Local Codex runner stopped: {result.status.value}\nEvidence: {evidence_dir}")
+        gh.comment_issue(
+            config.repo or "",
+            task.number,
+            f"Local Codex runner stopped: {result.status.value}\nEvidence: {evidence_dir}",
+        )
     return write_result(result.finish(), evidence_dir, state, config)
-
-
-def append_residual_risk(result: RunnerResult, message: str) -> None:
-    if isinstance(result.residual_risks, list):
-        result.residual_risks.append(message)
-        return
-    result.residual_risks = [str(result.residual_risks), message]
 
 
 def write_result(result: RunnerResult, evidence_dir: Path, state, config: RunnerConfig) -> RunnerResult:
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    (evidence_dir / "runner_result.json").write_text(json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (evidence_dir / "runner_result.json").write_text(
+        json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     (evidence_dir / "runner_result.md").write_text(render_result(result), encoding="utf-8")
     state.mark_finished(result.issue_number, result)
     save_state(config.state_file(), state)

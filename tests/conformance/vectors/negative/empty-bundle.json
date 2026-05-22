@@ -1,0 +1,47 @@
+{
+  "bundle": {
+    "bundle_version": 1,
+    "chain_metadata": {
+      "chain_id": "conf-negative-empty",
+      "evidence_taxonomy_version": 1,
+      "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "head_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "head_seq": -1,
+      "producer_runtime": "attestplane-test",
+      "schema_version": 1
+    },
+    "events": [],
+    "forbidden_fields": [
+      "customer_names",
+      "person_names",
+      "pii",
+      "raw_documents",
+      "contracts",
+      "scripts",
+      "tickets",
+      "emails",
+      "secrets",
+      "tokens",
+      "jwts",
+      "private_keys",
+      "raw_audit_payloads"
+    ],
+    "framework_mappings": [],
+    "verification_report": {
+      "first_bad_index": null,
+      "ok": true,
+      "reason": null,
+      "verification_method": "canonical-bytes-walk",
+      "verified_at": "2026-05-19T00:00:00.000000Z",
+      "verifier_version": "1.7.0"
+    }
+  },
+  "case_id": "empty-bundle",
+  "description": "An otherwise well-formed proof bundle with no events or signed-attestation records must fail the minimum schema contract.",
+  "expected_error_code": "bundle.schema.incomplete",
+  "expected_ok": false,
+  "schema_version": "attestplane.proof_bundle.minimum_schema.negative.v1",
+  "verify_options": {
+    "require_signed_attestation": true
+  }
+}

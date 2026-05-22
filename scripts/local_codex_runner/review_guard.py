@@ -10,7 +10,6 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-
 SECRET_RE = re.compile(
     r"(ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
     re.S,
@@ -71,12 +70,20 @@ def run_review_guard(
     ]
     if release_files and "release-workflow-approved" not in labels:
         blocking.append(f"Release/tag script modified without release-workflow-approved: {', '.join(release_files)}")
-    if ("claim-safety" in labels or "severity:P0" in labels or "P0" in labels) and not has_test_or_evidence_change(changed_files):
+    if (
+        "claim-safety" in labels
+        or "severity:P0" in labels
+        or "P0" in labels
+    ) and not has_test_or_evidence_change(changed_files):
         blocking.append("claim-safety/P0 issue lacks test or evidence changes")
     if codex_review_status(codex_review_report) == "FAIL":
         blocking.append("Codex self-review reported a blocking failure")
 
-    report = ReviewGuardReport(status="FAIL" if blocking else ("WARN" if warnings else "PASS"), blocking_reasons=blocking, warnings=warnings)
+    report = ReviewGuardReport(
+        status="FAIL" if blocking else ("WARN" if warnings else "PASS"),
+        blocking_reasons=blocking,
+        warnings=warnings,
+    )
     evidence_dir.mkdir(parents=True, exist_ok=True)
     (evidence_dir / "review_guard_report.json").write_text(
         json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n",
@@ -118,8 +125,10 @@ def codex_review_status(report: str) -> str | None:
 def render_markdown(report: ReviewGuardReport) -> str:
     lines = [f"# Review Guard: {report.status}", ""]
     lines.append("## Blocking Reasons")
+    lines.append("")
     lines.extend(f"- {item}" for item in report.blocking_reasons) if report.blocking_reasons else lines.append("- None")
     lines.append("")
     lines.append("## Warnings")
+    lines.append("")
     lines.extend(f"- {item}" for item in report.warnings) if report.warnings else lines.append("- None")
     return "\n".join(lines) + "\n"
