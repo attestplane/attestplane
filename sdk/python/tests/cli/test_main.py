@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import json
+import runpy
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,6 +16,7 @@ from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
+from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE
 
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
@@ -146,6 +149,33 @@ def test_verify_require_events_rejects_empty_bundle(
     assert payload["require_events"] is True
     assert payload["event_count"] == 0
     assert payload["error_code"] == "VERIFY_REQUIRED_FIELDS_MISSING"
+
+
+def test_verify_bundle_option_rejects_unsigned_bundle(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    chain_path = tmp_path / "chain.jsonl"
+    bundle_path = tmp_path / "bundle.json"
+    _seed_jsonl_chain(chain_path, n=1)
+    assert main(["export", str(chain_path), "--out", str(bundle_path)]) == 0
+    capsys.readouterr()
+
+    rc = main(["verify", "--bundle", str(bundle_path), "--json"])
+
+    assert rc == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["strict_proof_bundle_schema"] is True
+    assert payload["signed_attestation_schema_ok"] is False
+    assert payload["error_code"] == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+
+
+def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["attestplane.cli", "--version"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_module("attestplane.cli", run_name="__main__")
+
+    assert exc_info.value.code == 0
 
 
 def test_verify_detects_tampered_bundle(
