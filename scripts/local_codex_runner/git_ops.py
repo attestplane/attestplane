@@ -78,6 +78,15 @@ class GitOps:
     def current_branch(self) -> str:
         return self.run(["branch", "--show-current"]).strip()
 
+    def ensure_current_branch(self, branch: str) -> None:
+        current = self.current_branch()
+        if current == branch:
+            return
+        if current == "":
+            self.run(["switch", "-C", branch])
+            return
+        raise GitSafetyError(f"Refusing to continue on branch {current!r}; expected {branch!r}")
+
     def has_changes(self) -> bool:
         return bool(self.run(["status", "--porcelain"]).strip())
 
@@ -120,7 +129,9 @@ class GitOps:
         if untracked:
             self.run(["clean", "-f", "--", *untracked])
 
-    def commit_all(self, issue_number: int, message: str) -> None:
+    def commit_all(self, issue_number: int, message: str, *, expected_branch: str | None = None) -> None:
+        if expected_branch is not None:
+            self.ensure_current_branch(expected_branch)
         branch = self.current_branch()
         if branch in {"main", "master"}:
             raise GitSafetyError("Refusing to commit directly on main/master")
@@ -136,9 +147,10 @@ class GitOps:
         self.run(["commit", "-s", "-m", message])
 
     def push_branch(self, branch: str) -> None:
+        self.ensure_current_branch(branch)
         if branch in {"main", "master"}:
             raise GitSafetyError("Refusing to push main/master from runner")
-        self.run(["push", "-u", "origin", branch])
+        self.run(["push", "-u", "origin", f"HEAD:refs/heads/{branch}"])
 
     def abort_or_stash_on_failure(self) -> str:
         if not self.has_changes():
