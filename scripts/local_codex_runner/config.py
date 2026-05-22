@@ -53,6 +53,11 @@ class RunnerConfig:
     allowed_pr_authors: list[str] = field(default_factory=list)
     max_pr_merges_per_run: int = 1
     max_dependency_unlocks_per_run: int = 5
+    cleanup_stale_state: bool = True
+    lane_name: str | None = None
+    lane_slot: int | None = None
+    lane_include_labels: list[str] = field(default_factory=list)
+    lane_exclude_labels: list[str] = field(default_factory=list)
 
     def validate(self) -> None:
         missing = [name for name in ("repo", "workdir") if not getattr(self, name)]
@@ -62,6 +67,8 @@ class RunnerConfig:
             raise ConfigError("danger-full-access requires allow_danger_full_access=true")
         if self.allow_auto_merge and not self.allowed_pr_authors:
             raise ConfigError("allow_auto_merge requires at least one allowed_pr_authors entry")
+        if self.lane_slot is not None and self.lane_slot < 1:
+            raise ConfigError("lane_slot must be a positive integer")
 
     def workdir_path(self) -> Path:
         if self.workdir is None:

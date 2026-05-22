@@ -1,0 +1,38 @@
+repo: "OWNER/attestplane"
+workdir: "/Users/YOUR_USER/dev/attestplane-p1-1"
+base_branch: "main"
+base_checkout_ref: "origin/main"
+approved_label: "auto-codex-approved"
+candidate_label: "auto-codex-candidate"
+in_progress_label: "codex-in-progress"
+pr_opened_label: "codex-pr-opened"
+ci_green_label: "codex-ci-green"
+needs_human_label: "codex-needs-human"
+max_issues_per_run: 1
+max_local_fix_rounds: 3
+max_ci_fix_rounds: 2
+dry_run: true
+watch_ci: true
+create_pr: true
+codex_command: "codex"
+codex_sandbox: "workspace-write"
+state_path: ".local/codex-runner-state-p1-1.json"
+evidence_dir: "docs/validation/local_codex_runner"
+gate_matrix_path: ".local/codex-gates.yml"
+cleanup_stale_state: true
+auto_advance_before_consume: true
+allow_auto_merge: false
+allow_dependency_unlock: true
+auto_merge_ready_label: "codex-ci-green"
+planned_task_label: "planned-task"
+waiting_deps_label: "status:waiting-deps"
+max_pr_merges_per_run: 1
+max_dependency_unlocks_per_run: 5
+lane_name: "p1"
+lane_slot: 1
+lane_include_labels:
+  - "priority-P1"
+  - "priority:P1"
+lane_exclude_labels:
+  - "priority-P0"
+  - "priority:P0"
