@@ -11,6 +11,22 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### v1.6.2 user-visible delta
+
+- `v1.6.2` documents one user-visible automation fix: planned-task
+  issues created from Opus consultations are re-fetched from GitHub
+  before downstream runner consumption, so the first runner pass no
+  longer observes zero newly created issues. CI-only work from the same
+  release window, including the stable-train git proxy strategy and
+  local Python selection on the Opus runner, is recorded separately as
+  infrastructure hygiene rather than product behavior. Planning context:
+  [Issue #113](https://github.com/attestplane/attestplane/issues/113);
+  boundary-audit pattern:
+  [Issue #108](https://github.com/attestplane/attestplane/issues/108);
+  related local planned tasks:
+  [Issue #117](https://github.com/attestplane/attestplane/issues/117)
+  and [Issue #118](https://github.com/attestplane/attestplane/issues/118).
+
 ### v1.7.0 integrator delta
 
 - `v1.7.0` is the first stable release since `v1.5.0` to carry
