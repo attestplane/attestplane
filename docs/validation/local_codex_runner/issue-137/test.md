@@ -23,6 +23,14 @@ Commands run:
   - Result: PASS, 8 passed.
 - `env PYTHONPATH=sdk/python/src pytest tests/sdk/test_bundle_builder.py sdk/python/tests/test_sdk_bundle.py -q`
   - Result: PASS, 14 passed.
+- `cd sdk/python && ruff check src tests`
+  - Result: PASS.
+- `cd sdk/python && mypy`
+  - Result: PASS, 53 source files.
+- `git diff --check`
+  - Result: PASS.
+- Local Markdown sanity scan for changed files
+  - Result: PASS for repeated blank lines, list-start spacing, and heading-level jumps.
 
 Fixture lock review:
 

@@ -1,4 +1,4 @@
-Fixes #137
+# Fixes #137
 
 ## Summary
 
@@ -8,7 +8,7 @@ Labels: priority:P1, area:verifier, planned-task, auto-codex-approved
 
 ## Validation
 
-# Gate Report: PASS
+### Gate Report: PASS
 
 Gate: `area:verifier`
 

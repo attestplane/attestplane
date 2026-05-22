@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime
 import json
 import sys
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from attestplane.canonical import canonicalize
 from attestplane.proof_bundle import ProofBundleBuilder
