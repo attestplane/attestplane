@@ -59,6 +59,58 @@ def test_pr_gate_requires_explicit_ready_label() -> None:
     assert "label:auto-merge-ready" in decision.waiting_on
 
 
+def test_pr_gate_rejects_unclean_merge_state() -> None:
+    config = RunnerConfig(
+        repo="o/r",
+        workdir="/tmp/r",
+        allow_auto_merge=True,
+        allowed_pr_authors=["codex-bot"],
+    )
+    pr = PullRequestState(
+        number=126,
+        title="Fix #121",
+        url="https://example/pr/126",
+        base_branch="main",
+        author="codex-bot",
+        labels=["auto-merge-ready"],
+        is_draft=False,
+        merge_state_status="DIRTY",
+        review_decision="APPROVED",
+        checks=[CheckStatus("ci", "SUCCESS", "pass")],
+    )
+
+    decision = decide_pr_action(pr, config)
+
+    assert decision.action == "comment"
+    assert "merge-state:DIRTY" in decision.waiting_on
+
+
+def test_pr_gate_rejects_non_allowlisted_author() -> None:
+    config = RunnerConfig(
+        repo="o/r",
+        workdir="/tmp/r",
+        allow_auto_merge=True,
+        allowed_pr_authors=["codex-bot"],
+    )
+    pr = PullRequestState(
+        number=126,
+        title="Fix #121",
+        url="https://example/pr/126",
+        base_branch="main",
+        author="someone-else",
+        labels=["auto-merge-ready"],
+        is_draft=False,
+        merge_state_status="CLEAN",
+        review_decision="APPROVED",
+        checks=[CheckStatus("ci", "SUCCESS", "pass")],
+    )
+
+    decision = decide_pr_action(pr, config)
+
+    assert decision.action == "comment"
+    assert "author:someone-else" in decision.waiting_on
+
+
 def test_pr_gate_merges_only_when_config_allows() -> None:
     config = RunnerConfig(
         repo="o/r",
@@ -98,6 +150,22 @@ def test_dependency_unlock_waits_until_all_dependencies_closed() -> None:
 
     assert decision.action == "comment"
     assert decision.waiting_on == ["issue:127:OPEN"]
+
+
+def test_dependency_unlock_treats_reverted_dependency_as_blocked() -> None:
+    config = RunnerConfig(repo="o/r", workdir="/tmp/r", allow_dependency_unlock=True)
+    issue = IssueTask(
+        number=122,
+        title="task",
+        body="Depends on: #121",
+        url="https://example/issues/122",
+        labels=["planned-task"],
+    )
+
+    decision = decide_dependency_unlock(issue, {121: "REVERTED"}, config)
+
+    assert decision.action == "comment"
+    assert decision.waiting_on == ["issue:121:REVERTED"]
 
 
 def test_dependency_unlock_adds_approval_when_dependencies_closed() -> None:
