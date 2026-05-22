@@ -28,6 +28,14 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "ALL_VERIFY_REASON_CODES_V1",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "ANCHOR_SCHEMA_VERSION",
       "notes": "",
       "source": "src/anchoring.ts",
@@ -1108,6 +1116,94 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "VERIFY_REASON_ANCHOR_INVALID",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_CANONICAL_MISMATCH",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_CODE_DESCRIPTIONS",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_CODE_SCHEMA_VERSION",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_REQUIRED_FIELD_MISSING",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_SCHEMA_INVALID",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_SCHEMA_UNKNOWN",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_SIGNATURE_INVALID",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_SIGNATURE_MISSING",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_STRUCTURE_INVALID",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "VERSION",
       "notes": "",
       "source": "src/index_version.ts",
@@ -1159,6 +1255,14 @@
       "name": "VerifyErrorCode",
       "notes": "",
       "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "VerifyReasonCodeV1",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
       "stability": "alpha_public"
     },
     {
@@ -1335,6 +1439,14 @@
       "name": "isKnownVerifyErrorCode",
       "notes": "",
       "source": "src/verify_errors.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "isKnownVerifyReasonCode",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
       "stability": "alpha_public"
     },
     {
@@ -1623,6 +1735,14 @@
       "name": "verifyProofBundleFile",
       "notes": "",
       "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyReasonCodeMatchesFormat",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
       "stability": "alpha_public"
     },
     {

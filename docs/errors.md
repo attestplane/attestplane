@@ -50,3 +50,39 @@ These codes are engineering outcomes. They do not mean:
 
 They are intended to make offline verifier output deterministic and easier to
 consume in CI, audit exports, and cross-language conformance tests.
+
+## Verifier Rejection Reasons
+
+Issue #172 adds a second, SDK-public taxonomy for rejection reasons returned
+by `verify` paths:
+
+- `verify_reason_code_schema_version`: `1`
+- Python: `attestplane.verify_reason_codes`
+- TypeScript: `src/verify_reason_codes.ts`
+- Result shape: `primary_reason` is exactly one code for rejected verifier
+  results, and `secondary_reasons` is an ordered list of additional failed
+  checks. Successful verifier results use `primary_reason: null` and
+  `secondary_reasons: []`.
+
+These codes are namespaced under `att.verify.*`. The taxonomy is additive-only:
+adding a new code is allowed with documentation and tests, but removing or
+renaming an existing code is a breaking change and must be called out in
+`CHANGELOG.md`.
+
+| Code | Meaning |
+|---|---|
+| `att.verify.anchor_invalid` | Anchor material is missing, malformed, unsupported, or failed verification. |
+| `att.verify.canonical_mismatch` | Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree. |
+| `att.verify.required_field_missing` | A required top-level, nested, signature, or verifier-envelope field is absent. |
+| `att.verify.schema_invalid` | The input shape is malformed for a known verifier schema. |
+| `att.verify.schema_unknown` | The input declares an unknown schema family or verification method namespace. |
+| `att.verify.schema_version_unsupported` | A known bundle, payload, signature, or verifier schema version is unsupported. |
+| `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |
+| `att.verify.signature_missing` | Strict verification requires signature material but none is present. |
+| `att.verify.structure_invalid` | Known bundle relationships are malformed, duplicated, dangling, or out of order. |
+
+The existing human-readable fields such as `chain_result.reason`,
+`metadata_reason`, `policy_trace_refs_reason`, `retention_proofs_reason`, and
+`signed_attestation_schema_reason` remain for one minor release as deprecated
+migration aids. SDK and CLI consumers should branch on `primary_reason` and
+`secondary_reasons` instead of matching these strings.

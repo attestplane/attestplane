@@ -83,7 +83,9 @@
   "description": "A signed-attestation record missing signature_hex must fail the minimum schema contract.",
   "expected_error_code": "bundle.schema.incomplete",
   "expected_ok": false,
-  "schema_version": "attestplane.proof_bundle.minimum_schema.negative.v1",
+  "expected_primary_reason": "att.verify.required_field_missing",
+  "expected_secondary_reasons": [],
+  "schema_version": "attestplane.proof_bundle.minimum_schema.negative.v2",
   "verify_options": {
     "require_signed_attestation": true
   }

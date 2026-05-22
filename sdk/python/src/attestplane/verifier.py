@@ -45,6 +45,17 @@ from attestplane.verify_errors import (
     VERIFY_RETENTION_PROOF_FAILED,
     VerifyErrorCode,
 )
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+    VERIFY_REASON_SIGNATURE_INVALID,
+    VERIFY_REASON_SIGNATURE_MISSING,
+    VERIFY_REASON_STRUCTURE_INVALID,
+    VerifyReasonCodeV1,
+)
 
 
 class BundleVerificationError(Exception):
@@ -95,6 +106,8 @@ class BundleVerificationResult:
     signed_attestation_schema_ok: bool
     signed_attestation_schema_reason: str | None
     error_code: VerifyErrorCode
+    primary_reason: VerifyReasonCodeV1 | None
+    secondary_reasons: tuple[VerifyReasonCodeV1, ...]
 
     def short_summary(self) -> str:
         if self.ok:
@@ -110,7 +123,7 @@ class BundleVerificationResult:
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
             f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
-            f"error_code={self.error_code}"
+            f"error_code={self.error_code} primary_reason={self.primary_reason}"
         )
 
 
@@ -323,6 +336,82 @@ def _decode_b64_field(raw: dict[str, Any], field: str, index: int) -> str | None
     return None
 
 
+def _signed_attestation_reason_code(reason: str | None) -> VerifyReasonCodeV1:
+    if reason is None:
+        return VERIFY_REASON_SIGNATURE_INVALID
+    if reason.startswith("events must contain"):
+        return VERIFY_REASON_REQUIRED_FIELD_MISSING
+    if reason.startswith("signatures must contain"):
+        return VERIFY_REASON_SIGNATURE_MISSING
+    if "missing fields" in reason or "signed_event_hash_hex must" in reason:
+        return VERIFY_REASON_REQUIRED_FIELD_MISSING
+    return VERIFY_REASON_SIGNATURE_INVALID
+
+
+def classify_bundle_schema_error(exc: BaseException | str) -> VerifyReasonCodeV1:
+    """Map local schema failures to stable public verifier reason codes."""
+    text = str(exc)
+    if "unsupported bundle_version" in text:
+        return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    if "unsupported verification_method" in text:
+        return VERIFY_REASON_SCHEMA_UNKNOWN
+    if "missing required fields" in text or "missing fields" in text:
+        return VERIFY_REASON_REQUIRED_FIELD_MISSING
+    if "must be a JSON object" in text or "must be an array" in text:
+        return VERIFY_REASON_SCHEMA_INVALID
+    if "unknown top-level fields" in text:
+        return VERIFY_REASON_SCHEMA_UNKNOWN
+    if "schema_version" in text and "handles" in text:
+        return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    return VERIFY_REASON_SCHEMA_INVALID
+
+
+def _dedupe_reasons(
+    reasons: list[VerifyReasonCodeV1],
+) -> tuple[VerifyReasonCodeV1 | None, tuple[VerifyReasonCodeV1, ...]]:
+    seen: set[VerifyReasonCodeV1] = set()
+    ordered: list[VerifyReasonCodeV1] = []
+    for reason in reasons:
+        if reason not in seen:
+            seen.add(reason)
+            ordered.append(reason)
+    if not ordered:
+        return None, ()
+    return ordered[0], tuple(ordered[1:])
+
+
+def _verification_reasons(
+    *,
+    chain_result: VerificationResult,
+    agreement: bool,
+    require_non_empty: bool,
+    events: list[ChainedEvent],
+    signed_schema_ok: bool,
+    signed_schema_reason: str | None,
+    metadata_ok: bool,
+    metadata_reason: str | None,
+    policy_ok: bool,
+    retention_ok: bool,
+) -> tuple[VerifyReasonCodeV1 | None, tuple[VerifyReasonCodeV1, ...]]:
+    reasons: list[VerifyReasonCodeV1] = []
+    if not chain_result.ok or not agreement:
+        reasons.append(VERIFY_REASON_CANONICAL_MISMATCH)
+    if require_non_empty and not events:
+        reasons.append(VERIFY_REASON_REQUIRED_FIELD_MISSING)
+    if not signed_schema_ok:
+        reasons.append(_signed_attestation_reason_code(signed_schema_reason))
+    if not metadata_ok:
+        if metadata_reason and "schema_version" in metadata_reason and "handles" in metadata_reason:
+            reasons.append(classify_bundle_schema_error(metadata_reason))
+        else:
+            reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+    if not policy_ok:
+        reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+    if not retention_ok:
+        reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+    return _dedupe_reasons(reasons)
+
+
 def _verify_metadata_closure(
     bundle: dict[str, Any],
     events: list[ChainedEvent],
@@ -452,6 +541,18 @@ def verify_proof_bundle(
         error_code = VERIFY_POLICY_TRACE_REFS_FAILED
     elif not retention_result.ok:
         error_code = VERIFY_RETENTION_PROOF_FAILED
+    primary_reason, secondary_reasons = _verification_reasons(
+        chain_result=chain_result,
+        agreement=agreement,
+        require_non_empty=require_non_empty,
+        events=events,
+        signed_schema_ok=signed_schema_ok,
+        signed_schema_reason=signed_schema_reason,
+        metadata_ok=metadata_ok,
+        metadata_reason=metadata_reason,
+        policy_ok=policy_ok,
+        retention_ok=retention_result.ok,
+    )
     return BundleVerificationResult(
         ok=(
             chain_result.ok
@@ -477,6 +578,8 @@ def verify_proof_bundle(
         signed_attestation_schema_ok=signed_schema_ok,
         signed_attestation_schema_reason=signed_schema_reason,
         error_code=error_code,
+        primary_reason=primary_reason,
+        secondary_reasons=secondary_reasons,
     )
 
 
@@ -538,6 +641,7 @@ __all__ = [
     "BundleSchemaError",
     "BundleVerificationError",
     "BundleVerificationResult",
+    "classify_bundle_schema_error",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
 ]

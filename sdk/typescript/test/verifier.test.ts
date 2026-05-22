@@ -7,6 +7,10 @@ import { chainExtend, genesisHead } from '../src/hashchain.js';
 import { type ProofBundle, ProofBundleBuilder } from '../src/proof_bundle.js';
 import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
+import {
+  VERIFY_REASON_SIGNATURE_MISSING,
+  VERIFY_REASON_REQUIRED_FIELD_MISSING,
+} from '../src/verify_reason_codes.js';
 
 function buildChain(): ChainedEvent[] {
   let head: ChainHead = genesisHead();
@@ -56,6 +60,8 @@ describe('verifyProofBundle strict schema options', () => {
     const result = verifyProofBundle(bundleWithOneEvent());
 
     expect(result.ok).toBe(true);
+    expect(result.primary_reason).toBeNull();
+    expect(result.secondary_reasons).toEqual([]);
     expect(result.signed_attestation_schema_ok).toBe(true);
     expect(result.signed_attestation_schema_reason).toBeNull();
   });
@@ -65,6 +71,7 @@ describe('verifyProofBundle strict schema options', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error_code).toBe('bundle.schema.incomplete');
+    expect(result.primary_reason).toBe(VERIFY_REASON_SIGNATURE_MISSING);
     expect(result.signed_attestation_schema_ok).toBe(false);
     expect(result.signed_attestation_schema_reason).toContain('signatures');
   });
@@ -74,6 +81,7 @@ describe('verifyProofBundle strict schema options', () => {
 
     expect(result.ok).toBe(true);
     expect(result.error_code).toBe('VERIFY_OK');
+    expect(result.primary_reason).toBeNull();
     expect(result.signed_attestation_schema_ok).toBe(true);
   });
 
@@ -83,6 +91,7 @@ describe('verifyProofBundle strict schema options', () => {
 
     expect(result.ok).toBe(false);
     expect(result.error_code).toBe('VERIFY_REQUIRED_FIELDS_MISSING');
+    expect(result.primary_reason).toBe(VERIFY_REASON_REQUIRED_FIELD_MISSING);
     expect(result.signed_attestation_schema_ok).toBe(true);
   });
 

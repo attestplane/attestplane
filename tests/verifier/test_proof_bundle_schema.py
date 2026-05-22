@@ -29,6 +29,8 @@ def test_strict_verifier_accepts_bundle_with_signed_attestation_schema() -> None
 
     assert result.ok is True
     assert result.error_code == VERIFY_OK
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
     assert result.signed_attestation_schema_ok is True
     assert result.signed_attestation_schema_reason is None
 
@@ -42,6 +44,7 @@ def test_require_non_empty_also_enforces_signed_attestation_schema() -> None:
     assert result.ok is False
     assert result.event_count == 1
     assert result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+    assert result.primary_reason == "att.verify.signature_missing"
     assert result.signed_attestation_schema_ok is False
     assert "signatures" in (result.signed_attestation_schema_reason or "")
 
@@ -56,6 +59,7 @@ def test_empty_event_bundle_keeps_existing_non_empty_error_code() -> None:
 
     assert result.ok is False
     assert result.error_code == "VERIFY_REQUIRED_FIELDS_MISSING"
+    assert result.primary_reason == "att.verify.required_field_missing"
 
 
 def test_missing_signatures_fixture_fails_with_incomplete_schema() -> None:
@@ -66,6 +70,7 @@ def test_missing_signatures_fixture_fails_with_incomplete_schema() -> None:
 
     assert result.ok is False
     assert result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+    assert result.primary_reason == "att.verify.signature_missing"
 
 
 def test_malformed_signature_fixture_fails_with_incomplete_schema() -> None:
@@ -76,6 +81,7 @@ def test_malformed_signature_fixture_fails_with_incomplete_schema() -> None:
 
     assert result.ok is False
     assert result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+    assert result.primary_reason == "att.verify.signature_invalid"
     assert "malformed" in (result.signed_attestation_schema_reason or "")
 
 
@@ -87,6 +93,7 @@ def test_signature_digest_mismatch_fixture_fails_with_incomplete_schema() -> Non
 
     assert result.ok is False
     assert result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+    assert result.primary_reason == "att.verify.signature_invalid"
     assert "canonical bundle event" in (result.signed_attestation_schema_reason or "")
 
 

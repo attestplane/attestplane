@@ -40,3 +40,5 @@ def test_negative_minimum_schema_vectors_pin_error_code(vector: dict) -> None:
 
     assert result.ok is vector["expected_ok"]
     assert result.error_code == vector["expected_error_code"]
+    assert result.primary_reason == vector["expected_primary_reason"]
+    assert list(result.secondary_reasons) == vector["expected_secondary_reasons"]

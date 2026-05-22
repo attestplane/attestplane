@@ -46,6 +46,17 @@ import {
   VERIFY_RETENTION_PROOF_FAILED,
   type VerifyErrorCode,
 } from './verify_errors.js';
+import {
+  VERIFY_REASON_CANONICAL_MISMATCH,
+  VERIFY_REASON_REQUIRED_FIELD_MISSING,
+  VERIFY_REASON_SCHEMA_INVALID,
+  VERIFY_REASON_SCHEMA_UNKNOWN,
+  VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+  VERIFY_REASON_SIGNATURE_INVALID,
+  VERIFY_REASON_SIGNATURE_MISSING,
+  VERIFY_REASON_STRUCTURE_INVALID,
+  type VerifyReasonCodeV1,
+} from './verify_reason_codes.js';
 
 export class BundleVerificationError extends Error {
   constructor(message: string) {
@@ -79,6 +90,8 @@ export interface BundleVerificationResult {
   readonly signed_attestation_schema_ok: boolean;
   readonly signed_attestation_schema_reason: string | null;
   readonly error_code: VerifyErrorCode;
+  readonly primary_reason: VerifyReasonCodeV1 | null;
+  readonly secondary_reasons: readonly VerifyReasonCodeV1[];
 }
 
 export interface VerifyProofBundleOptions {
@@ -101,7 +114,7 @@ export function shortSummary(result: BundleVerificationResult): string {
     `policy_trace_refs_reason=${JSON.stringify(result.policy_trace_refs_reason)} ` +
     `retention_proofs_reason=${JSON.stringify(result.retention_proofs_reason)} ` +
     `signed_attestation_schema_reason=${JSON.stringify(result.signed_attestation_schema_reason)} ` +
-    `error_code=${result.error_code}`
+    `error_code=${result.error_code} primary_reason=${result.primary_reason}`
   );
 }
 
@@ -420,6 +433,80 @@ function validateMinimumSignedAttestationSchema(
   };
 }
 
+function signedAttestationReasonCode(reason: string | null): VerifyReasonCodeV1 {
+  if (reason === null) return VERIFY_REASON_SIGNATURE_INVALID;
+  if (reason.startsWith('events must contain')) return VERIFY_REASON_REQUIRED_FIELD_MISSING;
+  if (reason.startsWith('signatures must contain')) return VERIFY_REASON_SIGNATURE_MISSING;
+  if (reason.includes('missing fields') || reason.includes('signed_event_hash_hex must')) {
+    return VERIFY_REASON_REQUIRED_FIELD_MISSING;
+  }
+  return VERIFY_REASON_SIGNATURE_INVALID;
+}
+
+export function classifyBundleSchemaError(error: Error | string): VerifyReasonCodeV1 {
+  const text = typeof error === 'string' ? error : error.message;
+  if (text.includes('unsupported bundle_version')) return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED;
+  if (text.includes('unsupported verification_method')) return VERIFY_REASON_SCHEMA_UNKNOWN;
+  if (text.includes('missing required fields') || text.includes('missing fields')) {
+    return VERIFY_REASON_REQUIRED_FIELD_MISSING;
+  }
+  if (text.includes('must be a JSON object') || text.includes('must be an array')) {
+    return VERIFY_REASON_SCHEMA_INVALID;
+  }
+  if (text.includes('unknown top-level fields')) return VERIFY_REASON_SCHEMA_UNKNOWN;
+  if (text.includes('schema_version') && text.includes('handles')) {
+    return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED;
+  }
+  return VERIFY_REASON_SCHEMA_INVALID;
+}
+
+function dedupeReasons(
+  reasons: VerifyReasonCodeV1[],
+): { primary: VerifyReasonCodeV1 | null; secondary: readonly VerifyReasonCodeV1[] } {
+  const ordered: VerifyReasonCodeV1[] = [];
+  for (const reason of reasons) {
+    if (!ordered.includes(reason)) ordered.push(reason);
+  }
+  return {
+    primary: ordered[0] ?? null,
+    secondary: ordered.slice(1),
+  };
+}
+
+function verificationReasons(input: {
+  chainResult: VerificationResult;
+  agreement: boolean;
+  requireNonEmpty: boolean;
+  events: readonly ChainedEvent[];
+  signedSchemaOk: boolean;
+  signedSchemaReason: string | null;
+  metadataOk: boolean;
+  metadataReason: string | null;
+  policyOk: boolean;
+  retentionOk: boolean;
+}): { primary: VerifyReasonCodeV1 | null; secondary: readonly VerifyReasonCodeV1[] } {
+  const reasons: VerifyReasonCodeV1[] = [];
+  if (!input.chainResult.ok || !input.agreement) reasons.push(VERIFY_REASON_CANONICAL_MISMATCH);
+  if (input.requireNonEmpty && input.events.length === 0) {
+    reasons.push(VERIFY_REASON_REQUIRED_FIELD_MISSING);
+  }
+  if (!input.signedSchemaOk) reasons.push(signedAttestationReasonCode(input.signedSchemaReason));
+  if (!input.metadataOk) {
+    if (
+      input.metadataReason !== null &&
+      input.metadataReason.includes('schema_version') &&
+      input.metadataReason.includes('handles')
+    ) {
+      reasons.push(classifyBundleSchemaError(input.metadataReason));
+    } else {
+      reasons.push(VERIFY_REASON_STRUCTURE_INVALID);
+    }
+  }
+  if (!input.policyOk) reasons.push(VERIFY_REASON_STRUCTURE_INVALID);
+  if (!input.retentionOk) reasons.push(VERIFY_REASON_STRUCTURE_INVALID);
+  return dedupeReasons(reasons);
+}
+
 function verifyMetadataClosure(
   bundle: ProofBundle,
   events: readonly ChainedEvent[],
@@ -586,6 +673,18 @@ export function verifyProofBundle(
   } else if (!retentionProofs.ok) {
     errorCode = VERIFY_RETENTION_PROOF_FAILED;
   }
+  const reasons = verificationReasons({
+    chainResult,
+    agreement,
+    requireNonEmpty: options.requireNonEmpty === true,
+    events,
+    signedSchemaOk: signedAttestationSchema.ok,
+    signedSchemaReason: signedAttestationSchema.reason,
+    metadataOk: metadata.ok,
+    metadataReason: metadata.reason,
+    policyOk: policyTraceRefs.ok,
+    retentionOk: retentionProofs.ok,
+  });
 
   return {
     ok:
@@ -611,6 +710,8 @@ export function verifyProofBundle(
     signed_attestation_schema_ok: signedAttestationSchema.ok,
     signed_attestation_schema_reason: signedAttestationSchema.reason,
     error_code: errorCode,
+    primary_reason: reasons.primary,
+    secondary_reasons: reasons.secondary,
   };
 }
 

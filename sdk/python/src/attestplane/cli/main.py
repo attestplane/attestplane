@@ -29,6 +29,7 @@ from attestplane.verify_errors import (
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
 )
+from attestplane.verify_reason_codes import VERIFY_REASON_SCHEMA_INVALID
 
 VERIFY_SCOPE = "chain_report_only"
 VERIFY_SCOPE_NOTICE = (
@@ -190,6 +191,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     from attestplane.verifier import (
         BundleSchemaError,
         BundleVerificationError,
+        classify_bundle_schema_error,
         verify_proof_bundle_file,
     )
 
@@ -217,6 +219,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 "ok": False,
                 "error": "schema",
                 "error_code": VERIFY_SCHEMA_ERROR,
+                "primary_reason": classify_bundle_schema_error(exc),
+                "secondary_reasons": [],
                 "detail": str(exc),
                 **_verify_scope_metadata(),
             },
@@ -230,6 +234,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 "ok": False,
                 "error": "io",
                 "error_code": VERIFY_IO_ERROR,
+                "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
+                "secondary_reasons": [],
                 "detail": str(exc),
                 **_verify_scope_metadata(),
             },
@@ -256,6 +262,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
         },
         "bundle_reported_ok": result.bundle_reported_ok,
         "error_code": result.error_code,
+        "primary_reason": result.primary_reason,
+        "secondary_reasons": list(result.secondary_reasons),
         "retention_proofs_ok": result.retention_proofs_ok,
         "retention_proofs_reason": result.retention_proofs_reason,
         "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
