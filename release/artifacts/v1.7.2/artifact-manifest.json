@@ -4,16 +4,16 @@
       "kind": "python-wheel",
       "name": "attestplane",
       "path": "sdk/python/dist/attestplane-1.7.2-py3-none-any.whl",
-      "sha256": "b89fb34e31213e6f8ded827abfe3a338ad904f0c08da3a9b7a56650130490b5b",
-      "size_bytes": 166826,
+      "sha256": "1e9c26b25851439e442895f2fe03ed49d0d96c50e1734e7f99b593d7f7db508a",
+      "size_bytes": 169039,
       "version": "1.7.2"
     },
     {
       "kind": "python-sdist",
       "name": "attestplane",
       "path": "sdk/python/dist/attestplane-1.7.2.tar.gz",
-      "sha256": "7f169bf30b1f27388d496ee7c8bc460660627332c1e5e43fb668c2cb2a7e9ebe",
-      "size_bytes": 242740,
+      "sha256": "1a6d80d144f79d9d9a08180bb26422fa63ff24ce8aece9538e40269186e90e37",
+      "size_bytes": 245002,
       "version": "1.7.2"
     },
     {
@@ -44,7 +44,7 @@
   "schema": "attestplane_release_artifact_manifest.v1",
   "source_state": {
     "prepared_by": "autodev_train_stable_release_prep",
-    "target_commit": "258b45c822292c5e27d6704f6ec25b5045b7ed41"
+    "target_commit": "67849e64924722e0523c0ba50653ce70c1fdf9c5"
   },
   "upload_plan_file": "release/artifacts/v1.7.2/upload-plan.md"
 }
