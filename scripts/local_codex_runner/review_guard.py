@@ -15,6 +15,7 @@ SECRET_RE = re.compile(
     r"(ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
     re.S,
 )
+CODEX_REVIEW_STATUS_RE = re.compile(r"^\s*Status:\s*\*\*(?P<status>PASS|WARN|FAIL)\*\*\s*$", re.M | re.I)
 
 
 @dataclass(frozen=True)
@@ -57,10 +58,7 @@ def run_review_guard(
         warnings.append("New skip/xfail marker detected; verify it is not masking the issue")
     if len(added_skip_lines) >= 3:
         blocking.append("Multiple new skip/xfail markers detected")
-    if any(
-        line.startswith("-") and ("def test_" in line or "it(" in line or "test(" in line)
-        for line in diff.splitlines()
-    ):
+    if has_test_deletion(diff):
         blocking.append("Test deletion detected")
 
     publish_files = [path for path in changed_files if path.startswith(".github/workflows/publish")]
@@ -75,7 +73,7 @@ def run_review_guard(
         blocking.append(f"Release/tag script modified without release-workflow-approved: {', '.join(release_files)}")
     if ("claim-safety" in labels or "severity:P0" in labels or "P0" in labels) and not has_test_or_evidence_change(changed_files):
         blocking.append("claim-safety/P0 issue lacks test or evidence changes")
-    if "fail" in codex_review_report.lower() and "blocking" in codex_review_report.lower():
+    if codex_review_status(codex_review_report) == "FAIL":
         blocking.append("Codex self-review reported a blocking failure")
 
     report = ReviewGuardReport(status="FAIL" if blocking else ("WARN" if warnings else "PASS"), blocking_reasons=blocking, warnings=warnings)
@@ -90,6 +88,31 @@ def run_review_guard(
 
 def has_test_or_evidence_change(paths: list[str]) -> bool:
     return any(path.startswith("tests/") or path.startswith("docs/validation/") for path in paths)
+
+
+def has_test_deletion(diff: str) -> bool:
+    for line in diff.splitlines():
+        if line.startswith("diff --git ") or line.startswith("--- ") or line.startswith("+++ "):
+            continue
+        if not line.startswith("-"):
+            continue
+        removed = line[1:].lstrip()
+        if removed.startswith(("#", "//", "/*", "*")):
+            continue
+        if re.search(r"^(def\s+test_|(?:it|test)\s*\()", removed):
+            return True
+    return False
+
+
+def codex_review_status(report: str) -> str | None:
+    for line in report.splitlines():
+        stripped = line.strip()
+        if stripped in {"PASS", "WARN", "FAIL"}:
+            return stripped
+    match = CODEX_REVIEW_STATUS_RE.search(report)
+    if match:
+        return match.group("status").upper()
+    return None
 
 
 def render_markdown(report: ReviewGuardReport) -> str:
