@@ -13,6 +13,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -24,6 +25,10 @@ from scripts.release.plan_schema import (  # noqa: E402
     compute_plan_id,
     extract_plan_payload,
     plan_issue_body,
+)
+from scripts.observability.events import (  # noqa: E402
+    PLANNED_ISSUE_POST_CREATE_FETCH,
+    emit_event,
 )
 
 TASK_LABEL = "planned-task"
@@ -291,35 +296,127 @@ def fetch_uploaded_issues(source_issue: int, plan_ids: set[str], titles: set[str
     return sorted(uploaded, key=lambda issue: int(issue.get("number") or 0))
 
 
-def create_issues(tasks: list[PlannedTask], source_issue: int) -> list[dict[str, object]]:
+def _latency_ms(start: float) -> int:
+    return max(0, int((time.perf_counter() - start) * 1000))
+
+
+def _emit_post_create_fetch_event(
+    *,
+    milestone: str,
+    created_count: int,
+    refetched_count: int,
+    latency_ms: int,
+    ok: bool,
+    stream: IO[str] | None,
+) -> None:
+    emit_event(
+        {
+            "event": PLANNED_ISSUE_POST_CREATE_FETCH,
+            "milestone": milestone,
+            "created_count": created_count,
+            "refetched_count": refetched_count,
+            "latency_ms": latency_ms,
+            "ok": ok,
+        },
+        stream=stream,
+    )
+
+
+def create_issues(
+    tasks: list[PlannedTask],
+    source_issue: int,
+    *,
+    milestone: str = "",
+    emit_events: bool = False,
+    event_stream: IO[str] | None = None,
+) -> list[dict[str, object]]:
     for task in tasks:
         create_issue(task, source_issue)
     plan_ids = {task.plan_id for task in tasks if task.plan_id}
     titles = {task.title for task in tasks}
-    uploaded = fetch_uploaded_issues(source_issue, plan_ids, titles)
+    started = time.perf_counter()
+    try:
+        uploaded = fetch_uploaded_issues(source_issue, plan_ids, titles)
+    except Exception:
+        if emit_events:
+            _emit_post_create_fetch_event(
+                milestone=milestone,
+                created_count=len(tasks),
+                refetched_count=0,
+                latency_ms=_latency_ms(started),
+                ok=False,
+                stream=event_stream,
+            )
+        raise
+    if emit_events:
+        _emit_post_create_fetch_event(
+            milestone=milestone,
+            created_count=len(tasks),
+            refetched_count=len(uploaded),
+            latency_ms=_latency_ms(started),
+            ok=bool(uploaded),
+            stream=event_stream,
+        )
     if not uploaded:
         raise RuntimeError("planned-task issues were created but could not be fetched back from GitHub")
     return uploaded
 
 
+def emit_dry_run_post_create_fetch_event(
+    tasks: list[PlannedTask],
+    milestone: str,
+    stream: IO[str] | None = None,
+) -> None:
+    """Emit the post-create fetch shape for local dry-run validation."""
+
+    _emit_post_create_fetch_event(
+        milestone=milestone,
+        created_count=len(tasks),
+        refetched_count=0,
+        latency_ms=0,
+        ok=True,
+        stream=stream,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--plan-file", type=Path, required=True)
-    parser.add_argument("--source-issue", type=int, required=True)
+    parser.add_argument("--plan-file", type=Path)
+    parser.add_argument("--source-issue", type=int, default=0)
     parser.add_argument("--create", action="store_true", help="Create GitHub issues with gh.")
+    parser.add_argument("--dry-run", action="store_true", help="Parse without creating GitHub issues.")
+    parser.add_argument("--emit-events", action="store_true", help="Emit structured observability events.")
+    parser.add_argument("--milestone", default="", help="Milestone value included in observability events.")
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args(argv)
 
-    markdown = args.plan_file.read_text(encoding="utf-8")
-    tasks = parse_plan(markdown, args.source_issue)
-    if not tasks:
+    if args.create and args.dry_run:
+        parser.error("--create and --dry-run are mutually exclusive")
+    if args.create and not args.plan_file:
+        parser.error("--create requires --plan-file")
+    if args.plan_file and args.source_issue == 0:
+        parser.error("--plan-file requires --source-issue")
+
+    tasks: list[PlannedTask] = []
+    if args.plan_file:
+        markdown = args.plan_file.read_text(encoding="utf-8")
+        tasks = parse_plan(markdown, args.source_issue)
+
+    if not tasks and not args.dry_run:
         print("no issue-ready tasks found in plan", file=sys.stderr)
         return 1
 
     payload: object
     if args.create:
-        payload = create_issues(tasks, args.source_issue)
+        payload = create_issues(
+            tasks,
+            args.source_issue,
+            milestone=args.milestone,
+            emit_events=args.emit_events,
+        )
     else:
+        if args.dry_run and args.emit_events:
+            emit_dry_run_post_create_fetch_event(tasks, args.milestone)
         payload = [task.as_dict() for task in tasks]
 
     if args.json:

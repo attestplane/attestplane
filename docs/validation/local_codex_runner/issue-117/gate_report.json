@@ -1,0 +1,18 @@
+{
+  "commands": [
+    {
+      "command": "/Users/macworkers/Projects/attestplane-local-runner/sdk/python/.venv/bin/pytest tests/observability/test_events.py -k post_create_fetch -q",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "..........                                                               [100%]\n10 passed in 0.09s\n"
+    },
+    {
+      "command": "/Users/macworkers/Projects/attestplane-local-runner/sdk/python/.venv/bin/python -m scripts.release.plan_to_issues --dry-run --emit-events --milestone v1.6.2",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "{\"created_count\": 0, \"event\": \"planned_issue_post_create_fetch\", \"latency_ms\": 0, \"milestone\": \"v1.6.2\", \"ok\": true, \"refetched_count\": 0}\n"
+    }
+  ],
+  "selected_gate": "area:observability",
+  "status": "PASS"
+}
