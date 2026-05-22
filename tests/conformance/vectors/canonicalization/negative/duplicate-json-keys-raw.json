@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-duplicate-json-keys-raw",
+  "description": "Hand-crafted raw JSON duplicates a payload key; strict loaders must reject before Python dict collapse.",
+  "expected_error_code": "json.duplicate_key",
+  "expected_ok": false,
+  "mutation": {
+    "duplicate_key": "subject_digest",
+    "kind": "duplicate_payload_key"
+  },
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-duplicate-json-keys-helper-control"
+}

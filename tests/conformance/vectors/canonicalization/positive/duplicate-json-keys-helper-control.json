@@ -1,0 +1,21 @@
+{
+  "assertions": [
+    "recursive_unique_keys"
+  ],
+  "case_id": "canonicalization-positive-duplicate-json-keys-helper-control",
+  "description": "Helper-emitted minimum bundle control: SDK construction uses mappings with unique keys, so canonical JSON has no duplicate object keys.",
+  "event_id": "00000000-0000-7000-8000-000000137001",
+  "expected_ok": true,
+  "extra_payload": {
+    "duplicate_key_control": "unique"
+  },
+  "helper": "ProofBundleBuilder.minimal",
+  "now": "2026-05-22T00:00:00.000000Z",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.positive.v1",
+  "seed_hex": "1370000000000000000000000000000000000000000000000000000000000001",
+  "subject_digest": "1370000000000000000000000000000000000000000000000000000000000001",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}

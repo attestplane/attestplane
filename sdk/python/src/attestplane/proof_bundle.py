@@ -225,13 +225,36 @@ class ProofBundleBuilder:
     """
 
     @classmethod
-    def minimal(cls, subject_digest: str, signer: Any) -> dict[str, Any]:
+    def minimal(
+        cls,
+        subject_digest: str,
+        signer: Any,
+        *,
+        extra_payload: dict[str, Any] | None = None,
+        now: datetime | None = None,
+        event_id: str | None = None,
+    ) -> dict[str, Any]:
         """Return a minimum-valid signed proof bundle for ``subject_digest``.
 
         ``subject_digest`` must be a lowercase SHA-256 hex digest. It is stored
         as the event ``matched_input_ref`` and in the event payload, while the
         signature covers the canonical bundle event digest required by strict
         proof-bundle schema verification.
+
+        The helper canonicalizes or constrains the values it owns before emit:
+        it requires lowercase 64-hex ``subject_digest`` text, merges optional
+        ``extra_payload`` into a single Python mapping with no duplicate JSON
+        keys, routes the event through ``chain_extend`` so payload strings must
+        already be NFC and integers must be signed-int64 safe, emits UTC
+        microsecond ``Z`` timestamps, serializes events with sorted canonical
+        storage keys, and signs the canonical event digest used by strict
+        minimum-bundle verification.
+
+        The helper does not repair malformed raw JSON received by a verifier.
+        Strict verifiers must still reject duplicate raw JSON keys before dict
+        collapse, BOM/trailing bytes around canonical JSON input, hand-crafted
+        signature or metadata closure drift, non-NFC strings, unsafe integer
+        payloads, and timestamp text outside the accepted strict shape.
 
         Stability guarantee for v1.7.x: this method remains additive, returns a
         v1 proof-bundle dict with one event and at least one syntactically valid
@@ -244,17 +267,23 @@ class ProofBundleBuilder:
             raise IncompleteProofBundleError("subject_digest must be lowercase 64-hex SHA-256")
         if not hasattr(signer, "sign_event"):
             raise IncompleteProofBundleError("signer must provide sign_event(event)")
+        if extra_payload is not None and not isinstance(extra_payload, dict):
+            raise IncompleteProofBundleError("extra_payload must be a JSON object")
+        if extra_payload is not None and "subject_digest" in extra_payload:
+            raise IncompleteProofBundleError("extra_payload must not override subject_digest")
 
-        now = datetime.now(UTC)
+        actual_now = now if now is not None else datetime.now(UTC)
+        payload = {"subject_digest": subject_digest, **(extra_payload or {})}
         event = chain_extend(
             genesis_head(),
             EventDraft(
                 event_type="evidence_event",
                 actor="attestplane.sdk",
-                payload={"subject_digest": subject_digest},
+                payload=payload,
                 matched_input_ref=subject_digest,
             ),
-            now=now,
+            now=actual_now,
+            event_id=event_id,
         )
         try:
             records = signer.sign_event(event)
@@ -267,7 +296,7 @@ class ProofBundleBuilder:
         builder = cls(chain_id=chain_id, producer_runtime="attestplane-sdk-minimal")
         builder.extend([event])
         builder.extend_signatures(list(records))
-        return builder.build(now=now)
+        return builder.build(now=actual_now)
 
     def extend(self, events: list[ChainedEvent]) -> None:
         self.events.extend(events)

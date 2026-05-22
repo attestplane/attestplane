@@ -1,0 +1,21 @@
+{
+  "assertions": [
+    "int64_boundary_payload_is_accepted"
+  ],
+  "case_id": "canonicalization-positive-int64-boundary-timestamp-payload",
+  "description": "Helper-emitted minimum bundle with an integer timestamp-style payload field at the signed 64-bit upper boundary.",
+  "event_id": "00000000-0000-7000-8000-000000137004",
+  "expected_ok": true,
+  "extra_payload": {
+    "boundary_timestamp_us": 9223372036854775807
+  },
+  "helper": "ProofBundleBuilder.minimal",
+  "now": "2026-05-22T00:00:03.000000Z",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.positive.v1",
+  "seed_hex": "1370000000000000000000000000000000000000000000000000000000000004",
+  "subject_digest": "1370000000000000000000000000000000000000000000000000000000000004",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}
