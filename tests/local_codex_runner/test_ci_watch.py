@@ -1,5 +1,5 @@
 from scripts.local_codex_runner.ci_watch import classify_checks, wait_for_ci
-from scripts.local_codex_runner.github_cli import CheckStatus
+from scripts.local_codex_runner.github_cli import CheckStatus, RunnerCommandError
 
 
 def test_ci_pass_direct_success() -> None:
@@ -25,3 +25,19 @@ def test_ci_pending_timeout(monkeypatch) -> None:
 
     assert result.status == "TIMEOUT"
 
+
+def test_ci_no_checks_reported_is_pending(monkeypatch) -> None:
+    class FakeGH:
+        def pr_checks(self, repo, branch):
+            raise RunnerCommandError(
+                ["gh", "pr", "checks", branch],
+                1,
+                "no checks reported on the 'branch' branch",
+            )
+
+    monkeypatch.setattr("time.sleep", lambda _: None)
+
+    result = wait_for_ci(FakeGH(), repo="o/r", pr_number_or_branch="branch", timeout_seconds=0, poll_seconds=0)
+
+    assert result.status == "TIMEOUT"
+    assert result.summary == "No checks returned by gh pr checks."

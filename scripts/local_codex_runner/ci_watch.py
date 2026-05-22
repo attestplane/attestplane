@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from scripts.local_codex_runner.github_cli import CheckStatus, GitHubCLI
+from scripts.local_codex_runner.github_cli import CheckStatus, GitHubCLI, RunnerCommandError
 
 
 @dataclass(frozen=True)
@@ -44,10 +44,14 @@ def wait_for_ci(
     deadline = time.monotonic() + timeout_seconds
     checks: list[CheckStatus] = []
     while time.monotonic() <= deadline:
-        checks = gh.pr_checks(repo, pr_number_or_branch)
+        try:
+            checks = gh.pr_checks(repo, pr_number_or_branch)
+        except RunnerCommandError as exc:
+            if "no checks reported" not in exc.stderr.lower():
+                raise
+            checks = []
         status = classify_checks(checks)
         if status in {"PASS", "FAIL"}:
             return CIWatchResult(status=status, summary=summarize_checks(checks), checks=checks)
         time.sleep(poll_seconds)
     return CIWatchResult(status="TIMEOUT", summary=summarize_checks(checks), checks=checks)
-
