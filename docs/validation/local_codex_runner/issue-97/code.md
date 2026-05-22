@@ -39,13 +39,13 @@ d229378 Prioritize local runner issue queue
 Representative `git diff --name-status v1.7.4..HEAD` paths include:
 
 ```text
-A	docs/release-notes/v1.7.5.draft.md
-A	release/artifacts/v1.7.5/artifact-manifest.json
-M	scripts/local_codex_runner/run_once.py
-M	sdk/python/src/attestplane/verifier.py
-A	sdk/python/src/attestplane/verify_reason_codes.py
-M	sdk/typescript/src/verifier.ts
-A	sdk/typescript/src/verify_reason_codes.ts
+A  docs/release-notes/v1.7.5.draft.md
+A  release/artifacts/v1.7.5/artifact-manifest.json
+M  scripts/local_codex_runner/run_once.py
+M  sdk/python/src/attestplane/verifier.py
+A  sdk/python/src/attestplane/verify_reason_codes.py
+M  sdk/typescript/src/verifier.ts
+A  sdk/typescript/src/verify_reason_codes.ts
 ```
 
 The release-prep diff is not only train-generated metadata because the local
