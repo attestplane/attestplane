@@ -19,6 +19,8 @@ Task:
 
 Hard red lines:
 
+- Use only local repository files, local command output, and the issue text.
+- Do not use web search, browser tools, external plugin/app connectors, or external advisory services in this runner phase.
 - Do not merge `main`.
 - Do not create or move tags.
 - Do not publish packages.

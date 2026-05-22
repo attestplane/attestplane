@@ -76,7 +76,16 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         description=VERIFY_SCOPE_NOTICE,
     )
-    p_verify.add_argument("bundle", type=Path, help="path to bundle.json")
+    p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
+    p_verify.add_argument(
+        "--bundle",
+        dest="bundle_option",
+        type=Path,
+        help=(
+            "path to bundle.json; enables strict proof-bundle schema mode "
+            "(non-empty events plus at least one signed attestation)"
+        ),
+    )
     p_verify.add_argument(
         "--require-events",
         action="store_true",
@@ -158,10 +167,17 @@ def cmd_verify(args: argparse.Namespace) -> int:
         verify_proof_bundle_file,
     )
 
+    bundle_path = getattr(args, "bundle_option", None) or getattr(args, "bundle", None)
+    if bundle_path is None:
+        sys.stderr.write("attestplane verify: error: bundle path is required\n")
+        return 2
+    strict_bundle_mode = getattr(args, "bundle_option", None) is not None
+
     try:
         result = verify_proof_bundle_file(
-            args.bundle,
-            require_non_empty=getattr(args, "require_events", False),
+            bundle_path,
+            require_non_empty=getattr(args, "require_events", False) or strict_bundle_mode,
+            require_signed_attestation=strict_bundle_mode,
         )
     except BundleSchemaError as exc:
         _emit(
@@ -173,7 +189,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 **_verify_scope_metadata(),
             },
             args.json_output,
-            human=f"FAIL: schema error in {args.bundle}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+            human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
     except BundleVerificationError as exc:
@@ -186,7 +202,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 **_verify_scope_metadata(),
             },
             args.json_output,
-            human=f"FAIL: cannot read {args.bundle}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+            human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
 
@@ -194,7 +210,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "ok": result.ok,
         "chain_id": result.chain_id,
         "event_count": result.event_count,
-        "require_events": getattr(args, "require_events", False),
+        "require_events": getattr(args, "require_events", False) or strict_bundle_mode,
+        "strict_proof_bundle_schema": strict_bundle_mode,
         "head_hash_hex": result.head_hash_hex,
         "bundle_version": result.bundle_version,
         "agreement": result.agreement,
@@ -207,6 +224,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "error_code": result.error_code,
         "retention_proofs_ok": result.retention_proofs_ok,
         "retention_proofs_reason": result.retention_proofs_reason,
+        "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
+        "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
         **_verify_scope_metadata(),
     }
     _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")

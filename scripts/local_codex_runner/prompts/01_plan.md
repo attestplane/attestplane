@@ -25,6 +25,8 @@ The plan must include:
 
 Safety rules:
 
+- Use only local repository files, local command output, and the issue text.
+- Do not use web search, browser tools, external plugin/app connectors, or external advisory services in this runner phase.
 - Do not lower P0/P1 severity.
 - Do not remove failing tests to manufacture a pass.
 - Do not loosen release gates or claim-safety policy.

@@ -267,6 +267,13 @@ def fail_issue(
     return write_result(result.finish(), evidence_dir, state, config)
 
 
+def append_residual_risk(result: RunnerResult, message: str) -> None:
+    if isinstance(result.residual_risks, list):
+        result.residual_risks.append(message)
+        return
+    result.residual_risks = [str(result.residual_risks), message]
+
+
 def write_result(result: RunnerResult, evidence_dir: Path, state, config: RunnerConfig) -> RunnerResult:
     evidence_dir.mkdir(parents=True, exist_ok=True)
     (evidence_dir / "runner_result.json").write_text(json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")

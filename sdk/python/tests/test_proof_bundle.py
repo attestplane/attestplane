@@ -5,6 +5,8 @@
 from __future__ import annotations
 
 import json
+from base64 import standard_b64encode
+from collections.abc import Callable
 from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,7 +14,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 
-from attestplane.hashchain import chain_extend, genesis_head
+from attestplane.hashchain import chain_extend, genesis_head, hash_event
 from attestplane.obligations import load_eu_ai_act_article_12
 from attestplane.proof_bundle import (
     DEFAULT_FORBIDDEN_FIELDS,
@@ -27,6 +29,7 @@ from attestplane.verifier import (
     verify_proof_bundle,
     verify_proof_bundle_file,
 )
+from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE
 
 _SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "schemas" / "v1"
 
@@ -57,6 +60,32 @@ def _build_good_chain(n: int) -> list[ChainedEvent]:
         chain.append(event)
         head = ChainHead(seq=event.seq, event_hash=event.event_hash)
     return chain
+
+
+def _syntactic_signature_for(event: ChainedEvent) -> dict[str, object]:
+    return {
+        "signature_schema_version": 1,
+        "signed_seq": event.seq,
+        "signed_event_hash_hex": hash_event(event.event).hex(),
+        "signature_hex": "a" * 128,
+        "key_id": "b" * 32,
+        "public_key_der_b64": standard_b64encode(b"public-key").decode("ascii"),
+        "signing_cert_chain_b64": [
+            standard_b64encode(b"cert").decode("ascii"),
+        ],
+        "signed_at": "2026-05-17T12:00:00Z",
+        "signature_mode": "per_event",
+        "signed_payload_b64": standard_b64encode(b"payload").decode("ascii"),
+    }
+
+
+def _build_signed_schema_bundle() -> dict[str, object]:
+    chain = _build_good_chain(1)
+    builder = ProofBundleBuilder(chain_id="signed-schema", producer_runtime="test")
+    builder.extend(chain)
+    bundle = builder.build()
+    bundle["signatures"] = [_syntactic_signature_for(chain[0])]
+    return bundle
 
 
 def test_build_empty_bundle() -> None:
@@ -145,6 +174,74 @@ def test_verify_proof_bundle_accepts_good_bundle() -> None:
     assert result.chain_result.ok is True
     assert result.metadata_ok is True
     assert result.policy_trace_refs_ok is True
+
+
+def test_verify_proof_bundle_accepts_minimum_signed_attestation_schema() -> None:
+    result = verify_proof_bundle(
+        _build_signed_schema_bundle(),
+        require_signed_attestation=True,
+    )
+
+    assert result.ok is True
+    assert result.signed_attestation_schema_ok is True
+    assert result.signed_attestation_schema_reason is None
+
+
+def test_verify_proof_bundle_require_non_empty_enforces_signature_schema() -> None:
+    builder = ProofBundleBuilder(chain_id="unsigned", producer_runtime="test")
+    builder.extend(_build_good_chain(1))
+    result = verify_proof_bundle(builder.build(), require_non_empty=True)
+
+    assert result.ok is False
+    assert result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+    assert "signatures" in (result.signed_attestation_schema_reason or "")
+
+
+@pytest.mark.parametrize(
+    ("mutate", "expected_reason"),
+    [
+        (lambda sig: sig.clear(), "lowercase 64-hex"),
+        (lambda sig: sig.update({"signature_schema_version": 0}), "positive integer"),
+        (lambda sig: sig.update({"signed_seq": -1}), "non-negative integer"),
+        (lambda sig: sig.update({"signed_event_hash_hex": "f" * 64}), "canonical bundle event"),
+        (lambda sig: sig.update({"signed_event_hash_hex": "BAD"}), "lowercase 64-hex"),
+        (lambda sig: sig.update({"signature_hex": "a"}), "signature_hex"),
+        (lambda sig: sig.update({"key_id": "b"}), "key_id"),
+        (lambda sig: sig.update({"signature_mode": "detached"}), "signature_mode"),
+        (lambda sig: sig.update({"public_key_der_b64": "not base64"}), "public_key_der_b64"),
+        (lambda sig: sig.update({"signed_payload_b64": ["not", "text"]}), "signed_payload_b64"),
+        (lambda sig: sig.update({"signing_cert_chain_b64": "not-list"}), "signing_cert_chain_b64"),
+        (lambda sig: sig.update({"signing_cert_chain_b64": [7]}), "signing_cert_chain_b64[0]"),
+        (lambda sig: sig.update({"signing_cert_chain_b64": ["not base64"]}), "must be base64"),
+        (lambda sig: sig.update({"signed_at": 7}), "signed_at must be a string"),
+        (lambda sig: sig.update({"signed_at": "not-a-date"}), "signed_at must be RFC3339"),
+    ],
+)
+def test_verify_proof_bundle_rejects_malformed_signature_schema(
+    mutate: Callable[[dict[str, object]], None],
+    expected_reason: str,
+) -> None:
+    bundle = _build_signed_schema_bundle()
+    signature = dict(bundle["signatures"][0])  # type: ignore[index]
+    mutate(signature)
+    bundle["signatures"] = [signature]
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.signed_attestation_schema_ok is False
+    assert expected_reason in (result.signed_attestation_schema_reason or "")
+
+
+def test_verify_proof_bundle_skips_bad_signature_when_later_record_is_usable() -> None:
+    bundle = _build_signed_schema_bundle()
+    good_signature = dict(bundle["signatures"][0])  # type: ignore[index]
+    bundle["signatures"] = ["not-an-object", good_signature]
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.signed_attestation_schema_ok is True
 
 
 def test_verify_proof_bundle_is_read_only() -> None:

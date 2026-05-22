@@ -27,9 +27,9 @@ class CodexDriver:
         self.dry_run = dry_run
         self.commands_run: list[str] = []
 
-    def build_command(self, prompt_file: Path, workdir: Path) -> list[str]:
+    def build_command(self, prompt_file: Path, workdir: Path) -> tuple[list[str], str | None]:
         if self.command_template:
-            return shlex.split(
+            command = shlex.split(
                 self.command_template.format(
                     command=self.command,
                     workdir=str(workdir),
@@ -37,20 +37,41 @@ class CodexDriver:
                     prompt_file=str(prompt_file),
                 )
             )
-        return [self.command, "exec", "--cd", str(workdir), "--sandbox", self.sandbox, "--prompt-file", str(prompt_file)]
+            return command, None
+        return [
+            self.command,
+            "exec",
+            "--ignore-user-config",
+            "--ephemeral",
+            "--cd",
+            str(workdir),
+            "--sandbox",
+            self.sandbox,
+            "-",
+        ], prompt_file.read_text(encoding="utf-8")
 
     def run_codex(self, prompt_file: Path, workdir: Path, log_path: Path, timeout: int | None = None) -> str:
-        command = self.build_command(prompt_file, workdir)
-        self.commands_run.append(" ".join(command))
+        command, prompt_stdin = self.build_command(prompt_file, workdir)
+        command_log = " ".join(command)
+        if prompt_stdin is not None:
+            command_log = f"{command_log} < {prompt_file}"
+        self.commands_run.append(command_log)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         if self.dry_run:
-            text = f"[dry-run] would run: {' '.join(command)}\n"
+            text = f"[dry-run] would run: {command_log}\n"
             log_path.write_text(text, encoding="utf-8")
             return text
-        completed = subprocess.run(command, cwd=workdir, capture_output=True, text=True, timeout=timeout, check=False)
+        completed = subprocess.run(
+            command,
+            cwd=workdir,
+            capture_output=True,
+            text=True,
+            input=prompt_stdin,
+            timeout=timeout,
+            check=False,
+        )
         output = redact((completed.stdout or "") + ("\nSTDERR:\n" + completed.stderr if completed.stderr else ""))
         log_path.write_text(truncate(output), encoding="utf-8")
         if completed.returncode != 0:
             raise RunnerCommandError(command, completed.returncode, output)
         return output
-
