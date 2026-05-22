@@ -1183,11 +1183,21 @@ def test_cadence_limiter_proceeds_for_mixed_real_release_prep_range(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     subjects = (
+        "Fix #94: [P2][docs] Summarize the user-visible delta for v1.5.9 (#190)\n"
+        "Fix #96: [P0][release] Confirm the v1.5.10 real-change boundary (#191)\n"
+        "Fix #97: cover mixed real release-prep ranges (#192)\n"
+        "Fix #92: [P0][release] Confirm the v1.5.9 real-change boundary (#187)\n"
+        "Fix #114: [P0][release] Confirm the v1.6.2 real-change boundary (#189)\n"
         "Add multi-lane local Codex runner configuration\n"
         "chore(release): prepare v1.7.5\n"
         "Fix #172: align queue test with priority ordering\n"
+        "Fix #172: CI follow-up round 1\n"
         "Fix #172: [P1][verifier] Introduce stable rejection reason-code taxonomy for `verify` failures\n"
-        "Guard docs gate against non-doc runner diffs"
+        "Guard docs gate against non-doc runner diffs\n"
+        "Add canonicalization property tests\n"
+        "Prioritize local runner issue queue\n"
+        "Fix local runner result cleanup between cycles\n"
+        "Validate opus runner network and interpreter changes"
     )
 
     monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)

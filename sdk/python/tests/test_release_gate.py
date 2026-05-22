@@ -13,6 +13,37 @@ release_gate = importlib.util.module_from_spec(spec)
 sys.modules["release_gate"] = release_gate
 spec.loader.exec_module(release_gate)
 
+REAL_RELEASE_PREP_RANGE_FILES = [
+    "api/public/python_v1.json",
+    "api/public/typescript_v1.json",
+    "docs/release-notes/v1.7.5.draft.md",
+    "docs/validation/local_codex_runner/issue-172/code.md",
+    "release/artifacts/v1.7.5/artifact-manifest.json",
+    "release/artifacts/v1.7.5/checksums.sha256",
+    "scripts/local_codex_runner/run_once.py",
+    "sdk/python/pyproject.toml",
+    "sdk/python/src/attestplane/__init__.py",
+    "sdk/python/src/attestplane/cli/main.py",
+    "sdk/python/src/attestplane/verifier.py",
+    "sdk/python/src/attestplane/verify_reason_codes.py",
+    "sdk/python/tests/cli/test_verify_errors.py",
+    "sdk/python/tests/test_local_codex_runner_queue.py",
+    "sdk/python/tests/test_release_gate.py",
+    "sdk/python/tests/test_stable_auto_train_queue.py",
+    "sdk/python/uv.lock",
+    "sdk/typescript/package-lock.json",
+    "sdk/typescript/package.json",
+    "sdk/typescript/src/index.ts",
+    "sdk/typescript/src/index_version.ts",
+    "sdk/typescript/src/verifier.ts",
+    "sdk/typescript/src/verify_reason_codes.ts",
+    "sdk/typescript/test/verifier.test.ts",
+    "sdk/typescript/test/verify_reason_codes.test.ts",
+    "tests/canonicalization/test_canonicalization_properties.py",
+    "tests/local_codex_runner/test_run_once.py",
+    "tests/verifier/test_verify_reason_codes.py",
+]
+
 
 def test_stable_patch_release_defaults_to_fast_track() -> None:
     decision = release_gate.decide_release_gate(
@@ -211,39 +242,44 @@ def test_product_delta_allows_product_implementation_change() -> None:
 
 
 def test_product_delta_allows_real_sdk_changes_in_release_prep_range() -> None:
-    result = release_gate.classify_product_delta(
-        [
-            "docs/release-notes/v1.7.5.draft.md",
-            "release/artifacts/v1.7.5/artifact-manifest.json",
-            "scripts/local_codex_runner/run_once.py",
-            "sdk/python/src/attestplane/verifier.py",
-            "sdk/python/src/attestplane/verify_reason_codes.py",
-            "sdk/python/tests/test_local_codex_runner_queue.py",
-            "sdk/python/src/attestplane/__init__.py",
-            "sdk/typescript/src/verifier.ts",
-            "sdk/typescript/src/verify_reason_codes.ts",
-            "sdk/typescript/src/index_version.ts",
-        ],
-        labels=[],
-        env={},
-    )
+    result = release_gate.classify_product_delta(REAL_RELEASE_PREP_RANGE_FILES, labels=[], env={})
 
     assert result.allowed is True
     assert result.reason == "product_implementation_delta"
     assert result.product_files == [
+        "sdk/python/src/attestplane/cli/main.py",
         "sdk/python/src/attestplane/verifier.py",
         "sdk/python/src/attestplane/verify_reason_codes.py",
+        "sdk/typescript/src/index.ts",
         "sdk/typescript/src/verifier.ts",
         "sdk/typescript/src/verify_reason_codes.ts",
     ]
-    assert result.product_support_files == ["sdk/python/tests/test_local_codex_runner_queue.py"]
+    assert result.product_support_files == [
+        "sdk/python/tests/cli/test_verify_errors.py",
+        "sdk/python/tests/test_local_codex_runner_queue.py",
+        "sdk/python/tests/test_release_gate.py",
+        "sdk/python/tests/test_stable_auto_train_queue.py",
+    ]
     assert result.support_only_files == [
+        "api/public/python_v1.json",
+        "api/public/typescript_v1.json",
         "docs/release-notes/v1.7.5.draft.md",
+        "docs/validation/local_codex_runner/issue-172/code.md",
         "release/artifacts/v1.7.5/artifact-manifest.json",
+        "release/artifacts/v1.7.5/checksums.sha256",
         "scripts/local_codex_runner/run_once.py",
+        "sdk/typescript/test/verifier.test.ts",
+        "sdk/typescript/test/verify_reason_codes.test.ts",
+        "tests/canonicalization/test_canonicalization_properties.py",
+        "tests/local_codex_runner/test_run_once.py",
+        "tests/verifier/test_verify_reason_codes.py",
     ]
     assert result.ignored_files == [
+        "sdk/python/pyproject.toml",
         "sdk/python/src/attestplane/__init__.py",
+        "sdk/python/uv.lock",
+        "sdk/typescript/package-lock.json",
+        "sdk/typescript/package.json",
         "sdk/typescript/src/index_version.ts",
     ]
 

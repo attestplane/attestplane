@@ -1,0 +1,18 @@
+{
+  "commands": [
+    {
+      "command": "/Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/python -m compileall scripts",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Listing 'scripts'...\nListing 'scripts/api'...\nCompiling 'scripts/api/check_public_api_manifest.py'...\nCompiling 'scripts/api/extract_python_public_api.py'...\nCompiling 'scripts/api/extract_typescript_public_api.py'...\nCompiling 'scripts/check_api_manifest_vs_impl.py'...\nListing 'scripts/conformance'...\nCompiling 'scripts/conformance/verify_fixture_lock.py'...\nListing 'scripts/dev'...\nCompiling 'scripts/dev/real_commit_stats.py'...\nListing 'scripts/fault'...\nCompiling 'scripts/fault/check_fault_matrix.py'...\nListing 'scripts/local_codex_runner'...\nListing 'scripts/local_codex_runner/launchd'...\nCompiling 'scripts/local_codex_runner/models.py'...\nCompiling 'scripts/local_codex_runner/poll_issues.py'...\nListing 'scripts/local_codex_runner/prompts'...\nListing 'scripts/observability'...\nListing 'scripts/release'...\nCompiling 'scripts/release/rc_release_watch.py'...\nListing 'scripts/security'...\nListing 'scripts/storage'...\n"
+    },
+    {
+      "command": "/Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/pytest -q",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "........................................................................ [ 22%]\n........................................................................ [ 45%]\n........................................................................ [ 68%]\n........................................................................ [ 91%]\n..........................                                               [100%]\n314 passed in 11.29s\n"
+    }
+  ],
+  "selected_gate": "default",
+  "status": "PASS"
+}
