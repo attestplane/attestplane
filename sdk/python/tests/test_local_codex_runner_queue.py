@@ -31,8 +31,8 @@ def test_processable_issues_skips_ineligible_queue_head_without_starving_ready_i
         [
             issue(141, ["auto-codex-approved", "codex-pr-opened"]),
             issue(140, ["auto-codex-approved", "codex-needs-human"]),
-            issue(118, ["auto-codex-approved", "planned-task"]),
-            issue(117, ["auto-codex-approved", "planned-task"]),
+            issue(118, ["auto-codex-approved", "planned-task", "priority:P1"]),
+            issue(117, ["auto-codex-approved", "planned-task", "priority:P2"]),
         ],
         approved_label="auto-codex-approved",
         pr_opened_label="codex-pr-opened",
