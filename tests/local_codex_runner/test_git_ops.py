@@ -65,17 +65,19 @@ def test_forbidden_file_changed_is_rejected() -> None:
 
 
 def test_commit_removes_transient_prompt_and_log_evidence() -> None:
+    status = "\n".join(
+        [
+            " M CHANGELOG.md",
+            "?? docs/validation/local_codex_runner/issue-12/01_plan.prompt.md",
+            "?? docs/validation/local_codex_runner/issue-12/codex_code.log",
+            "",
+        ]
+    )
     git = FakeGit(
         {
             "branch --show-current": "codex/issue-12-fix\n",
-            "status --porcelain": "\n".join(
-                [
-                    " M CHANGELOG.md",
-                    "?? docs/validation/local_codex_runner/issue-12/01_plan.prompt.md",
-                    "?? docs/validation/local_codex_runner/issue-12/codex_code.log",
-                    "",
-                ]
-            ),
+            "status --porcelain": status,
+            "status --porcelain --untracked-files=all": status,
         }
     )
 
