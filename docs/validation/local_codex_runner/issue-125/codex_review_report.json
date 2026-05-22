@@ -2,7 +2,7 @@
   "status": "WARN",
   "blocking_reasons": [],
   "warnings": [
-    "Issue-requested validation was not fully runnable in this checkout: markdownlint was not installed, npx --no-install markdownlint-cli2 attempted registry access and was blocked by the restricted runner environment, and scripts/release/check_changelog.py is absent.",
+    "Issue-requested validation was not fully runnable exactly as written: the plain markdownlint executable was not installed and npx --no-install markdownlint-cli2 attempted registry access, but the cached local markdownlint-cli2 binary was available and passed on the full CI markdown glob. scripts/release/check_changelog.py is still absent.",
     "The final release-note file docs/release-notes/v1.7.0.md is untracked in the current worktree, while release/artifacts/v1.7.0/artifact-manifest.json still references docs/release-notes/v1.7.0.draft.md. The draft was kept in sync and no release artifact metadata was changed."
   ],
   "validation": [
@@ -17,12 +17,13 @@
     "The diff does not implement runtime behavior. It documents already-local release and SDK contract evidence, and docs/validation/local_codex_runner/issue-125/test.md records the local evidence and command results.",
     "The diff introduces no uncertain external dependency. GitHub issue links are documentation references only; no package, script, workflow, or dependency manifest changed.",
     "git diff --check passed with no whitespace errors.",
-    "docs/validation/local_codex_runner/issue-125/gate_report.json records type:docs gate status PASS via python -m compileall scripts.",
+    "Full markdown lint passed with /Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 '**/*.md' '!.github/**'.",
+    "docs/validation/local_codex_runner/issue-125/gate_report.json records type:docs gate status PASS via full markdown lint and python -m compileall scripts.",
     "docs/validation/local_codex_runner/issue-125/test.md records a local release-note contract check passing for docs/release-notes/v1.7.0.md and docs/release-notes/v1.7.0.draft.md.",
     "docs/validation/local_codex_runner/issue-125/test.md records the product delta release gate command passing with product_delta.allowed=true."
   ],
   "residual_risks": [
-    "Because markdownlint and scripts/release/check_changelog.py were unavailable locally, formatting/changelog validation coverage depends on fallback checks until those tools are available.",
+    "Changelog validation coverage is incomplete until scripts/release/check_changelog.py is available.",
     "The repository currently has both docs/release-notes/v1.7.0.md and docs/release-notes/v1.7.0.draft.md content in play; the synced content reduces divergence risk, but the release-note source-of-truth should be confirmed before merge.",
     "This review did not consult remote GitHub issue state or external documentation by design, so it relies on the issue text provided in the runner prompt and local evidence files."
   ],

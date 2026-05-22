@@ -28,6 +28,11 @@ Implemented the v1.7.0 user-visible documentation delta as a docs-only change.
   - Added a short SDK migration note for
     `ProofBundleBuilder.minimal(subject_digest, signer)`,
     `EmptyProofBundleError`, and `IncompleteProofBundleError`.
+- `docs/validation/local_codex_runner/issue-125/*.md`
+  - Escaped raw issue titles such as `[P2][docs]` in runner prompt/evidence
+    markdown so markdownlint does not parse them as undefined reference links.
+  - Added required blank lines around prompt lists and removed extra blank
+    lines flagged by markdownlint.
 
 ## Scope Confirmation
 

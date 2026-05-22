@@ -32,6 +32,65 @@ can't open file '/Users/macworkers/Projects/attestplane-local-runner/scripts/rel
 
 ## Local Checks Run
 
+### Markdown lint CI reproduction
+
+Command:
+
+```sh
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 \
+  'CHANGELOG.md' \
+  'docs/release-notes/v1.7.0.md' \
+  'docs/release-notes/v1.7.0.draft.md' \
+  'docs/contributor/api-reference.md' \
+  'docs/validation/local_codex_runner/issue-125/*.md'
+```
+
+Initial result: fail, 11 markdownlint errors confined to Issue #125 prompt /
+evidence markdown files:
+
+```text
+Summary: 11 error(s)
+docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:11 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: "- Priority: P2"]
+docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:25 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
+docs/validation/local_codex_runner/issue-125/02_code.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/02_code.prompt.md:13 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: "- Priority: P2"]
+docs/validation/local_codex_runner/issue-125/02_code.prompt.md:27 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
+docs/validation/local_codex_runner/issue-125/03_fix_ci_round_1.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/03_fix_ci_round_1.prompt.md:12 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: "- Markdown lint: https://githu..."]
+docs/validation/local_codex_runner/issue-125/04_review.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/codex_review_report.md:83 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
+docs/validation/local_codex_runner/issue-125/pr_body.md:5:32 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+```
+
+Post-fix result:
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Finding: CHANGELOG.md docs/release-notes/v1.7.0.md docs/release-notes/v1.7.0.draft.md docs/contributor/api-reference.md docs/validation/local_codex_runner/issue-125/*.md
+Linting: 16 file(s)
+Summary: 0 error(s)
+```
+
+### Full markdown lint CI glob
+
+Command:
+
+```sh
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 \
+  '**/*.md' \
+  '!.github/**'
+```
+
+Result:
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Finding: **/*.md !.github/**
+Linting: 537 file(s)
+Summary: 0 error(s)
+```
+
 ### Whitespace / patch sanity
 
 Command:

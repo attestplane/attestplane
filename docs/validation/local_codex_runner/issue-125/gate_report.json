@@ -1,6 +1,12 @@
 {
   "commands": [
     {
+      "command": "/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 '**/*.md' '!.github/**'",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)\nFinding: **/*.md !.github/**\nLinting: 537 file(s)\nSummary: 0 error(s)\n"
+    },
+    {
       "command": "python -m compileall scripts",
       "exit_code": 0,
       "stderr": "",
