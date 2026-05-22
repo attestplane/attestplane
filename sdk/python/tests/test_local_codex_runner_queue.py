@@ -86,3 +86,25 @@ def test_git_ops_recovers_detached_head_before_issue_commit(monkeypatch, tmp_pat
 
 def test_pr_body_is_transient_runner_evidence() -> None:
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-154/pr_body.md")
+
+
+def test_status_paths_expands_untracked_evidence_directories(monkeypatch, tmp_path) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command, *, cwd, capture_output, text, check):  # noqa: ANN001
+        assert cwd == tmp_path
+        args = command[1:]
+        commands.append(args)
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout="?? docs/validation/local_codex_runner/issue-118/01_plan.prompt.md\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    paths = GitOps(tmp_path).status_paths()
+
+    assert commands == [["status", "--porcelain", "--untracked-files=all"]]
+    assert paths == [("??", "docs/validation/local_codex_runner/issue-118/01_plan.prompt.md")]

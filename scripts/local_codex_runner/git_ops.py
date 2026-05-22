@@ -92,7 +92,7 @@ class GitOps:
         return bool(self.run(["status", "--porcelain"]).strip())
 
     def status_paths(self) -> list[tuple[str, str]]:
-        output = self.run(["status", "--porcelain"])
+        output = self.run(["status", "--porcelain", "--untracked-files=all"])
         paths: list[tuple[str, str]] = []
         for line in output.splitlines():
             if not line:
