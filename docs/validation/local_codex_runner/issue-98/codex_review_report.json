@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text supplied in the prompt.",
+    "Inspected git status, diff stat, changed file list, and the patch for docs/release-notes/v1.5.10.draft.md.",
+    "Tracked diff is limited to docs/release-notes/v1.5.10.draft.md with 6 insertions and 1 deletion.",
+    "The release-note change adds planning issue links for #95 and #98 and replaces a terse test bullet with bounded user-visible wording about release-planning test coverage.",
+    "No release gate files, release workflow files, package metadata, tag logic, publishing logic, or remote state were modified.",
+    "No severity labels or release-blocking policy text were lowered.",
+    "No secrets, credentials, tokens, private keys, .pypirc, or .npmrc content were introduced or logged by the diff.",
+    "No tests were deleted; the diff is docs-only and is supported by local validation evidence in the issue-98 runner directory.",
+    "No uncertain external dependency was introduced.",
+    "git diff --check exited 0."
+  ],
+  "residual_risks": [
+    "This was a local diff review only; it did not fetch GitHub issue bodies or external release state.",
+    "The existing v1.5.10 highlights and expected assets were not introduced by this diff and were treated as pre-existing release-note context.",
+    "No full product gate was run because the tracked change is release-note-only documentation."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
