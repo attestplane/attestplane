@@ -15,17 +15,27 @@ from __future__ import annotations
 
 import json
 import re
+from base64 import b64decode
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from attestplane.event_types import POLICY_CHECK_EVENT
-from attestplane.hashchain import GENESIS_HASH, SCHEMA_VERSION, VerificationResult, head_of, verify_chain
+from attestplane.hashchain import (
+    GENESIS_HASH,
+    SCHEMA_VERSION,
+    VerificationResult,
+    hash_event,
+    head_of,
+    verify_chain,
+)
 from attestplane.proof_bundle import DEFAULT_FORBIDDEN_FIELDS
 from attestplane.retention import verify_retention_proofs
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
 from attestplane.types import ChainedEvent
 from attestplane.verify_errors import (
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_CHAIN_RECOMPUTE_FAILED,
     VERIFY_METADATA_CLOSURE_FAILED,
     VERIFY_OK,
@@ -81,6 +91,8 @@ class BundleVerificationResult:
     policy_trace_refs_reason: str | None
     retention_proofs_ok: bool
     retention_proofs_reason: str | None
+    signed_attestation_schema_ok: bool
+    signed_attestation_schema_reason: str | None
     error_code: VerifyErrorCode
 
     def short_summary(self) -> str:
@@ -96,6 +108,7 @@ class BundleVerificationResult:
             f"agreement={self.agreement} metadata_reason={self.metadata_reason!r} "
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
+            f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
             f"error_code={self.error_code}"
         )
 
@@ -196,6 +209,119 @@ def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
     return chain
 
 
+def _validate_minimum_signed_attestation_schema(
+    bundle: dict[str, Any],
+    events: list[ChainedEvent],
+) -> tuple[bool, str | None]:
+    """Require one syntactically valid signature over a canonical event digest.
+
+    This is a pre-crypto schema gate: it proves the bundle contains at
+    least one well-shaped ADR-0005 signature record whose subject digest
+    matches a canonical event hash already present in the bundle. Trust-root
+    lookup and Ed25519 verification remain outside this chain/report verifier.
+    """
+    if not events:
+        return False, "events must contain at least one event before signed-attestation schema can pass"
+    signatures = bundle.get("signatures")
+    if not isinstance(signatures, list) or not signatures:
+        return False, "signatures must contain at least one signed attestation"
+
+    canonical_event_hashes = {hash_event(event.event).hex() for event in events}
+    if len(canonical_event_hashes) != len(events):
+        return False, "events do not have unique canonical subject digests"
+
+    malformed_reasons: list[str] = []
+    for index, raw in enumerate(signatures):
+        if not isinstance(raw, dict):
+            malformed_reasons.append(f"signatures[{index}] must be an object")
+            continue
+        digest = raw.get("signed_event_hash_hex")
+        if not isinstance(digest, str) or not _HEX64.match(digest):
+            malformed_reasons.append(
+                f"signatures[{index}].signed_event_hash_hex must be lowercase 64-hex"
+            )
+            continue
+        if digest not in canonical_event_hashes:
+            malformed_reasons.append(
+                f"signatures[{index}].signed_event_hash_hex does not match a canonical bundle event"
+            )
+            continue
+        shape_reason = _validate_signature_record_shape(raw, index)
+        if shape_reason is not None:
+            malformed_reasons.append(shape_reason)
+            continue
+        return True, None
+
+    joined = "; ".join(malformed_reasons) if malformed_reasons else "no usable signature record"
+    return False, joined
+
+
+def _validate_signature_record_shape(raw: dict[str, Any], index: int) -> str | None:
+    required = {
+        "signature_schema_version",
+        "signed_seq",
+        "signed_event_hash_hex",
+        "signature_hex",
+        "key_id",
+        "public_key_der_b64",
+        "signing_cert_chain_b64",
+        "signed_at",
+        "signature_mode",
+        "signed_payload_b64",
+    }
+    missing = sorted(required - set(raw))
+    if missing:
+        return f"signatures[{index}] is malformed: missing fields {missing}"
+    if not isinstance(raw["signature_schema_version"], int) or raw["signature_schema_version"] < 1:
+        return f"signatures[{index}].signature_schema_version must be a positive integer"
+    if not isinstance(raw["signed_seq"], int) or raw["signed_seq"] < 0:
+        return f"signatures[{index}].signed_seq must be a non-negative integer"
+    if not isinstance(raw["signature_hex"], str) or not re.fullmatch(r"[0-9a-f]{128}", raw["signature_hex"]):
+        return f"signatures[{index}] is malformed: signature_hex must be lowercase 128-hex"
+    if not isinstance(raw["key_id"], str) or not re.fullmatch(r"[0-9a-f]{32}", raw["key_id"]):
+        return f"signatures[{index}].key_id must be lowercase 32-hex"
+    if raw["signature_mode"] not in {"segment_head", "per_event"}:
+        return f"signatures[{index}].signature_mode must be segment_head or per_event"
+    reason = _decode_b64_field(raw, "public_key_der_b64", index)
+    if reason is not None:
+        return reason
+    reason = _decode_b64_field(raw, "signed_payload_b64", index)
+    if reason is not None:
+        return reason
+    cert_chain = raw["signing_cert_chain_b64"]
+    if not isinstance(cert_chain, list):
+        return f"signatures[{index}].signing_cert_chain_b64 must be a list"
+    for cert_index, cert in enumerate(cert_chain):
+        if not isinstance(cert, str):
+            return f"signatures[{index}].signing_cert_chain_b64[{cert_index}] must be a string"
+        try:
+            b64decode(cert, validate=True)
+        except Exception:
+            return f"signatures[{index}].signing_cert_chain_b64[{cert_index}] must be base64"
+    signed_at = raw["signed_at"]
+    if not isinstance(signed_at, str):
+        return f"signatures[{index}].signed_at must be a string"
+    try:
+        if signed_at.endswith("Z"):
+            datetime.fromisoformat(signed_at.removesuffix("Z") + "+00:00")
+        else:
+            datetime.fromisoformat(signed_at)
+    except ValueError:
+        return f"signatures[{index}].signed_at must be RFC3339/ISO-8601 datetime text"
+    return None
+
+
+def _decode_b64_field(raw: dict[str, Any], field: str, index: int) -> str | None:
+    value = raw[field]
+    if not isinstance(value, str):
+        return f"signatures[{index}].{field} must be a string"
+    try:
+        b64decode(value, validate=True)
+    except Exception:
+        return f"signatures[{index}].{field} must be base64"
+    return None
+
+
 def _verify_metadata_closure(
     bundle: dict[str, Any],
     events: list[ChainedEvent],
@@ -278,6 +404,7 @@ def verify_proof_bundle(
     bundle: dict[str, Any],
     *,
     require_non_empty: bool = False,
+    require_signed_attestation: bool = False,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -289,6 +416,14 @@ def verify_proof_bundle(
     """
     _validate_shape(bundle)
     events = _rehydrate_events(bundle["events"])
+    effective_require_signed_attestation = require_signed_attestation or require_non_empty
+    if effective_require_signed_attestation:
+        signed_schema_ok, signed_schema_reason = _validate_minimum_signed_attestation_schema(
+            bundle,
+            events,
+        )
+    else:
+        signed_schema_ok, signed_schema_reason = True, None
     chain_result = verify_chain(events)
     bundle_reported_ok = bool(bundle["verification_report"]["ok"])
     agreement = bundle_reported_ok == chain_result.ok
@@ -308,6 +443,8 @@ def verify_proof_bundle(
         error_code = VERIFY_CHAIN_RECOMPUTE_FAILED
     elif require_non_empty and not events:
         error_code = VERIFY_REQUIRED_FIELDS_MISSING
+    elif not signed_schema_ok:
+        error_code = VERIFY_BUNDLE_SCHEMA_INCOMPLETE
     elif not metadata_ok:
         error_code = VERIFY_METADATA_CLOSURE_FAILED
     elif not policy_ok:
@@ -315,7 +452,14 @@ def verify_proof_bundle(
     elif not retention_result.ok:
         error_code = VERIFY_RETENTION_PROOF_FAILED
     return BundleVerificationResult(
-        ok=chain_result.ok and agreement and metadata_ok and policy_ok and retention_result.ok,
+        ok=(
+            chain_result.ok
+            and agreement
+            and metadata_ok
+            and policy_ok
+            and retention_result.ok
+            and signed_schema_ok
+        ),
         chain_result=chain_result,
         bundle_reported_ok=bundle_reported_ok,
         agreement=agreement,
@@ -329,6 +473,8 @@ def verify_proof_bundle(
         policy_trace_refs_reason=policy_reason,
         retention_proofs_ok=retention_result.ok,
         retention_proofs_reason=retention_result.reason,
+        signed_attestation_schema_ok=signed_schema_ok,
+        signed_attestation_schema_reason=signed_schema_reason,
         error_code=error_code,
     )
 
@@ -337,6 +483,7 @@ def verify_proof_bundle_file(
     path: str | Path,
     *,
     require_non_empty: bool = False,
+    require_signed_attestation: bool = False,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -346,7 +493,11 @@ def verify_proof_bundle_file(
         raise BundleVerificationError(f"bundle file not found: {p}") from exc
     except json.JSONDecodeError as exc:
         raise BundleSchemaError(f"{p}: not valid JSON: {exc.msg}") from exc
-    return verify_proof_bundle(bundle, require_non_empty=require_non_empty)
+    return verify_proof_bundle(
+        bundle,
+        require_non_empty=require_non_empty,
+        require_signed_attestation=require_signed_attestation,
+    )
 
 
 __all__ = [

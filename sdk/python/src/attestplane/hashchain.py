@@ -15,8 +15,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Final
 
-import uuid_utils
-
 from attestplane.canonical import canonicalize
 from attestplane.types import AuditEvent, ChainedEvent, ChainHead, EventDraft
 
@@ -73,7 +71,12 @@ def chain_extend(
     if now.tzinfo is None or now.utcoffset() != UTC.utcoffset(None):
         raise ValueError("chain_extend requires a UTC-aware datetime for 'now'")
 
-    resolved_event_id = event_id if event_id is not None else str(uuid_utils.uuid7())
+    if event_id is not None:
+        resolved_event_id = event_id
+    else:
+        import uuid_utils
+
+        resolved_event_id = str(uuid_utils.uuid7())
     event = AuditEvent(
         schema_version=SCHEMA_VERSION,
         event_id=resolved_event_id,

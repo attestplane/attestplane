@@ -13,6 +13,7 @@ Write:
 
 Review checklist:
 
+0. Did the review use only local repository files, local command output, and the issue text?
 1. Did the diff weaken any release gate?
 2. Did it lower severity?
 3. Did it leak or log secrets?

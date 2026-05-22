@@ -183,7 +183,7 @@ def run_issue(config: RunnerConfig, issue_number: int | None, include_labels: se
         return write_result(result.finish(), evidence_dir, state, config)
     except Exception as exc:
         result.status = RunnerStatus.LOCAL_FAILED
-        result.residual_risks.append(str(exc))
+        append_residual_risk(result, str(exc))
         (evidence_dir / "failure.txt").write_text(str(exc) + "\n", encoding="utf-8")
         return fail_issue(config, gh, task if "task" in locals() else None, result, evidence_dir, state)
     finally:
@@ -252,6 +252,13 @@ def fail_issue(
         gh.remove_labels(config.repo or "", task.number, [config.in_progress_label])
         gh.comment_issue(config.repo or "", task.number, f"Local Codex runner stopped: {result.status.value}\nEvidence: {evidence_dir}")
     return write_result(result.finish(), evidence_dir, state, config)
+
+
+def append_residual_risk(result: RunnerResult, message: str) -> None:
+    if isinstance(result.residual_risks, list):
+        result.residual_risks.append(message)
+        return
+    result.residual_risks = [str(result.residual_risks), message]
 
 
 def write_result(result: RunnerResult, evidence_dir: Path, state, config: RunnerConfig) -> RunnerResult:

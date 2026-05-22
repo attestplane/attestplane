@@ -18,6 +18,7 @@ VerifyErrorCode = Literal[
     "VERIFY_OK",
     "VERIFY_IO_ERROR",
     "VERIFY_SCHEMA_ERROR",
+    "bundle.schema.incomplete",
     "VERIFY_CHAIN_RECOMPUTE_FAILED",
     "VERIFY_METADATA_CLOSURE_FAILED",
     "VERIFY_POLICY_TRACE_REFS_FAILED",
@@ -32,6 +33,7 @@ VerifyErrorCode = Literal[
 VERIFY_OK: Final[VerifyErrorCode] = "VERIFY_OK"
 VERIFY_IO_ERROR: Final[VerifyErrorCode] = "VERIFY_IO_ERROR"
 VERIFY_SCHEMA_ERROR: Final[VerifyErrorCode] = "VERIFY_SCHEMA_ERROR"
+VERIFY_BUNDLE_SCHEMA_INCOMPLETE: Final[VerifyErrorCode] = "bundle.schema.incomplete"
 VERIFY_CHAIN_RECOMPUTE_FAILED: Final[VerifyErrorCode] = "VERIFY_CHAIN_RECOMPUTE_FAILED"
 VERIFY_METADATA_CLOSURE_FAILED: Final[VerifyErrorCode] = "VERIFY_METADATA_CLOSURE_FAILED"
 VERIFY_POLICY_TRACE_REFS_FAILED: Final[VerifyErrorCode] = "VERIFY_POLICY_TRACE_REFS_FAILED"
@@ -46,6 +48,7 @@ ALL_VERIFY_ERROR_CODES_V1: Final[tuple[VerifyErrorCode, ...]] = (
     VERIFY_OK,
     VERIFY_IO_ERROR,
     VERIFY_SCHEMA_ERROR,
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_CHAIN_RECOMPUTE_FAILED,
     VERIFY_METADATA_CLOSURE_FAILED,
     VERIFY_POLICY_TRACE_REFS_FAILED,
@@ -61,6 +64,9 @@ VERIFY_ERROR_DESCRIPTIONS: Final[dict[VerifyErrorCode, str]] = {
     VERIFY_OK: "Verification completed without a verifier-detected failure.",
     VERIFY_IO_ERROR: "The verifier could not read the requested input.",
     VERIFY_SCHEMA_ERROR: "The input shape is unsupported or malformed.",
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE: (
+        "The proof bundle lacks the minimum signed-attestation schema required by strict verification."
+    ),
     VERIFY_CHAIN_RECOMPUTE_FAILED: "Recomputed hash-chain verification failed.",
     VERIFY_METADATA_CLOSURE_FAILED: "Bundle metadata disagrees with recomputed chain state.",
     VERIFY_POLICY_TRACE_REFS_FAILED: "Policy trace references are missing, dangling, duplicated, or out of order.",
@@ -83,6 +89,7 @@ def is_known_verify_error_code(value: str) -> bool:
 __all__ = [
     "ALL_VERIFY_ERROR_CODES_V1",
     "VERIFY_ARTIFACT_HASH_FAILED",
+    "VERIFY_BUNDLE_SCHEMA_INCOMPLETE",
     "VERIFY_CHAIN_RECOMPUTE_FAILED",
     "VERIFY_ERROR_DESCRIPTIONS",
     "VERIFY_ERROR_SCHEMA_VERSION",

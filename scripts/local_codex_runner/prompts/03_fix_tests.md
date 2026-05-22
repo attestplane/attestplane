@@ -18,6 +18,8 @@ Task:
 
 Hard red lines:
 
+- Use only local repository files, local command output, and the issue text.
+- Do not use web search, browser tools, external plugin/app connectors, or external advisory services in this runner phase.
 - Do not skip, xfail, delete, or weaken tests just to pass.
 - Do not lower severity.
 - Do not weaken release gates or release_blocking policy.
