@@ -151,7 +151,13 @@ class GitHubCLI:
         self._run(["gh", "pr", "merge", str(pr_number), "--repo", repo, "--squash"], write=True)
 
     def pr_checks(self, repo: str, pr_number_or_branch: str) -> list[CheckStatus]:
-        completed = self._run(["gh", "pr", "checks", pr_number_or_branch, "--repo", repo, "--json", "name,state,bucket,link"])
+        command = ["gh", "pr", "checks", pr_number_or_branch, "--repo", repo, "--json", "name,state,bucket,link"]
+        try:
+            completed = self._run(command)
+        except RunnerCommandError as exc:
+            if "no checks reported" not in exc.stderr.lower():
+                raise
+            return []
         return [check_from_json(item) for item in json.loads(completed.stdout or "[]")]
 
     def run_view_failed_logs(self, repo: str, pr_number_or_branch: str) -> str:
