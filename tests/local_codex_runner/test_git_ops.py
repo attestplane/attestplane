@@ -1,7 +1,13 @@
 from pathlib import Path
 
 import pytest
-from scripts.local_codex_runner.git_ops import GitOps, GitSafetyError, is_forbidden_path, slugify
+from scripts.local_codex_runner.git_ops import (
+    GitOps,
+    GitSafetyError,
+    is_forbidden_path,
+    is_transient_evidence_path,
+    slugify,
+)
 
 
 class FakeGit(GitOps):
@@ -37,7 +43,6 @@ def test_commit_uses_dco_signoff() -> None:
         {
             "branch --show-current": "codex/issue-12-fix\n",
             "status --porcelain": " M x\n",
-            "diff --name-only HEAD": "x\n",
         }
     )
 
@@ -57,3 +62,34 @@ def test_remote_checkout_ref_uses_detached_origin_branch() -> None:
 def test_forbidden_file_changed_is_rejected() -> None:
     assert is_forbidden_path(".env")
     assert is_forbidden_path("release/credentials.json")
+
+
+def test_commit_removes_transient_prompt_and_log_evidence() -> None:
+    git = FakeGit(
+        {
+            "branch --show-current": "codex/issue-12-fix\n",
+            "status --porcelain": "\n".join(
+                [
+                    " M CHANGELOG.md",
+                    "?? docs/validation/local_codex_runner/issue-12/01_plan.prompt.md",
+                    "?? docs/validation/local_codex_runner/issue-12/codex_code.log",
+                    "",
+                ]
+            ),
+        }
+    )
+
+    git.commit_all(12, "Fix #12")
+
+    assert (
+        "clean -f -- docs/validation/local_codex_runner/issue-12/01_plan.prompt.md "
+        "docs/validation/local_codex_runner/issue-12/codex_code.log"
+    ) in git.commands_run
+    assert "add -A" in git.commands_run
+
+
+def test_transient_evidence_path_only_matches_runner_prompts_and_logs() -> None:
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/01_plan.prompt.md")
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/codex_review.log")
+    assert not is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/gate_report.md")
+    assert not is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/codex_review_report.md")

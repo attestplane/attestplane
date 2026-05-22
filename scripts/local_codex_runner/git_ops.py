@@ -30,6 +30,11 @@ FORBIDDEN_PATTERNS = (
     "**/*release*credential*",
 )
 
+TRANSIENT_EVIDENCE_PATTERNS = (
+    "docs/validation/local_codex_runner/issue-*/*.prompt.md",
+    "docs/validation/local_codex_runner/issue-*/codex_*.log",
+)
+
 
 class GitOps:
     def __init__(self, workdir: Path) -> None:
@@ -76,12 +81,24 @@ class GitOps:
     def has_changes(self) -> bool:
         return bool(self.run(["status", "--porcelain"]).strip())
 
+    def status_paths(self) -> list[tuple[str, str]]:
+        output = self.run(["status", "--porcelain"])
+        paths: list[tuple[str, str]] = []
+        for line in output.splitlines():
+            if not line:
+                continue
+            status = line[:2]
+            path = line[3:]
+            if " -> " in path:
+                path = path.rsplit(" -> ", 1)[1]
+            paths.append((status, path.strip()))
+        return paths
+
     def diff_summary(self) -> str:
         return self.run(["diff", "--stat"]) + "\n" + self.run(["diff", "--name-status"])
 
     def changed_files(self) -> list[str]:
-        output = self.run(["diff", "--name-only", "HEAD"])
-        return [line.strip() for line in output.splitlines() if line.strip()]
+        return [path for _, path in self.status_paths()]
 
     def diff(self) -> str:
         return self.run(["diff", "HEAD"])
@@ -92,6 +109,17 @@ class GitOps:
         if forbidden:
             raise GitSafetyError(f"Forbidden sensitive file change blocked: {', '.join(forbidden)}")
 
+    def remove_transient_evidence(self) -> None:
+        transient = [
+            (status, path) for status, path in self.status_paths() if is_transient_evidence_path(path)
+        ]
+        untracked = [path for status, path in transient if status == "??"]
+        tracked = [path for status, path in transient if status != "??"]
+        if tracked:
+            self.run(["rm", "-f", "--", *tracked])
+        if untracked:
+            self.run(["clean", "-f", "--", *untracked])
+
     def commit_all(self, issue_number: int, message: str) -> None:
         branch = self.current_branch()
         if branch in {"main", "master"}:
@@ -100,6 +128,9 @@ class GitOps:
             raise GitSafetyError("Refusing to commit an empty diff")
         if f"#{issue_number}" not in message and f"issue {issue_number}" not in message.lower():
             raise GitSafetyError("Commit message must include the issue number")
+        self.remove_transient_evidence()
+        if not self.has_changes():
+            raise GitSafetyError("Refusing to commit only transient runner evidence")
         self.ensure_no_forbidden_files_changed()
         self.run(["add", "-A"])
         self.run(["commit", "-s", "-m", message])
@@ -128,3 +159,8 @@ def slugify(title: str, *, max_length: int = 48) -> str:
 def is_forbidden_path(path: str) -> bool:
     normalized = path.replace("\\", "/")
     return any(fnmatch.fnmatch(normalized, pattern) for pattern in FORBIDDEN_PATTERNS)
+
+
+def is_transient_evidence_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return any(fnmatch.fnmatch(normalized, pattern) for pattern in TRANSIENT_EVIDENCE_PATTERNS)
