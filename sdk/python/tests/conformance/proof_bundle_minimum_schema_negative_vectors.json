@@ -4,6 +4,8 @@
       "case_id": "empty-bundle",
       "expected_error_code": "bundle.schema.incomplete",
       "expected_ok": false,
+      "expected_primary_reason": "att.verify.required_field_missing",
+      "expected_secondary_reasons": [],
       "path": "tests/conformance/vectors/negative/empty-bundle.json",
       "verify_options": {
         "require_signed_attestation": true
@@ -13,6 +15,8 @@
       "case_id": "attestations-array-empty",
       "expected_error_code": "bundle.schema.incomplete",
       "expected_ok": false,
+      "expected_primary_reason": "att.verify.signature_missing",
+      "expected_secondary_reasons": [],
       "path": "tests/conformance/vectors/negative/attestations-array-empty.json",
       "verify_options": {
         "require_signed_attestation": true
@@ -22,6 +26,8 @@
       "case_id": "attestation-missing-signature",
       "expected_error_code": "bundle.schema.incomplete",
       "expected_ok": false,
+      "expected_primary_reason": "att.verify.required_field_missing",
+      "expected_secondary_reasons": [],
       "path": "tests/conformance/vectors/negative/attestation-missing-signature.json",
       "verify_options": {
         "require_signed_attestation": true
@@ -31,11 +37,13 @@
       "case_id": "attestation-missing-subject-digest",
       "expected_error_code": "bundle.schema.incomplete",
       "expected_ok": false,
+      "expected_primary_reason": "att.verify.required_field_missing",
+      "expected_secondary_reasons": [],
       "path": "tests/conformance/vectors/negative/attestation-missing-subject-digest.json",
       "verify_options": {
         "require_signed_attestation": true
       }
     }
   ],
-  "schema_version": "attestplane.proof_bundle.minimum_schema.negative.v1"
+  "schema_version": "attestplane.proof_bundle.minimum_schema.negative.v2"
 }

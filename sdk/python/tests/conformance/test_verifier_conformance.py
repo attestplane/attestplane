@@ -92,9 +92,13 @@ def test_minimum_schema_negative_conformance_vectors(case: dict) -> None:
     assert vector["case_id"] == case["case_id"]
     assert vector["expected_ok"] is case["expected_ok"]
     assert vector["expected_error_code"] == case["expected_error_code"]
+    assert vector["expected_primary_reason"] == case["expected_primary_reason"]
+    assert vector["expected_secondary_reasons"] == case["expected_secondary_reasons"]
     assert vector["verify_options"] == case["verify_options"]
 
     result = verify_proof_bundle(vector["bundle"], **case["verify_options"])
 
     assert result.ok is case["expected_ok"]
     assert result.error_code == case["expected_error_code"]
+    assert result.primary_reason == case["expected_primary_reason"]
+    assert list(result.secondary_reasons) == case["expected_secondary_reasons"]

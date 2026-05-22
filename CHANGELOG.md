@@ -45,6 +45,12 @@ notes are the authoritative reference for supply-chain verification.
 
 ### Conformance
 
+- Added the SDK-public `att.verify.*` verifier rejection reason taxonomy.
+  `verify` result objects and `attestplane verify --json` now expose exactly
+  one `primary_reason` for rejected results plus ordered `secondary_reasons`
+  for additional failed checks. Existing human-readable reason strings remain
+  for one minor release as deprecated migration aids. The reason-code set is
+  additive-only; removing or renaming a code is a breaking change.
 - `attestplane verify <bundle>` now exposes opt-in `--require-non-empty`
   and `--strict-schema` flags for the proof-bundle contract. Downstream
   automation can adopt these checks before they become default in a future

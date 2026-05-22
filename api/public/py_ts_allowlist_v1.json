@@ -1186,6 +1186,38 @@
     },
     {
       "classification": "language_specific",
+      "python": false,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
+      "review_by": "v1.7.5",
+      "symbol": "isKnownVerifyReasonCode",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic snake_case in Python; TypeScript exposes the equivalent camelCase helper.",
+      "review_by": "v1.7.5",
+      "symbol": "is_known_verify_reason_code",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
+      "review_by": "v1.7.5",
+      "symbol": "verifyReasonCodeMatchesFormat",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic snake_case in Python; TypeScript exposes the equivalent camelCase helper.",
+      "review_by": "v1.7.5",
+      "symbol": "verify_reason_code_matches_format",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": true,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",

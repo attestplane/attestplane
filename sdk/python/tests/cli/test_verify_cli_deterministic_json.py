@@ -42,4 +42,6 @@ def test_verify_json_is_deterministic_and_machine_readable(tmp_path: Path, capsy
     assert out1 == out2
     payload = json.loads(out1)
     assert payload["error_code"] == VERIFY_OK
+    assert payload["primary_reason"] is None
+    assert payload["secondary_reasons"] == []
     assert payload["retention_proofs_ok"] is True

@@ -192,6 +192,23 @@ from attestplane.verify_errors import (
     VerifyErrorCode,
     is_known_verify_error_code,
 )
+from attestplane.verify_reason_codes import (
+    ALL_VERIFY_REASON_CODES_V1,
+    VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
+    VERIFY_REASON_CODE_SCHEMA_VERSION,
+    VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+    VERIFY_REASON_SIGNATURE_INVALID,
+    VERIFY_REASON_SIGNATURE_MISSING,
+    VERIFY_REASON_STRUCTURE_INVALID,
+    VerifyReasonCodeV1,
+    is_known_verify_reason_code,
+    verify_reason_code_matches_format,
+)
 
 __version__ = "1.7.4"
 
@@ -261,6 +278,7 @@ __all__ = [
     "SettlementVerificationResult",
     "ALL_REASON_CODES_V1",
     "ALL_VERIFY_ERROR_CODES_V1",
+    "ALL_VERIFY_REASON_CODES_V1",
     "REASON_CODE_DESCRIPTIONS",
     "REASON_CODE_SCHEMA_VERSION",
     "RETENTION_PROOF_SCHEMA_VERSION",
@@ -268,9 +286,22 @@ __all__ = [
     "RetentionProofVerificationResult",
     "VERIFY_ERROR_DESCRIPTIONS",
     "VERIFY_ERROR_SCHEMA_VERSION",
+    "VERIFY_REASON_ANCHOR_INVALID",
+    "VERIFY_REASON_CANONICAL_MISMATCH",
+    "VERIFY_REASON_CODE_DESCRIPTIONS",
+    "VERIFY_REASON_CODE_SCHEMA_VERSION",
+    "VERIFY_REASON_REQUIRED_FIELD_MISSING",
+    "VERIFY_REASON_SCHEMA_INVALID",
+    "VERIFY_REASON_SCHEMA_UNKNOWN",
+    "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
+    "VERIFY_REASON_SIGNATURE_INVALID",
+    "VERIFY_REASON_SIGNATURE_MISSING",
+    "VERIFY_REASON_STRUCTURE_INVALID",
     "VerifyErrorCode",
+    "VerifyReasonCodeV1",
     "is_known_reason_code",
     "is_known_verify_error_code",
+    "is_known_verify_reason_code",
     "reason_code_matches_format",
     "MockTSAProvider",
     "MultiTSAProvider",
@@ -322,6 +353,7 @@ __all__ = [
     "verify_chain_with_anchors",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
+    "verify_reason_code_matches_format",
 ]
 
 if _SIGNING_AVAILABLE:

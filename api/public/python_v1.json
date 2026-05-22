@@ -32,6 +32,14 @@
       "documented": false,
       "kind": "constant",
       "module": "attestplane",
+      "name": "ALL_VERIFY_REASON_CODES_V1",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
       "name": "ANCHOR_SCHEMA_VERSION",
       "notes": "",
       "stability": "alpha_public"
@@ -822,6 +830,94 @@
     },
     {
       "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_ANCHOR_INVALID",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_CANONICAL_MISMATCH",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_CODE_DESCRIPTIONS",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_CODE_SCHEMA_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_REQUIRED_FIELD_MISSING",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_SCHEMA_INVALID",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_SCHEMA_UNKNOWN",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_SIGNATURE_INVALID",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_SIGNATURE_MISSING",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_STRUCTURE_INVALID",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
       "kind": "class",
       "module": "attestplane",
       "name": "VerificationResult",
@@ -833,6 +929,14 @@
       "kind": "class",
       "module": "attestplane",
       "name": "VerifyErrorCode",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "VerifyReasonCodeV1",
       "notes": "",
       "stability": "alpha_public"
     },
@@ -984,6 +1088,14 @@
       "documented": false,
       "kind": "function",
       "module": "attestplane",
+      "name": "is_known_verify_reason_code",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
       "name": "load_all_registries",
       "notes": "",
       "stability": "alpha_public"
@@ -1113,6 +1225,14 @@
       "kind": "function",
       "module": "attestplane",
       "name": "verify_proof_bundle_file",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_reason_code_matches_format",
       "notes": "",
       "stability": "alpha_public"
     },
