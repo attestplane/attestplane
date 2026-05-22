@@ -4,11 +4,30 @@ Plan ID: `1c6c43895e7a304f`
 
 ## Issue-required validation
 
-```text
-$ git diff --check
+```sh
+git diff --check
 ```
 
 Exit status: `0`; no output.
+
+## Markdown lint CI reproduction
+
+Command:
+
+```sh
+/Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/.bin/markdownlint-cli2 \
+  '**/*.md' \
+  '!.github/**'
+```
+
+Result:
+
+```text
+markdownlint-cli2 v0.22.1 (markdownlint v0.40.0)
+Finding: **/*.md !.github/**
+Linting: 608 file(s)
+Summary: 0 error(s)
+```
 
 ## Focused supporting checks
 
