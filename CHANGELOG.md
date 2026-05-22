@@ -29,6 +29,10 @@ notes are the authoritative reference for supply-chain verification.
 
 ### Conformance
 
+- `attestplane verify <bundle>` now exposes opt-in `--require-non-empty`
+  and `--strict-schema` flags for the proof-bundle contract. Downstream
+  automation can adopt these checks before they become default in a future
+  `x.0.0`; default `verify <bundle>` behavior is unchanged.
 - Added v1.7.0 negative proof-bundle conformance vectors for the strict
   non-empty / minimum-schema contract: empty bundle, empty signed-attestation
   collection, missing signature payload, and missing subject digest. Downstream

@@ -22,6 +22,7 @@ import {
   GENESIS_HASH,
   SCHEMA_VERSION,
   type VerificationResult,
+  hashEvent,
   headOf,
   verifyChain,
 } from './hashchain.js';
@@ -29,12 +30,14 @@ import type {
   ProofBundle,
   SerializedAuditEvent,
   SerializedChainedEvent,
+  SerializedSignatureRecord,
   SerializedSubjectRef,
 } from './proof_bundle.js';
 import { DEFAULT_FORBIDDEN_FIELDS } from './proof_bundle.js';
 import { verifyRetentionProofs } from './retention.js';
 import type { AuditEvent, ChainedEvent, SubjectRef } from './types.js';
 import {
+  VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
   VERIFY_CHAIN_RECOMPUTE_FAILED,
   VERIFY_METADATA_CLOSURE_FAILED,
   VERIFY_OK,
@@ -73,11 +76,14 @@ export interface BundleVerificationResult {
   readonly policy_trace_refs_reason: string | null;
   readonly retention_proofs_ok: boolean;
   readonly retention_proofs_reason: string | null;
+  readonly signed_attestation_schema_ok: boolean;
+  readonly signed_attestation_schema_reason: string | null;
   readonly error_code: VerifyErrorCode;
 }
 
 export interface VerifyProofBundleOptions {
   readonly requireNonEmpty?: boolean;
+  readonly requireSignedAttestation?: boolean;
 }
 
 export function shortSummary(result: BundleVerificationResult): string {
@@ -94,6 +100,7 @@ export function shortSummary(result: BundleVerificationResult): string {
     `agreement=${result.agreement} metadata_reason=${JSON.stringify(result.metadata_reason)} ` +
     `policy_trace_refs_reason=${JSON.stringify(result.policy_trace_refs_reason)} ` +
     `retention_proofs_reason=${JSON.stringify(result.retention_proofs_reason)} ` +
+    `signed_attestation_schema_reason=${JSON.stringify(result.signed_attestation_schema_reason)} ` +
     `error_code=${result.error_code}`
   );
 }
@@ -296,6 +303,123 @@ function bytesToHex(bytes: Uint8Array): string {
   return out;
 }
 
+function isValidBase64(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  if (value.length % 4 !== 0) return false;
+  return /^[A-Za-z0-9+/]*={0,2}$/.test(value);
+}
+
+function validateSignatureRecordShape(
+  raw: SerializedSignatureRecord,
+  index: number,
+): string | null {
+  const obj = raw as unknown as Record<string, unknown>;
+  const required = [
+    'signature_schema_version',
+    'signed_seq',
+    'signed_event_hash_hex',
+    'signature_hex',
+    'key_id',
+    'public_key_der_b64',
+    'signing_cert_chain_b64',
+    'signed_at',
+    'signature_mode',
+    'signed_payload_b64',
+  ] as const;
+  const missing = required.filter((field) => !(field in obj));
+  if (missing.length > 0) {
+    return `signatures[${index}] is malformed: missing fields ${JSON.stringify(missing)}`;
+  }
+  if (!Number.isInteger(raw.signature_schema_version) || raw.signature_schema_version < 1) {
+    return `signatures[${index}].signature_schema_version must be a positive integer`;
+  }
+  if (!Number.isInteger(raw.signed_seq) || raw.signed_seq < 0) {
+    return `signatures[${index}].signed_seq must be a non-negative integer`;
+  }
+  if (typeof raw.signature_hex !== 'string' || !/^[0-9a-f]{128}$/.test(raw.signature_hex)) {
+    return `signatures[${index}] is malformed: signature_hex must be lowercase 128-hex`;
+  }
+  if (typeof raw.key_id !== 'string' || !/^[0-9a-f]{32}$/.test(raw.key_id)) {
+    return `signatures[${index}].key_id must be lowercase 32-hex`;
+  }
+  if (raw.signature_mode !== 'segment_head' && raw.signature_mode !== 'per_event') {
+    return `signatures[${index}].signature_mode must be segment_head or per_event`;
+  }
+  if (!isValidBase64(raw.public_key_der_b64)) {
+    return `signatures[${index}].public_key_der_b64 must be base64`;
+  }
+  if (!isValidBase64(raw.signed_payload_b64)) {
+    return `signatures[${index}].signed_payload_b64 must be base64`;
+  }
+  if (!Array.isArray(raw.signing_cert_chain_b64)) {
+    return `signatures[${index}].signing_cert_chain_b64 must be a list`;
+  }
+  for (let i = 0; i < raw.signing_cert_chain_b64.length; i++) {
+    if (!isValidBase64(raw.signing_cert_chain_b64[i])) {
+      return `signatures[${index}].signing_cert_chain_b64[${i}] must be base64`;
+    }
+  }
+  if (typeof raw.signed_at !== 'string') {
+    return `signatures[${index}].signed_at must be a string`;
+  }
+  if (Number.isNaN(Date.parse(raw.signed_at))) {
+    return `signatures[${index}].signed_at must be RFC3339/ISO-8601 datetime text`;
+  }
+  return null;
+}
+
+function validateMinimumSignedAttestationSchema(
+  bundle: ProofBundle,
+  events: readonly ChainedEvent[],
+): { ok: boolean; reason: string | null } {
+  if (events.length === 0) {
+    return {
+      ok: false,
+      reason: 'events must contain at least one event before signed-attestation schema can pass',
+    };
+  }
+  if (!Array.isArray(bundle.signatures) || bundle.signatures.length === 0) {
+    return { ok: false, reason: 'signatures must contain at least one signed attestation' };
+  }
+  const canonicalEventHashes = new Set(events.map((event) => bytesToHex(hashEvent(event.event))));
+  if (canonicalEventHashes.size !== events.length) {
+    return { ok: false, reason: 'events do not have unique canonical subject digests' };
+  }
+  const malformedReasons: string[] = [];
+  for (let i = 0; i < bundle.signatures.length; i++) {
+    const raw = bundle.signatures[i];
+    if (!isPlainObject(raw)) {
+      malformedReasons.push(`signatures[${i}] must be an object`);
+      continue;
+    }
+    const record = raw as unknown as SerializedSignatureRecord;
+    if (
+      typeof record.signed_event_hash_hex !== 'string' ||
+      !HEX64.test(record.signed_event_hash_hex)
+    ) {
+      malformedReasons.push(`signatures[${i}].signed_event_hash_hex must be lowercase 64-hex`);
+      continue;
+    }
+    if (!canonicalEventHashes.has(record.signed_event_hash_hex)) {
+      malformedReasons.push(
+        `signatures[${i}].signed_event_hash_hex does not match a canonical bundle event`,
+      );
+      continue;
+    }
+    const shapeReason = validateSignatureRecordShape(record, i);
+    if (shapeReason !== null) {
+      malformedReasons.push(shapeReason);
+      continue;
+    }
+    return { ok: true, reason: null };
+  }
+  return {
+    ok: false,
+    reason:
+      malformedReasons.length > 0 ? malformedReasons.join('; ') : 'no usable signature record',
+  };
+}
+
 function verifyMetadataClosure(
   bundle: ProofBundle,
   events: readonly ChainedEvent[],
@@ -438,6 +562,10 @@ export function verifyProofBundle(
   const chainResult = verifyChain(events);
   const bundleReportedOk = Boolean(bundle.verification_report.ok);
   const agreement = bundleReportedOk === chainResult.ok;
+  const requireSignedAttestation = options.requireSignedAttestation === true;
+  const signedAttestationSchema = requireSignedAttestation
+    ? validateMinimumSignedAttestationSchema(bundle, events)
+    : { ok: true, reason: null };
   const metadata = verifyMetadataClosure(bundle, events, chainResult, options);
   const policyTraceRefs = verifyPolicyTraceRefs(bundle, events);
   const retentionProofs = verifyRetentionProofs(
@@ -449,6 +577,8 @@ export function verifyProofBundle(
     errorCode = VERIFY_CHAIN_RECOMPUTE_FAILED;
   } else if (options.requireNonEmpty === true && events.length === 0) {
     errorCode = VERIFY_REQUIRED_FIELDS_MISSING;
+  } else if (!signedAttestationSchema.ok) {
+    errorCode = VERIFY_BUNDLE_SCHEMA_INCOMPLETE;
   } else if (!metadata.ok) {
     errorCode = VERIFY_METADATA_CLOSURE_FAILED;
   } else if (!policyTraceRefs.ok) {
@@ -458,7 +588,13 @@ export function verifyProofBundle(
   }
 
   return {
-    ok: chainResult.ok && agreement && metadata.ok && policyTraceRefs.ok && retentionProofs.ok,
+    ok:
+      chainResult.ok &&
+      agreement &&
+      metadata.ok &&
+      policyTraceRefs.ok &&
+      retentionProofs.ok &&
+      signedAttestationSchema.ok,
     chain_result: chainResult,
     bundle_reported_ok: bundleReportedOk,
     agreement,
@@ -472,6 +608,8 @@ export function verifyProofBundle(
     policy_trace_refs_reason: policyTraceRefs.reason,
     retention_proofs_ok: retentionProofs.ok,
     retention_proofs_reason: retentionProofs.reason,
+    signed_attestation_schema_ok: signedAttestationSchema.ok,
+    signed_attestation_schema_reason: signedAttestationSchema.reason,
     error_code: errorCode,
   };
 }

@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Checklist 0: PASS. Review used only local repository files, local command output, and the issue text supplied in the prompt. No web search, remote fetch, external advisory service, merge, tag, package publish, PyPI push, or remote push was used.",
+    "Checklist 1: PASS. The diff does not weaken a release gate. It adds opt-in fail-closed CLI flags and strict verifier checks, plus tests and validation fixtures.",
+    "Checklist 2: PASS. The diff does not lower severity. Issue #138 remains P1 in the supplied issue text and no severity metadata was edited.",
+    "Checklist 3: PASS. No secrets are leaked or logged. New CLI output reports verifier status, event counts, hashes already present in proof bundles, and structured error codes.",
+    "Checklist 4: PASS. Publish/tag logic was not modified. The root package.json is private workspace metadata and contains no publish/tag scripts.",
+    "Checklist 5: PASS. Key tests were not deleted. Existing tests were updated for intentional exit-code 2 behavior and new tests were added for the issue flags.",
+    "Checklist 6: PASS. Behavior is covered by local evidence: Python CLI flag tests, existing CLI/verifier regressions, Python conformance tests, TypeScript verifier tests, and TypeScript typecheck passed.",
+    "Checklist 7: PASS. No uncertain external dependency was introduced. The new root package.json declares only private npm workspace metadata and no dependencies.",
+    "Checklist 8: PASS. The diff avoided merge, tag, package publish, and PyPI push operations.",
+    "Reviewed changed Python CLI wiring in sdk/python/src/attestplane/cli/main.py: added --require-non-empty and --strict-schema, preserved default verify behavior, mapped contract violations to exit 2, and left I/O/non-contract failures on exit 1.",
+    "Reviewed TypeScript verifier additions in sdk/typescript/src/verifier.ts and sdk/typescript/src/verify_errors.ts: opt-in minimum signed-attestation schema validation mirrors the existing Python verifier contract.",
+    "Reviewed tests and fixtures: tests/cli/test_verify_flags.py covers default, --require-non-empty, --strict-schema, combined flags, help text, and exit codes; sdk/typescript/test/verifier.test.ts covers TypeScript strict-schema behavior.",
+    "Ran: env PYTHONPATH=sdk/python/src pytest tests/cli/test_verify_flags.py sdk/python/tests/cli/test_verify_errors.py tests/cli/test_verify_errors.py tests/verifier/test_proof_bundle_schema.py -q -> 16 passed.",
+    "Ran: npm run test --workspace sdk/typescript -- verifier.test.ts -> 2 files passed, 21 tests passed.",
+    "Ran: npm run typecheck --workspace sdk/typescript -> passed.",
+    "Ran: git diff --check -> passed.",
+    "Ran: env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q -> 12 passed.",
+    "Ran local source equivalent for attestplane verify tests/fixtures/empty_bundle.json --require-non-empty -> exit=2 with VERIFY_REQUIRED_FIELDS_MISSING.",
+    "Ran local source equivalent for attestplane verify tests/fixtures/v1.7.0_signed.json --strict-schema -> exit=0."
+  ],
+  "residual_risks": [
+    "The generic run_gate attestplane helper is not configured for this checkout path, as recorded in local validation evidence; focused issue validation and conformance checks passed.",
+    "The review did not execute external Opus consultation because the local runner review checklist requires local-only inputs."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

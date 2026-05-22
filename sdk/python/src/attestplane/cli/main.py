@@ -4,7 +4,7 @@
 
 Subcommands::
 
-    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1
+    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1/2
     verify-proofbundle <file.json> — alpha local ProofBundle verifier, JSON report, exit 0/1/2
     inspect <chain.jsonl>          — print a chain summary, exit 0/1
     export <chain.jsonl> --out OUT — build a proof bundle from a JSONL chain
@@ -80,6 +80,11 @@ def build_parser() -> argparse.ArgumentParser:
             "signature, anchor, or compliance verification"
         ),
         description=VERIFY_SCOPE_NOTICE,
+        epilog=(
+            "Exit codes: 0 success; 2 proof-bundle contract schema/non-empty "
+            "violation; 1 cryptographic, chain-integrity, I/O, or other "
+            "verification failure."
+        ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
     p_verify.add_argument(
@@ -93,8 +98,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_verify.add_argument(
         "--require-events",
+        dest="require_events",
         action="store_true",
         help="fail closed when the proof bundle contains zero events",
+    )
+    p_verify.add_argument(
+        "--require-non-empty",
+        dest="require_non_empty",
+        action="store_true",
+        help=(
+            "enforce the proof-bundle contract that strict bundles contain "
+            "at least one event"
+        ),
+    )
+    p_verify.add_argument(
+        "--strict-schema",
+        dest="strict_schema",
+        action="store_true",
+        help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
     _add_format_flag(p_verify)
 
@@ -177,12 +198,18 @@ def cmd_verify(args: argparse.Namespace) -> int:
         sys.stderr.write("attestplane verify: error: bundle path is required\n")
         return 2
     strict_bundle_mode = getattr(args, "bundle_option", None) is not None
+    require_non_empty = (
+        getattr(args, "require_non_empty", False)
+        or getattr(args, "require_events", False)
+        or strict_bundle_mode
+    )
+    strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
 
     try:
         result = verify_proof_bundle_file(
             bundle_path,
-            require_non_empty=getattr(args, "require_events", False) or strict_bundle_mode,
-            require_signed_attestation=strict_bundle_mode,
+            require_non_empty=require_non_empty,
+            require_signed_attestation=strict_schema,
         )
     except BundleSchemaError as exc:
         _emit(
@@ -196,7 +223,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             args.json_output,
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
-        return 1
+        return 2
     except BundleVerificationError as exc:
         _emit(
             {
@@ -215,7 +242,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "ok": result.ok,
         "chain_id": result.chain_id,
         "event_count": result.event_count,
-        "require_events": getattr(args, "require_events", False) or strict_bundle_mode,
+        "require_events": require_non_empty,
+        "require_non_empty": require_non_empty,
+        "strict_schema": strict_schema,
         "strict_proof_bundle_schema": strict_bundle_mode,
         "head_hash_hex": result.head_hash_hex,
         "bundle_version": result.bundle_version,
@@ -239,7 +268,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
     }:
         sys.stderr.write(f"{result.error_code}\n")
     _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
-    return 0 if result.ok else 1
+    if result.ok:
+        return 0
+    if result.error_code in {
+        VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+        VERIFY_REQUIRED_FIELDS_MISSING,
+    }:
+        return 2
+    return 1
 
 
 def cmd_verify_proofbundle(args: argparse.Namespace) -> int:

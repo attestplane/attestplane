@@ -1,0 +1,18 @@
+{
+  "commands": [
+    {
+      "command": "env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "............                                                             [100%]\n12 passed in 0.04s\n"
+    },
+    {
+      "command": "npm run test --workspace sdk/typescript -- verifier.test.ts",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "\n> @attestplane/attestplane@1.7.1 test\n> vitest run verifier.test.ts\n\n\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.5 \u001b[39m\u001b[90m/Users/macworkers/Projects/attestplane-local-runner/sdk/typescript\u001b[39m\n\n \u001b[32m\u2713\u001b[39m test/settlement_verifier.test.ts \u001b[2m(\u001b[22m\u001b[2m17 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 3\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m\u2713\u001b[39m test/verifier.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 4\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m2 passed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m22 passed\u001b[39m\u001b[22m\u001b[90m (22)\u001b[39m\n\u001b[2m   Start at \u001b[22m 16:22:24\n\u001b[2m   Duration \u001b[22m 123ms\u001b[2m (transform 62ms, setup 0ms, import 86ms, tests 7ms, environment 0ms)\u001b[22m\n\n"
+    }
+  ],
+  "selected_gate": "area:conformance",
+  "status": "PASS"
+}
