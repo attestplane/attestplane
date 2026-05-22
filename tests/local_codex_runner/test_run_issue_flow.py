@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from scripts.local_codex_runner.config import RunnerConfig
-from scripts.local_codex_runner.run_issue import run_issue
+from scripts.local_codex_runner.models import RunnerResult, RunnerStatus
+from scripts.local_codex_runner.run_issue import append_residual_risk, run_issue
 
 
 def test_run_issue_dry_run_generates_evidence(monkeypatch, tmp_path: Path) -> None:
@@ -26,3 +27,18 @@ def test_run_issue_dry_run_generates_evidence(monkeypatch, tmp_path: Path) -> No
     assert (tmp_path / "docs/validation/local_codex_runner/issue-4/runner_result.json").exists()
     assert (tmp_path / "docs/validation/local_codex_runner/issue-4/dry_run_actions.md").exists()
 
+
+def test_append_residual_risk_preserves_legacy_string_value() -> None:
+    result = RunnerResult(
+        issue_number=127,
+        branch=None,
+        pr_url=None,
+        status=RunnerStatus.LOCAL_FAILED,
+        plan_path=None,
+        evidence_dir="evidence",
+    )
+    result.residual_risks = "legacy scalar risk"  # type: ignore[assignment]
+
+    append_residual_risk(result, "new exception")
+
+    assert result.residual_risks == ["legacy scalar risk", "new exception"]
