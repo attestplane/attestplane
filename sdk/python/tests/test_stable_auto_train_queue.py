@@ -18,6 +18,13 @@ sys.modules["stable_auto_train"] = stable_auto_train
 spec.loader.exec_module(stable_auto_train)
 
 
+def _write_abandoned_tags(path: Path, tags: dict[str, object]) -> None:
+    path.write_text(
+        json.dumps({"schema": "attestplane_abandoned_stable_tags.v1", "tags": tags}),
+        encoding="utf-8",
+    )
+
+
 def test_target_queue_loads_strictly_increasing_stable_targets(tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     queue.write_text(
@@ -197,6 +204,198 @@ def test_select_target_recovers_latest_incomplete_tag(monkeypatch: pytest.Monkey
     target = stable_auto_train.select_target(queue)
 
     assert target.version.tag == "v1.0.6"
+
+
+def test_select_target_skips_abandoned_latest_tag_and_generates_next_available(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    queue = tmp_path / "queue.json"
+    queue.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_autodev_train_targets.v2",
+                "targets": [
+                    {"version": "1.7.2", "status": "queued", "channel": "latest", "min_soak_hours": 0},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: stable_auto_train.StableVersion.parse("1.7.2"))
+    monkeypatch.setattr(
+        stable_auto_train,
+        "list_stable_tags",
+        lambda: [
+            stable_auto_train.StableVersion.parse("1.7.1"),
+            stable_auto_train.StableVersion.parse("1.7.2"),
+        ],
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
+        "abandoned_stable_tags",
+        lambda path=stable_auto_train.DEFAULT_ABANDONED_STABLE_TAGS: {"v1.7.2"},
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda version: stable_auto_train.PublicationStatus(
+            python_visible=True,
+            npm_visible=True,
+            npm_latest=True,
+            github_release=True,
+        ),
+    )
+    monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: ref == "refs/tags/v1.7.2")
+    monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: tag == "v1.7.2")
+
+    target = stable_auto_train.select_target(queue)
+
+    assert target.version.tag == "v1.7.3"
+
+
+def test_latest_stable_before_skips_abandoned_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        stable_auto_train,
+        "list_stable_tags",
+        lambda: [
+            stable_auto_train.StableVersion.parse("1.7.1"),
+            stable_auto_train.StableVersion.parse("1.7.2"),
+        ],
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
+        "abandoned_stable_tags",
+        lambda path=stable_auto_train.DEFAULT_ABANDONED_STABLE_TAGS: {"v1.7.2"},
+    )
+
+    previous = stable_auto_train.latest_stable_before(stable_auto_train.StableVersion.parse("1.7.3"))
+
+    assert previous.tag == "v1.7.1"
+
+
+def test_latest_stable_before_target_abandoned_tag_still_returns_previous(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        stable_auto_train,
+        "list_stable_tags",
+        lambda: [
+            stable_auto_train.StableVersion.parse("1.7.1"),
+            stable_auto_train.StableVersion.parse("1.7.2"),
+            stable_auto_train.StableVersion.parse("1.7.3"),
+        ],
+    )
+    monkeypatch.setattr(
+        stable_auto_train,
+        "abandoned_stable_tags",
+        lambda path=stable_auto_train.DEFAULT_ABANDONED_STABLE_TAGS: {"v1.7.2"},
+    )
+
+    previous = stable_auto_train.latest_stable_before(stable_auto_train.StableVersion.parse("1.7.2"))
+
+    assert previous.tag == "v1.7.1"
+
+
+def test_abandoned_stable_tags_rejects_missing_required_field(tmp_path: Path) -> None:
+    manifest = tmp_path / "abandoned.json"
+    _write_abandoned_tags(
+        manifest,
+        {
+            "v1.7.2": {
+                "commit": "cfed9f2",
+                "reason": "failed CI",
+                "evidence": {},
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="missing required fields"):
+        stable_auto_train.abandoned_stable_tags(manifest)
+
+
+def test_abandoned_stable_tags_rejects_unknown_field(tmp_path: Path) -> None:
+    manifest = tmp_path / "abandoned.json"
+    _write_abandoned_tags(
+        manifest,
+        {
+            "v1.7.2": {
+                "commit": "cfed9f2",
+                "reason": "failed CI",
+                "abandoned_at": "2026-05-22T09:00:00Z",
+                "evidence": {},
+                "unexpected": "value",
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="unknown fields"):
+        stable_auto_train.abandoned_stable_tags(manifest)
+
+
+def test_abandoned_stable_tags_rejects_invalid_successor(tmp_path: Path) -> None:
+    manifest = tmp_path / "abandoned.json"
+    _write_abandoned_tags(
+        manifest,
+        {
+            "v1.7.2": {
+                "commit": "cfed9f2",
+                "reason": "failed CI",
+                "abandoned_at": "2026-05-22T09:00:00Z",
+                "evidence": {},
+                "successor_candidate": "not-a-version",
+            }
+        },
+    )
+
+    with pytest.raises(ValueError, match="invalid stable tag"):
+        stable_auto_train.abandoned_stable_tags(manifest)
+
+
+def test_abandoned_stable_tags_rejects_non_utc_abandoned_at(tmp_path: Path) -> None:
+    manifest = tmp_path / "abandoned.json"
+    _write_abandoned_tags(
+        manifest,
+        {
+            "v1.7.2": {
+                "commit": "cfed9f2",
+                "reason": "failed CI",
+                "abandoned_at": "2026-05-22T09:00:00+08:00",
+                "evidence": {},
+                "successor_candidate": "v1.7.3",
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="UTC timestamp ending in Z"):
+        stable_auto_train.abandoned_stable_tags(manifest)
+
+
+def test_abandoned_stable_tags_rejects_self_reference(tmp_path: Path) -> None:
+    manifest = tmp_path / "abandoned.json"
+    _write_abandoned_tags(
+        manifest,
+        {
+            "v1.7.2": {
+                "commit": "cfed9f2",
+                "reason": "failed CI",
+                "abandoned_at": "2026-05-22T09:00:00Z",
+                "evidence": {},
+                "successor_candidate": "v1.7.2",
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="must not reference itself"):
+        stable_auto_train.abandoned_stable_tags(manifest)
+
+
+def test_markdown_escape_release_subject_escapes_issue_area_brackets() -> None:
+    subject = "Fix #137: [P1][sdk] Extend helper"
+
+    escaped = stable_auto_train.markdown_escape_release_subject(subject)
+
+    assert escaped == r"Fix #137: \[P1\]\[sdk\] Extend helper"
 
 
 def test_recover_existing_release_repairs_transient_python_publish(

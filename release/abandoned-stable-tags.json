@@ -1,0 +1,15 @@
+{
+  "schema": "attestplane_abandoned_stable_tags.v1",
+  "tags": {
+    "v1.7.2": {
+      "commit": "9566f716c39d7171efc83e25095461ec0fa8822a",
+      "reason": "Push CI failed markdownlint on docs/release-notes/v1.7.2.draft.md before registry or GitHub Release publication.",
+      "successor_candidate": "v1.7.3",
+      "abandoned_at": "2026-05-22T09:00:00Z",
+      "evidence": {
+        "failed_workflow": "https://github.com/attestplane/attestplane/actions/runs/26278745767",
+        "fix_pr": "https://github.com/attestplane/attestplane/pull/150"
+      }
+    }
+  }
+}
