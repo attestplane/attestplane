@@ -1,8 +1,9 @@
 # Conformance fixture hash lock (Gap G7).
 #
 # Canonical-JSON SHA-256 of every sdk/python/tests/conformance/*.json
-# fixture. Fixtures are the cross-SDK contract — TS replays them
-# byte-for-byte. Recompute with:
+# fixture and public tests/conformance/vectors/**/*.json fixture.
+# Fixtures are the cross-SDK contract — TS replays them byte-for-byte.
+# Recompute with:
 #   ./scripts/check-fixture-hashes.sh --update
 # Verify with:
 #   ./scripts/check-fixture-hashes.sh
@@ -17,6 +18,7 @@
 7cbadd5401187ca1b70bdb92b965771799c1aafbaea33f05254a8260a7646beb  anchor_vectors.json
 e04d96dcc9f6c2c120905f6ab159388b4262502530494e1ffe53b31d685bf47a  lease_lifecycle_event_vectors.json
 57307a673ac66d93902e5a82db5f9ea2d21ce59e296278c014704aec1e50b8cd  policy_check_event_vectors.json
+fbb6dc780b35f01567f87f3ec181f395a3bd4a30774df592472db11ffaf1e5a8  proof_bundle_minimum_schema_negative_vectors.json
 d8d3c7eecfb42cdad1b8f7da9e1f998cb6e19ec3a254b2e591ca2d2f130220f5  proof_bundle_policy_trace_vectors.json
 0d351a37903617b5fe2ae36c5b708098f6b46c417342deb445882ce408fff0cc  reason_codes_vectors.json
 f9ee38db463a8d1062b102f0fc19ea8f545c9086051d97196b54142dd2ba7db0  replay_event_vectors.json
@@ -25,3 +27,7 @@ f89fb4acecfc58f0de5163f889a3c8047d0e13f4b239cc902d77db12f3f16592  signature_vect
 4a6bbdad4c8d02fcf1d0b182c9d3b7f82020caed965553c4b47759cbf6ee74a0  text_vectors.json
 32d0e9d00e08bcac299ebf07ab04861fbb2a11af975fe0b498607bda8a3b8d3a  vectors.json
 e02ea75f6bfbd8baa21008598c9f18962aa128fe8352915cc411260005e6a800  verifier_conformance_vectors.json
+eb8a8bae02e53f13dcce81117827cdfa78e029c99800445937b93c484f6d082b  tests/conformance/vectors/negative/attestation-missing-signature.json
+a50b1b61090838e5c55684c08900a39e140bb3a3133ac0a866fceb826e9e58ac  tests/conformance/vectors/negative/attestation-missing-subject-digest.json
+780ec653891ceb08b05f465c2f403812ff357a09034d131072c0a1c962d5c9a8  tests/conformance/vectors/negative/attestations-array-empty.json
+02bf3669bd33c621085e6ddcf471b63bfb76c04296369ed77e8eb26252897c1c  tests/conformance/vectors/negative/empty-bundle.json

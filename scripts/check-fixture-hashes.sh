@@ -4,11 +4,12 @@
 #
 # Conformance fixture hash gate (T1 invariant — Gap G7).
 #
-# Locks every sdk/python/tests/conformance/*_vectors.json and vectors.json
-# by canonical-JSON SHA-256. Fixtures are the cross-SDK contract: the TS SDK
-# replays them byte-for-byte (see sdk/typescript/test/conformance.test.ts
-# and siblings). Silent edits would cause TS to silently accept new bytes
-# without anyone noticing the contract changed.
+# Locks every sdk/python/tests/conformance/*.json fixture and public
+# tests/conformance/vectors/**/*.json fixture by canonical-JSON SHA-256.
+# Fixtures are the cross-SDK contract: the TS SDK replays them byte-for-byte
+# (see sdk/typescript/test/conformance.test.ts and siblings). Silent edits
+# would cause TS to silently accept new bytes without anyone noticing the
+# contract changed.
 #
 # Complements existing sdk/python conformance-vectors-frozen job (which
 # regenerates vectors.json from the Python generator and compares).
@@ -22,24 +23,38 @@ set -uo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 lock_file="${repo_root}/sdk/python/tests/conformance/FIXTURE_HASHES.lock"
-fix_dir="${repo_root}/sdk/python/tests/conformance"
+sdk_fix_dir="${repo_root}/sdk/python/tests/conformance"
+public_vector_dir="${repo_root}/tests/conformance/vectors"
 
 mode="${1:-verify}"
 
 current_hashes() {
-  AP_FIX_DIR="$fix_dir" python3 - <<'PYEOF'
+  AP_REPO_ROOT="$repo_root" AP_SDK_FIX_DIR="$sdk_fix_dir" AP_PUBLIC_VECTOR_DIR="$public_vector_dir" python3 - <<'PYEOF'
 import hashlib
 import json
 import os
+from pathlib import Path
 
-fix_dir = os.environ["AP_FIX_DIR"]
-files = sorted(f for f in os.listdir(fix_dir) if f.endswith(".json"))
-for fn in files:
-    with open(os.path.join(fix_dir, fn), encoding="utf-8") as fh:
+repo_root = Path(os.environ["AP_REPO_ROOT"])
+sdk_fix_dir = Path(os.environ["AP_SDK_FIX_DIR"])
+public_vector_dir = Path(os.environ["AP_PUBLIC_VECTOR_DIR"])
+
+files = [(path.name, path) for path in sorted(sdk_fix_dir.glob("*.json"))]
+if public_vector_dir.exists():
+    files.extend(
+        (
+            path.relative_to(repo_root).as_posix(),
+            path,
+        )
+        for path in sorted(public_vector_dir.rglob("*.json"))
+    )
+
+for display_path, path in files:
+    with path.open(encoding="utf-8") as fh:
         try:
             data = json.load(fh)
         except json.JSONDecodeError as exc:
-            raise SystemExit(f"::error::{fn} is not valid JSON: {exc}") from exc
+            raise SystemExit(f"::error::{display_path} is not valid JSON: {exc}") from exc
     canon = json.dumps(
         data,
         sort_keys=True,
@@ -47,7 +62,7 @@ for fn in files:
         ensure_ascii=False,
     )
     h = hashlib.sha256(canon.encode("utf-8")).hexdigest()
-    print(f"{h}  {fn}")
+    print(f"{h}  {display_path}")
 PYEOF
 }
 
@@ -60,8 +75,9 @@ if [ "$mode" = "--update" ]; then
 # Conformance fixture hash lock (Gap G7).
 #
 # Canonical-JSON SHA-256 of every sdk/python/tests/conformance/*.json
-# fixture. Fixtures are the cross-SDK contract — TS replays them
-# byte-for-byte. Recompute with:
+# fixture and public tests/conformance/vectors/**/*.json fixture.
+# Fixtures are the cross-SDK contract — TS replays them byte-for-byte.
+# Recompute with:
 #   ./scripts/check-fixture-hashes.sh --update
 # Verify with:
 #   ./scripts/check-fixture-hashes.sh

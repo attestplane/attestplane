@@ -11,6 +11,13 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### Conformance
+
+- Added v1.7.0 negative proof-bundle conformance vectors for the strict
+  non-empty / minimum-schema contract: empty bundle, empty signed-attestation
+  collection, missing signature payload, and missing subject digest. Downstream
+  verifiers consuming the public vector set should re-run their suites.
+
 ### Release automation
 
 - Autodev-train now applies a cadence limiter before cutting a new

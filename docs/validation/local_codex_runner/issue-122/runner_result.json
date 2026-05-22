@@ -1,0 +1,16 @@
+{
+  "branch": "codex/issue-122-p1-conformance-add-negative-conformance-vectors",
+  "ci_summary": null,
+  "commands_run": [],
+  "evidence_dir": "/Users/macworkers/Projects/attestplane/docs/validation/local_codex_runner/issue-122",
+  "finished_at_utc": "2026-05-22T05:59:35.440329+00:00",
+  "issue_number": 122,
+  "local_test_summary": "PASS: gate=area:verifier\n- env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q: exit=0\n- env PYTHONPATH=sdk/python/src pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_conformance_fixtures.py -q: exit=0",
+  "plan_path": "/Users/macworkers/Projects/attestplane/docs/validation/local_codex_runner/issue-122/plan.md",
+  "pr_url": null,
+  "residual_risks": [],
+  "salvage_note": "Original REVIEW_BLOCKED was caused by review guard false positives fixed in PR #133; rerun review guard and focused conformance validation now pass.",
+  "salvaged_at_utc": "2026-05-22T06:08:39Z",
+  "started_at_utc": "2026-05-22T05:50:50.073710+00:00",
+  "status": "PASS_AFTER_REVIEW_GUARD_FIX"
+}
