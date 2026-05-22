@@ -37,6 +37,9 @@ STRINGs = "STRINGs"
 # tokenises and reads the leading 3 chars as `afe` → `safe` typo.
 # This is a fixed historical hash, not an English word.
 "8afe7b7" = "8afe7b7"
+# Frozen git short-sha in Issue 92 local release-boundary evidence; typos
+# tokenises the leading two chars as `ba` and suggests prose words.
+"ba569a9" = "ba569a9"
 
 [files]
 extend-exclude = [

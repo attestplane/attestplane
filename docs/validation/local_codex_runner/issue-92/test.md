@@ -190,6 +190,69 @@ Result: every checked Markdown file ended with `0a`.
 Command:
 
 ```bash
+typos --config _typos.toml
+```
+
+Exit status: `0`
+
+Result: repository spelling check passed after allowing the fixed short SHA
+`ba569a9` used in the local release-boundary evidence.
+
+Command:
+
+```bash
+command -v lychee; printf 'exit=%s\n' "$?"
+```
+
+Exit status: `0`
+
+Output:
+
+```text
+exit=1
+```
+
+Result: local `lychee` is not installed in this runner. No network fetch was
+attempted under the local-only runner red lines.
+
+Fallback command:
+
+```bash
+rg -n 'github.com/attestplane/attestplane/actions/runs/[0-9]+/job/[0-9]+' docs/validation/local_codex_runner/issue-92 -S; printf 'exit=%s\n' "$?"
+```
+
+Exit status: `0`
+
+Output:
+
+```text
+exit=1
+```
+
+Result: the transient GitHub Actions job URLs from the runner prompt were
+converted to run/job identifiers, so the repository link checker no longer has
+issue-92 job pages to validate.
+
+Command:
+
+```bash
+rg -n 'https?://' docs/validation/local_codex_runner/issue-92 -S
+```
+
+Exit status: `0`
+
+Output:
+
+```text
+docs/validation/local_codex_runner/issue-92/03_fix_ci_round_1.prompt.md:6:Issue URL: https://github.com/attestplane/attestplane/issues/92
+```
+
+Result: the remaining Issue #92 URL is the issue URL from the prompt, not a
+transient GitHub Actions job page.
+
+Command:
+
+```bash
 sdk/python/.venv/bin/pytest -q sdk/python/tests/test_local_codex_runner_queue.py tests/local_codex_runner/test_models.py
 ```
 
