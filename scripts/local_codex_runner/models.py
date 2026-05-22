@@ -198,8 +198,8 @@ def processable_issues(
     exclude_labels: set[str] | None = None,
 ) -> list[IssueTask]:
     queue = [
-        issue
-        for issue in issues
+        (index, issue)
+        for index, issue in enumerate(issues)
         if should_process_issue(
             issue,
             approved_label=approved_label,
@@ -209,5 +209,5 @@ def processable_issues(
             exclude_labels=exclude_labels,
         )
     ]
-    queue.sort(key=lambda issue: (issue_priority_rank(issue), issue.number))
-    return queue[: max(0, max_issues_per_run)]
+    queue.sort(key=lambda item: (issue_priority_rank(item[1]), item[0]))
+    return [issue for _, issue in queue[: max(0, max_issues_per_run)]]
