@@ -24,16 +24,18 @@ artifact.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Final, Literal
 
 from attestplane.hashchain import SCHEMA_VERSION as _CHAIN_SCHEMA_VERSION
-from attestplane.hashchain import head_of, verify_chain
+from attestplane.hashchain import chain_extend, genesis_head, head_of, verify_chain
 from attestplane.retention import validate_retention_proof
 from attestplane.storage.jsonl import _serialize_event as _serialize_chained_event
-from attestplane.types import ChainedEvent
+from attestplane.types import ChainedEvent, EventDraft
+from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING, VerifyErrorCode
 
 
 def _sdk_version() -> str:
@@ -138,6 +140,41 @@ DEFAULT_FORBIDDEN_FIELDS: Final[tuple[str, ...]] = (
 """The thirteen-term redaction floor. Producers MAY add more; MUST NOT remove."""
 
 _VERIFICATION_METHOD = Literal["canonical-bytes-walk", "canonical-bytes-walk+anchor"]
+_LOWER_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+
+class ProofBundleError(Exception):
+    """Base class for SDK proof-bundle construction and strict verification errors."""
+
+    error_code: VerifyErrorCode
+
+    def __init__(self, message: str, *, error_code: VerifyErrorCode) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class EmptyProofBundleError(ProofBundleError):
+    """Strict SDK verification rejected a proof bundle with no events."""
+
+    def __init__(
+        self,
+        message: str = "proof bundle must contain at least one event",
+        *,
+        error_code: VerifyErrorCode = VERIFY_REQUIRED_FIELDS_MISSING,
+    ) -> None:
+        super().__init__(message, error_code=error_code)
+
+
+class IncompleteProofBundleError(ProofBundleError):
+    """Strict SDK construction or verification rejected an incomplete proof bundle."""
+
+    def __init__(
+        self,
+        message: str = "proof bundle lacks the minimum signed-attestation schema",
+        *,
+        error_code: VerifyErrorCode = VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    ) -> None:
+        super().__init__(message, error_code=error_code)
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,6 +223,51 @@ class ProofBundleBuilder:
     These markers are strictly additive. They prove shape and references only;
     they do not claim GDPR compliance or legal sufficiency.
     """
+
+    @classmethod
+    def minimal(cls, subject_digest: str, signer: Any) -> dict[str, Any]:
+        """Return a minimum-valid signed proof bundle for ``subject_digest``.
+
+        ``subject_digest`` must be a lowercase SHA-256 hex digest. It is stored
+        as the event ``matched_input_ref`` and in the event payload, while the
+        signature covers the canonical bundle event digest required by strict
+        proof-bundle schema verification.
+
+        Stability guarantee for v1.7.x: this method remains additive, returns a
+        v1 proof-bundle dict with one event and at least one syntactically valid
+        per-event signature, and the returned shape stays valid for
+        ``verify_proof_bundle(..., require_non_empty=True,
+        require_signed_attestation=True)``. Existing public symbols are not
+        removed or renamed by this helper.
+        """
+        if not isinstance(subject_digest, str) or _LOWER_HEX64.fullmatch(subject_digest) is None:
+            raise IncompleteProofBundleError("subject_digest must be lowercase 64-hex SHA-256")
+        if not hasattr(signer, "sign_event"):
+            raise IncompleteProofBundleError("signer must provide sign_event(event)")
+
+        now = datetime.now(UTC)
+        event = chain_extend(
+            genesis_head(),
+            EventDraft(
+                event_type="evidence_event",
+                actor="attestplane.sdk",
+                payload={"subject_digest": subject_digest},
+                matched_input_ref=subject_digest,
+            ),
+            now=now,
+        )
+        try:
+            records = signer.sign_event(event)
+        except Exception as exc:
+            raise IncompleteProofBundleError(f"signer failed to sign minimal bundle event: {exc}") from exc
+        if not records:
+            raise IncompleteProofBundleError("signer returned no signature records")
+
+        chain_id = str(getattr(signer, "_chain_id", "attestplane-sdk-minimal"))
+        builder = cls(chain_id=chain_id, producer_runtime="attestplane-sdk-minimal")
+        builder.extend([event])
+        builder.extend_signatures(list(records))
+        return builder.build(now=now)
 
     def extend(self, events: list[ChainedEvent]) -> None:
         self.events.extend(events)
@@ -445,7 +527,10 @@ def bundle_to_dsse_envelope(
 
 __all__ = [
     "DEFAULT_FORBIDDEN_FIELDS",
+    "EmptyProofBundleError",
     "FrameworkMapping",
+    "IncompleteProofBundleError",
+    "ProofBundleError",
     "ProofBundleBuilder",
     "build_auditor_export",
     "bundle_to_dsse_envelope",

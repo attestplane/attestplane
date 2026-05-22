@@ -23,7 +23,12 @@ from pathlib import Path
 from typing import Any
 
 from attestplane import __version__
-from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
+from attestplane.verify_errors import (
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    VERIFY_IO_ERROR,
+    VERIFY_REQUIRED_FIELDS_MISSING,
+    VERIFY_SCHEMA_ERROR,
+)
 
 VERIFY_SCOPE = "chain_report_only"
 VERIFY_SCOPE_NOTICE = (
@@ -228,6 +233,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
         **_verify_scope_metadata(),
     }
+    if not result.ok and result.error_code in {
+        VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+        VERIFY_REQUIRED_FIELDS_MISSING,
+    }:
+        sys.stderr.write(f"{result.error_code}\n")
     _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
     return 0 if result.ok else 1
 

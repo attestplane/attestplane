@@ -113,14 +113,29 @@ def parse_simple_yaml(text: str, path: Path) -> dict[str, Any]:
         if not line.strip():
             continue
         if line.startswith("  - ") and current_key:
-            data.setdefault(current_key, []).append(parse_scalar(line[4:].strip()))
+            values = data.setdefault(current_key, [])
+            if not isinstance(values, list):
+                raise ConfigError(f"{path}: YAML list item follows scalar key: {current_key}")
+            values.append(parse_scalar(line[4:].strip()))
             continue
-        if ":" not in line:
+        split = split_simple_yaml_mapping(line)
+        if split is None:
             raise ConfigError(f"{path}: unsupported YAML line: {raw_line}")
-        key, value = line.split(":", 1)
+        key, value = split
         current_key = key.strip()
         data[current_key] = [] if not value.strip() else parse_scalar(value.strip())
     return data
+
+
+def split_simple_yaml_mapping(line: str) -> tuple[str, str] | None:
+    """Split a simple YAML mapping line, allowing ':' inside label-like keys."""
+    for index, char in enumerate(line):
+        if char != ":":
+            continue
+        next_char = line[index + 1] if index + 1 < len(line) else ""
+        if not next_char or next_char.isspace():
+            return line[:index], line[index + 1 :]
+    return None
 
 
 def parse_scalar(value: str) -> Any:
