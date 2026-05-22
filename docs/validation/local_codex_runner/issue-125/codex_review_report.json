@@ -1,0 +1,30 @@
+{
+  "status": "WARN",
+  "blocking_reasons": [],
+  "warnings": [
+    "Issue-requested validation was not fully runnable in this checkout: markdownlint was not installed, npx --no-install markdownlint-cli2 attempted registry access and was blocked by the restricted runner environment, and scripts/release/check_changelog.py is absent.",
+    "The final release-note file docs/release-notes/v1.7.0.md is untracked in the current worktree, while release/artifacts/v1.7.0/artifact-manifest.json still references docs/release-notes/v1.7.0.draft.md. The draft was kept in sync and no release artifact metadata was changed."
+  ],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text from the runner prompt; no web search, browser tools, external connectors, or external advisory services were used.",
+    "git status --short shows docs-only changes: CHANGELOG.md, docs/contributor/api-reference.md, docs/release-notes/v1.7.0.draft.md, untracked docs/release-notes/v1.7.0.md, and issue-125 validation evidence/report files.",
+    "git diff --stat for tracked changes shows only documentation files changed: 55 insertions and 7 deletions across CHANGELOG.md, docs/contributor/api-reference.md, and docs/release-notes/v1.7.0.draft.md.",
+    "The diff does not weaken any release gate; no release scripts, workflow files, gate code, artifact manifest, checksum file, or policy code was modified.",
+    "The diff does not lower severity; it preserves the issue as P2 in local evidence and does not change issue labels, release_blocking policy, or P0/P1 text.",
+    "The diff does not leak or log secrets. Local grep found no new secrets, signing keys, credentials, .pypirc, .npmrc, private tokens, or internal runner hostnames in the changed documentation scope.",
+    "The diff does not modify publish/tag logic; publish/tag references are documentation context only and no executable publish, tag, or release workflow files changed.",
+    "The diff does not delete key tests; no test files were modified or removed.",
+    "The diff does not implement runtime behavior. It documents already-local release and SDK contract evidence, and docs/validation/local_codex_runner/issue-125/test.md records the local evidence and command results.",
+    "The diff introduces no uncertain external dependency. GitHub issue links are documentation references only; no package, script, workflow, or dependency manifest changed.",
+    "git diff --check passed with no whitespace errors.",
+    "docs/validation/local_codex_runner/issue-125/gate_report.json records type:docs gate status PASS via python -m compileall scripts.",
+    "docs/validation/local_codex_runner/issue-125/test.md records a local release-note contract check passing for docs/release-notes/v1.7.0.md and docs/release-notes/v1.7.0.draft.md.",
+    "docs/validation/local_codex_runner/issue-125/test.md records the product delta release gate command passing with product_delta.allowed=true."
+  ],
+  "residual_risks": [
+    "Because markdownlint and scripts/release/check_changelog.py were unavailable locally, formatting/changelog validation coverage depends on fallback checks until those tools are available.",
+    "The repository currently has both docs/release-notes/v1.7.0.md and docs/release-notes/v1.7.0.draft.md content in play; the synced content reduces divergence risk, but the release-note source-of-truth should be confirmed before merge.",
+    "This review did not consult remote GitHub issue state or external documentation by design, so it relies on the issue text provided in the runner prompt and local evidence files."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

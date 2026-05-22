@@ -11,6 +11,22 @@ notes are the authoritative reference for supply-chain verification.
 
 ## [Unreleased]
 
+### v1.7.0 integrator delta
+
+- `v1.7.0` is the first stable release since `v1.5.0` to carry
+  user-visible product changes: `3f551d9` requires non-empty proof
+  bundles in strict verification paths, Issue 1 tightens the minimum
+  signed-attestation schema, and Issue 3 adds
+  `attestplane.sdk.ProofBundleBuilder.minimal(subject_digest, signer)`
+  with typed `EmptyProofBundleError` / `IncompleteProofBundleError`
+  handling. Integrators should stop emitting or accepting empty strict
+  bundles, include at least one minimum-valid signed attestation with
+  subject digest material, and migrate SDK callers to the builder plus
+  typed error handling. Planning context:
+  [Issue #120](https://github.com/attestplane/attestplane/issues/120);
+  implementation summary task:
+  [Issue #125](https://github.com/attestplane/attestplane/issues/125).
+
 ### Conformance
 
 - Added v1.7.0 negative proof-bundle conformance vectors for the strict

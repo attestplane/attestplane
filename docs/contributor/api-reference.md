@@ -58,6 +58,16 @@ Artifacts are retained for 60 days.
   `IncompleteProofBundleError`. These names render from their source docstrings and must stay
   listed in the relevant module `__all__` values when changed.
 
+## v1.7.0 proof-bundle migration note
+
+Strict proof-bundle callers should migrate construction to
+`attestplane.sdk.ProofBundleBuilder.minimal(subject_digest, signer)` when they
+need the minimum signed-attestation bundle shape accepted by the v1.7.0
+non-empty verifier contract. SDK integrations that raise on verification
+failures should catch `EmptyProofBundleError` for bundles with no proof events
+and `IncompleteProofBundleError` for bundles that are non-empty but lack the
+minimum signed-attestation schema.
+
 ## Future work
 
 A follow-up PR will publish the rendered HTML to GitHub Pages so the latest `main` reference
