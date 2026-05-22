@@ -1179,6 +1179,22 @@ def test_cadence_limiter_proceeds_when_real_fix_present(
     assert stable_auto_train.commits_since_tag_have_real_work("v1.3.8") is True
 
 
+def test_cadence_limiter_proceeds_for_mixed_real_release_prep_range(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    subjects = (
+        "Add multi-lane local Codex runner configuration\n"
+        "chore(release): prepare v1.7.5\n"
+        "Fix #172: align queue test with priority ordering\n"
+        "Fix #172: [P1][verifier] Introduce stable rejection reason-code taxonomy for `verify` failures\n"
+        "Guard docs gate against non-doc runner diffs"
+    )
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v1.7.4") is True
+
+
 def test_cadence_limiter_returns_false_on_empty_range(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

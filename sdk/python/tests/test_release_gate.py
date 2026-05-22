@@ -210,6 +210,44 @@ def test_product_delta_allows_product_implementation_change() -> None:
     assert result.ignored_files == ["sdk/python/src/attestplane/__init__.py"]
 
 
+def test_product_delta_allows_real_sdk_changes_in_release_prep_range() -> None:
+    result = release_gate.classify_product_delta(
+        [
+            "docs/release-notes/v1.7.5.draft.md",
+            "release/artifacts/v1.7.5/artifact-manifest.json",
+            "scripts/local_codex_runner/run_once.py",
+            "sdk/python/src/attestplane/verifier.py",
+            "sdk/python/src/attestplane/verify_reason_codes.py",
+            "sdk/python/tests/test_local_codex_runner_queue.py",
+            "sdk/python/src/attestplane/__init__.py",
+            "sdk/typescript/src/verifier.ts",
+            "sdk/typescript/src/verify_reason_codes.ts",
+            "sdk/typescript/src/index_version.ts",
+        ],
+        labels=[],
+        env={},
+    )
+
+    assert result.allowed is True
+    assert result.reason == "product_implementation_delta"
+    assert result.product_files == [
+        "sdk/python/src/attestplane/verifier.py",
+        "sdk/python/src/attestplane/verify_reason_codes.py",
+        "sdk/typescript/src/verifier.ts",
+        "sdk/typescript/src/verify_reason_codes.ts",
+    ]
+    assert result.product_support_files == ["sdk/python/tests/test_local_codex_runner_queue.py"]
+    assert result.support_only_files == [
+        "docs/release-notes/v1.7.5.draft.md",
+        "release/artifacts/v1.7.5/artifact-manifest.json",
+        "scripts/local_codex_runner/run_once.py",
+    ]
+    assert result.ignored_files == [
+        "sdk/python/src/attestplane/__init__.py",
+        "sdk/typescript/src/index_version.ts",
+    ]
+
+
 def test_product_delta_blocks_release_only_change() -> None:
     result = release_gate.classify_product_delta(
         [
