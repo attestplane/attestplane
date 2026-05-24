@@ -84,12 +84,19 @@ def recover_needs_human_for_labels(
         return {"enabled": False, "results": []}
 
     state = load_state(config.state_file())
-    issues = gh.list_issues(
-        config.repo or "",
-        config.needs_human_label,
-        max(config.needs_human_scan_limit, config.max_needs_human_recoveries_per_run),
-    )
-    prs = gh.list_pull_requests(config.repo or "", config.base_branch, 100)
+    external_errors: list[dict[str, object]] = []
+    try:
+        issues = gh.list_issues(
+            config.repo or "",
+            config.needs_human_label,
+            max(config.needs_human_scan_limit, config.max_needs_human_recoveries_per_run),
+        )
+    except RunnerCommandError as exc:
+        return {"enabled": True, "results": [], "external_errors": [{"stage": "list_needs_human", "error": str(exc)}]}
+    try:
+        prs = gh.list_pull_requests(config.repo or "", config.base_branch, 100)
+    except RunnerCommandError as exc:
+        return {"enabled": True, "results": [], "external_errors": [{"stage": "list_pull_requests", "error": str(exc)}]}
     results: list[NeedsHumanRecovery] = []
     recoverable_reasons = set(config.needs_human_recoverable_reasons)
     policy_block_labels = set(config.needs_human_policy_block_labels)
@@ -175,7 +182,7 @@ def recover_needs_human_for_labels(
             save_state(config.state_file(), state)
         results.append(result)
         recoveries += 1
-    return {"enabled": True, "results": [item.to_dict() for item in results]}
+    return {"enabled": True, "results": [item.to_dict() for item in results], "external_errors": external_errors}
 
 
 def has_existing_clean_recovery_commits(config: RunnerConfig, branch: str | None) -> bool:

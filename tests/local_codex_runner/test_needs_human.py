@@ -231,6 +231,47 @@ def test_recovery_respects_lane_filters(tmp_path: Path) -> None:
     assert summary["results"][0]["action"] == "would_requeue"
 
 
+def test_needs_human_issue_list_outage_is_reported_without_crashing(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+
+    class FailingGH:
+        def list_issues(self, repo: str, label: str, limit: int):
+            raise RunnerCommandError(
+                ["gh", "issue", "list"],
+                1,
+                "proxyconnect tcp: dial tcp 127.0.0.1:7897: connect: connection refused",
+            )
+
+    summary = recover_needs_human(config, FailingGH())  # type: ignore[arg-type]
+
+    assert summary["enabled"] is True
+    assert summary["results"] == []
+    assert summary["external_errors"][0]["stage"] == "list_needs_human"
+    assert "proxyconnect tcp" in summary["external_errors"][0]["error"]
+
+
+def test_needs_human_pr_list_outage_is_reported_without_crashing(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+
+    class FailingGH:
+        def list_issues(self, repo: str, label: str, limit: int):
+            return [issue(22, ["auto-codex-approved", "codex-needs-human"])]
+
+        def list_pull_requests(self, repo: str, base: str, limit: int):
+            raise RunnerCommandError(
+                ["gh", "pr", "list"],
+                1,
+                'Post "https://api.github.com/graphql": EOF',
+            )
+
+    summary = recover_needs_human(config, FailingGH())  # type: ignore[arg-type]
+
+    assert summary["enabled"] is True
+    assert summary["results"] == []
+    assert summary["external_errors"][0]["stage"] == "list_pull_requests"
+    assert "api.github.com/graphql" in summary["external_errors"][0]["error"]
+
+
 def test_recovery_scans_past_newer_out_of_lane_issues(tmp_path: Path) -> None:
     config = base_config(tmp_path)
     config.max_needs_human_recoveries_per_run = 1
