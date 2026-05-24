@@ -178,8 +178,10 @@ def _validate_shape(bundle: Any) -> bool:
     if schema_version_raw is None:
         raise BundleSchemaError("schema_version_missing: bundle missing required field 'schema_version'")
     if not isinstance(schema_version_raw, str):
+        schema_type = type(schema_version_raw).__name__
         raise BundleSchemaError(
-            f"schema_version_invalid: bundle schema_version must be a MAJOR.MINOR string, got {type(schema_version_raw).__name__}"
+            "schema_version_invalid: bundle schema_version must be a "
+            f"MAJOR.MINOR string, got {schema_type}"
         )
     match = _BUNDLE_SCHEMA_VERSION_RE.fullmatch(schema_version_raw)
     if match is None:
@@ -190,7 +192,8 @@ def _validate_shape(bundle: Any) -> bool:
     bundle_minor = int(match.group("minor"))
     if bundle_major != _BUNDLE_SCHEMA_MAJOR:
         raise BundleSchemaError(
-            f"schema_version_major_unsupported: bundle schema_version major {bundle_major} exceeds supported major {_BUNDLE_SCHEMA_MAJOR}"
+            "schema_version_major_unsupported: bundle schema_version "
+            f"major {bundle_major} exceeds supported major {_BUNDLE_SCHEMA_MAJOR}"
         )
     unknown = set(bundle) - _ALLOWED_TOP_LEVEL
     if unknown and bundle_minor <= _BUNDLE_SCHEMA_MINOR:

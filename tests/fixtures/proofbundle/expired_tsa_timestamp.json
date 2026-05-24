@@ -1,12 +1,36 @@
 {
+  "anchor_records": [
+    {
+      "alpha_no_go_claims": {
+        "legal_timestamp_attestation": false,
+        "long_term_archival_trust": false,
+        "rfc3161_token_verification_performed": false
+      },
+      "anchor_type": "rfc3161",
+      "anchored_event_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+      "anchored_seq": 0,
+      "expiry_claimed": "2020-12-31T23:59:59+00:00",
+      "expiry_fixture_kind": "expired_tsa_timestamp",
+      "issued_at_claimed": "2020-01-01T00:00:00+00:00",
+      "ocsp_responses_b64": [
+        "MIIB5g...truncated..."
+      ],
+      "tsa_cert_chain_b64": [
+        "MIIDGj...truncated...",
+        "MIIC+j...truncated..."
+      ],
+      "tsa_provider_id": "test.tsa:Attestplane Test TSA — Vector Issuer",
+      "tsa_token_b64": "MIIFjjAD...truncated-test-only..."
+    }
+  ],
   "artifact": {
     "canonicalization": "attestplane.restricted_jcs.v1",
     "hash_algorithm": "sha256",
-    "sha256": "0e245766eefc183139e63ccc51253ff0121cf6122a2ef50617729ac13ffcca86",
+    "sha256": "f61f2d771c98ba8a4fcf265d2f1b1de0b48403cf16309422c78ce3c74c61d77e",
     "target": "proof_bundle"
   },
   "dsse_envelope": {
-    "payload": "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJwcmVkaWNhdGUiOnsiY2hhaW5fbWV0YWRhdGEiOnsiY2hhaW5faWQiOiJwMy1jbGktcHJvb2ZidW5kbGUiLCJldmlkZW5jZV90YXhvbm9teV92ZXJzaW9uIjoxLCJnZW5lc2lzX2hhc2hfaGV4IjoiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsImhlYWRfaGFzaF9oZXgiOiJmNDNhNmFmZDBiYTQyNmQxMmFhNTc5YzIxMDJmZWFjZTlmNTU5ZTRjMDc5NDY2ZGFmMWEwMTcyZDEwNWFjZTlhIiwiaGVhZF9zZXEiOjAsInByb2R1Y2VyX3J1bnRpbWUiOiJhdHRlc3RwbGFuZS10ZXN0Iiwic2NoZW1hX3ZlcnNpb24iOjF9LCJldmVudHMiOlt7ImV2ZW50Ijp7ImFjdG9yIjoiYWdlbnQ6Ly9wMy90ZXN0IiwiZXZlbnRfaWQiOiIwMDAwMDAwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJldmVudF90eXBlIjoiZXZhbF9ldmVudCIsImh1bWFuX3ZlcmlmaWVyIjpudWxsLCJtYXRjaGVkX2lucHV0X3JlZiI6InNoYTI1NjptYXRjaGVkLWlucHV0LXJlZiIsInBheWxvYWQiOnsiYXJ0aWZhY3RfcmVmIjoibG9jYWw6Ly9hcnRpZmFjdC1BIiwic2NvcmUiOjF9LCJyZWZlcmVuY2VfZGJfcmVmIjpudWxsLCJzY2hlbWFfdmVyc2lvbiI6MSwic2Vzc2lvbl9pZCI6bnVsbCwic3ViamVjdF9yZWYiOm51bGwsInRpbWVzdGFtcCI6IjIwMjYtMDUtMThUMTI6MDA6MDAuMDAwMDAwWiJ9LCJldmVudF9oYXNoX2hleCI6ImY0M2E2YWZkMGJhNDI2ZDEyYWE1NzljMjEwMmZlYWNlOWY1NTllNGMwNzk0NjZkYWYxYTAxNzJkMTA1YWNlOWEiLCJwcmV2X2hhc2hfaGV4IjoiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsInNlcSI6MH1dLCJmb3JiaWRkZW5fZmllbGRzIjpbImN1c3RvbWVyX25hbWVzIiwicGVyc29uX25hbWVzIiwicGlpIiwicmF3X2RvY3VtZW50cyIsImNvbnRyYWN0cyIsInNjcmlwdHMiLCJ0aWNrZXRzIiwiZW1haWxzIiwic2VjcmV0cyIsInRva2VucyIsImp3dHMiLCJwcml2YXRlX2tleXMiLCJyYXdfYXVkaXRfcGF5bG9hZHMiXSwiZnJhbWV3b3JrX21hcHBpbmdzIjpbeyJldmlkZW5jZV9ldmVudF9pbmRleGVzIjpbMF0sImltcGxlbWVudGF0aW9uX3N0YXR1c19hdF9idW5kbGVfdGltZSI6ImZpZWxkX3N1cHBvcnRlZCIsIm9ibGlnYXRpb25faWQiOiJldV9haV9hY3QuYXJ0MTIuM2MubWF0Y2hlZF9pbnB1dF9kYXRhIn1dLCJ2ZXJpZmljYXRpb25fcmVwb3J0Ijp7ImZpcnN0X2JhZF9pbmRleCI6bnVsbCwib2siOnRydWUsInJlYXNvbiI6bnVsbCwidmVyaWZpY2F0aW9uX21ldGhvZCI6ImNhbm9uaWNhbC1ieXRlcy13YWxrIiwidmVyaWZpZWRfYXQiOiIyMDI2LTA1LTE4VDEyOjAwOjAwLjAwMDAwMFoiLCJ2ZXJpZmllcl92ZXJzaW9uIjoiMC4wLjJhMCJ9fSwicHJlZGljYXRlVHlwZSI6Imh0dHBzOi8vYXR0ZXN0cGxhbmUuaW8vdjEvYWdlbnQtcnVudGltZS1ldmVudCIsInN1YmplY3QiOlt7ImRpZ2VzdCI6eyJzaGEyNTYiOiJmNDNhNmFmZDBiYTQyNmQxMmFhNTc5YzIxMDJmZWFjZTlmNTU5ZTRjMDc5NDY2ZGFmMWEwMTcyZDEwNWFjZTlhIn0sIm5hbWUiOiJwMy1jbGktcHJvb2ZidW5kbGUifV19",
+    "payload": "eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJwcmVkaWNhdGUiOnsiY2hhaW5fbWV0YWRhdGEiOnsiY2hhaW5faWQiOiJwMy1jbGktcHJvb2ZidW5kbGUiLCJldmlkZW5jZV90YXhvbm9teV92ZXJzaW9uIjoxLCJnZW5lc2lzX2hhc2hfaGV4IjoiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsImhlYWRfaGFzaF9oZXgiOiJmNDNhNmFmZDBiYTQyNmQxMmFhNTc5YzIxMDJmZWFjZTlmNTU5ZTRjMDc5NDY2ZGFmMWEwMTcyZDEwNWFjZTlhIiwiaGVhZF9zZXEiOjAsInByb2R1Y2VyX3J1bnRpbWUiOiJhdHRlc3RwbGFuZS10ZXN0Iiwic2NoZW1hX3ZlcnNpb24iOjF9LCJldmVudHMiOlt7ImV2ZW50Ijp7ImFjdG9yIjoiYWdlbnQ6Ly9wMy90ZXN0IiwiZXZlbnRfaWQiOiIwMDAwMDAwMC0wMDAwLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJldmVudF90eXBlIjoiZXZhbF9ldmVudCIsImh1bWFuX3ZlcmlmaWVyIjpudWxsLCJtYXRjaGVkX2lucHV0X3JlZiI6InNoYTI1NjptYXRjaGVkLWlucHV0LXJlZiIsInBheWxvYWQiOnsiYXJ0aWZhY3RfcmVmIjoibG9jYWw6Ly9hcnRpZmFjdC1BIiwic2NvcmUiOjF9LCJyZWZlcmVuY2VfZGJfcmVmIjpudWxsLCJzY2hlbWFfdmVyc2lvbiI6MSwic2Vzc2lvbl9pZCI6bnVsbCwic3ViamVjdF9yZWYiOm51bGwsInRpbWVzdGFtcCI6IjIwMjYtMDUtMThUMTI6MDA6MDAuMDAwMDAwWiJ9LCJldmVudF9oYXNoX2hleCI6ImY0M2E2YWZkMGJhNDI2ZDEyYWE1NzljMjEwMmZlYWNlOWY1NTllNGMwNzk0NjZkYWYxYTAxNzJkMTA1YWNlOWEiLCJwcmV2X2hhc2hfaGV4IjoiMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMCIsInNlcSI6MH1dLCJmb3JiaWRkZW5fZmllbGRzIjpbImN1c3RvbWVyX25hbWVzIiwicGVyc29uX25hbWVzIiwicGlpIiwicmF3X2RvY3VtZW50cyIsImNvbnRyYWN0cyIsInNjcmlwdHMiLCJ0aWNrZXRzIiwiZW1haWxzIiwic2VjcmV0cyIsInRva2VucyIsImp3dHMiLCJwcml2YXRlX2tleXMiLCJyYXdfYXVkaXRfcGF5bG9hZHMiXSwiZnJhbWV3b3JrX21hcHBpbmdzIjpbeyJldmlkZW5jZV9ldmVudF9pbmRleGVzIjpbMF0sImltcGxlbWVudGF0aW9uX3N0YXR1c19hdF9idW5kbGVfdGltZSI6ImZpZWxkX3N1cHBvcnRlZCIsIm9ibGlnYXRpb25faWQiOiJldV9haV9hY3QuYXJ0MTIuM2MubWF0Y2hlZF9pbnB1dF9kYXRhIn1dLCJ2ZXJpZmljYXRpb25fcmVwb3J0Ijp7ImZpcnN0X2JhZF9pbmRleCI6bnVsbCwib2siOnRydWUsInJlYXNvbiI6bnVsbCwidmVyaWZpY2F0aW9uX21ldGhvZCI6ImNhbm9uaWNhbC1ieXRlcy13YWxrIiwidmVyaWZpZWRfYXQiOiIyMDI2LTA1LTE4VDEyOjAwOjAwLjAwMDAwMFoiLCJ2ZXJpZmllcl92ZXJzaW9uIjoiMC4wLjJhMCJ9LCJzY2hlbWFfdmVyc2lvbiI6IjEuNyJ9LCJwcmVkaWNhdGVUeXBlIjoiaHR0cHM6Ly9hdHRlc3RwbGFuZS5pby92MS9hZ2VudC1ydW50aW1lLWV2ZW50Iiwic3ViamVjdCI6W3siZGlnZXN0Ijp7InNoYTI1NiI6ImY0M2E2YWZkMGJhNDI2ZDEyYWE1NzljMjEwMmZlYWNlOWY1NTllNGMwNzk0NjZkYWYxYTAxNzJkMTA1YWNlOWEifSwibmFtZSI6InAzLWNsaS1wcm9vZmJ1bmRsZSJ9XX0=",
     "payloadType": "application/vnd.in-toto+json",
     "signatures": []
   },
@@ -73,6 +97,7 @@
           "obligation_id": "eu_ai_act.art12.3c.matched_input_data"
         }
       ],
+      "schema_version": "1.7",
       "verification_report": {
         "first_bad_index": null,
         "ok": true,
@@ -156,6 +181,7 @@
         "obligation_id": "eu_ai_act.art12.3c.matched_input_data"
       }
     ],
+    "schema_version": "1.7",
     "verification_report": {
       "first_bad_index": null,
       "ok": true,
@@ -177,29 +203,5 @@
     "multi_writer_safe": false,
     "record_format": "chained_event_jsonl.v1",
     "schema_version": "storage_compatibility_manifest.v1"
-  },
-  "anchor_records": [
-    {
-      "anchor_type": "rfc3161",
-      "anchored_event_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
-      "anchored_seq": 0,
-      "issued_at_claimed": "2020-01-01T00:00:00+00:00",
-      "tsa_provider_id": "test.tsa:Attestplane Test TSA — Vector Issuer",
-      "tsa_token_b64": "MIIFjjAD...truncated-test-only...",
-      "tsa_cert_chain_b64": [
-        "MIIDGj...truncated...",
-        "MIIC+j...truncated..."
-      ],
-      "ocsp_responses_b64": [
-        "MIIB5g...truncated..."
-      ],
-      "alpha_no_go_claims": {
-        "rfc3161_token_verification_performed": false,
-        "legal_timestamp_attestation": false,
-        "long_term_archival_trust": false
-      },
-      "expiry_claimed": "2020-12-31T23:59:59+00:00",
-      "expiry_fixture_kind": "expired_tsa_timestamp"
-    }
-  ]
+  }
 }

@@ -167,7 +167,10 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function validateShape(raw: unknown): { schemaVersion: string; schemaVersionForwardCompat: boolean } {
+function validateShape(raw: unknown): {
+  schemaVersion: string;
+  schemaVersionForwardCompat: boolean;
+} {
   if (!isPlainObject(raw)) {
     throw new BundleSchemaError(
       `bundle must be a JSON object, got ${raw === null ? 'null' : typeof raw}`,

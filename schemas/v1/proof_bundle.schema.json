@@ -12,20 +12,35 @@
     "verification_report",
     "forbidden_fields"
   ],
-  "if": {
-    "required": ["schema_version"],
-    "properties": {
-      "schema_version": {
-        "pattern": "^1\\.(?:[8-9]|[1-9][0-9]+)$"
+  "allOf": [
+    {
+      "if": {
+        "required": ["schema_version"],
+        "properties": {
+          "schema_version": {
+            "pattern": "^1\\.(?:[8-9]|[1-9][0-9]+)$"
+          }
+        }
+      },
+      "else": {
+        "propertyNames": {
+          "enum": [
+            "bundle_version",
+            "schema_version",
+            "chain_metadata",
+            "events",
+            "verification_report",
+            "framework_mappings",
+            "forbidden_fields",
+            "signature",
+            "policy_trace_refs",
+            "signatures",
+            "retention_proofs"
+          ]
+        }
       }
     }
-  },
-  "then": {
-    "unevaluatedProperties": true
-  },
-  "else": {
-    "unevaluatedProperties": false
-  },
+  ],
   "properties": {
     "bundle_version": {
       "type": "integer",

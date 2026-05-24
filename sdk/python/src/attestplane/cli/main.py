@@ -200,7 +200,9 @@ def _schema_version_explain_lines(result: Any) -> list[str]:
     lines: list[str] = []
     if getattr(result, "schema_version_forward_compat", False):
         lines.append(
-            f"schema_version_forward_compat: true (bundle schema_version {result.schema_version} exceeds supported 1.7; unknown top-level additions accepted)"
+            "schema_version_forward_compat: true "
+            f"(bundle schema_version {result.schema_version} exceeds supported 1.7; "
+            "unknown top-level additions accepted)"
         )
     return lines
 
