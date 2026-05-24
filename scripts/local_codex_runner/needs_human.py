@@ -644,11 +644,44 @@ def recover_ci_pr(
             signature=signal.signature,
             detail=gate.summary(),
         )
-    git.commit_all(
-        issue.number,
-        f"Fix #{issue.number}: needs-human CI recovery round {attempt}",
-        expected_branch=branch,
-    )
+    try:
+        git.commit_all(
+            issue.number,
+            f"Fix #{issue.number}: needs-human CI recovery round {attempt}",
+            expected_branch=branch,
+        )
+    except GitSafetyError as exc:
+        if "only transient runner evidence" not in str(exc):
+            return NeedsHumanRecovery(
+                issue.number,
+                "kept",
+                "local_workspace_blocked",
+                attempt,
+                pr_number=number,
+                branch=branch,
+                signature=signal.signature,
+                detail=str(exc),
+            )
+        fresh_pr = gh.view_pull_request(config.repo or "", number or 0) or pr
+        checks = gh.pr_checks(config.repo or "", str(number or branch))
+        if classify_checks(checks) == "PASS":
+            return recover_passed_ci_pr(
+                config,
+                gh,
+                issue,
+                fresh_pr,
+                StopSignal("ci_passed", stable_signature("ci_passed"), "checks already pass"),
+            )
+        return NeedsHumanRecovery(
+            issue.number,
+            "kept",
+            "local_workspace_blocked",
+            attempt,
+            pr_number=number,
+            branch=branch,
+            signature=signal.signature,
+            detail=str(exc),
+        )
     gh.comment_issue(
         config.repo or "",
         issue.number,

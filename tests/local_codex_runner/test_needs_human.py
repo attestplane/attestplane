@@ -4,6 +4,7 @@ from pathlib import Path
 from scripts.local_codex_runner.ci_watch import CIWatchResult
 from scripts.local_codex_runner.config import RunnerConfig
 from scripts.local_codex_runner.gate_runner import CI_FAILED_GATE, GateReport
+from scripts.local_codex_runner.git_ops import GitSafetyError
 from scripts.local_codex_runner.github_cli import CheckStatus, RunnerCommandError
 from scripts.local_codex_runner.models import IssueTask
 from scripts.local_codex_runner.needs_human import (
@@ -497,6 +498,78 @@ def test_ci_recovery_pushes_existing_clean_local_commit(monkeypatch, tmp_path: P
     assert pushed == ["codex/issue-33-fix"]
     assert selected_gates == [CI_FAILED_GATE]
     assert gh.removed == [(33, ["codex-needs-human"])]
+
+
+def test_ci_recovery_transient_only_diff_marks_fresh_green_pr(monkeypatch, tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    config.allowed_pr_authors = ["runner-bot"]
+
+    class FlippingGH(FakeGH):
+        def __init__(self):
+            super().__init__(
+                issues=[issue(35, ["auto-codex-approved", "codex-needs-human"])],
+                prs=[pr(15, 35)],
+                checks=[CheckStatus("pytest", "FAILURE", "fail")],
+            )
+            self.check_calls = 0
+
+        def pr_checks(self, repo: str, pr_number_or_branch: str):
+            self.check_calls += 1
+            if self.check_calls == 1:
+                return [CheckStatus("pytest", "FAILURE", "fail")]
+            return [CheckStatus("pytest", "SUCCESS", "pass")]
+
+    class FakeGit:
+        def __init__(self, workdir):
+            pass
+
+        def run(self, args):
+            return f"worktree {tmp_path}\nHEAD abc\nbranch refs/heads/main\n\n"
+
+        def remove_transient_evidence(self):
+            pass
+
+        def ensure_clean_worktree(self):
+            pass
+
+        def current_branch(self):
+            return "main"
+
+        def checkout_remote_branch(self, branch):
+            pass
+
+        def has_unpushed_commits(self, branch):
+            return False
+
+        def commit_all(self, issue_number, message, *, expected_branch=None):
+            raise GitSafetyError("Refusing to commit only transient runner evidence")
+
+    class PassingGate:
+        def __init__(self, workdir, matrix_path, *, timeout_seconds):
+            pass
+
+        def run(self, labels, evidence_dir, *, preferred_gate=None):
+            return GateReport(status="PASS", selected_gate=preferred_gate or "default", commands=[])
+
+    class NoopCodex:
+        def __init__(self, **kwargs):
+            pass
+
+        def run_codex(self, prompt_file, workdir, log_path, timeout=None):
+            return None
+
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GateRunner", PassingGate)
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", NoopCodex)
+
+    gh = FlippingGH()
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "marked_ci_green"
+    assert summary["results"][0]["reason"] == "ci_passed"
+    assert gh.removed == [(35, ["codex-needs-human"])]
+    assert gh.added == [(35, ["codex-recovered", "codex-ci-green"]), (15, ["codex-ci-green"])]
 
 
 def test_ci_recovery_attempt_cap_allows_existing_clean_local_commit(monkeypatch, tmp_path: Path) -> None:
