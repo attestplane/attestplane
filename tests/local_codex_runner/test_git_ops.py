@@ -59,6 +59,44 @@ def test_remote_checkout_ref_uses_detached_origin_branch() -> None:
     assert git.commands_run == ["fetch origin main", "checkout --detach origin/main"]
 
 
+def test_remote_issue_branch_checkout_is_limited_to_codex_branches() -> None:
+    git = FakeGit({"branch --show-current": "main\n"})
+
+    git.checkout_remote_branch("codex/issue-12-fix")
+
+    assert git.commands_run == [
+        "fetch origin codex/issue-12-fix",
+        "branch --show-current",
+        "checkout -B codex/issue-12-fix origin/codex/issue-12-fix",
+    ]
+
+
+def test_remote_issue_branch_checkout_preserves_unpushed_current_branch() -> None:
+    git = FakeGit(
+        {
+            "branch --show-current": "codex/issue-12-fix\n",
+            "rev-list --count origin/codex/issue-12-fix..HEAD": "1\n",
+        }
+    )
+
+    git.checkout_remote_branch("codex/issue-12-fix")
+
+    assert git.commands_run == [
+        "fetch origin codex/issue-12-fix",
+        "branch --show-current",
+        "rev-list --count origin/codex/issue-12-fix..HEAD",
+    ]
+
+
+def test_remote_branch_checkout_rejects_main_and_non_codex() -> None:
+    git = FakeGit({})
+
+    with pytest.raises(GitSafetyError):
+        git.checkout_remote_branch("main")
+    with pytest.raises(GitSafetyError):
+        git.checkout_remote_branch("feature/unsafe")
+
+
 def test_forbidden_file_changed_is_rejected() -> None:
     assert is_forbidden_path(".env")
     assert is_forbidden_path("release/credentials.json")
@@ -70,6 +108,8 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
             " M CHANGELOG.md",
             "?? docs/validation/local_codex_runner/issue-12/01_plan.prompt.md",
             "?? docs/validation/local_codex_runner/issue-12/codex_code.log",
+            "?? docs/validation/local_codex_runner/issue-12/failure.txt",
+            " M docs/validation/local_codex_runner/issue-12/gate_report.md",
             "?? docs/validation/local_codex_runner/issue-12/runner_result.json",
             "?? docs/validation/local_codex_runner/issue-12/runner_result.md",
             "",
@@ -86,8 +126,12 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
     git.commit_all(12, "Fix #12")
 
     assert (
+        "restore --worktree --staged -- docs/validation/local_codex_runner/issue-12/gate_report.md"
+    ) in git.commands_run
+    assert (
         "clean -f -- docs/validation/local_codex_runner/issue-12/01_plan.prompt.md "
         "docs/validation/local_codex_runner/issue-12/codex_code.log "
+        "docs/validation/local_codex_runner/issue-12/failure.txt "
         "docs/validation/local_codex_runner/issue-12/runner_result.json "
         "docs/validation/local_codex_runner/issue-12/runner_result.md"
     ) in git.commands_run
@@ -97,7 +141,9 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
 def test_transient_evidence_path_only_matches_runner_prompts_and_logs() -> None:
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/01_plan.prompt.md")
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/codex_review.log")
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/failure.txt")
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/gate_report.md")
+    assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/gate_report.json")
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/runner_result.json")
     assert is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/runner_result.md")
-    assert not is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/gate_report.md")
     assert not is_transient_evidence_path("docs/validation/local_codex_runner/issue-12/codex_review_report.md")

@@ -120,6 +120,22 @@ class GitHubCLI:
             return []
         return [dict(item) for item in loaded]
 
+    def view_pull_request(self, repo: str, pr_number: int) -> dict[str, Any]:
+        completed = self._run(
+            [
+                "gh",
+                "pr",
+                "view",
+                str(pr_number),
+                "--repo",
+                repo,
+                "--json",
+                "number,title,url,author,baseRefName,headRefName,isDraft,mergeStateStatus,reviewDecision,labels",
+            ]
+        )
+        loaded = json.loads(completed.stdout or "{}")
+        return dict(loaded) if isinstance(loaded, dict) else {}
+
     def view_issue(self, repo: str, issue_number: int) -> IssueTask:
         completed = self._run(["gh", "issue", "view", str(issue_number), "--repo", repo, "--json", "number,title,url,labels,body"])
         return IssueTask.from_gh_json(json.loads(completed.stdout))
@@ -131,7 +147,34 @@ class GitHubCLI:
 
     def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
         if labels:
-            self._run(["gh", "issue", "edit", str(issue_number), "--repo", repo, "--add-label", ",".join(labels)], write=True)
+            command = ["gh", "issue", "edit", str(issue_number), "--repo", repo, "--add-label", ",".join(labels)]
+            try:
+                self._run(command, write=True)
+            except RunnerCommandError as exc:
+                if "not found" not in exc.stderr.lower():
+                    raise
+                self.ensure_labels(repo, labels)
+                self._run(command, write=True)
+
+    def ensure_labels(self, repo: str, labels: list[str]) -> None:
+        for label in labels:
+            command = [
+                "gh",
+                "label",
+                "create",
+                label,
+                "--repo",
+                repo,
+                "--color",
+                label_color(label),
+                "--description",
+                label_description(label),
+            ]
+            try:
+                self._run(command, write=True)
+            except RunnerCommandError as exc:
+                if "already exists" not in exc.stderr.lower():
+                    raise
 
     def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
         if labels:
@@ -169,3 +212,23 @@ class GitHubCLI:
 
 def check_from_json(data: dict[str, Any]) -> CheckStatus:
     return CheckStatus(name=str(data.get("name", "")), state=str(data.get("state", "")), bucket=str(data.get("bucket", "")), link=data.get("link"))
+
+
+def label_color(label: str) -> str:
+    if label.startswith("codex-"):
+        return "5319e7"
+    if label.startswith("status:"):
+        return "fbca04"
+    if label.startswith("priority"):
+        return "d73a4a"
+    return "bfd4f2"
+
+
+def label_description(label: str) -> str:
+    if label == "codex-recovered":
+        return "Recovered by the local Codex runner after a safe retry or stale-state cleanup."
+    if label == "codex-ci-green":
+        return "Local Codex runner observed green CI for the linked pull request."
+    if label.startswith("codex-"):
+        return "Managed by the local Codex runner."
+    return "Created automatically by the local Codex runner when applying workflow state."

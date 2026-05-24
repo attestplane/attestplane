@@ -33,9 +33,16 @@ FORBIDDEN_PATTERNS = (
 TRANSIENT_EVIDENCE_PATTERNS = (
     "docs/validation/local_codex_runner/issue-*/*.prompt.md",
     "docs/validation/local_codex_runner/issue-*/codex_*.log",
+    "docs/validation/local_codex_runner/issue-*/code.md",
+    "docs/validation/local_codex_runner/issue-*/failure.txt",
+    "docs/validation/local_codex_runner/issue-*/gate_report.json",
+    "docs/validation/local_codex_runner/issue-*/gate_report.md",
+    "docs/validation/local_codex_runner/issue-*/plan.md",
     "docs/validation/local_codex_runner/issue-*/pr_body.md",
+    "docs/validation/local_codex_runner/issue-*/review.md",
     "docs/validation/local_codex_runner/issue-*/runner_result.json",
     "docs/validation/local_codex_runner/issue-*/runner_result.md",
+    "docs/validation/local_codex_runner/issue-*/test.md",
 )
 
 
@@ -72,6 +79,20 @@ class GitOps:
             return
         self.run(["checkout", base_ref])
         self.run(["pull", "--ff-only", "origin", base_ref])
+
+    def checkout_remote_branch(self, branch: str) -> None:
+        if branch in {"main", "master"} or not branch.startswith("codex/"):
+            raise GitSafetyError(f"Refusing to check out non-runner branch {branch!r}")
+        self.run(["fetch", "origin", branch])
+        if self.current_branch() == branch and self.has_unpushed_commits(branch):
+            return
+        self.run(["checkout", "-B", branch, f"origin/{branch}"])
+
+    def has_unpushed_commits(self, branch: str) -> bool:
+        if branch in {"main", "master"} or not branch.startswith("codex/"):
+            raise GitSafetyError(f"Refusing to inspect non-runner branch {branch!r}")
+        count = self.run(["rev-list", "--count", f"origin/{branch}..HEAD"]).strip()
+        return int(count or "0") > 0
 
     def create_branch(self, issue_number: int, title: str) -> str:
         branch = f"codex/issue-{issue_number}-{slugify(title)}"
@@ -121,16 +142,17 @@ class GitOps:
         if forbidden:
             raise GitSafetyError(f"Forbidden sensitive file change blocked: {', '.join(forbidden)}")
 
-    def remove_transient_evidence(self) -> None:
+    def remove_transient_evidence(self) -> list[str]:
         transient = [
             (status, path) for status, path in self.status_paths() if is_transient_evidence_path(path)
         ]
         untracked = [path for status, path in transient if status == "??"]
         tracked = [path for status, path in transient if status != "??"]
         if tracked:
-            self.run(["rm", "-f", "--", *tracked])
+            self.run(["restore", "--worktree", "--staged", "--", *tracked])
         if untracked:
             self.run(["clean", "-f", "--", *untracked])
+        return tracked + untracked
 
     def commit_all(self, issue_number: int, message: str, *, expected_branch: str | None = None) -> None:
         if expected_branch is not None:

@@ -45,6 +45,19 @@ that GitHub already reports as closed before each poll cycle. This lets the
 runner recover from stale local state such as closed issues that were previously
 left in `active_issue_ids`.
 
+Set `auto_recover_needs_human: true` only after a dry-run canary. The recovery
+step classifies `codex-needs-human` issues before normal queue consumption and
+only acts on whitelisted stop reasons. By default it may requeue local
+rate-limit/network timeout evidence, and it may plan a CI repair for a matching
+runner-owned PR. Unknown failures, policy/external blocking labels, missing
+approval, stale PR labels, non-`codex/issue-N-*` branches, and live PR recovery
+without an author allowlist stay human-blocked.
+
+Codex/ChatGPT backend errors during an attempted CI repair are classified as
+`external_model_api_blocker`. That result keeps the issue blocked for the
+current poll but does not consume the underlying `ci_failed` attempt cap, so a
+transient 403/429/5xx outage cannot permanently starve a P1 product PR.
+
 ## Multi-Lane Operation
 
 The runner can be deployed as several independent lanes by giving each lane its
@@ -87,6 +100,9 @@ quota fits the global 2-3 merges per cycle budget.
 - PR opened: add `codex-pr-opened`, remove `codex-in-progress`.
 - CI pass: add `codex-ci-green`.
 - Failure after retries: add `codex-needs-human`, remove `codex-in-progress`.
+- Optional recovery: with `auto_recover_needs_human: true`, remove
+  `codex-needs-human` only for whitelisted, signature-counted stop reasons;
+  otherwise keep the label and report the non-recoverable reason.
 - Dry-run: print and record planned label actions without changing GitHub.
 
 If an issue has `codex-in-progress` but local state does not map it to the

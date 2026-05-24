@@ -11,8 +11,10 @@ from types import SimpleNamespace
 
 from scripts.local_codex_runner.advance_queue import advance_queue
 from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
-from scripts.local_codex_runner.github_cli import GitHubCLI
+from scripts.local_codex_runner.git_ops import GitOps
+from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError
 from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues
+from scripts.local_codex_runner.needs_human import recover_needs_human_for_labels
 from scripts.local_codex_runner.run_issue import run_issue
 from scripts.local_codex_runner.state_store import load_state, save_state
 
@@ -21,6 +23,15 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
     cleanup_summary: dict[str, object] | None = cleanup_stale_state(config, gh) if config.cleanup_stale_state else None
+    include = set(config.lane_include_labels).union(args.include_label or [])
+    exclude = set(config.lane_exclude_labels).union(args.exclude_label or [])
+    needs_human_summary = recover_needs_human_for_labels(
+        config,
+        gh,
+        include_labels=include or None,
+        exclude_labels=exclude or None,
+    )
+    transient_cleanup = [] if config.dry_run else GitOps(config.workdir_path()).remove_transient_evidence()
     advance_summary: dict[str, object] | None = None
     if config.auto_advance_before_consume:
         advance_args = SimpleNamespace(
@@ -41,9 +52,16 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
             comment=False,
         )
         advance_summary = advance_queue(advance_args)
-    issues = gh.list_issues(config.repo or "", config.approved_label, candidate_fetch_limit(config.max_issues_per_run))
-    include = set(config.lane_include_labels).union(args.include_label or [])
-    exclude = set(config.lane_exclude_labels).union(args.exclude_label or [])
+    external_errors: list[dict[str, object]] = []
+    try:
+        issues = gh.list_issues(
+            config.repo or "",
+            config.approved_label,
+            candidate_fetch_limit(config.max_issues_per_run),
+        )
+    except RunnerCommandError as exc:
+        external_errors.append({"stage": "list_issues", "error": str(exc)})
+        issues = []
     results = []
     for issue in processable_issues(
         issues,
@@ -60,8 +78,11 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         "advance": advance_summary,
         "cleanup": cleanup_summary,
         "lane": lane_summary(config),
+        "needs_human_recovery": needs_human_summary,
+        "external_errors": external_errors,
         "processed": len(results),
         "results": results,
+        "transient_cleanup": transient_cleanup,
     }
 
 
@@ -84,8 +105,13 @@ def cleanup_stale_state(config: RunnerConfig, gh: GitHubCLI) -> dict[str, object
     tracked = sorted(set(state.active_issue_ids).union(int(key) for key in state.branch_mappings if key.isdigit()))
     pruned: list[int] = []
     kept: list[dict[str, object]] = []
+    external_errors: list[dict[str, object]] = []
     for issue_number in tracked:
-        issue_state = gh.view_issue_state(config.repo or "", issue_number)
+        try:
+            issue_state = gh.view_issue_state(config.repo or "", issue_number)
+        except RunnerCommandError as exc:
+            external_errors.append({"issue": issue_number, "error": str(exc)})
+            continue
         if issue_state == "CLOSED":
             if state.prune_issue(issue_number):
                 pruned.append(issue_number)
@@ -93,7 +119,12 @@ def cleanup_stale_state(config: RunnerConfig, gh: GitHubCLI) -> dict[str, object
             kept.append({"issue": issue_number, "state": issue_state})
     if pruned:
         save_state(state_path, state)
-    return {"invalid_branch_keys": invalid_branch_keys, "pruned_closed_issues": pruned, "kept": kept}
+    return {
+        "external_errors": external_errors,
+        "invalid_branch_keys": invalid_branch_keys,
+        "pruned_closed_issues": pruned,
+        "kept": kept,
+    }
 
 
 def main() -> int:

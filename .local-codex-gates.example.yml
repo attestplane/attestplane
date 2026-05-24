@@ -12,6 +12,13 @@ area:verifier:
 area:conformance:
   - "env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q"
   - "npm run test --workspace sdk/typescript -- verifier.test.ts"
+ci:failed:
+  - "./scripts/check-schema-hashes.sh"
+  - "uv run --project sdk/python ruff check sdk/python/src sdk/python/tests tests"
+  - "uv run --project sdk/python mypy --config-file sdk/python/pyproject.toml sdk/python/src/attestplane"
+  - "npm --prefix sdk/typescript run lint"
+  - "npm --prefix sdk/typescript run typecheck"
+  - "uv run --project sdk/python pytest sdk/python/tests tests -q"
 test-gap:
   - "pytest tests -q"
 docs:

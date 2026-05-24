@@ -1,7 +1,13 @@
 import subprocess
 from pathlib import Path
 
-from scripts.local_codex_runner.gate_runner import GateCommandResult, GateReport, GateRunner, is_docs_only_path
+from scripts.local_codex_runner.gate_runner import (
+    GateCommandResult,
+    GateReport,
+    GateRunner,
+    is_docs_only_path,
+    raise_open_file_limit,
+)
 
 
 def test_label_to_gate_mapping(tmp_path: Path) -> None:
@@ -25,6 +31,19 @@ def test_label_mapping_allows_colon_in_key(tmp_path: Path) -> None:
 
     assert gate == "area:verifier"
     assert commands == ["pytest tests/verifier -q"]
+
+
+def test_preferred_gate_overrides_narrow_label_gate(tmp_path: Path) -> None:
+    matrix = tmp_path / "gates.yml"
+    matrix.write_text(
+        'default:\n  - "pytest -q"\narea:verifier:\n  - "pytest tests/verifier -q"\nci:failed:\n  - "pytest tests -q"\n',
+        encoding="utf-8",
+    )
+
+    gate, commands = GateRunner(tmp_path, matrix).select_gate(["area:verifier"], preferred_gate="ci:failed")
+
+    assert gate == "ci:failed"
+    assert commands == ["pytest tests -q"]
 
 
 def test_docs_gate_falls_back_when_non_doc_files_changed(tmp_path: Path) -> None:
@@ -86,6 +105,7 @@ def test_gate_command_uses_argv_list(monkeypatch, tmp_path: Path) -> None:
     def fake_run(*args, **kwargs):
         observed["argv"] = args[0]
         observed["shell"] = kwargs.get("shell")
+        observed["preexec_fn"] = kwargs.get("preexec_fn")
         return subprocess.CompletedProcess(args[0], 0, "ok", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -98,6 +118,7 @@ def test_gate_command_uses_argv_list(monkeypatch, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert observed["argv"] == ["python", "-m", "compileall", "scripts"]
     assert observed["shell"] is None
+    assert observed["preexec_fn"] is raise_open_file_limit
 
 
 def test_no_live_tests_by_default(tmp_path: Path) -> None:

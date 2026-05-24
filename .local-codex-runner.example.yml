@@ -14,11 +14,27 @@ dry_run: true
 watch_ci: true
 create_pr: true
 codex_command: "codex"
+codex_model: null
 codex_sandbox: "workspace-write"
+codex_timeout_seconds: 1800
 state_path: ".local_codex_runner/state.json"
 evidence_dir: "docs/validation/local_codex_runner"
 gate_matrix_path: ".local-codex-gates.yml"
 cleanup_stale_state: true
+auto_recover_needs_human: false
+needs_human_scan_limit: 100
+max_needs_human_recoveries_per_run: 2
+max_needs_human_attempts: 2
+needs_human_recovered_label: "codex-recovered"
+needs_human_policy_block_labels:
+  - "codex-policy-blocked"
+  - "codex-external-blocked"
+  - "do-not-merge"
+  - "hold"
+needs_human_recoverable_reasons:
+  - "rate_limit"
+  - "network_timeout"
+  - "ci_failed"
 
 # Optional lane settings for multi-worktree runner deployments.
 # Each lane should use its own workdir, state_path, and tmux session.

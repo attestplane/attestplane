@@ -96,14 +96,15 @@ def run_issue(
         codex = CodexDriver(
             command=config.codex_command,
             command_template=config.codex_command_template,
+            model=config.codex_model,
             sandbox=config.codex_sandbox,
             dry_run=config.dry_run,
         )
         plan_prompt = builder.build("01_plan.md", task, output_name="01_plan.prompt.md")
         result.plan_path = str(evidence_dir / "plan.md")
-        codex.run_codex(plan_prompt, workdir, evidence_dir / "codex_plan.log")
+        codex.run_codex(plan_prompt, workdir, evidence_dir / "codex_plan.log", timeout=config.codex_timeout_seconds)
         code_prompt = builder.build("02_code.md", task, output_name="02_code.prompt.md")
-        codex.run_codex(code_prompt, workdir, evidence_dir / "codex_code.log")
+        codex.run_codex(code_prompt, workdir, evidence_dir / "codex_code.log", timeout=config.codex_timeout_seconds)
 
         gate = dry_run_gate() if config.dry_run else run_local_gate(config, task, evidence_dir)
         result.local_test_summary = gate.summary()
@@ -116,7 +117,12 @@ def run_issue(
                 extra={"gate_log": gate.summary()},
                 output_name=f"03_fix_tests_round_{round_index + 1}.prompt.md",
             )
-            codex.run_codex(fix_prompt, workdir, evidence_dir / f"codex_fix_tests_round_{round_index + 1}.log")
+            codex.run_codex(
+                fix_prompt,
+                workdir,
+                evidence_dir / f"codex_fix_tests_round_{round_index + 1}.log",
+                timeout=config.codex_timeout_seconds,
+            )
             gate = run_local_gate(config, task, evidence_dir)
             result.local_test_summary = gate.summary()
         if gate.status != "PASS":
@@ -125,7 +131,7 @@ def run_issue(
                 return fail_issue(config, gh, task, result, evidence_dir, state)
 
         review_prompt = builder.build("04_review.md", task, output_name="04_review.prompt.md")
-        codex.run_codex(review_prompt, workdir, evidence_dir / "codex_review.log")
+        codex.run_codex(review_prompt, workdir, evidence_dir / "codex_review.log", timeout=config.codex_timeout_seconds)
         changed_files = [] if config.dry_run else git.changed_files()
         diff = "" if config.dry_run else git.diff()
         review_guard = run_review_guard(
@@ -177,7 +183,12 @@ def run_issue(
                     extra={"gate_log": failed_logs, "ci_summary": ci.summary},
                     output_name=f"03_fix_ci_round_{round_index + 1}.prompt.md",
                 )
-                codex.run_codex(fix_prompt, workdir, evidence_dir / f"codex_fix_ci_round_{round_index + 1}.log")
+                codex.run_codex(
+                    fix_prompt,
+                    workdir,
+                    evidence_dir / f"codex_fix_ci_round_{round_index + 1}.log",
+                    timeout=config.codex_timeout_seconds,
+                )
                 gate = run_local_gate(config, task, evidence_dir)
                 result.local_test_summary = gate.summary()
                 if gate.status != "PASS":
@@ -193,6 +204,9 @@ def run_issue(
             result.ci_summary = ci.summary
             if ci.status == "PASS":
                 gh.add_labels(config.repo or "", task.number, [config.ci_green_label])
+                pr_number = parse_pr_number(result.pr_url)
+                if pr_number is not None:
+                    gh.add_labels(config.repo or "", pr_number, [config.ci_green_label])
             else:
                 result.status = RunnerStatus.CI_FAILED
                 return fail_issue(config, gh, task, result, evidence_dir, state)
@@ -259,6 +273,13 @@ def safe_branch_slug(title: str) -> str:
     from scripts.local_codex_runner.git_ops import slugify
 
     return slugify(title)
+
+
+def parse_pr_number(pr_url: str | None) -> int | None:
+    if not pr_url:
+        return None
+    tail = pr_url.rstrip("/").rsplit("/", 1)[-1]
+    return int(tail) if tail.isdigit() else None
 
 
 def append_residual_risk(result: RunnerResult, risk: str) -> None:

@@ -43,6 +43,30 @@ def test_label_add_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch) -> 
     assert called is False
 
 
+def test_label_add_creates_missing_runner_labels_and_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command, capture_output, text, check):
+        commands.append(command)
+        if command[:3] == ["gh", "issue", "edit"] and len(commands) == 1:
+            return subprocess.CompletedProcess(
+                command,
+                1,
+                "",
+                "failed to update issue: 'codex-recovered' not found",
+            )
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    GitHubCLI(dry_run=False).add_labels("o/r", 108, ["codex-recovered", "codex-ci-green"])
+
+    assert commands[0][:3] == ["gh", "issue", "edit"]
+    assert commands[1][:3] == ["gh", "label", "create"]
+    assert commands[2][:3] == ["gh", "label", "create"]
+    assert commands[3][:3] == ["gh", "issue", "edit"]
+
+
 def test_pr_checks_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(command, capture_output, text, check):
         return subprocess.CompletedProcess(command, 0, '[{"name":"ci","state":"SUCCESS","bucket":"pass","link":"https://example"}]', "")

@@ -18,11 +18,13 @@ class CodexDriver:
         *,
         command: str = "codex",
         command_template: str | None = None,
+        model: str | None = None,
         sandbox: str = "workspace-write",
         dry_run: bool = True,
     ) -> None:
         self.command = command
         self.command_template = command_template
+        self.model = model
         self.sandbox = sandbox
         self.dry_run = dry_run
         self.commands_run: list[str] = []
@@ -32,13 +34,14 @@ class CodexDriver:
             command = shlex.split(
                 self.command_template.format(
                     command=self.command,
+                    model=self.model or "",
                     workdir=str(workdir),
                     sandbox=self.sandbox,
                     prompt_file=str(prompt_file),
                 )
             )
             return command, None
-        return [
+        command = [
             self.command,
             "exec",
             "--ignore-user-config",
@@ -48,7 +51,10 @@ class CodexDriver:
             "--sandbox",
             self.sandbox,
             "-",
-        ], prompt_file.read_text(encoding="utf-8")
+        ]
+        if self.model:
+            command[2:2] = ["--model", self.model]
+        return command, prompt_file.read_text(encoding="utf-8")
 
     def run_codex(self, prompt_file: Path, workdir: Path, log_path: Path, timeout: int | None = None) -> str:
         command, prompt_stdin = self.build_command(prompt_file, workdir)
@@ -61,15 +67,36 @@ class CodexDriver:
             text = f"[dry-run] would run: {command_log}\n"
             log_path.write_text(text, encoding="utf-8")
             return text
-        completed = subprocess.run(
-            command,
-            cwd=workdir,
-            capture_output=True,
-            text=True,
-            input=prompt_stdin,
-            timeout=timeout,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=workdir,
+                capture_output=True,
+                text=True,
+                input=prompt_stdin,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+            if isinstance(stdout, bytes):
+                stdout = stdout.decode("utf-8", errors="replace")
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode("utf-8", errors="replace")
+            output = redact(
+                "\n".join(
+                    part
+                    for part in (
+                        f"Codex command timed out after {timeout} seconds.",
+                        stdout,
+                        f"STDERR:\n{stderr}" if stderr else "",
+                    )
+                    if part
+                )
+            )
+            log_path.write_text(truncate(output), encoding="utf-8")
+            raise RunnerCommandError(command, 124, output) from exc
         output = redact((completed.stdout or "") + ("\nSTDERR:\n" + completed.stderr if completed.stderr else ""))
         log_path.write_text(truncate(output), encoding="utf-8")
         if completed.returncode != 0:

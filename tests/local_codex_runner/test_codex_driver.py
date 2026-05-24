@@ -13,7 +13,27 @@ def test_codex_command_construction(tmp_path: Path) -> None:
 
     command, prompt_stdin = CodexDriver(command="codex", sandbox="workspace-write").build_command(prompt, tmp_path)
 
-    assert command == ["codex", "exec", "--ignore-user-config", "--ephemeral", "--cd", str(tmp_path), "--sandbox", "workspace-write", "-"]
+    assert command == [
+        "codex",
+        "exec",
+        "--ignore-user-config",
+        "--ephemeral",
+        "--cd",
+        str(tmp_path),
+        "--sandbox",
+        "workspace-write",
+        "-",
+    ]
+    assert prompt_stdin == "x"
+
+
+def test_codex_command_can_pin_model(tmp_path: Path) -> None:
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("x", encoding="utf-8")
+
+    command, prompt_stdin = CodexDriver(model="gpt-5.4-mini").build_command(prompt, tmp_path)
+
+    assert command[:4] == ["codex", "exec", "--model", "gpt-5.4-mini"]
     assert prompt_stdin == "x"
 
 
@@ -46,3 +66,20 @@ def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path:
         CodexDriver(dry_run=False).run_codex(prompt, tmp_path, tmp_path / "codex.log")
 
     assert "github_pat" not in str(excinfo.value)
+
+
+def test_codex_timeout_writes_redacted_log(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs.get("timeout"), output="", stderr="TOKEN=secret")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("x", encoding="utf-8")
+    log_path = tmp_path / "codex.log"
+
+    with pytest.raises(RunnerCommandError) as excinfo:
+        CodexDriver(dry_run=False).run_codex(prompt, tmp_path, log_path, timeout=1)
+
+    assert "timed out after 1 seconds" in log_path.read_text(encoding="utf-8")
+    assert "secret" not in log_path.read_text(encoding="utf-8")
+    assert "secret" not in str(excinfo.value)
