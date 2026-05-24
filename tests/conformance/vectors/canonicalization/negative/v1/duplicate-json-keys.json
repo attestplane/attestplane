@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-duplicate-json-keys-v1",
+  "description": "Raw JSON repeats the same key in one object; strict decoding must fail closed.",
+  "expected": {
+    "pointer": "/subject_digest",
+    "reason_code": "att.verify.structure_invalid"
+  },
+  "raw_json": "{\"subject_digest\":\"one\",\"subject_digest\":\"two\"}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-duplicate-json-keys-helper-control",
+  "surface": "json"
+}

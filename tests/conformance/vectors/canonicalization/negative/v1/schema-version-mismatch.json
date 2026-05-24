@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-schema-version-mismatch-v1",
+  "description": "A bundle-like object declaring the wrong schema_version must be rejected.",
+  "expected": {
+    "pointer": "/schema_version",
+    "reason_code": "att.verify.schema_version_unsupported"
+  },
+  "raw_json": "{\"schema_version\":2}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-canonical-json-no-bom-trailing",
+  "surface": "json"
+}

@@ -24,6 +24,10 @@ from attestplane.canonical import (
     CanonicalizationError,
     canonicalize,
 )
+from attestplane.conformance.negative_vectors import (
+    assert_negative_vector,
+    load_negative_canonicalization_vectors,
+)
 from attestplane.types import SubjectRef
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,6 +49,7 @@ def _load_vector_manifest() -> Any:
 
 vector_manifest = _load_vector_manifest()
 POSITIVE_VECTORS = vector_manifest.load_positive_canonicalization_vectors()
+NEGATIVE_VECTORS = load_negative_canonicalization_vectors()
 
 SAFE_ALPHABET = string.ascii_letters + string.digits + "-_.@/: " + "\u00e9\u03a9"
 Stage = Callable[[Any], Any]
@@ -179,6 +184,13 @@ def test_canonicalization_property_positive_vectors_are_reparse_idempotent(
 ) -> None:
     bundle = vector_manifest.emit_positive_canonicalization_bundle(vector)
     _assert_canonical_reparse_idempotent(bundle)
+
+
+@pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
+def test_canonicalization_property_negative_vectors_are_named_and_classified(
+    vector: dict[str, Any],
+) -> None:
+    assert_negative_vector(vector)
 
 
 @pytest.mark.parametrize("value", TABLE_VALUES)

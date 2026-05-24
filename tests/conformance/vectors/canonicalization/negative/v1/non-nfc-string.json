@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-non-nfc-string-v1",
+  "description": "A decomposed Unicode string must fail canonicalization and be named by pointer.",
+  "expected": {
+    "pointer": "/payload_text",
+    "reason_code": "att.verify.canonical_mismatch"
+  },
+  "raw_json": "{\"payload_text\":\"café\"}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-nfc-payload-string",
+  "surface": "json"
+}

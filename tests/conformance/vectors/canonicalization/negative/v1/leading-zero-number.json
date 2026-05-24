@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-leading-zero-number-v1",
+  "description": "A JSON number with a leading zero must be rejected before canonicalization.",
+  "expected": {
+    "pointer": "/value",
+    "reason_code": "att.verify.schema_invalid"
+  },
+  "raw_json": "{\"value\":01}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-int64-boundary-timestamp-payload",
+  "surface": "json"
+}
