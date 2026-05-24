@@ -14,7 +14,7 @@ from pathlib import Path
 from scripts.local_codex_runner.ci_watch import classify_checks, wait_for_ci
 from scripts.local_codex_runner.codex_driver import CodexDriver
 from scripts.local_codex_runner.config import RunnerConfig
-from scripts.local_codex_runner.gate_runner import GateRunner
+from scripts.local_codex_runner.gate_runner import CI_FAILED_GATE, GateRunner
 from scripts.local_codex_runner.git_ops import GitOps, GitSafetyError
 from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError
 from scripts.local_codex_runner.models import IssueTask
@@ -571,7 +571,11 @@ def recover_ci_pr(
         workdir,
         config.gate_matrix_file(),
         timeout_seconds=config.gate_timeout_seconds,
-    ).run(issue.labels, evidence_dir)
+    ).run(
+        issue.labels,
+        evidence_dir,
+        preferred_gate=CI_FAILED_GATE if signal.reason == "ci_failed" else None,
+    )
     if gate.status != "PASS":
         return NeedsHumanRecovery(
             issue.number,

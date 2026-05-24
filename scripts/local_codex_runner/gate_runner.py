@@ -17,6 +17,7 @@ from scripts.local_codex_runner.github_cli import redact, truncate
 FORBIDDEN_COMMAND_WORDS = ("publish", "twine upload", "npm publish", "git tag", "gh release upload")
 LIVE_COMMAND_WORDS = ("--live", "live-test", "external-live")
 DOCS_ONLY_GATE = "type:docs"
+CI_FAILED_GATE = "ci:failed"
 
 
 @dataclass(frozen=True)
@@ -59,8 +60,16 @@ class GateRunner:
         loaded = load_yaml_mapping(self.matrix_path)
         return {str(key): [str(item) for item in value] for key, value in loaded.items() if isinstance(value, list)}
 
-    def select_gate(self, labels: list[str], *, changed_files: list[str] | None = None) -> tuple[str, list[str]]:
+    def select_gate(
+        self,
+        labels: list[str],
+        *,
+        changed_files: list[str] | None = None,
+        preferred_gate: str | None = None,
+    ) -> tuple[str, list[str]]:
         matrix = self.load_matrix()
+        if preferred_gate and preferred_gate in matrix:
+            return preferred_gate, matrix[preferred_gate]
         for label in labels:
             if label in matrix:
                 if label == DOCS_ONLY_GATE and changed_files and not all(is_docs_only_path(path) for path in changed_files):
@@ -68,8 +77,12 @@ class GateRunner:
                 return label, matrix[label]
         return "default", matrix.get("default", ["python -m compileall scripts", "pytest -q"])
 
-    def run(self, labels: list[str], evidence_dir: Path) -> GateReport:
-        gate_name, commands = self.select_gate(labels, changed_files=self.changed_files())
+    def run(self, labels: list[str], evidence_dir: Path, *, preferred_gate: str | None = None) -> GateReport:
+        gate_name, commands = self.select_gate(
+            labels,
+            changed_files=self.changed_files(),
+            preferred_gate=preferred_gate,
+        )
         live_allowed = "live-test-approved" in labels
         results = [self.run_command(self.rewrite_for_project_python(command), live_allowed=live_allowed) for command in commands]
         status = "PASS" if all(result.exit_code == 0 for result in results) else "FAIL"

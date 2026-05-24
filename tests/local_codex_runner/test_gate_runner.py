@@ -27,6 +27,19 @@ def test_label_mapping_allows_colon_in_key(tmp_path: Path) -> None:
     assert commands == ["pytest tests/verifier -q"]
 
 
+def test_preferred_gate_overrides_narrow_label_gate(tmp_path: Path) -> None:
+    matrix = tmp_path / "gates.yml"
+    matrix.write_text(
+        'default:\n  - "pytest -q"\narea:verifier:\n  - "pytest tests/verifier -q"\nci:failed:\n  - "pytest tests -q"\n',
+        encoding="utf-8",
+    )
+
+    gate, commands = GateRunner(tmp_path, matrix).select_gate(["area:verifier"], preferred_gate="ci:failed")
+
+    assert gate == "ci:failed"
+    assert commands == ["pytest tests -q"]
+
+
 def test_docs_gate_falls_back_when_non_doc_files_changed(tmp_path: Path) -> None:
     matrix = tmp_path / "gates.yml"
     matrix.write_text(
