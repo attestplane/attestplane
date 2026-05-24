@@ -1,0 +1,28 @@
+{
+  "status": "WARN",
+  "blocking_reasons": [],
+  "warnings": [
+    "The exact required validation command `sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'release_gate or stable_auto_train' -x` could not run in this runner because `pytest` is not installed in the project venv. A compatible focused regression command did pass locally.",
+    "This review is based on the current local repository state and issue-local evidence only; it does not prove remote CI or remote release state."
+  ],
+  "validation": [
+    "Checklist 0: Review used only local repository files, local command output, and the issue text supplied in the prompt. No web lookup or external tooling was used.",
+    "Checklist 1: No release gate implementation was weakened. The issue-local evidence says the source tree was left unchanged and the existing regression coverage was documented instead.",
+    "Checklist 2: No severity was lowered.",
+    "Checklist 3: No secrets were leaked or logged by the diff or the review artifacts.",
+    "Checklist 4: No publish, tag, or release workflow logic was modified.",
+    "Checklist 5: No key tests were deleted.",
+    "Checklist 6: The diff does not implement production behavior without tests or evidence; it records validation for existing regression coverage.",
+    "Checklist 7: No uncertain external dependency was introduced.",
+    "Checklist 8: No merge, tag, package publish, or PyPI push was performed.",
+    "Local evidence: `docs/validation/local_codex_runner/issue-80/gate_report.json` reports PASS for the issue-local docs gate.",
+    "Local evidence: `docs/validation/local_codex_runner/issue-80/test.md` records the blocked exact venv pytest command and a passing focused regression command (`75 passed in 60.45s`).",
+    "Local evidence: `git diff --check` passed according to the issue-local evidence."
+  ],
+  "residual_risks": [
+    "The exact required pytest command could not be executed inside the project venv because the venv is missing `pytest`.",
+    "The review relies on local evidence only and cannot confirm remote CI, remote tags, or remote package state.",
+    "The current diff is evidence-only, so this review does not independently re-run the underlying source regression tests in a fully provisioned environment."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
