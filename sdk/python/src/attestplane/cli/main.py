@@ -211,7 +211,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_signed_attestation=strict_schema,
         )
     except BundleSchemaError as exc:
-        report = verify_json_report_for_error(exc, verifier_version=__version__)
+        report = verify_json_report_for_error(
+            exc,
+            verifier_version=__version__,
+            bundle_schema_version=getattr(exc, "bundle_version", None),
+        )
         _emit(
             report.to_dict(),
             args.json_output,

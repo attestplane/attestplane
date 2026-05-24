@@ -841,11 +841,17 @@ def verify_proof_bundle_file(
         raise BundleVerificationError(f"bundle file not found: {p}") from exc
     except json.JSONDecodeError as exc:
         raise BundleSchemaError(f"{p}: not valid JSON: {exc.msg}") from exc
-    return verify_proof_bundle(
-        bundle,
-        require_non_empty=require_non_empty,
-        require_signed_attestation=require_signed_attestation,
-    )
+    try:
+        return verify_proof_bundle(
+            bundle,
+            require_non_empty=require_non_empty,
+            require_signed_attestation=require_signed_attestation,
+        )
+    except BundleSchemaError as exc:
+        # Preserve the declared bundle version for CLI JSON reports even when
+        # the bundle is rejected for schema-version or shape violations.
+        exc.bundle_version = bundle.get("bundle_version")  # type: ignore[attr-defined]
+        raise
 
 
 def verify_json_report_for_error(
