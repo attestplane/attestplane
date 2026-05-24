@@ -106,5 +106,7 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert rc == 0
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1

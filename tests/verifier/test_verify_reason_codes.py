@@ -33,7 +33,9 @@ from attestplane.verify_reason_codes import (  # noqa: E402
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION,
     is_known_verify_reason_code,
+    verify_reason_code_explanation,
     verify_reason_code_matches_format,
 )
 
@@ -70,6 +72,7 @@ def _signed_bundle() -> dict:
 
 
 def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
+    assert VERIFY_REASON_TAXONOMY_VERSION == 1
     expected = (
         VERIFY_REASON_ANCHOR_INVALID,
         VERIFY_REASON_CANONICAL_MISMATCH,
@@ -87,6 +90,7 @@ def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
     for code in ALL_VERIFY_REASON_CODES_V1:
         assert is_known_verify_reason_code(code)
         assert verify_reason_code_matches_format(code)
+        assert verify_reason_code_explanation(code)
 
 
 def test_verify_reason_code_ok_result_has_no_rejection_reason() -> None:

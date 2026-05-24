@@ -54,7 +54,8 @@ consume in CI, audit exports, and cross-language conformance tests.
 ## Verifier Rejection Reasons
 
 Issue #172 adds a second, SDK-public taxonomy for rejection reasons returned
-by `verify` paths:
+by `verify` paths. Issue #236 threads that same taxonomy through both
+`verify --json` and `verify --explain`:
 
 - `verify_reason_code_schema_version`: `1`
 - Python: `attestplane.verify_reason_codes`
@@ -63,6 +64,9 @@ by `verify` paths:
   results, and `secondary_reasons` is an ordered list of additional failed
   checks. Successful verifier results use `primary_reason: null` and
   `secondary_reasons: []`.
+- CLI JSON surfaces the same taxonomy with `reason_code` and
+  `taxonomy_version`, while `--explain` renders the same code set in human
+  form.
 
 These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
 `taxonomy_version = 1` and is additive-only: adding a new code is allowed with

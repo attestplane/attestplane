@@ -13,6 +13,8 @@ The payload is fixed at schema version 1:
   "schema_version": 1,
   "result": "pass",
   "exit_code": 0,
+  "reason_code": null,
+  "taxonomy_version": 1,
   "reasons": [],
   "bundle": {
     "schema_version": 1,
@@ -24,15 +26,19 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on.
+- `reason_code` is the machine-readable primary verifier rejection code, or
+  `null` on success.
+- `taxonomy_version` pins the shared verifier rejection taxonomy that both
+  `--json` and `--explain` use.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, each reason may also include an `explanation`
   field with the stable human rationale string for that reason code.
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
-- The verifier reason-code taxonomy is versioned separately via
-  `taxonomy_version`. The taxonomy is additive-only: new reason codes may be
-  added, but existing codes are not renamed, removed, or reused.
+- The verifier reason-code taxonomy is additive-only: new reason codes may be
+  added, but existing codes are not renamed, removed, or reused within a
+  stable `taxonomy_version`.
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
@@ -88,6 +94,8 @@ stderr in reason-code order while stdout keeps the existing human summary.
   "schema_version": 1,
   "result": "fail",
   "exit_code": 1,
+  "reason_code": "att.verify.schema_version_unsupported",
+  "taxonomy_version": 1,
   "reasons": [
     {
       "code": "att.verify.schema_version_unsupported",

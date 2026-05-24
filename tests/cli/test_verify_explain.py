@@ -195,7 +195,33 @@ def test_verify_explain_embeds_reason_explanations_in_json(
 
     assert rc == expected_rc
     assert stderr == ""
+    assert payload["reason_code"] == expected_codes[0]
+    assert payload["taxonomy_version"] == 1
     assert [reason["code"] for reason in payload["reasons"]] == expected_codes
     assert [reason["explanation"] for reason in payload["reasons"]] == [
         line.split(": ", 1)[1] for line in expected_stderr_lines
     ]
+
+
+def test_verify_json_and_explain_share_primary_reason_code(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    json_rc, json_stdout, json_stderr = _run_verify(["verify", "--json", str(CANONICAL_FIXTURE)], capsys)
+    json_payload = json.loads(json_stdout)
+
+    assert json_rc == 1
+    assert json_stderr == ""
+    assert json_payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert json_payload["taxonomy_version"] == 1
+
+    explain_rc, explain_stdout, explain_stderr = _run_verify(
+        ["verify", "--explain", str(CANONICAL_FIXTURE)],
+        capsys,
+    )
+
+    assert explain_rc == 1
+    assert explain_stdout.startswith("FAIL")
+    assert explain_stderr.splitlines()[0] == (
+        f"{json_payload['reason_code']}: "
+        f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_CANONICAL_MISMATCH]}"
+    )

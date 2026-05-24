@@ -206,8 +206,11 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY,
+    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
     is_known_verify_reason_code,
+    verify_reason_code_explanation,
     verify_reason_code_matches_format,
 )
 
@@ -291,6 +294,8 @@ __all__ = [
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",
+    "VERIFY_REASON_TAXONOMY",
+    "VERIFY_REASON_TAXONOMY_VERSION",
     "VERIFY_REASON_REQUIRED_FIELD_MISSING",
     "VERIFY_REASON_SCHEMA_INVALID",
     "VERIFY_REASON_SCHEMA_UNKNOWN",
@@ -355,6 +360,7 @@ __all__ = [
     "verify_chain_with_anchors",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
+    "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
 ]
 
