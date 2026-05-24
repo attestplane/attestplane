@@ -1,5 +1,6 @@
 from scripts.local_codex_runner.advance_queue import (
     PullRequestState,
+    advance_queue,
     decide_dependency_unlock,
     decide_pr_action,
     dependencies_for_issue,
@@ -206,3 +207,79 @@ def test_dependency_unlock_approves_tasks_without_dependencies() -> None:
 
     assert decision.action == "unlock"
     assert decision.reason == "no_dependencies"
+
+
+def test_advance_queue_unlocks_only_product_tasks_during_product_delta_idle(monkeypatch, tmp_path) -> None:
+    product = IssueTask(
+        201,
+        "[P1][sdk][verifier] Add product behavior",
+        "Implement verifier-facing SDK behavior.",
+        "u",
+        ["planned-task", "priority:P1"],
+    )
+    support = IssueTask(
+        202,
+        "[P1][runner] Tune local runner",
+        "Support-only release train runner task.",
+        "u",
+        ["planned-task", "priority:P1"],
+    )
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            self.commands_run = []
+            self.added: list[tuple[int, list[str]]] = []
+
+        def list_issues(self, repo: str, label: str, limit: int, *, state: str = "open"):
+            return [support, product]
+
+        def list_pull_requests(self, repo: str, base: str, limit: int):
+            return []
+
+        def view_issue_state(self, repo: str, issue_number: int) -> str:
+            return "CLOSED"
+
+        def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+            self.added.append((issue_number, labels))
+
+        def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+            pass
+
+    fake = FakeGH()
+    monkeypatch.setattr("scripts.local_codex_runner.advance_queue.GitHubCLI", lambda dry_run=True: fake)
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: false\n"
+        "allow_dependency_unlock: true\n",
+        encoding="utf-8",
+    )
+    args = type(
+        "Args",
+        (),
+        {
+            "config": config_path,
+            "repo": "o/r",
+            "workdir": "/tmp/r",
+            "dry_run": False,
+            "max_local_fix_rounds": None,
+            "max_ci_fix_rounds": None,
+            "create_pr": None,
+            "watch_ci": None,
+            "allow_dirty": None,
+            "mode": "deps",
+            "pr_limit": 0,
+            "issue_limit": 10,
+            "include_label": [],
+            "exclude_label": [],
+            "comment": False,
+            "product_delta_idle": True,
+        },
+    )()
+
+    summary = advance_queue(args)
+
+    assert fake.added == [(201, ["auto-codex-approved"])]
+    assert summary["product_delta_idle"] is True
+    assert [decision["target_number"] for decision in summary["decisions"]] == [201]

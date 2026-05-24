@@ -6,7 +6,10 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
+from collections import deque
+from pathlib import Path
 from types import SimpleNamespace
 
 from scripts.local_codex_runner.advance_queue import advance_queue
@@ -22,6 +25,7 @@ from scripts.local_codex_runner.state_store import load_state, save_state
 def run_once(args: argparse.Namespace) -> dict[str, object]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
+    product_delta_idle = product_delta_idle_summary(config)
     cleanup_summary: dict[str, object] | None = cleanup_stale_state(config, gh) if config.cleanup_stale_state else None
     include = set(config.lane_include_labels).union(args.include_label or [])
     exclude = set(config.lane_exclude_labels).union(args.exclude_label or [])
@@ -50,6 +54,7 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
             include_label=[],
             exclude_label=[],
             comment=False,
+            product_delta_idle=product_delta_idle["active"],
         )
         advance_summary = advance_queue(advance_args)
     external_errors: list[dict[str, object]] = []
@@ -68,9 +73,10 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         approved_label=config.approved_label,
         pr_opened_label=config.pr_opened_label,
         needs_human_label=config.needs_human_label,
-        max_issues_per_run=config.max_issues_per_run,
-        include_labels=include or None,
-        exclude_labels=exclude or None,
+            max_issues_per_run=config.max_issues_per_run,
+            include_labels=include or None,
+            exclude_labels=exclude or None,
+            require_product_delta=bool(product_delta_idle["active"]),
     ):
         result = run_issue(config, issue.number, include, exclude)
         results.append(result.to_dict())
@@ -81,9 +87,63 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         "needs_human_recovery": needs_human_summary,
         "external_errors": external_errors,
         "processed": len(results),
+        "product_delta_idle": product_delta_idle,
         "results": results,
         "transient_cleanup": transient_cleanup,
     }
+
+
+def product_delta_idle_summary(config: RunnerConfig) -> dict[str, object]:
+    if not config.product_delta_idle_dispatch:
+        return {"active": False, "reason": "disabled"}
+    if not config.product_delta_idle_log_glob:
+        return {"active": False, "reason": "missing_log_glob"}
+    latest = latest_matching_log(config.product_delta_idle_log_glob, config.workdir_path())
+    if latest is None:
+        return {
+            "active": False,
+            "reason": "no_matching_log",
+            "log_glob": config.product_delta_idle_log_glob,
+        }
+    lines = tail_lines(latest, config.product_delta_idle_tail_lines)
+    idle_count = consecutive_product_delta_idle_events(lines)
+    return {
+        "active": idle_count >= config.product_delta_idle_threshold,
+        "consecutive_idle_events": idle_count,
+        "log": str(latest),
+        "reason": "threshold_met" if idle_count >= config.product_delta_idle_threshold else "below_threshold",
+        "threshold": config.product_delta_idle_threshold,
+    }
+
+
+def latest_matching_log(pattern: str, workdir: Path) -> Path | None:
+    expanded = str(Path(pattern).expanduser())
+    if not Path(expanded).is_absolute():
+        expanded = str(workdir / expanded)
+    matches = [Path(path) for path in glob.glob(expanded)]
+    if not matches:
+        return None
+    return max(matches, key=lambda path: path.stat().st_mtime)
+
+
+def tail_lines(path: Path, limit: int) -> list[str]:
+    recent: deque[str] = deque(maxlen=limit)
+    with path.open(encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            recent.append(line.rstrip("\n"))
+    return list(recent)
+
+
+def consecutive_product_delta_idle_events(lines: list[str]) -> int:
+    count = 0
+    for line in reversed(lines):
+        lowered = line.lower()
+        if "product_delta_skipped" in lowered or "no product implementation delta since" in lowered:
+            count += 1
+            continue
+        if any(marker in lowered for marker in ("prepared local tag", "preparing v", "cycle failed", "release-cd", "published")):
+            break
+    return count
 
 
 def lane_summary(config: RunnerConfig) -> dict[str, object] | None:

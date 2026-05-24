@@ -1,4 +1,10 @@
-from scripts.local_codex_runner.models import IssueTask, State, processable_issues, should_process_issue
+from scripts.local_codex_runner.models import (
+    IssueTask,
+    State,
+    processable_issues,
+    should_process_issue,
+    task_has_product_delta,
+)
 
 
 def test_only_approved_issue_enters_queue() -> None:
@@ -49,6 +55,37 @@ def test_processable_issues_uses_title_priority_when_label_is_missing() -> None:
     )
 
     assert [issue.number for issue in queue] == [11, 10]
+
+
+def test_product_delta_idle_filter_skips_support_only_tasks() -> None:
+    product = IssueTask(
+        21,
+        "[P1][sdk][verifier] Implement proof-bundle behavior",
+        "Touch Python SDK verifier and conformance fixtures.",
+        "",
+        ["auto-codex-approved", "priority:P1"],
+    )
+    support = IssueTask(
+        22,
+        "[P1][runner] Improve release train watcher",
+        "Runner/docs/support-only task for release cadence.",
+        "",
+        ["auto-codex-approved", "priority:P1"],
+    )
+
+    assert task_has_product_delta(product)
+    assert not task_has_product_delta(support)
+
+    queue = processable_issues(
+        [support, product],
+        approved_label="auto-codex-approved",
+        pr_opened_label="codex-pr-opened",
+        needs_human_label="codex-needs-human",
+        max_issues_per_run=2,
+        require_product_delta=True,
+    )
+
+    assert [issue.number for issue in queue] == [21]
 
 
 def test_state_round_trip_is_deterministic() -> None:

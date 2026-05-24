@@ -13,6 +13,45 @@ from typing import Any
 DEFAULT_CANDIDATE_FETCH_FLOOR = 20
 DEFAULT_CANDIDATE_FETCH_MULTIPLIER = 10
 DEFAULT_CANDIDATE_FETCH_CEILING = 100
+PRODUCT_DELTA_TASK_KEYWORDS = (
+    "sdk",
+    "python sdk",
+    "typescript sdk",
+    "verifier",
+    "verification",
+    "proof bundle",
+    "proof-bundle",
+    "canonical",
+    "canonicalization",
+    "conformance",
+    "signature",
+    "signing",
+    "anchoring",
+    "attestation",
+    "evidence",
+    "public api",
+    "api contract",
+    "cli",
+    "schema",
+    "roundtrip",
+    "trust boundary",
+)
+SUPPORT_ONLY_TASK_KEYWORDS = (
+    "release train",
+    "release-cd",
+    "sign-release",
+    "slsa-provenance",
+    "github actions",
+    "workflow",
+    "runner",
+    "pypi",
+    "npm",
+    "dist-tag",
+    "observability",
+    "telemetry",
+    "docs",
+    "release notes",
+)
 
 
 class RunnerStatus(StrEnum):
@@ -169,6 +208,7 @@ def should_process_issue(
     needs_human_label: str,
     include_labels: set[str] | None = None,
     exclude_labels: set[str] | None = None,
+    require_product_delta: bool = False,
 ) -> bool:
     labels = set(task.labels)
     if approved_label not in labels:
@@ -177,7 +217,26 @@ def should_process_issue(
         return False
     if include_labels and not labels.intersection(include_labels):
         return False
+    if require_product_delta and not task_has_product_delta(task):
+        return False
     return not (exclude_labels and labels.intersection(exclude_labels))
+
+
+def task_has_product_delta(task: IssueTask) -> bool:
+    """Return True when a planned task is product implementation work.
+
+    Stable release trains require real Attestplane product changes. During a
+    product-delta idle loop, runner/support/docs/release tasks must not starve
+    SDK, verifier, ProofBundle, canonicalization, conformance, signing,
+    anchoring, or CLI implementation tasks.
+    """
+
+    text = " ".join([task.title, task.body, *task.labels]).lower().replace("_", " ")
+    product_hit = any(keyword in text for keyword in PRODUCT_DELTA_TASK_KEYWORDS)
+    support_hit = any(keyword in text for keyword in SUPPORT_ONLY_TASK_KEYWORDS)
+    if product_hit:
+        return True
+    return not support_hit and issue_priority_rank(task) <= 1
 
 
 def candidate_fetch_limit(max_issues_per_run: int) -> int:
@@ -204,6 +263,7 @@ def processable_issues(
     max_issues_per_run: int,
     include_labels: set[str] | None = None,
     exclude_labels: set[str] | None = None,
+    require_product_delta: bool = False,
 ) -> list[IssueTask]:
     queue = [
         (index, issue)
@@ -215,6 +275,7 @@ def processable_issues(
             needs_human_label=needs_human_label,
             include_labels=include_labels,
             exclude_labels=exclude_labels,
+            require_product_delta=require_product_delta,
         )
     ]
     queue.sort(key=lambda item: (issue_priority_rank(item[1]), item[0]))

@@ -18,7 +18,7 @@ from scripts.local_codex_runner.config import (
     overrides_from_args,
 )
 from scripts.local_codex_runner.github_cli import CheckStatus, GitHubCLI
-from scripts.local_codex_runner.models import IssueTask
+from scripts.local_codex_runner.models import IssueTask, task_has_product_delta
 
 DEPENDENCY_LINE_RE = re.compile(r"(?im)^\s*(?:depends\s+on|depends-on|dependencies)\s*:\s*(?P<refs>.+)$")
 ISSUE_REF_RE = re.compile(r"#(?P<number>[1-9][0-9]*)")
@@ -208,6 +208,9 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
     if args.mode in {"all", "deps"}:
         issues = gh.list_issues(config.repo or "", config.planned_task_label, args.issue_limit)
         sibling_issues = gh.list_issues(config.repo or "", config.planned_task_label, args.issue_limit, state="all")
+        product_delta_idle = bool(getattr(args, "product_delta_idle", False))
+        if product_delta_idle:
+            issues = [issue for issue in issues if task_has_product_delta(issue)]
         siblings_by_source: dict[int | None, list[IssueTask]] = {}
         for issue in sibling_issues:
             siblings_by_source.setdefault(source_planning_issue(issue.body), []).append(issue)
@@ -232,6 +235,7 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
         "commands_run": gh.commands_run,
         "decisions": [decision.to_dict() for decision in decisions],
         "dry_run": config.dry_run,
+        "product_delta_idle": bool(getattr(args, "product_delta_idle", False)),
         "writes": writes,
     }
 
@@ -248,6 +252,11 @@ def main() -> int:
     parser.add_argument("--pr-limit", type=int, default=20)
     parser.add_argument("--issue-limit", type=int, default=50)
     parser.add_argument("--comment", action="store_true", help="write waiting-state comments/labels when not dry-run")
+    parser.add_argument(
+        "--product-delta-idle",
+        action="store_true",
+        help="unlock only product implementation planned-tasks while stable train is product-delta idle",
+    )
     args = parser.parse_args()
     print(json.dumps(advance_queue(args), indent=2, sort_keys=True))
     return 0
