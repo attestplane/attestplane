@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed the local diff only: CHANGELOG.md, docs/cli/verify-json.md, docs/errors.md, docs/release-notes/v1.7.x-delta.md, docs/schema/verify-json.md.",
+    "Confirmed the touched docs are consistent with existing repo references for schema_version, taxonomy_version, verify --json, and verify --explain via local `rg` output.",
+    "Ran `pytest -q tests/docs/test_release_notes_links.py` and it passed with 2 tests.",
+    "Ran `pytest -q tests/conformance/test_verify_json_schema.py` and it passed with 3 tests.",
+    "Reviewed `docs/validation/local_codex_runner/issue-239/gate_report.json`, which records `status: PASS` for the docs gate."
+  ],
+  "residual_risks": [],
+  "no_merge_tag_publish_pypi": true
+}

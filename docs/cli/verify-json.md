@@ -30,6 +30,9 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+- The verifier reason-code taxonomy is versioned separately via
+  `taxonomy_version`. The taxonomy is additive-only: new reason codes may be
+  added, but existing codes are not renamed, removed, or reused.
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
@@ -48,8 +51,9 @@ attestplane verify --json --explain "$bundle"
 
 The flag is additive: it does not bump `schema_version`, it does not change
 the `verify --json` contract documented in #220, and it does not alter the
-bundle forward-compatibility rules documented in #217. The shared
-`att.verify.*` reason-code taxonomy lives in `docs/errors.md`.
+bundle forward-compatibility rules documented in #217. It also does not alter
+`taxonomy_version`; the shared `att.verify.*` reason-code taxonomy lives in
+`docs/errors.md`.
 
 Within that taxonomy, additive unknown fields remain accepted, while
 unsupported major versions and fail-closed critical/required fields surface
