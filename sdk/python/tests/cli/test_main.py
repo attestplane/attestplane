@@ -16,7 +16,6 @@ from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
-from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE
 
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
@@ -120,16 +119,12 @@ def test_export_then_verify_json_output(
     rc = main(["verify", str(bundle_path), "--json"])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["ok"] is True
-    assert payload["event_count"] == 2
-    assert payload["verification_scope"] == "chain_report_only"
-    assert payload["full_proof_bundle_verification"] is False
-    assert payload["proof_bundle_metadata_closure_performed"] is True
-    assert payload["policy_trace_refs_verification_performed"] is True
-    assert payload["signature_verification_performed"] is False
-    assert payload["anchor_verification_performed"] is False
-    assert payload["compliance_certification"] is False
-    assert "not a full verifier" in payload["warning"]
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["reasons"] == []
+    assert payload["bundle"]["schema_version"] == 1
+    assert payload["bundle"]["digest"]
 
 
 def test_verify_require_events_rejects_empty_bundle(
@@ -145,10 +140,10 @@ def test_verify_require_events_rejects_empty_bundle(
     rc = main(["verify", str(bundle_path), "--require-events", "--json"])
     assert rc == 2
     payload = json.loads(capsys.readouterr().out)
-    assert payload["ok"] is False
-    assert payload["require_events"] is True
-    assert payload["event_count"] == 0
-    assert payload["error_code"] == "VERIFY_REQUIRED_FIELDS_MISSING"
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reasons"][0]["code"] == "att.verify.required_field_missing"
 
 
 def test_verify_bundle_option_rejects_unsigned_bundle(
@@ -164,9 +159,10 @@ def test_verify_bundle_option_rejects_unsigned_bundle(
 
     assert rc == 2
     payload = json.loads(capsys.readouterr().out)
-    assert payload["strict_proof_bundle_schema"] is True
-    assert payload["signed_attestation_schema_ok"] is False
-    assert payload["error_code"] == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reasons"][0]["code"] == "att.verify.signature_missing"
 
 
 def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from attestplane import __version__
+from attestplane.cli.verify_json import build_verify_json_outcome
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_IO_ERROR,
@@ -382,6 +383,7 @@ def _collect_nested_reserved_reasons(
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
+    from attestplane.canonical import CanonicalizationError
     from attestplane.verifier import (
         BundleSchemaError,
         classify_bundle_schema_error,
@@ -399,6 +401,19 @@ def cmd_verify(args: argparse.Namespace) -> int:
         or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+
+    if args.json_output:
+        outcome = build_verify_json_outcome(
+            bundle_path,
+            require_non_empty=require_non_empty,
+            require_signed_attestation=strict_schema,
+            explain=getattr(args, "explain", False),
+        )
+        _emit(outcome.payload, True, human="")
+        if outcome.stderr_code is not None:
+            sys.stderr.write(f"{outcome.stderr_code}\n")
+        return outcome.exit_code
+
     try:
         bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
         result = verify_proof_bundle(
@@ -451,6 +466,21 @@ def cmd_verify(args: argparse.Namespace) -> int:
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 2
+    except CanonicalizationError as exc:
+        _emit(
+            {
+                "ok": False,
+                "error": "canonicalization",
+                "error_code": VERIFY_SCHEMA_ERROR,
+                "primary_reason": classify_bundle_schema_error(exc),
+                "secondary_reasons": [],
+                "detail": str(exc),
+                **_verify_scope_metadata(),
+            },
+            args.json_output,
+            human=f"FAIL: canonicalization error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+        )
+        return 1
 
     payload = {
         "ok": result.ok,

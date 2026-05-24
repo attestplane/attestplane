@@ -1,68 +1,62 @@
 # `attestplane verify --json`
 
-`attestplane verify --json` emits the machine-readable verifier result used by
-the v1.7.x support-task delta. It is the JSON companion to the human-facing
-`verify --explain` path.
+`attestplane verify --json` emits the machine-readable CI-gating contract for
+`attestplane verify`. It is intentionally separate from the legacy
+human-readable report fields.
 
 ## Output Contract
 
-The JSON payload includes the verifier outcome plus the machine-readable
-reason surface:
+The payload is fixed at schema version 1:
 
-- `ok`
-- `error_code`
-- `primary_reason`
-- `secondary_reasons`
-- `reasons` (the derived ordered list of `{code, severity}` entries)
-- `chain_result.reason`
-- the existing compatibility fields such as `retention_proofs_reason` and
-  `signed_attestation_schema_reason`
+```json
+{
+  "schema_version": 1,
+  "result": "pass",
+  "exit_code": 0,
+  "reasons": [],
+  "bundle": {
+    "schema_version": 1,
+    "digest": "..."
+  }
+}
+```
 
-Successful results use `primary_reason: null`, `secondary_reasons: []`, and an
-empty `reasons` list. Rejected results should be consumed by checking the exit
-code first and then inspecting the ordered reason list.
+- `schema_version` is the CLI result schema version.
+- `result` is `pass` or `fail`.
+- `exit_code` is the process exit code that callers should gate on.
+- `reasons[]` is an ordered list of `{code, path, message}` entries.
+- `bundle.schema_version` is the proof-bundle schema version currently handled
+  by this verifier contract.
+- `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+
+Consumers should keep branching on `exit_code` first and then inspect
+`result` and `reasons[]` for diagnostics.
 
 ## `verify --explain`
 
 `verify --explain` is the operator-oriented companion to `verify --json`.
-Use it when a person needs the failure summary; use `verify --json` when a CI
-job or integration needs machine-readable branching. Both commands preserve the
-same exit-code contract.
-
-When `--explain` is used on a bundle that is otherwise valid but carries
-forward-compatible additive fields, the `reasons` list can include a
-`severity: reserved` advisory entry describing the ignored fields. That entry
-may also include a `detail` field with the ignored field paths.
-
-## Reason List
-
-When you need a compact `reasons[]` view, derive it from the JSON payload:
-
-```sh
-jq -cr '"'"'[.primary_reason] + .secondary_reasons | map(select(. != null))'"'"' verify.json
-```
-
-This keeps the exit code as the gate while still exposing the ordered
-reason list for downstream policy decisions.
+When the two are combined, the explanatory text is carried in
+`reasons[].message` while stdout remains valid JSON.
 
 ## CI Gating Example
 
 ```sh
-attestplane verify "$bundle" --json > verify.json
+attestplane verify --json "$bundle" > verify.json
 rc=$?
 
-reasons=$(jq -cr '"'"'[.primary_reason] + .secondary_reasons | map(select(. != null))'"'"' verify.json)
+result=$(jq -r '.result' verify.json)
 
-if [ "$rc" -ne 0 ]; then
-  printf '"'"'verify failed (rc=%s)\n'"'"' "$rc"
-  printf '"'"'%s\n'"'"' "$reasons" | jq -r '"'"'.[]'"'"'
+if [ "$rc" -ne 0 ] || [ "$result" != "pass" ]; then
+  printf 'verify failed (rc=%s, result=%s)\n' "$rc" "$result"
+  jq -r '.reasons[]? | "\(.code) \(.path) \(.message)"' verify.json
   exit "$rc"
 fi
 ```
 
 ## See Also
 
-- [`docs/errors.md`](../errors.md) - `att.verify.*` reason-code taxonomy
-  reference from Issue #172.
 - [`docs/schema/verify-json.md`](../schema/verify-json.md) - schema-version
-  policy for verifier JSON consumers.
+  policy for the v1 verifier JSON contract.
+- [`schemas/cli/verify-result-v1.json`](../../schemas/cli/verify-result-v1.json)
+  - JSON Schema for the structured result.
+- [`docs/errors.md`](../errors.md) - `att.verify.*` reason-code taxonomy.

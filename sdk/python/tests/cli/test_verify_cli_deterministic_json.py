@@ -10,7 +10,6 @@ from pathlib import Path
 from attestplane import AttestSubstrate, EventDraft
 from attestplane.cli.main import main
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_OK
 
 
 def _bundle_path(tmp_path: Path) -> Path:
@@ -41,7 +40,8 @@ def test_verify_json_is_deterministic_and_machine_readable(tmp_path: Path, capsy
     assert rc2 == 0
     assert out1 == out2
     payload = json.loads(out1)
-    assert payload["error_code"] == VERIFY_OK
-    assert payload["primary_reason"] is None
-    assert payload["secondary_reasons"] == []
-    assert payload["retention_proofs_ok"] is True
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["reasons"] == []
+    assert payload["bundle"]["schema_version"] == 1
