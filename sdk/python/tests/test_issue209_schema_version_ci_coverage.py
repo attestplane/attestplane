@@ -19,9 +19,11 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verifier import (
     BundleSchemaError,
     classify_bundle_schema_error,
-    main as verifier_main,
     verify_proof_bundle,
     verify_proof_bundle_file,
+)
+from attestplane.verifier import (
+    main as verifier_main,
 )
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
@@ -41,7 +43,6 @@ from attestplane.verify_reason_codes import (
     is_known_verify_reason_code,
     verify_reason_code_matches_format,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = REPO_ROOT / "tests" / "fixtures" / "bundles"
