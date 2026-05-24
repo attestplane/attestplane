@@ -18,9 +18,12 @@ def test_v17x_delta_covers_requested_user_visible_surface() -> None:
     assert "Issue #172" in text
     assert "verify --explain" in text
     assert "verify --json" in text
+    assert "reason_code_version" in text
     assert "schema_version" in text
     assert "negative conformance vectors" in text
     assert "CI Gating Example" in text
+    assert "tests/conformance/README.md" in text
+    assert "tests/conformance/canonicalization_negative_matrix.md" in text
 
 
 def test_verify_json_docs_cover_exit_code_and_reason_list() -> None:
