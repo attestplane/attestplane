@@ -3,7 +3,10 @@
 `verify --json` is a CLI report contract, not a bundle wire-format schema.
 Its fields are additive-only for v1.7.x consumers, while bundle
 `schema_version` handling continues to follow the wire-format policy in
-[`schemas/v1/README.md`](../../schemas/v1/README.md).
+[`schemas/v1/README.md`](../../schemas/v1/README.md). The companion
+`verify --explain` surface is additive as well: it does not bump
+`schema_version`, and it only enriches the human-readable rejection text that
+accompanies the structured JSON contract.
 
 ## Policy
 
@@ -17,8 +20,10 @@ Its fields are additive-only for v1.7.x consumers, while bundle
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code
   taxonomy version documented in `docs/errors.md`.
-- Consumers should keep branching on exit code first, then inspect
-  `primary_reason` and `secondary_reasons`.
+- Consumers should keep branching on exit code first, then inspect `result`
+  and `reasons[]` for diagnostics.
+- `verify --explain` stays aligned with the same JSON contract and does not
+  introduce a new schema or a new bundle policy.
 
 ## Negative Vectors
 

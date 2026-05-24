@@ -35,8 +35,58 @@ Consumers should keep branching on `exit_code` first and then inspect
 ## `verify --explain`
 
 `verify --explain` is the operator-oriented companion to `verify --json`.
-When the two are combined, the explanatory text is carried in
+Use it with `--json` when a CI gate needs machine-readable output and a human
+still needs a plain-language rejection summary.
+
+Synopsis:
+
+```sh
+attestplane verify --json --explain "$bundle"
+```
+
+The flag is additive: it does not bump `schema_version`, it does not change
+the `verify --json` contract documented in #220, and it does not alter the
+bundle forward-compatibility rules documented in #217. The shared
+`att.verify.*` reason-code taxonomy lives in `docs/errors.md`.
+
+When the two flags are combined, the explanatory text is carried in
 `reasons[].message` while stdout remains valid JSON.
+
+### Pass Example
+
+```json
+{
+  "schema_version": 1,
+  "result": "pass",
+  "exit_code": 0,
+  "reasons": [],
+  "bundle": {
+    "schema_version": 1,
+    "digest": "..."
+  }
+}
+```
+
+### Fail Example
+
+```json
+{
+  "schema_version": 1,
+  "result": "fail",
+  "exit_code": 1,
+  "reasons": [
+    {
+      "code": "att.verify.schema_version_unsupported",
+      "path": "bundle.schema_version",
+      "message": "bundle schema_version 2 is not supported"
+    }
+  ],
+  "bundle": {
+    "schema_version": 2,
+    "digest": "..."
+  }
+}
+```
 
 ## CI Gating Example
 
