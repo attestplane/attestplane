@@ -1,0 +1,40 @@
+{
+  "cases": [
+    {
+      "case_id": "additive_minor_ok",
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "ok": true
+    },
+    {
+      "case_id": "additive_with_unknown_field_ok",
+      "extra_fields": [
+        "future_bundle_field"
+      ],
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "ok": true
+    },
+    {
+      "case_id": "missing",
+      "expected_reason_code": "att.verify.schema_version_missing",
+      "expected_secondary_reasons": [],
+      "ok": false
+    },
+    {
+      "case_id": "major_version_ahead",
+      "expected_reason_code": "att.verify.schema_version_unsupported",
+      "expected_secondary_reasons": [],
+      "ok": false
+    },
+    {
+      "case_id": "unknown_required_field",
+      "chain_metadata_fields": [
+        "critical_future_field"
+      ],
+      "expected_reason_code": "att.verify.schema_unknown",
+      "expected_secondary_reasons": [],
+      "ok": false
+    }
+  ]
+}

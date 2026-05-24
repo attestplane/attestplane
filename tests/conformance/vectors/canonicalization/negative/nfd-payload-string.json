@@ -1,6 +1,7 @@
 {
   "case_id": "canonicalization-negative-nfd-payload-string",
   "description": "Hand-crafted bundle mutates an NFC helper payload string to NFD; canonicalization must reject.",
+  "expected_reason_code": "canonicalization.nfc",
   "expected_error_code": "canonicalization.nfc",
   "expected_ok": false,
   "mutation": {

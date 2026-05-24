@@ -46,6 +46,9 @@ from attestplane.verify_reason_codes import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = REPO_ROOT / "tests" / "fixtures" / "bundles"
 SCHEMA_VERSION_DIR = REPO_ROOT / "tests" / "conformance" / "schema_version"
+SCHEMA_VERSION_VECTORS = json.loads(
+    (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
+)["cases"]
 
 
 def _fixture(name: str) -> dict:
@@ -87,19 +90,16 @@ def _signed_bundle() -> dict:
 
 
 def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
-    expectations = {
-        "additive_minor_ok": (True, None, ()),
-        "additive_with_unknown_field_ok": (True, None, ()),
-        "missing": (False, VERIFY_REASON_SCHEMA_VERSION_MISSING, ()),
-        "major_version_ahead": (False, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED, ()),
-        "unknown_required_field": (False, VERIFY_REASON_SCHEMA_UNKNOWN, ()),
-    }
-
-    for case, (ok, primary, secondary) in expectations.items():
-        result = verify_proof_bundle(_schema_case(case), require_signed_attestation=True)
-        assert result.ok is ok
-        assert result.primary_reason == primary
-        assert result.secondary_reasons == secondary
+    for vector in SCHEMA_VERSION_VECTORS:
+        bundle = _schema_case(str(vector["case_id"]))
+        result = verify_proof_bundle(bundle, require_signed_attestation=True)
+        assert result.ok is vector["ok"]
+        assert result.primary_reason == vector["expected_reason_code"]
+        assert result.secondary_reasons == tuple(vector["expected_secondary_reasons"])
+        for field in vector.get("extra_fields", ()):
+            assert field in bundle
+        for field in vector.get("chain_metadata_fields", ()):
+            assert field in bundle["chain_metadata"]
 
 
 def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
@@ -114,12 +114,15 @@ def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
 
 
 def test_unknown_required_field_maps_to_schema_unknown() -> None:
+    vector = next(
+        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field"
+    )
     bundle = _schema_case("unknown_required_field")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 
     assert result.ok is False
-    assert result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert result.primary_reason == vector["expected_reason_code"]
     assert "critical_future_field" in (result.metadata_reason or "")
 
 
