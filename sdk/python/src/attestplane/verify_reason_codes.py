@@ -13,7 +13,8 @@ import re
 from collections.abc import Mapping
 from typing import Final, Literal
 
-VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = 1
+VERIFY_REASON_TAXONOMY_VERSION: Final[int] = 1
+VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
 
 VerifyReasonCodeV1 = Literal[
     "att.verify.anchor_invalid",
@@ -58,7 +59,7 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_STRUCTURE_INVALID,
 )
 
-VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = {
+VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
     VERIFY_REASON_ANCHOR_INVALID: "Anchor material is missing, malformed, unsupported, or failed verification.",
     VERIFY_REASON_CANONICAL_MISMATCH: (
         "Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree."
@@ -78,6 +79,7 @@ VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = {
     VERIFY_REASON_SIGNATURE_MISSING: "Strict verification requires signature material but none is present.",
     VERIFY_REASON_STRUCTURE_INVALID: "Known bundle relationships are malformed, duplicated, dangling, or out of order.",
 }
+VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
 _VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^att\.verify\.[a-z][a-z0-9_]*$"
@@ -94,12 +96,19 @@ def verify_reason_code_matches_format(value: str) -> bool:
     return bool(_VERIFY_REASON_CODE_PATTERN.match(value))
 
 
+def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
+    """Return the stable human-readable explanation for a verify reason code."""
+    return VERIFY_REASON_TAXONOMY[value]
+
+
 __all__ = [
     "ALL_VERIFY_REASON_CODES_V1",
     "VERIFY_REASON_ANCHOR_INVALID",
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",
+    "VERIFY_REASON_TAXONOMY",
+    "VERIFY_REASON_TAXONOMY_VERSION",
     "VERIFY_REASON_REQUIRED_FIELD_MISSING",
     "VERIFY_REASON_SCHEMA_INVALID",
     "VERIFY_REASON_SCHEMA_UNKNOWN",
@@ -110,5 +119,6 @@ __all__ = [
     "VERIFY_REASON_STRUCTURE_INVALID",
     "VerifyReasonCodeV1",
     "is_known_verify_reason_code",
+    "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
 ]

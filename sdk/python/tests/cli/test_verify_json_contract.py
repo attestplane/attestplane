@@ -49,6 +49,8 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
     assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"] == {
         "schema_version": 1,
@@ -67,6 +69,8 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 1
+    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["taxonomy_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))  # type: ignore[index]
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
@@ -81,6 +85,8 @@ def test_verify_json_and_explain_keep_json_parseable(
 
     assert rc == 1
     assert stderr == ""
+    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
@@ -98,6 +104,8 @@ def test_verify_json_reports_invalid_json(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -116,6 +124,8 @@ def test_verify_json_reports_invalid_utf8(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -133,6 +143,8 @@ def test_verify_json_rejects_duplicate_keys(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
+    assert payload["reason_code"] == VERIFY_REASON_STRUCTURE_INVALID
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_STRUCTURE_INVALID
     assert reason["path"] == "/chain_metadata"
@@ -150,6 +162,8 @@ def test_verify_json_rejects_non_object_root(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -166,6 +180,8 @@ def test_verify_json_reports_missing_bundle_path(
 
     assert rc == 1
     assert stderr == ""
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"

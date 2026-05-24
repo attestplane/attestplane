@@ -22,7 +22,6 @@ from attestplane.verify_errors import (
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
-    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
@@ -30,7 +29,9 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
+    verify_reason_code_explanation,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
@@ -121,7 +122,7 @@ def _reason_entry(
         "message": message,
     }
     if explain:
-        reason["explanation"] = VERIFY_REASON_CODE_DESCRIPTIONS[code]
+        reason["explanation"] = verify_reason_code_explanation(code)
     return reason
 
 
@@ -168,6 +169,8 @@ def _json_failure(
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "fail",
             "exit_code": exit_code,
+            "reason_code": reason["code"],
+            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
             "reasons": [reason],
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -185,6 +188,8 @@ def _json_pass(*, bundle_digest: str) -> VerifyJsonOutcome:
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "pass",
             "exit_code": 0,
+            "reason_code": None,
+            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
             "reasons": [],
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -479,6 +484,8 @@ def build_verify_json_outcome(
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "fail",
             "exit_code": exit_code,
+            "reason_code": result.primary_reason,
+            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,

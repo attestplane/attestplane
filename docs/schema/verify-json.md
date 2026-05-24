@@ -20,13 +20,16 @@ accompanies the structured JSON contract.
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code
   taxonomy version documented in `docs/errors.md`.
-- The verifier reason-code taxonomy is versioned separately via
-  `taxonomy_version`. The taxonomy is additive-only, and code values are not
+- `taxonomy_version` pins the shared verifier rejection taxonomy used by both
+  `verify --json` and `verify --explain`.
+- `reason_code` is the top-level machine-readable primary rejection code, or
+  `null` on pass.
+- The verifier reason-code taxonomy is additive-only, and code values are not
   reused within a stable taxonomy version.
 - Consumers should keep branching on exit code first, then inspect `result`
   and `reasons[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
-  introduce a new schema, a new bundle policy, or a new `taxonomy_version`.
+  introduce a new schema or a new bundle policy.
 - When `--explain` is combined with `--json`, each reason may also include an
   `explanation` field with the stable rationale string for that reason code.
 
