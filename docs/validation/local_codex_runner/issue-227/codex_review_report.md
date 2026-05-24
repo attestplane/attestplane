@@ -1,0 +1,21 @@
+# Local Codex Runner Review
+
+- Status: `WARN`
+- Blocking reasons: none
+- Warnings:
+  - The local Opus consultation path was unavailable in this environment because `ask_opus.sh reviewer` returned `Not logged in · Please run /login`.
+  - The conformance test in [`tests/conformance/test_verify_json_schema.py`](/Users/macworkers/Projects/attestplane-lane-p1-2/tests/conformance/test_verify_json_schema.py) was loosened from exact key-set enforcement to subset enforcement, so it no longer catches unexpected extra keys on its own.
+
+## Validation
+
+- Reviewed the diff and relevant source files locally only.
+- Attempted `ask_opus.sh reviewer`, but the local Claude bridge returned `Not logged in · Please run /login`.
+- `pytest -q tests/cli/test_verify_explain.py tests/cli/test_verify_json.py tests/conformance/test_verify_json_schema.py sdk/python/tests/cli/test_verify_json_contract.py` passed (26 tests).
+
+## Residual Risks
+
+- The JSON schema still constrains `reasons[]`, but the unit-level conformance assertion no longer requires an exact field set, so a future extra field could slip past that test if schema validation were bypassed.
+
+## Release Safety
+
+- `no_merge_tag_publish_pypi: true`

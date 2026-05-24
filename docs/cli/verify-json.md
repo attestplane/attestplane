@@ -25,6 +25,8 @@ The payload is fixed at schema version 1:
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
+- When `--explain` is set, each reason may also include an `explanation`
+  field with the stable human rationale string for that reason code.
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
@@ -49,8 +51,11 @@ the `verify --json` contract documented in #220, and it does not alter the
 bundle forward-compatibility rules documented in #217. The shared
 `att.verify.*` reason-code taxonomy lives in `docs/errors.md`.
 
-When the two flags are combined, the explanatory text is carried in
-`reasons[].message` while stdout remains valid JSON.
+When the two flags are combined, stdout remains valid JSON and the rationale
+text is carried in `reasons[].explanation`.
+
+When `--explain` is used without `--json`, rationale lines are written to
+stderr in reason-code order while stdout keeps the existing human summary.
 
 ### Pass Example
 

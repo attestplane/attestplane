@@ -22,6 +22,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
 )
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -83,6 +84,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
+    assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
 
 
 def test_verify_json_reports_invalid_json(
@@ -100,6 +102,7 @@ def test_verify_json_reports_invalid_json(
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
     assert str(bundle) in reason["message"]
+    assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
 
 
 def test_verify_json_reports_invalid_utf8(
