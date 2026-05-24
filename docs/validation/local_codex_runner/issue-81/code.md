@@ -17,4 +17,3 @@ Implemented the release-note update for v1.5.6 by editing
 - `docs/runbooks/autodev-train.md` was not changed.
 - The release note stays within the documented claim boundary and does not add
   compliance, production-readiness, registry-policy, or provenance claims.
-

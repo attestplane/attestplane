@@ -41,4 +41,3 @@ release/artifacts/v1.5.6/artifact-manifest.json:49:  "upload_plan_file": "releas
 - `git diff --stat` showed one changed file: `docs/release-notes/v1.5.6.draft.md`.
 - `release/artifacts/v1.5.6/artifact-manifest.json` remained unchanged and still points to the draft note.
 - `docs/runbooks/autodev-train.md` remained unchanged.
-
