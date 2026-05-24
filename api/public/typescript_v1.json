@@ -1172,6 +1172,14 @@
     {
       "documented": false,
       "kind": "constant",
+      "name": "VERIFY_REASON_SCHEMA_VERSION_MISSING",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
       "name": "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
       "notes": "",
       "source": "src/verify_reason_codes.ts",
@@ -1197,6 +1205,22 @@
       "documented": false,
       "kind": "constant",
       "name": "VERIFY_REASON_STRUCTURE_INVALID",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_TAXONOMY",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "name": "VERIFY_REASON_TAXONOMY_VERSION",
       "notes": "",
       "source": "src/verify_reason_codes.ts",
       "stability": "alpha_public"
@@ -1735,6 +1759,14 @@
       "name": "verifyProofBundleFile",
       "notes": "",
       "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "verifyReasonCodeExplanation",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
       "stability": "alpha_public"
     },
     {
