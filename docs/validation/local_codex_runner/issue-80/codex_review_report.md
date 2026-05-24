@@ -27,9 +27,9 @@ only. No browser lookup or external advisory service was used.
 
 ## Local Evidence
 
-- [gate_report.json](/Users/macworkers/Projects/attestplane-lane-p1-2/docs/validation/local_codex_runner/issue-80/gate_report.json) reports `PASS` for the issue-local docs gate.
-- [test.md](/Users/macworkers/Projects/attestplane-lane-p1-2/docs/validation/local_codex_runner/issue-80/test.md) records that the exact required command was blocked because `pytest` is not installed in the project venv.
-- [test.md](/Users/macworkers/Projects/attestplane-lane-p1-2/docs/validation/local_codex_runner/issue-80/test.md) also records a passing focused regression command: `75 passed in 60.45s`.
+- [gate_report.json](gate_report.json) reports `PASS` for the issue-local docs gate.
+- [test.md](test.md) records that the exact required command was blocked because `pytest` is not installed in the project venv.
+- [test.md](test.md) also records a passing focused regression command: `75 passed in 60.45s`.
 - The issue-local evidence states that the branch already contained the relevant regression coverage, so no source edits were required in this lane.
 
 ## Residual Risks
