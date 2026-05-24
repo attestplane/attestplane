@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts.local_codex_runner import codex_driver
 from scripts.local_codex_runner.codex_driver import CodexDriver
 from scripts.local_codex_runner.github_cli import RunnerCommandError
 
@@ -44,7 +45,7 @@ def test_codex_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch, tmp_pat
         nonlocal called
         called = True
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(codex_driver, "run_with_process_group_timeout", fake_run)
     prompt = tmp_path / "prompt.md"
     prompt.write_text("x", encoding="utf-8")
 
@@ -55,10 +56,10 @@ def test_codex_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    def fake_run(*args, **kwargs):
-        return subprocess.CompletedProcess(args[0], 1, "", "GITHUB_TOKEN=github_pat_abc123")
+    def fake_run(command, workdir, prompt_stdin, timeout):
+        return subprocess.CompletedProcess(command, 1, "", "GITHUB_TOKEN=github_pat_abc123")
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(codex_driver, "run_with_process_group_timeout", fake_run)
     prompt = tmp_path / "prompt.md"
     prompt.write_text("x", encoding="utf-8")
 
@@ -69,10 +70,13 @@ def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
 
 def test_codex_timeout_writes_redacted_log(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    def fake_run(*args, **kwargs):
-        raise subprocess.TimeoutExpired(args[0], kwargs.get("timeout"), output="", stderr="TOKEN=secret")
+    def fake_run(command, workdir, prompt_stdin, timeout):
+        exc = subprocess.TimeoutExpired(command, timeout)
+        exc.stdout = ""
+        exc.stderr = "TOKEN=secret"
+        raise exc
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(codex_driver, "run_with_process_group_timeout", fake_run)
     prompt = tmp_path / "prompt.md"
     prompt.write_text("x", encoding="utf-8")
     log_path = tmp_path / "codex.log"
