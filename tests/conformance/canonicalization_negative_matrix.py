@@ -202,11 +202,13 @@ def load_vector_inventory() -> list[dict[str, Any]]:
     inventory: list[dict[str, Any]] = []
     for spec in VECTOR_SPECS:
         vector = _load_json(spec.path)
-        expected_reason_code = (
-            _field(vector, ("expected", "reason_code"))
-            if "expected" in vector
-            else vector["expected_error_code"]
-        )
+        expected_reason_code = vector.get("expected_reason_code")
+        if expected_reason_code is None:
+            expected_reason_code = (
+                _field(vector, ("expected", "reason_code"))
+                if "expected" in vector
+                else vector["expected_error_code"]
+            )
         assert vector["case_id"] == spec.case_id, spec.path
         assert expected_reason_code == spec.expected_reason_code, spec.path
         inventory.append(

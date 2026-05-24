@@ -1,6 +1,7 @@
 {
   "case_id": "canonicalization-negative-int64-overflow-timestamp-payload",
   "description": "Hand-crafted bundle mutates a timestamp-style payload integer past the signed 64-bit boundary; canonicalization must reject.",
+  "expected_reason_code": "canonicalization.int64",
   "expected_error_code": "canonicalization.int64",
   "expected_ok": false,
   "mutation": {

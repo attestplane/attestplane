@@ -1,6 +1,7 @@
 {
   "case_id": "canonicalization-negative-bom-trailing-bytes-raw",
   "description": "Hand-crafted raw JSON adds a UTF-8 BOM prefix and trailing non-JSON bytes around a helper-emitted canonical bundle.",
+  "expected_reason_code": "json.non_canonical_envelope",
   "expected_error_code": "json.non_canonical_envelope",
   "expected_ok": false,
   "mutation": {
