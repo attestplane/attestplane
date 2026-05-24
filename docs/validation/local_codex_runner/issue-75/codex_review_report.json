@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Checklist 0: Review used only local repository files, local command output, and the issue text supplied in the prompt. No web lookup or external advisory service was used.",
+    "Checklist 1: No release gate was weakened. The issue-local evidence records a read-only boundary confirmation and does not change release gate logic.",
+    "Checklist 2: No severity was lowered. The issue-local evidence does not modify labels, triage state, or issue severity.",
+    "Checklist 3: No secrets were leaked or logged. The reviewed artifacts contain no credentials, tokens, or sensitive runtime output.",
+    "Checklist 4: No publish, tag, or release workflow logic was modified. The reviewed artifacts are documentation-only.",
+    "Checklist 5: No key tests were deleted.",
+    "Checklist 6: The diff does not implement production behavior without tests or evidence. It records local boundary evidence instead.",
+    "Checklist 7: No uncertain external dependency was introduced.",
+    "Checklist 8: No merge, tag, package publish, or PyPI push was performed.",
+    "Local evidence: `git log --no-merges --pretty=tformat:%s v1.5.0..v1.5.5` shows the boundary includes both release-prep commits and real-work commits.",
+    "Local evidence: `git diff --stat v1.5.0..v1.5.5` reports a non-empty delta across 39 files, confirming the range is not idle.",
+    "Local evidence: `git diff --check v1.5.0..v1.5.5` exited 0.",
+    "Local evidence: `docs/validation/local_codex_runner/issue-75/v1.5.5-real-change-boundary.md`, `code.md`, `test.md`, and `review.md` all state that the release train should publish `v1.5.5` rather than skip."
+  ],
+  "residual_risks": [
+    "The repo-wide root-to-HEAD hygiene check referenced in the evidence bundle includes historical whitespace and EOF noise outside the focused `v1.5.0..v1.5.5` decision boundary; those findings were not edited by this issue.",
+    "This review is scoped to the local repository state and local command output only; it does not prove remote CI, remote tags, or remote package state."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
