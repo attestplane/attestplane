@@ -22,6 +22,7 @@ evidence_dir: "docs/validation/local_codex_runner"
 gate_matrix_path: ".local-codex-gates.yml"
 cleanup_stale_state: true
 auto_recover_needs_human: false
+needs_human_scan_limit: 100
 max_needs_human_recoveries_per_run: 2
 max_needs_human_attempts: 2
 needs_human_recovered_label: "codex-recovered"

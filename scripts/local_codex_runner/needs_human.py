@@ -68,7 +68,7 @@ def recover_needs_human_for_labels(
     issues = gh.list_issues(
         config.repo or "",
         config.needs_human_label,
-        max(1, config.max_needs_human_recoveries_per_run * 10),
+        max(config.needs_human_scan_limit, config.max_needs_human_recoveries_per_run),
     )
     prs = gh.list_pull_requests(config.repo or "", config.base_branch, 100)
     results: list[NeedsHumanRecovery] = []

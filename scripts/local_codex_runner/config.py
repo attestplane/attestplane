@@ -57,6 +57,7 @@ class RunnerConfig:
     max_dependency_unlocks_per_run: int = 5
     cleanup_stale_state: bool = True
     auto_recover_needs_human: bool = False
+    needs_human_scan_limit: int = 100
     max_needs_human_recoveries_per_run: int = 2
     max_needs_human_attempts: int = 2
     needs_human_recovered_label: str = "codex-recovered"
@@ -79,6 +80,8 @@ class RunnerConfig:
             raise ConfigError("danger-full-access requires allow_danger_full_access=true")
         if self.codex_timeout_seconds < 1:
             raise ConfigError("codex_timeout_seconds must be a positive integer")
+        if self.needs_human_scan_limit < 1:
+            raise ConfigError("needs_human_scan_limit must be a positive integer")
         if self.allow_auto_merge and not self.allowed_pr_authors:
             raise ConfigError("allow_auto_merge requires at least one allowed_pr_authors entry")
         if self.lane_slot is not None and self.lane_slot < 1:

@@ -220,6 +220,29 @@ def test_recovery_respects_lane_filters(tmp_path: Path) -> None:
     assert summary["results"][0]["action"] == "would_requeue"
 
 
+def test_recovery_scans_past_newer_out_of_lane_issues(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+    config.max_needs_human_recoveries_per_run = 1
+    config.needs_human_scan_limit = 20
+    evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-30"
+    evidence_dir.mkdir(parents=True)
+    (evidence_dir / "failure.txt").write_text("429 rate limit\n", encoding="utf-8")
+    gh = FakeGH(
+        issues=[
+            *[
+                issue(number, ["auto-codex-approved", "codex-needs-human", "priority-P1"])
+                for number in range(100, 110)
+            ],
+            issue(30, ["auto-codex-approved", "codex-needs-human", "priority-P0"]),
+        ]
+    )
+
+    summary = recover_needs_human_for_labels(config, gh, include_labels={"priority-P0"})
+
+    assert [item["issue_number"] for item in summary["results"]] == [30]
+    assert summary["results"][0]["action"] == "would_requeue"
+
+
 def test_branch_checked_out_elsewhere_detects_other_worktree(monkeypatch, tmp_path: Path) -> None:
     config = base_config(tmp_path, dry_run=False)
 
