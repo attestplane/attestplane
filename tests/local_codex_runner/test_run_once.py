@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 from scripts.local_codex_runner.run_once import cleanup_stale_state, run_once
@@ -127,3 +128,36 @@ def test_run_once_reports_needs_human_recovery(monkeypatch, tmp_path: Path) -> N
         "enabled": True,
         "results": [{"issue_number": 1, "action": "kept"}],
     }
+
+
+def test_run_once_cleans_transient_result_files_before_live_cycle(monkeypatch, tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-9"
+    evidence_dir.mkdir(parents=True)
+    result_file = evidence_dir / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: false\n"
+        "cleanup_stale_state: false\n"
+        "auto_recover_needs_human: false\n"
+        "auto_advance_before_consume: false\n"
+        "max_issues_per_run: 0\n",
+        encoding="utf-8",
+    )
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            pass
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            return []
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert result["transient_cleanup"] == ["docs/validation/local_codex_runner/issue-9/runner_result.json"]
+    assert not result_file.exists()

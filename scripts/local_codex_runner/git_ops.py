@@ -131,7 +131,7 @@ class GitOps:
         if forbidden:
             raise GitSafetyError(f"Forbidden sensitive file change blocked: {', '.join(forbidden)}")
 
-    def remove_transient_evidence(self) -> None:
+    def remove_transient_evidence(self) -> list[str]:
         transient = [
             (status, path) for status, path in self.status_paths() if is_transient_evidence_path(path)
         ]
@@ -141,6 +141,7 @@ class GitOps:
             self.run(["rm", "-f", "--", *tracked])
         if untracked:
             self.run(["clean", "-f", "--", *untracked])
+        return tracked + untracked
 
     def commit_all(self, issue_number: int, message: str, *, expected_branch: str | None = None) -> None:
         if expected_branch is not None:

@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 from scripts.local_codex_runner.advance_queue import advance_queue
 from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
+from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI
 from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues
 from scripts.local_codex_runner.needs_human import recover_needs_human_for_labels
@@ -21,6 +22,7 @@ from scripts.local_codex_runner.state_store import load_state, save_state
 def run_once(args: argparse.Namespace) -> dict[str, object]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
+    transient_cleanup = [] if config.dry_run else GitOps(config.workdir_path()).remove_transient_evidence()
     cleanup_summary: dict[str, object] | None = cleanup_stale_state(config, gh) if config.cleanup_stale_state else None
     include = set(config.lane_include_labels).union(args.include_label or [])
     exclude = set(config.lane_exclude_labels).union(args.exclude_label or [])
@@ -70,6 +72,7 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         "needs_human_recovery": needs_human_summary,
         "processed": len(results),
         "results": results,
+        "transient_cleanup": transient_cleanup,
     }
 
 
