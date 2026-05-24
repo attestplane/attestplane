@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed the diff with git status --short, git diff --check, and the new issue-228 evidence files.",
+    "Verified the checked-in matrix against the on-disk canonicalization negative vectors with bash scripts/check-conformance-matrix.sh.",
+    "Verified fixture pins with bash scripts/check-fixture-hashes.sh.",
+    "Verified the relevant regression coverage with sdk/python/.venv/bin/pytest -q tests/conformance/test_canonicalization_negative_coverage.py.",
+    "Verified the relevant regression coverage with sdk/python/.venv/bin/pytest -q tests/conformance/test_negative_vectors.py.",
+    "Verified the relevant regression coverage with sdk/python/.venv/bin/pytest -q tests/conformance/test_canonicalization_minimum_bundle_vectors.py.",
+    "Verified the relevant regression coverage with sdk/python/.venv/bin/pytest -q sdk/python/tests/test_conformance_negative.py."
+  ],
+  "residual_risks": [
+    "The change is test-and-evidence only; the remaining risk is future corpus drift if new vectors are added without updating the matrix helper and markdown artifact.",
+    "The local .venv was used because the host interpreter does not have pytest installed."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
