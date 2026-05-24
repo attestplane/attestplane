@@ -119,3 +119,38 @@ def test_command_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch) -> None
         GitHubCLI(dry_run=False).current_auth_status()
 
     assert "github_pat" not in str(excinfo.value)
+
+
+def test_read_command_retries_transient_graphql_eof(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+
+    def fake_run(command, capture_output, text, check):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return subprocess.CompletedProcess(command, 1, "", 'Post "https://api.github.com/graphql": EOF')
+        return subprocess.CompletedProcess(command, 0, '[{"number":7,"title":"Fix","url":"u","body":"b","labels":[]}]', "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr("scripts.local_codex_runner.github_cli.time.sleep", lambda _seconds: None)
+
+    issues = GitHubCLI(dry_run=False).list_issues("o/r", "auto-codex-approved", 10)
+
+    assert calls == 2
+    assert issues[0].number == 7
+
+
+def test_write_command_does_not_retry_transient_graphql_eof(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+
+    def fake_run(command, capture_output, text, check):
+        nonlocal calls
+        calls += 1
+        return subprocess.CompletedProcess(command, 1, "", 'Post "https://api.github.com/graphql": EOF')
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    with pytest.raises(RunnerCommandError):
+        GitHubCLI(dry_run=False).comment_issue("o/r", 7, "body")
+
+    assert calls == 1
