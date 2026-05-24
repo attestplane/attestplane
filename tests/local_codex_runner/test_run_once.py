@@ -35,6 +35,40 @@ def test_cleanup_stale_state_prunes_closed_active_issues(tmp_path: Path) -> None
     assert "codex/118" not in state_path.read_text(encoding="utf-8")
 
 
+def test_cleanup_stale_state_reports_github_errors_without_crashing(tmp_path: Path) -> None:
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        "{\n"
+        '  "active_issue_ids": [103],\n'
+        '  "branch_mappings": {"103": "codex/103"},\n'
+        '  "last_result": null,\n'
+        '  "processed_issue_ids": [],\n'
+        '  "retry_counts": {}\n'
+        "}\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.config import RunnerConfig
+    from scripts.local_codex_runner.github_cli import RunnerCommandError
+
+    class FailingGH:
+        def view_issue_state(self, repo: str, issue_number: int) -> str:
+            raise RunnerCommandError(
+                ["gh", "issue", "view", str(issue_number)],
+                1,
+                "proxyconnect tcp: dial tcp 127.0.0.1:7897: connect: connection refused",
+            )
+
+    config = RunnerConfig(repo="o/r", workdir=str(tmp_path), state_path="state.json")
+    summary = cleanup_stale_state(config, FailingGH())  # type: ignore[arg-type]
+
+    assert summary["pruned_closed_issues"] == []
+    assert summary["kept"] == []
+    assert summary["external_errors"][0]["issue"] == 103
+    assert "proxyconnect tcp" in summary["external_errors"][0]["error"]
+    assert "codex/103" in state_path.read_text(encoding="utf-8")
+
+
 def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
     config_path.write_text(

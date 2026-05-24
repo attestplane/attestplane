@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from scripts.local_codex_runner.advance_queue import advance_queue
 from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
 from scripts.local_codex_runner.git_ops import GitOps
-from scripts.local_codex_runner.github_cli import GitHubCLI
+from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError
 from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues
 from scripts.local_codex_runner.needs_human import recover_needs_human_for_labels
 from scripts.local_codex_runner.run_issue import run_issue
@@ -95,8 +95,13 @@ def cleanup_stale_state(config: RunnerConfig, gh: GitHubCLI) -> dict[str, object
     tracked = sorted(set(state.active_issue_ids).union(int(key) for key in state.branch_mappings if key.isdigit()))
     pruned: list[int] = []
     kept: list[dict[str, object]] = []
+    external_errors: list[dict[str, object]] = []
     for issue_number in tracked:
-        issue_state = gh.view_issue_state(config.repo or "", issue_number)
+        try:
+            issue_state = gh.view_issue_state(config.repo or "", issue_number)
+        except RunnerCommandError as exc:
+            external_errors.append({"issue": issue_number, "error": str(exc)})
+            continue
         if issue_state == "CLOSED":
             if state.prune_issue(issue_number):
                 pruned.append(issue_number)
@@ -104,7 +109,12 @@ def cleanup_stale_state(config: RunnerConfig, gh: GitHubCLI) -> dict[str, object
             kept.append({"issue": issue_number, "state": issue_state})
     if pruned:
         save_state(state_path, state)
-    return {"invalid_branch_keys": invalid_branch_keys, "pruned_closed_issues": pruned, "kept": kept}
+    return {
+        "external_errors": external_errors,
+        "invalid_branch_keys": invalid_branch_keys,
+        "pruned_closed_issues": pruned,
+        "kept": kept,
+    }
 
 
 def main() -> int:
