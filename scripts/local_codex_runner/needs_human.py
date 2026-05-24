@@ -24,6 +24,25 @@ from scripts.local_codex_runner.state_store import load_state, save_state
 
 UNKNOWN_REASON = "unknown"
 POLICY_REASON = "policy_boundary"
+EXTERNAL_MODEL_API_BLOCKER_REASON = "external_model_api_blocker"
+EXTERNAL_MODEL_API_ERROR_PATTERNS = (
+    "chatgpt.com/backend-api/codex/responses",
+    "api error: 403",
+    "api error 403",
+    "http error: 403",
+    "403 forbidden",
+    "request not allowed",
+    "rate limit",
+    "usage limit",
+    "quota",
+    "429",
+    "bad gateway",
+    "service unavailable",
+    "gateway timeout",
+    "502",
+    "503",
+    "504",
+)
 
 
 @dataclass(frozen=True)
@@ -137,16 +156,30 @@ def recover_needs_human_for_labels(
             continue
 
         attempt += 1
-        if not config.dry_run:
-            state.retry_counts[key] = attempt
-            save_state(config.state_file(), state)
         if pr is None:
-            results.append(requeue_issue(config, gh, issue, signal, attempt))
+            result = requeue_issue(config, gh, issue, signal, attempt)
+            if recovery_attempt_counts_toward_cap(signal, result) and not config.dry_run:
+                state.retry_counts[key] = attempt
+                save_state(config.state_file(), state)
+            results.append(result)
             recoveries += 1
             continue
-        results.append(recover_ci_pr(config, gh, issue, pr, signal, attempt))
+        result = recover_ci_pr(config, gh, issue, pr, signal, attempt)
+        if recovery_attempt_counts_toward_cap(signal, result) and not config.dry_run:
+            state.retry_counts[key] = attempt
+            save_state(config.state_file(), state)
+        results.append(result)
         recoveries += 1
     return {"enabled": True, "results": [item.to_dict() for item in results]}
+
+
+def recovery_attempt_counts_toward_cap(signal: StopSignal, result: NeedsHumanRecovery) -> bool:
+    """Return whether a recovery result should consume the stop-signal retry cap."""
+    if result.reason == EXTERNAL_MODEL_API_BLOCKER_REASON:
+        return False
+    if result.reason == "local_workspace_blocked":
+        return False
+    return signal.reason in {"rate_limit", "network_timeout", "ci_failed"}
 
 
 def issue_in_lane(
@@ -341,6 +374,19 @@ def normalize_line(line: str) -> str:
     return re.sub(r"\s+", " ", line.strip())[:240]
 
 
+def codex_driver_external_blocker(exc: RunnerCommandError) -> StopSignal | None:
+    """Classify upstream Codex/ChatGPT service errors separately from local CI failures."""
+    text = str(exc)
+    lowered = text.lower()
+    if any(pattern in lowered for pattern in EXTERNAL_MODEL_API_ERROR_PATTERNS):
+        return StopSignal(
+            EXTERNAL_MODEL_API_BLOCKER_REASON,
+            stable_signature(first_matching_line(text, EXTERNAL_MODEL_API_ERROR_PATTERNS)),
+            "Codex model/API backend blocked recovery; retry later without consuming CI attempt cap",
+        )
+    return None
+
+
 def stable_signature(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:16]
 
@@ -499,6 +545,18 @@ def recover_ci_pr(
     try:
         codex.run_codex(fix_prompt, workdir, recovery_log, timeout=config.codex_timeout_seconds)
     except RunnerCommandError as exc:
+        external_signal = codex_driver_external_blocker(exc)
+        if external_signal is not None:
+            return NeedsHumanRecovery(
+                issue.number,
+                "kept",
+                external_signal.reason,
+                0,
+                pr_number=number,
+                branch=branch,
+                signature=external_signal.signature,
+                detail=external_signal.detail,
+            )
         return NeedsHumanRecovery(
             issue.number,
             "kept",

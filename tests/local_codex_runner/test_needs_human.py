@@ -317,7 +317,59 @@ def test_ci_recovery_codex_failure_is_reported_without_crashing(monkeypatch, tmp
     summary = recover_needs_human(config, gh)
 
     assert summary["results"][0]["action"] == "kept"
-    assert summary["results"][0]["reason"] == "local_failed"
-    assert "403 Forbidden" in summary["results"][0]["detail"]
+    assert summary["results"][0]["reason"] == "external_model_api_blocker"
+    assert summary["results"][0]["attempt"] == 0
+    assert "backend blocked recovery" in summary["results"][0]["detail"]
     assert gh.added == []
     assert gh.removed == []
+    assert not (tmp_path / "state.json").exists()
+
+
+def test_external_codex_backend_failure_does_not_poison_attempt_cap(monkeypatch, tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    config.allowed_pr_authors = ["runner-bot"]
+
+    class FakeGit:
+        def __init__(self, workdir):
+            pass
+
+        def run(self, args):
+            return f"worktree {tmp_path}\nHEAD abc\nbranch refs/heads/main\n\n"
+
+        def remove_transient_evidence(self):
+            pass
+
+        def ensure_clean_worktree(self):
+            pass
+
+        def checkout_remote_branch(self, branch):
+            pass
+
+    class FailingCodex:
+        def __init__(self, **kwargs):
+            pass
+
+        def run_codex(self, prompt_file, workdir, log_path, timeout=None):
+            raise RunnerCommandError(
+                ["codex", "exec"],
+                1,
+                "POST https://chatgpt.com/backend-api/codex/responses failed: 403 Forbidden",
+            )
+
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", FailingCodex)
+
+    gh = FakeGH(
+        issues=[issue(32, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[pr(12, 32)],
+        checks=[CheckStatus("pytest", "FAILURE", "fail")],
+    )
+
+    first = recover_needs_human(config, gh)
+    second = recover_needs_human(config, gh)
+
+    assert first["results"][0]["reason"] == "external_model_api_blocker"
+    assert second["results"][0]["reason"] == "external_model_api_blocker"
+    assert first["results"][0]["attempt"] == 0
+    assert second["results"][0]["attempt"] == 0
+    assert not (tmp_path / "state.json").exists()

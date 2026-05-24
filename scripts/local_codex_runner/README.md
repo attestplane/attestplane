@@ -53,6 +53,11 @@ runner-owned PR. Unknown failures, policy/external blocking labels, missing
 approval, stale PR labels, non-`codex/issue-N-*` branches, and live PR recovery
 without an author allowlist stay human-blocked.
 
+Codex/ChatGPT backend errors during an attempted CI repair are classified as
+`external_model_api_blocker`. That result keeps the issue blocked for the
+current poll but does not consume the underlying `ci_failed` attempt cap, so a
+transient 403/429/5xx outage cannot permanently starve a P1 product PR.
+
 ## Multi-Lane Operation
 
 The runner can be deployed as several independent lanes by giving each lane its
