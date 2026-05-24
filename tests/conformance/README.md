@@ -11,3 +11,12 @@ stable `case_id`, `expected.reason_code`, and `expected.pointer`, and the local
 runner asserts both values before reporting success. Future taxonomy growth adds
 new files under `v1/` or a later versioned subdirectory; existing vectors stay
 frozen.
+
+The full negative corpus also includes the non-versioned canonicalization edge
+fixtures in `tests/conformance/vectors/canonicalization/negative/*.json`. Their
+coverage is tracked in `tests/conformance/canonicalization_negative_matrix.md`
+and enforced by `scripts/check-conformance-matrix.sh`.
+
+The matrix is additive and frozen. If a future audit finds an uncovered edge
+case, add a new negative vector, update the checked-in matrix, and keep the
+fixture hash lock in sync in the same change.
