@@ -82,7 +82,15 @@ class GitOps:
         if branch in {"main", "master"} or not branch.startswith("codex/"):
             raise GitSafetyError(f"Refusing to check out non-runner branch {branch!r}")
         self.run(["fetch", "origin", branch])
+        if self.current_branch() == branch and self.has_unpushed_commits(branch):
+            return
         self.run(["checkout", "-B", branch, f"origin/{branch}"])
+
+    def has_unpushed_commits(self, branch: str) -> bool:
+        if branch in {"main", "master"} or not branch.startswith("codex/"):
+            raise GitSafetyError(f"Refusing to inspect non-runner branch {branch!r}")
+        count = self.run(["rev-list", "--count", f"origin/{branch}..HEAD"]).strip()
+        return int(count or "0") > 0
 
     def create_branch(self, issue_number: int, title: str) -> str:
         branch = f"codex/issue-{issue_number}-{slugify(title)}"

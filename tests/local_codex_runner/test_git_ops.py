@@ -60,13 +60,31 @@ def test_remote_checkout_ref_uses_detached_origin_branch() -> None:
 
 
 def test_remote_issue_branch_checkout_is_limited_to_codex_branches() -> None:
-    git = FakeGit({})
+    git = FakeGit({"branch --show-current": "main\n"})
 
     git.checkout_remote_branch("codex/issue-12-fix")
 
     assert git.commands_run == [
         "fetch origin codex/issue-12-fix",
+        "branch --show-current",
         "checkout -B codex/issue-12-fix origin/codex/issue-12-fix",
+    ]
+
+
+def test_remote_issue_branch_checkout_preserves_unpushed_current_branch() -> None:
+    git = FakeGit(
+        {
+            "branch --show-current": "codex/issue-12-fix\n",
+            "rev-list --count origin/codex/issue-12-fix..HEAD": "1\n",
+        }
+    )
+
+    git.checkout_remote_branch("codex/issue-12-fix")
+
+    assert git.commands_run == [
+        "fetch origin codex/issue-12-fix",
+        "branch --show-current",
+        "rev-list --count origin/codex/issue-12-fix..HEAD",
     ]
 
 

@@ -503,6 +503,38 @@ def recover_ci_pr(
         git.remove_transient_evidence()
         git.ensure_clean_worktree()
         git.checkout_remote_branch(branch or "")
+        if branch and git.has_unpushed_commits(branch):
+            gate = GateRunner(
+                workdir,
+                config.gate_matrix_file(),
+                timeout_seconds=config.gate_timeout_seconds,
+            ).run(
+                issue.labels,
+                evidence_dir,
+                preferred_gate=CI_FAILED_GATE if signal.reason == "ci_failed" else None,
+            )
+            if gate.status != "PASS":
+                return NeedsHumanRecovery(
+                    issue.number,
+                    "kept",
+                    "local_failed",
+                    attempt,
+                    pr_number=number,
+                    branch=branch,
+                    signature=signal.signature,
+                    detail=gate.summary(),
+                )
+            gh.comment_issue(
+                config.repo or "",
+                issue.number,
+                (
+                    f"Local Codex runner found existing clean recovery commits for "
+                    f"`{config.needs_human_label}`; reason `{signal.reason}`; "
+                    f"signature `{signal.signature}`; attempt {attempt}."
+                ),
+            )
+            git.push_branch(branch)
+            return complete_ci_recovery(config, gh, issue, signal, attempt, number, branch, evidence_dir)
     except (GitSafetyError, RunnerCommandError) as exc:
         return NeedsHumanRecovery(
             issue.number,
@@ -601,6 +633,19 @@ def recover_ci_pr(
         ),
     )
     git.push_branch(branch or "")
+    return complete_ci_recovery(config, gh, issue, signal, attempt, number, branch, evidence_dir)
+
+
+def complete_ci_recovery(
+    config: RunnerConfig,
+    gh: GitHubCLI,
+    issue: IssueTask,
+    signal: StopSignal,
+    attempt: int,
+    number: int | None,
+    branch: str | None,
+    evidence_dir: Path,
+) -> NeedsHumanRecovery:
     ci = wait_for_ci(
         gh,
         repo=config.repo or "",
