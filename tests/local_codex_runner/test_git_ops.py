@@ -125,7 +125,9 @@ def test_commit_removes_transient_prompt_and_log_evidence() -> None:
 
     git.commit_all(12, "Fix #12")
 
-    assert "rm -f -- docs/validation/local_codex_runner/issue-12/gate_report.md" in git.commands_run
+    assert (
+        "restore --worktree --staged -- docs/validation/local_codex_runner/issue-12/gate_report.md"
+    ) in git.commands_run
     assert (
         "clean -f -- docs/validation/local_codex_runner/issue-12/01_plan.prompt.md "
         "docs/validation/local_codex_runner/issue-12/codex_code.log "

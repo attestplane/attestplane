@@ -149,7 +149,7 @@ class GitOps:
         untracked = [path for status, path in transient if status == "??"]
         tracked = [path for status, path in transient if status != "??"]
         if tracked:
-            self.run(["rm", "-f", "--", *tracked])
+            self.run(["restore", "--worktree", "--staged", "--", *tracked])
         if untracked:
             self.run(["clean", "-f", "--", *untracked])
         return tracked + untracked
