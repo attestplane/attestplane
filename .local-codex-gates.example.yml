@@ -15,7 +15,7 @@ area:conformance:
 ci:failed:
   - "./scripts/check-schema-hashes.sh"
   - "uv run --project sdk/python ruff check sdk/python/src sdk/python/tests tests"
-  - "uv run --project sdk/python mypy"
+  - "uv run --project sdk/python mypy sdk/python/src sdk/python/tests tests"
   - "npm --prefix sdk/typescript run lint"
   - "npm --prefix sdk/typescript run typecheck"
   - "uv run --project sdk/python pytest sdk/python/tests tests -q"
