@@ -33,7 +33,9 @@ def test_verify_json_docs_cover_exit_code_and_reason_list() -> None:
     assert "verify --explain" in cli
     assert "primary_reason" in cli
     assert "secondary_reasons" in cli
+    assert "reasons" in cli
     assert "reasons[]" in cli
     assert "schema_version" in schema
+    assert "att.verify.schema_version_missing" in schema
     assert "att.verify.schema_version_unsupported" in schema
     assert "negative conformance vectors" in schema

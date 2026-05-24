@@ -50,6 +50,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
@@ -135,7 +136,7 @@ _REQUIRED_TOP_LEVEL = {
     "forbidden_fields",
 }
 _REQUIRED_CHAIN_METADATA = {
-    "chain_id", "schema_version", "genesis_hash_hex",
+    "chain_id", "genesis_hash_hex",
     "head_hash_hex", "head_seq", "producer_runtime",
 }
 _REQUIRED_VERIFICATION_REPORT = {
@@ -163,9 +164,6 @@ def _validate_shape(bundle: Any) -> None:
     """
     if not isinstance(bundle, dict):
         raise BundleSchemaError(f"bundle must be a JSON object, got {type(bundle).__name__}")
-    unknown = set(bundle) - _ALLOWED_TOP_LEVEL
-    if unknown:
-        raise BundleSchemaError(f"bundle contains unknown top-level fields: {sorted(unknown)}")
     missing = _REQUIRED_TOP_LEVEL - set(bundle)
     if missing:
         raise BundleSchemaError(f"bundle missing required fields: {sorted(missing)}")
@@ -209,6 +207,17 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("policy_trace_refs must be an array when present")
     if "retention_proofs" in bundle and not isinstance(bundle["retention_proofs"], list):
         raise BundleSchemaError("retention_proofs must be an array when present")
+
+
+def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | None:
+    if "schema_version" not in metadata:
+        return VERIFY_REASON_SCHEMA_VERSION_MISSING
+    schema_version = metadata["schema_version"]
+    if not isinstance(schema_version, int):
+        return VERIFY_REASON_SCHEMA_INVALID
+    if schema_version != SCHEMA_VERSION:
+        return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    return None
 
 
 def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
@@ -380,6 +389,18 @@ def _dedupe_reasons(
     return ordered[0], tuple(ordered[1:])
 
 
+def _schema_version_reason_code(metadata_reason: str | None) -> VerifyReasonCodeV1 | None:
+    if metadata_reason is None:
+        return None
+    if metadata_reason == "chain_metadata.schema_version is missing":
+        return VERIFY_REASON_SCHEMA_VERSION_MISSING
+    if metadata_reason == "chain_metadata.schema_version must be an integer":
+        return VERIFY_REASON_SCHEMA_INVALID
+    if metadata_reason.startswith("chain_metadata.schema_version="):
+        return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    return None
+
+
 def _verification_reasons(
     *,
     chain_result: VerificationResult,
@@ -401,8 +422,9 @@ def _verification_reasons(
     if not signed_schema_ok:
         reasons.append(_signed_attestation_reason_code(signed_schema_reason))
     if not metadata_ok:
-        if metadata_reason and "schema_version" in metadata_reason and "handles" in metadata_reason:
-            reasons.append(classify_bundle_schema_error(metadata_reason))
+        schema_version_reason = _schema_version_reason_code(metadata_reason)
+        if schema_version_reason is not None:
+            reasons.append(schema_version_reason)
         else:
             reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if not policy_ok:
@@ -423,9 +445,14 @@ def _verify_metadata_closure(
     report = bundle["verification_report"]
     if require_non_empty and not events:
         return False, "events must contain at least one event when require_non_empty=True"
-    if metadata["schema_version"] != SCHEMA_VERSION:
+    schema_reason = _schema_version_reason(metadata)
+    if schema_reason is not None:
+        if schema_reason is VERIFY_REASON_SCHEMA_VERSION_MISSING:
+            return False, "chain_metadata.schema_version is missing"
+        if schema_reason is VERIFY_REASON_SCHEMA_INVALID:
+            return False, "chain_metadata.schema_version must be an integer"
         return False, (
-            f"chain_metadata.schema_version={metadata['schema_version']!r}; "
+            f"chain_metadata.schema_version={metadata.get('schema_version')!r}; "
             f"this verifier handles {SCHEMA_VERSION}"
         )
     if metadata["genesis_hash_hex"] != GENESIS_HASH.hex():

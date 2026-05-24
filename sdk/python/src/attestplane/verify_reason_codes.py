@@ -21,6 +21,7 @@ VerifyReasonCodeV1 = Literal[
     "att.verify.required_field_missing",
     "att.verify.schema_invalid",
     "att.verify.schema_unknown",
+    "att.verify.schema_version_missing",
     "att.verify.schema_version_unsupported",
     "att.verify.signature_invalid",
     "att.verify.signature_missing",
@@ -32,6 +33,9 @@ VERIFY_REASON_SIGNATURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.signatu
 VERIFY_REASON_SIGNATURE_MISSING: Final[VerifyReasonCodeV1] = "att.verify.signature_missing"
 VERIFY_REASON_SCHEMA_UNKNOWN: Final[VerifyReasonCodeV1] = "att.verify.schema_unknown"
 VERIFY_REASON_SCHEMA_INVALID: Final[VerifyReasonCodeV1] = "att.verify.schema_invalid"
+VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = (
+    "att.verify.schema_version_missing"
+)
 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = (
     "att.verify.schema_version_unsupported"
 )
@@ -47,6 +51,7 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
@@ -63,6 +68,9 @@ VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = {
     ),
     VERIFY_REASON_SCHEMA_INVALID: "The input shape is malformed for a known verifier schema.",
     VERIFY_REASON_SCHEMA_UNKNOWN: "The input declares an unknown schema family or verification method namespace.",
+    VERIFY_REASON_SCHEMA_VERSION_MISSING: (
+        "A known bundle, payload, signature, or verifier schema version is missing."
+    ),
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: (
         "A known bundle, payload, signature, or verifier schema version is unsupported."
     ),
@@ -95,6 +103,7 @@ __all__ = [
     "VERIFY_REASON_REQUIRED_FIELD_MISSING",
     "VERIFY_REASON_SCHEMA_INVALID",
     "VERIFY_REASON_SCHEMA_UNKNOWN",
+    "VERIFY_REASON_SCHEMA_VERSION_MISSING",
     "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
     "VERIFY_REASON_SIGNATURE_INVALID",
     "VERIFY_REASON_SIGNATURE_MISSING",

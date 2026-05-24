@@ -13,19 +13,26 @@ reason surface:
 - `error_code`
 - `primary_reason`
 - `secondary_reasons`
+- `reasons` (the derived ordered list of `{code, severity}` entries)
 - `chain_result.reason`
 - the existing compatibility fields such as `retention_proofs_reason` and
   `signed_attestation_schema_reason`
 
-Successful results use `primary_reason: null` and `secondary_reasons: []`.
-Rejected results should be consumed by checking the exit code first and then
-inspecting the reason list.
+Successful results use `primary_reason: null`, `secondary_reasons: []`, and an
+empty `reasons` list. Rejected results should be consumed by checking the exit
+code first and then inspecting the ordered reason list.
 
 ## `verify --explain`
 
 `verify --explain` is the operator-oriented companion to `verify --json`.
 Use it when a person needs the failure summary; use `verify --json` when a CI
-job or integration needs machine-readable branching.
+job or integration needs machine-readable branching. Both commands preserve the
+same exit-code contract.
+
+When `--explain` is used on a bundle that is otherwise valid but carries
+forward-compatible additive fields, the `reasons` list can include a
+`severity: reserved` advisory entry describing the ignored fields. That entry
+may also include a `detail` field with the ignored field paths.
 
 ## Reason List
 

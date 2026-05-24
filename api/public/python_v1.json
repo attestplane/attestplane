@@ -888,6 +888,14 @@
       "documented": false,
       "kind": "constant",
       "module": "attestplane",
+      "name": "VERIFY_REASON_SCHEMA_VERSION_MISSING",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
       "name": "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
       "notes": "",
       "stability": "alpha_public"
