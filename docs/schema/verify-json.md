@@ -16,6 +16,8 @@ accompanies the structured JSON contract.
 - An unsupported bundle or payload schema version should remain a rejected
   verifier result and surface `att.verify.schema_version_unsupported` in the
   reason list.
+- A fail-closed critical/required field should remain a rejected verifier
+  result and surface `att.verify.schema_unknown` in the reason list.
 - Additive unknown fields are preserved verbatim by the caller and ignored by
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code

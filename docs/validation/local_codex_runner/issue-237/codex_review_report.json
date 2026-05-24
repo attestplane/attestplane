@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "git diff --check",
+    "PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane-lane-p1-1/sdk/python/.venv/bin/pytest -q tests/conformance/test_schema_version_vectors.py tests/verifier/test_proof_bundle_schema.py tests/verifier/test_verify_reason_codes.py tests/cli/test_verify_errors.py sdk/python/tests/test_issue209_schema_version_ci_coverage.py sdk/python/tests/cli/test_verify_json_contract.py -> 81 passed",
+    "PATH=/Users/macworkers/.local/bin:$PATH npm test -- test/proof_bundle.test.ts test/verify_reason_codes.test.ts test/verifier_conformance.test.ts in sdk/typescript/ -> 38 passed"
+  ],
+  "residual_risks": [
+    "The new fail-closed unknown-required-field detection is prefix-based (`critical_`) and currently exercised only in `chain_metadata` and `verification_report`; if future schema locations need the same treatment, they will need explicit coverage."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

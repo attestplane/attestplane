@@ -75,7 +75,7 @@ renaming an existing code is a breaking change and must be called out in
 | `att.verify.canonical_mismatch` | Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree. |
 | `att.verify.required_field_missing` | A required top-level, nested, signature, or verifier-envelope field is absent. |
 | `att.verify.schema_invalid` | The input shape is malformed for a known verifier schema. |
-| `att.verify.schema_unknown` | The input declares an unknown schema family or verification method namespace. |
+| `att.verify.schema_unknown` | The input declares an unknown schema family, verification method namespace, or fail-closed critical/required field. |
 | `att.verify.schema_version_missing` | A known bundle, payload, signature, or verifier schema version is missing. |
 | `att.verify.schema_version_unsupported` | A known bundle, payload, signature, or verifier schema version is unsupported. |
 | `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |

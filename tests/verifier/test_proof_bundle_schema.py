@@ -15,6 +15,7 @@ from attestplane.verifier import verify_proof_bundle, verify_proof_bundle_file  
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_OK  # noqa: E402
 from attestplane.verify_reason_codes import (  # noqa: E402
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
 )
 
@@ -134,6 +135,17 @@ def test_bundle_verifier_rejects_unknown_schema_version_major() -> None:
 
     assert result.ok is False
     assert result.primary_reason == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+
+
+def test_bundle_verifier_rejects_unknown_required_metadata_field() -> None:
+    bundle = _load_fixture("valid_signed_attestation.json")
+    bundle["chain_metadata"]["critical_future_field"] = True
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert "critical_future_field" in (result.metadata_reason or "")
 
 
 def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:

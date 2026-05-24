@@ -234,6 +234,17 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   }
 }
 
+function unknownRequiredFieldReason(
+  section: Record<string, unknown>,
+  sectionName: string,
+): string | null {
+  const criticalFields = Object.keys(section)
+    .filter((key) => key.startsWith('critical_'))
+    .sort();
+  if (criticalFields.length === 0) return null;
+  return `${sectionName}.${criticalFields[0]} is an unknown required field`;
+}
+
 function hexToBytes(hex: string): Uint8Array {
   if (hex.length % 2 !== 0) {
     throw new BundleSchemaError(`hex string has odd length: ${hex.length}`);
@@ -498,6 +509,8 @@ function verificationReasons(input: {
       input.metadataReason.includes('handles')
     ) {
       reasons.push(classifyBundleSchemaError(input.metadataReason));
+    } else if (input.metadataReason?.includes('unknown required field')) {
+      reasons.push(VERIFY_REASON_SCHEMA_UNKNOWN);
     } else {
       reasons.push(VERIFY_REASON_STRUCTURE_INVALID);
     }
@@ -526,6 +539,17 @@ function verifyMetadataClosure(
       ok: false,
       reason: `chain_metadata.schema_version=${JSON.stringify(metadata.schema_version)}; this verifier handles ${SCHEMA_VERSION}`,
     };
+  }
+  const metadataUnknownRequiredField = unknownRequiredFieldReason(metadata as Record<string, unknown>, 'chain_metadata');
+  if (metadataUnknownRequiredField !== null) {
+    return { ok: false, reason: metadataUnknownRequiredField };
+  }
+  const reportUnknownRequiredField = unknownRequiredFieldReason(
+    report as Record<string, unknown>,
+    'verification_report',
+  );
+  if (reportUnknownRequiredField !== null) {
+    return { ok: false, reason: reportUnknownRequiredField };
   }
   if (metadata.genesis_hash_hex !== bytesToHex(GENESIS_HASH)) {
     return {

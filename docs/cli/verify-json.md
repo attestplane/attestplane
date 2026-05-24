@@ -51,6 +51,11 @@ the `verify --json` contract documented in #220, and it does not alter the
 bundle forward-compatibility rules documented in #217. The shared
 `att.verify.*` reason-code taxonomy lives in `docs/errors.md`.
 
+Within that taxonomy, additive unknown fields remain accepted, while
+unsupported major versions and fail-closed critical/required fields surface
+`att.verify.schema_version_unsupported` or `att.verify.schema_unknown`
+respectively.
+
 When the two flags are combined, stdout remains valid JSON and the rationale
 text is carried in `reasons[].explanation`.
 
