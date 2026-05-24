@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-trailing-whitespace-v1",
+  "description": "Trailing whitespace after a JSON value is not part of the canonical byte representation.",
+  "expected": {
+    "pointer": "/",
+    "reason_code": "att.verify.canonical_mismatch"
+  },
+  "raw_json": "{\"payload_text\":\"clean\"}   ",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-canonical-json-no-bom-trailing",
+  "surface": "json"
+}

@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-embedded-nul-string-v1",
+  "description": "A raw text input containing U+0000 must fail the text canonicalizer.",
+  "expected": {
+    "pointer": "/",
+    "reason_code": "att.verify.schema_invalid"
+  },
+  "raw_text": "agent\u0000alpha",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-nfc-payload-string",
+  "surface": "text"
+}

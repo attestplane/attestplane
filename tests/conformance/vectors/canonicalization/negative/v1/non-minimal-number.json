@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-non-minimal-number-v1",
+  "description": "A floating-point representation of an integer is not canonical restricted JSON.",
+  "expected": {
+    "pointer": "/value",
+    "reason_code": "att.verify.canonical_mismatch"
+  },
+  "raw_json": "{\"value\":1.0}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-int64-boundary-timestamp-payload",
+  "surface": "json"
+}

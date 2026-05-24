@@ -1,0 +1,18 @@
+{
+  "commands": [
+    {
+      "command": "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/pytest sdk/python/tests/conformance/test_verifier_conformance.py -q",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "............                                                             [100%]\n12 passed in 0.18s\n"
+    },
+    {
+      "command": "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_conformance_fixtures.py -q",
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": ".........                                                                [100%]\n9 passed in 0.47s\n"
+    }
+  ],
+  "selected_gate": "area:verifier",
+  "status": "PASS"
+}

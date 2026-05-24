@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Review used only local repository files, local command output, and the issue text supplied in the prompt; no network access was used.",
+    "Tracked diff reviewed with git status --short, git diff --stat, git diff --name-only, and targeted git diff output.",
+    "Untracked issue files under docs/validation/local_codex_runner/issue-184/, sdk/python/src/attestplane/conformance/, tests/conformance/, and tests/sdk/ were reviewed directly from the local workspace.",
+    "No release gate was weakened. The fixture hash helper still verifies the conformance corpus, and the updated lockfile matches the local corpus hash set.",
+    "No severity was lowered. The new negative vectors still assert rejection codes and pointers for the canonicalization edge cases.",
+    "No secrets were leaked or logged. The added fixtures are synthetic test data only.",
+    "No publish, tag, merge, package publish, or PyPI push logic was modified by the diff.",
+    "No key tests were deleted. The diff adds dedicated negative-vector coverage and a compatibility shim.",
+    "Behavior is covered by local evidence: pytest -q tests/conformance/test_negative_vectors.py tests/canonicalization/test_canonicalization_properties.py tests/sdk/test_canonicalization_property.py passed with 175 tests.",
+    "Behavior is covered by local evidence: PYTHONPATH=sdk/python/src python -m attestplane.conformance.run --negative passed and printed all nine versioned negative vectors.",
+    "Fixture-lock evidence: bash scripts/check-fixture-hashes.sh passed with 'Conformance fixtures: 33 files, all canonical hashes match'."
+  ],
+  "residual_risks": [
+    "This review was scoped to the current local diff and focused conformance validation, not a full repository gate.",
+    "The new versioned negative corpus is local and static; downstream consumers still need to adopt the new runner and vector directory in their own workflows."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

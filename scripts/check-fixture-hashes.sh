@@ -61,7 +61,7 @@ for display_path, path in files:
         separators=(",", ":"),
         ensure_ascii=False,
     )
-    h = hashlib.sha256(canon.encode("utf-8")).hexdigest()
+    h = hashlib.sha256(canon.encode("utf-8", "surrogatepass")).hexdigest()
     print(f"{h}  {display_path}")
 PYEOF
 }
