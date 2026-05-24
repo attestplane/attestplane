@@ -19,6 +19,7 @@ class FakeGH:
         self.added: list[tuple[int, list[str]]] = []
         self.removed: list[tuple[int, list[str]]] = []
         self.comments: list[tuple[int, str]] = []
+        self.ensured: list[list[str]] = []
 
     def list_issues(self, repo: str, label: str, limit: int):
         return self.issues[:limit]
@@ -40,6 +41,9 @@ class FakeGH:
 
     def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
         self.added.append((issue_number, labels))
+
+    def ensure_labels(self, repo: str, labels: list[str]) -> None:
+        self.ensured.append(labels)
 
     def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
         self.comments.append((issue_number, body))
@@ -103,6 +107,7 @@ def test_green_pr_needs_human_is_cleared_without_codex_repair(tmp_path: Path) ->
 
     assert summary["results"][0]["action"] == "marked_ci_green"
     assert summary["results"][0]["reason"] == "ci_passed"
+    assert gh.ensured == [["codex-recovered", "codex-ci-green"]]
     assert gh.removed == [(22, ["codex-needs-human"])]
     assert gh.added == [(22, ["codex-recovered", "codex-ci-green"]), (9, ["codex-ci-green"])]
     assert gh.comments
@@ -148,6 +153,7 @@ def test_rate_limit_evidence_requeues_issue(tmp_path: Path) -> None:
 
     assert summary["results"][0]["action"] == "requeued"
     assert summary["results"][0]["reason"] == "rate_limit"
+    assert gh.ensured == [["codex-recovered"]]
     assert gh.removed == [(14, ["codex-needs-human"])]
     assert gh.added == [(14, ["codex-recovered"])]
     assert gh.comments

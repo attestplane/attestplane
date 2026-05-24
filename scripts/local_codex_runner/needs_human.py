@@ -356,8 +356,9 @@ def requeue_issue(
         action = "would_requeue"
     else:
         action = "requeued"
-        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
+        gh.ensure_labels(config.repo or "", [config.needs_human_recovered_label])
         gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label])
+        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
         gh.comment_issue(
             config.repo or "",
             issue.number,
@@ -389,10 +390,11 @@ def recover_passed_ci_pr(
         action = "would_mark_ci_green"
     else:
         action = "marked_ci_green"
-        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
+        gh.ensure_labels(config.repo or "", [config.needs_human_recovered_label, config.ci_green_label])
         gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label, config.ci_green_label])
         if number is not None:
             gh.add_labels(config.repo or "", number, [config.ci_green_label])
+        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
         gh.comment_issue(
             config.repo or "",
             issue.number,
@@ -533,10 +535,11 @@ def recover_ci_pr(
         poll_seconds=config.ci_poll_seconds,
     )
     if ci.status == "PASS":
-        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
+        gh.ensure_labels(config.repo or "", [config.needs_human_recovered_label, config.ci_green_label])
         gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label, config.ci_green_label])
         if number is not None:
             gh.add_labels(config.repo or "", number, [config.ci_green_label])
+        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
         gh.comment_issue(
             config.repo or "",
             issue.number,
