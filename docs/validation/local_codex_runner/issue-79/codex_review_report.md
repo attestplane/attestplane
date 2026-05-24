@@ -11,12 +11,14 @@ PASS
   - `git log --no-merges --pretty=tformat:%s v1.5.0..v1.5.6`
   - `git diff --stat v1.5.0..v1.5.6`
   - `git diff --check v1.5.0..v1.5.6`
+- Verified the issue-local markdown bundle with:
+  - `node /Users/macworkers/.npm/_npx/3c2a9ea6c4b6e0a2/node_modules/markdownlint-cli2/markdownlint-cli2.mjs docs/validation/local_codex_runner/issue-79/*.md`
 - Cross-checked the cadence rule and release boundary references in:
   - `docs/runbooks/autodev-train.md`
   - `scripts/release/stable_auto_train.py`
   - `docs/release-notes/v1.5.6.draft.md`
   - `scripts/release/validate_release_cd.py`
-- Confirmed the working tree shows only untracked validation artifacts under `docs/validation/local_codex_runner/issue-79/`.
+- Confirmed the working tree remains scoped to the issue-79 validation bundle, plus the untracked prompt file under `docs/validation/local_codex_runner/issue-79/`.
 
 ## Findings
 

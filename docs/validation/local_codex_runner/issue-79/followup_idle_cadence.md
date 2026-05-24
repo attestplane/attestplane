@@ -51,4 +51,3 @@ git diff --check v1.5.0..v1.5.6
 
 The follow-up exists only because the broader repository baseline still has
 pre-existing hygiene noise.
-
