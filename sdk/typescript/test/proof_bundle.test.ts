@@ -181,7 +181,10 @@ describe('verifyProofBundle', () => {
   });
 
   it('rejects unknown required metadata fields with a stable reason', () => {
-    const builder = new ProofBundleBuilder({ chain_id: 'unknown-required', producer_runtime: 'test' });
+    const builder = new ProofBundleBuilder({
+      chain_id: 'unknown-required',
+      producer_runtime: 'test',
+    });
     const bundle = builder.build() as Record<string, unknown>;
     (bundle.chain_metadata as Record<string, unknown>).critical_future_field = true;
 

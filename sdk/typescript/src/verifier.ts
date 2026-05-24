@@ -540,7 +540,10 @@ function verifyMetadataClosure(
       reason: `chain_metadata.schema_version=${JSON.stringify(metadata.schema_version)}; this verifier handles ${SCHEMA_VERSION}`,
     };
   }
-  const metadataUnknownRequiredField = unknownRequiredFieldReason(metadata as Record<string, unknown>, 'chain_metadata');
+  const metadataUnknownRequiredField = unknownRequiredFieldReason(
+    metadata as Record<string, unknown>,
+    'chain_metadata',
+  );
   if (metadataUnknownRequiredField !== null) {
     return { ok: false, reason: metadataUnknownRequiredField };
   }
