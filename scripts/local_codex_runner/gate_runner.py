@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import json
+import os
+import resource
 import shlex
 import subprocess
 from dataclasses import asdict, dataclass
@@ -18,6 +20,7 @@ FORBIDDEN_COMMAND_WORDS = ("publish", "twine upload", "npm publish", "git tag", 
 LIVE_COMMAND_WORDS = ("--live", "live-test", "external-live")
 DOCS_ONLY_GATE = "type:docs"
 CI_FAILED_GATE = "ci:failed"
+MIN_GATE_OPEN_FILES = 4096
 
 
 @dataclass(frozen=True)
@@ -116,6 +119,7 @@ class GateRunner:
             text=True,
             timeout=self.timeout_seconds,
             check=False,
+            preexec_fn=raise_open_file_limit if os.name == "posix" else None,
         )
         return GateCommandResult(
             command=command,
@@ -176,3 +180,18 @@ def is_docs_only_path(path: str) -> bool:
         or normalized.endswith(".md")
         or normalized in {"README.md", "CHANGELOG.md", "CONTRIBUTING.md", "LICENSE"}
     )
+
+
+def raise_open_file_limit() -> None:
+    """Raise the gate subprocess fd soft limit when launchd/tmux starts low."""
+    try:
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    except (OSError, ValueError):
+        return
+    if soft >= MIN_GATE_OPEN_FILES:
+        return
+    target = min(max(MIN_GATE_OPEN_FILES, soft), hard)
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+    except (OSError, ValueError):
+        return

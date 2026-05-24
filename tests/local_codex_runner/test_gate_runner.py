@@ -1,7 +1,13 @@
 import subprocess
 from pathlib import Path
 
-from scripts.local_codex_runner.gate_runner import GateCommandResult, GateReport, GateRunner, is_docs_only_path
+from scripts.local_codex_runner.gate_runner import (
+    GateCommandResult,
+    GateReport,
+    GateRunner,
+    is_docs_only_path,
+    raise_open_file_limit,
+)
 
 
 def test_label_to_gate_mapping(tmp_path: Path) -> None:
@@ -99,6 +105,7 @@ def test_gate_command_uses_argv_list(monkeypatch, tmp_path: Path) -> None:
     def fake_run(*args, **kwargs):
         observed["argv"] = args[0]
         observed["shell"] = kwargs.get("shell")
+        observed["preexec_fn"] = kwargs.get("preexec_fn")
         return subprocess.CompletedProcess(args[0], 0, "ok", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -111,6 +118,7 @@ def test_gate_command_uses_argv_list(monkeypatch, tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert observed["argv"] == ["python", "-m", "compileall", "scripts"]
     assert observed["shell"] is None
+    assert observed["preexec_fn"] is raise_open_file_limit
 
 
 def test_no_live_tests_by_default(tmp_path: Path) -> None:
