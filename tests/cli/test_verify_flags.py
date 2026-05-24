@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
+SIGNED_BUNDLE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
 
 
 @pytest.mark.parametrize(
@@ -75,7 +76,33 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "2 proof-bundle contract schema/non-empty violation" in out
     assert "1 cryptographic" in out
+
+
+def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = json.loads(SIGNED_BUNDLE.read_text(encoding="utf-8"))
+    bundle["future_bundle_field"] = {"preserved": True}
+    bundle["chain_metadata"]["future_metadata_field"] = "kept"
+    bundle["verification_report"]["future_report_field"] = "ignored"
+    bundle["events"][0]["event"]["future_event_field"] = "kept"
+    bundle["signatures"][0]["future_signature_field"] = "kept"
+    path = tmp_path / "additive.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+
+    rc = main(["verify", "--json", "--explain", str(path)])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == 0
+    assert payload["ok"] is True
+    assert payload["reasons"][0]["severity"] == "reserved"
+    assert payload["reasons"][0]["code"] == "att.verify.schema_unknown"
+    assert "events[0].event.future_event_field" in payload["reasons"][0]["detail"]
+    assert "signatures[0].future_signature_field" in payload["reasons"][0]["detail"]

@@ -16,6 +16,9 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import EventDraft
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
 
+ROOT = Path(__file__).resolve().parents[2]
+FIXTURES = ROOT / "tests" / "fixtures" / "bundles"
+
 
 def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     tmp_path: Path,
@@ -58,3 +61,22 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert json.loads(captured.out)["error_code"] == VERIFY_REQUIRED_FIELDS_MISSING
     assert json.loads(captured.out)["primary_reason"] == "att.verify.required_field_missing"
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
+
+
+def test_verify_json_includes_reasons_list_for_schema_version_failures(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "missing-schema-version.json"
+    payload = json.loads((FIXTURES / "valid_signed_attestation.json").read_text(encoding="utf-8"))
+    del payload["chain_metadata"]["schema_version"]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = main(["verify", "--json", str(path)])
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
+
+    assert rc == 1
+    assert result["primary_reason"] == "att.verify.schema_version_missing"
+    assert result["reasons"][0]["code"] == "att.verify.schema_version_missing"
+    assert captured.err == ""

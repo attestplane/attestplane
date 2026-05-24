@@ -76,6 +76,7 @@ renaming an existing code is a breaking change and must be called out in
 | `att.verify.required_field_missing` | A required top-level, nested, signature, or verifier-envelope field is absent. |
 | `att.verify.schema_invalid` | The input shape is malformed for a known verifier schema. |
 | `att.verify.schema_unknown` | The input declares an unknown schema family or verification method namespace. |
+| `att.verify.schema_version_missing` | A known bundle, payload, signature, or verifier schema version is missing. |
 | `att.verify.schema_version_unsupported` | A known bundle, payload, signature, or verifier schema version is unsupported. |
 | `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |
 | `att.verify.signature_missing` | Strict verification requires signature material but none is present. |
@@ -86,3 +87,7 @@ The existing human-readable fields such as `chain_result.reason`,
 `signed_attestation_schema_reason` remain for one minor release as deprecated
 migration aids. SDK and CLI consumers should branch on `primary_reason` and
 `secondary_reasons` instead of matching these strings.
+
+Forward-compatible additive bundle fields are ignored by the verifier and do
+not change `ok` when the rest of the bundle is valid. Use `verify --explain`
+when you need the human-oriented summary of the rejected result.

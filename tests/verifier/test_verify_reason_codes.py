@@ -28,6 +28,7 @@ from attestplane.verify_reason_codes import (  # noqa: E402
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
@@ -75,6 +76,7 @@ def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
         VERIFY_REASON_REQUIRED_FIELD_MISSING,
         VERIFY_REASON_SCHEMA_INVALID,
         VERIFY_REASON_SCHEMA_UNKNOWN,
+        VERIFY_REASON_SCHEMA_VERSION_MISSING,
         VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
         VERIFY_REASON_SIGNATURE_INVALID,
         VERIFY_REASON_SIGNATURE_MISSING,
@@ -142,6 +144,42 @@ def test_verify_reason_code_schema_version_unsupported_from_metadata_closure() -
     assert result.primary_reason == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 
+def test_verify_reason_code_schema_version_missing_from_metadata_closure() -> None:
+    bundle = _signed_bundle()
+    del bundle["chain_metadata"]["schema_version"]
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == VERIFY_REASON_SCHEMA_VERSION_MISSING
+
+
+def test_verify_reason_code_additive_unknown_fields_are_accepted() -> None:
+    bundle = _signed_bundle()
+    bundle["chain_metadata"]["future_minor_field"] = {"preserved": True}
+    bundle["verification_report"]["future_minor_field"] = "ignored"
+    bundle["future_top_level_field"] = "preserved"
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.error_code == "VERIFY_OK"
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
+
+
+def test_verify_reason_code_canonical_mismatch_keeps_primary_before_schema_version() -> None:
+    bundle = _signed_bundle()
+    bundle["events"][0]["event_hash_hex"] = "f" * 64
+    bundle["chain_metadata"]["schema_version"] = 999
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == VERIFY_REASON_CANONICAL_MISMATCH
+    assert VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED in result.secondary_reasons
+
+
 def test_verify_reason_code_structure_invalid_for_policy_trace_refs() -> None:
     bundle = _bundle()
     bundle["policy_trace_refs"] = []
@@ -203,3 +241,4 @@ def test_verify_reason_code_cli_json_smoke(tmp_path: Path, capsys: pytest.Captur
     assert rc == 2
     assert payload["primary_reason"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["secondary_reasons"] == []
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING

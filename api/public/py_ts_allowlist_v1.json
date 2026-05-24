@@ -1219,6 +1219,14 @@
     {
       "classification": "language_specific",
       "python": true,
+      "reason": "Python root exports the new verifier rejection reason constant for v1.7.x; the TypeScript mirror will land in a follow-up parity update.",
+      "review_by": "v1.7.7",
+      "symbol": "VERIFY_REASON_SCHEMA_VERSION_MISSING",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
       "symbol": "verify_replay_manifest",

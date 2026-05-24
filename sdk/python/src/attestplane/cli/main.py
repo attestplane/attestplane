@@ -62,6 +62,14 @@ def _add_format_flag(p: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_explain_flag(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--explain",
+        action="store_true",
+        help="include the derived reasons list in the verifier report",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="attestplane",
@@ -118,6 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
+    _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
 
     p_verify_pb = sub.add_parser(
@@ -187,12 +196,196 @@ def _emit(payload: dict[str, Any], json_output: bool, *, human: str) -> None:
         sys.stdout.write(human + "\n")
 
 
+def _reason_entries(
+    result: Any,
+    *,
+    bundle: dict[str, Any] | None = None,
+    explain: bool = False,
+) -> list[dict[str, str]]:
+    reasons: list[dict[str, str]] = []
+    for code in (result.primary_reason, *result.secondary_reasons):
+        if code is None:
+            continue
+        reasons.append({"code": code, "severity": "error"})
+    if explain and bundle is not None and result.ok:
+        reasons.extend(_explain_reserved_reasons(bundle))
+    return reasons
+
+
+_KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {
+    "bundle_version",
+    "chain_metadata",
+    "events",
+    "verification_report",
+    "forbidden_fields",
+    "framework_mappings",
+    "signature",
+    "policy_trace_refs",
+    "signatures",
+    "retention_proofs",
+}
+_KNOWN_CHAIN_METADATA_FIELDS = {
+    "chain_id",
+    "genesis_hash_hex",
+    "head_hash_hex",
+    "head_seq",
+    "producer_runtime",
+    "schema_version",
+    "anchor_ref",
+    "evidence_taxonomy_version",
+}
+_KNOWN_VERIFICATION_REPORT_FIELDS = {
+    "ok",
+    "first_bad_index",
+    "reason",
+    "verified_at",
+    "verifier_version",
+    "verification_method",
+}
+_KNOWN_EVENT_ITEM_FIELDS = {
+    "seq",
+    "prev_hash_hex",
+    "event_hash_hex",
+    "event",
+}
+_KNOWN_AUDIT_EVENT_FIELDS = {
+    "schema_version",
+    "event_id",
+    "timestamp",
+    "event_type",
+    "actor",
+    "payload",
+    "subject_ref",
+    "session_id",
+    "reference_db_ref",
+    "matched_input_ref",
+    "human_verifier",
+}
+_KNOWN_SUBJECT_REF_FIELDS = {"scheme", "value"}
+_KNOWN_SIGNATURE_FIELDS = {
+    "signature_schema_version",
+    "signed_seq",
+    "signed_event_hash_hex",
+    "signature_hex",
+    "key_id",
+    "public_key_der_b64",
+    "signing_cert_chain_b64",
+    "signed_at",
+    "signature_mode",
+    "signed_payload_b64",
+}
+_KNOWN_RETENTION_PROOF_FIELDS = {
+    "retention_proof_schema_version",
+    "proof_id",
+    "action",
+    "target_event_hash_hex",
+    "commit_event_hash_hex",
+    "reason",
+    "redacted_event_hash_hex",
+}
+_KNOWN_FRAMEWORK_MAPPING_FIELDS = {
+    "obligation_id",
+    "evidence_event_indexes",
+    "implementation_status_at_bundle_time",
+}
+
+
+def _explain_reserved_reasons(bundle: dict[str, Any]) -> list[dict[str, str]]:
+    extras: list[str] = []
+    top_level_unknown = sorted(set(bundle) - _KNOWN_BUNDLE_TOP_LEVEL_FIELDS)
+    if top_level_unknown:
+        extras.extend(f"bundle.{key}" for key in top_level_unknown)
+    chain_metadata = bundle.get("chain_metadata")
+    if isinstance(chain_metadata, dict):
+        for key in sorted(set(chain_metadata) - _KNOWN_CHAIN_METADATA_FIELDS):
+            extras.append(f"chain_metadata.{key}")
+    verification_report = bundle.get("verification_report")
+    if isinstance(verification_report, dict):
+        for key in sorted(set(verification_report) - _KNOWN_VERIFICATION_REPORT_FIELDS):
+            extras.append(f"verification_report.{key}")
+    framework_mappings = bundle.get("framework_mappings")
+    if isinstance(framework_mappings, list):
+        for index, mapping in enumerate(framework_mappings):
+            if not isinstance(mapping, dict):
+                continue
+            for key in sorted(set(mapping) - _KNOWN_FRAMEWORK_MAPPING_FIELDS):
+                extras.append(f"framework_mappings[{index}].{key}")
+    events = bundle.get("events")
+    if isinstance(events, list):
+        for index, event in enumerate(events):
+            if not isinstance(event, dict):
+                continue
+            for key in sorted(set(event) - _KNOWN_EVENT_ITEM_FIELDS):
+                extras.append(f"events[{index}].{key}")
+            payload = event.get("event")
+            if isinstance(payload, dict):
+                _collect_nested_reserved_reasons(
+                    payload,
+                    f"events[{index}].event",
+                    _KNOWN_AUDIT_EVENT_FIELDS,
+                    extras,
+                )
+    signatures = bundle.get("signatures")
+    if isinstance(signatures, list):
+        for index, signature in enumerate(signatures):
+            if isinstance(signature, dict):
+                _collect_nested_reserved_reasons(
+                    signature,
+                    f"signatures[{index}]",
+                    _KNOWN_SIGNATURE_FIELDS,
+                    extras,
+                )
+    retention_proofs = bundle.get("retention_proofs")
+    if isinstance(retention_proofs, list):
+        for index, proof in enumerate(retention_proofs):
+            if isinstance(proof, dict):
+                _collect_nested_reserved_reasons(
+                    proof,
+                    f"retention_proofs[{index}]",
+                    _KNOWN_RETENTION_PROOF_FIELDS,
+                    extras,
+                )
+    if not extras:
+        return []
+    return [
+        {
+            "code": "att.verify.schema_unknown",
+            "severity": "reserved",
+            "detail": f"ignored additive fields: {', '.join(extras)}",
+        }
+    ]
+
+
+def _collect_nested_reserved_reasons(
+    obj: dict[str, Any],
+    prefix: str,
+    known_fields: set[str],
+    extras: list[str],
+) -> None:
+    unknown = sorted(set(obj) - known_fields)
+    for key in unknown:
+        extras.append(f"{prefix}.{key}")
+    if "subject_ref" in obj and isinstance(obj["subject_ref"], dict):
+        _collect_nested_reserved_reasons(
+            obj["subject_ref"],
+            f"{prefix}.subject_ref",
+            _KNOWN_SUBJECT_REF_FIELDS,
+            extras,
+        )
+    if "human_verifier" in obj and isinstance(obj["human_verifier"], dict):
+        _collect_nested_reserved_reasons(
+            obj["human_verifier"],
+            f"{prefix}.human_verifier",
+            _KNOWN_SUBJECT_REF_FIELDS,
+            extras,
+        )
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from attestplane.verifier import (
         BundleSchemaError,
-        BundleVerificationError,
         classify_bundle_schema_error,
-        verify_proof_bundle_file,
+        verify_proof_bundle,
     )
 
     bundle_path = getattr(args, "bundle_option", None) or getattr(args, "bundle", None)
@@ -206,13 +399,43 @@ def cmd_verify(args: argparse.Namespace) -> int:
         or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
-
     try:
-        result = verify_proof_bundle_file(
-            bundle_path,
+        bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+        result = verify_proof_bundle(
+            bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
         )
+    except FileNotFoundError as exc:
+        _emit(
+            {
+                "ok": False,
+                "error": "io",
+                "error_code": VERIFY_IO_ERROR,
+                "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
+                "secondary_reasons": [],
+                "detail": str(exc),
+                **_verify_scope_metadata(),
+            },
+            args.json_output,
+            human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+        )
+        return 1
+    except json.JSONDecodeError as exc:
+        _emit(
+            {
+                "ok": False,
+                "error": "schema",
+                "error_code": VERIFY_SCHEMA_ERROR,
+                "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
+                "secondary_reasons": [],
+                "detail": f"{bundle_path}: not valid JSON: {exc.msg}",
+                **_verify_scope_metadata(),
+            },
+            args.json_output,
+            human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+        )
+        return 2
     except BundleSchemaError as exc:
         _emit(
             {
@@ -228,21 +451,6 @@ def cmd_verify(args: argparse.Namespace) -> int:
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 2
-    except BundleVerificationError as exc:
-        _emit(
-            {
-                "ok": False,
-                "error": "io",
-                "error_code": VERIFY_IO_ERROR,
-                "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
-                "secondary_reasons": [],
-                "detail": str(exc),
-                **_verify_scope_metadata(),
-            },
-            args.json_output,
-            human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
-        )
-        return 1
 
     payload = {
         "ok": result.ok,
@@ -264,6 +472,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "error_code": result.error_code,
         "primary_reason": result.primary_reason,
         "secondary_reasons": list(result.secondary_reasons),
+        "reasons": _reason_entries(result, bundle=bundle, explain=getattr(args, "explain", False)),
         "retention_proofs_ok": result.retention_proofs_ok,
         "retention_proofs_reason": result.retention_proofs_reason,
         "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
