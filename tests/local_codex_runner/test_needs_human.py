@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from scripts.local_codex_runner.config import RunnerConfig
-from scripts.local_codex_runner.github_cli import CheckStatus
+from scripts.local_codex_runner.github_cli import CheckStatus, RunnerCommandError
 from scripts.local_codex_runner.models import IssueTask
 from scripts.local_codex_runner.needs_human import (
     branch_checked_out_elsewhere,
@@ -47,6 +47,9 @@ class FakeGH:
 
     def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
         self.comments.append((issue_number, body))
+
+    def run_view_failed_logs(self, repo: str, pr_number_or_branch: str) -> str:
+        return "pytest failed"
 
 
 def issue(number: int, labels: list[str] | None = None) -> IssueTask:
@@ -273,3 +276,48 @@ def test_branch_checked_out_elsewhere_detects_other_worktree(monkeypatch, tmp_pa
     assert branch_checked_out_elsewhere(config, "codex/issue-1-fix") == (
         "branch codex/issue-1-fix is already checked out at /tmp/other-lane"
     )
+
+
+def test_ci_recovery_codex_failure_is_reported_without_crashing(monkeypatch, tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    config.allowed_pr_authors = ["runner-bot"]
+
+    class FakeGit:
+        def __init__(self, workdir):
+            pass
+
+        def run(self, args):
+            return f"worktree {tmp_path}\nHEAD abc\nbranch refs/heads/main\n\n"
+
+        def remove_transient_evidence(self):
+            pass
+
+        def ensure_clean_worktree(self):
+            pass
+
+        def checkout_remote_branch(self, branch):
+            pass
+
+    class FailingCodex:
+        def __init__(self, **kwargs):
+            pass
+
+        def run_codex(self, prompt_file, workdir, log_path, timeout=None):
+            raise RunnerCommandError(["codex", "exec"], 1, "HTTP error: 403 Forbidden")
+
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", FailingCodex)
+
+    gh = FakeGH(
+        issues=[issue(31, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[pr(11, 31)],
+        checks=[CheckStatus("pytest", "FAILURE", "fail")],
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "kept"
+    assert summary["results"][0]["reason"] == "local_failed"
+    assert "403 Forbidden" in summary["results"][0]["detail"]
+    assert gh.added == []
+    assert gh.removed == []

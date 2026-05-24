@@ -496,7 +496,19 @@ def recover_ci_pr(
         output_name=f"03_needs_human_ci_recovery_round_{attempt}.prompt.md",
     )
     recovery_log = evidence_dir / f"codex_needs_human_ci_recovery_round_{attempt}.log"
-    codex.run_codex(fix_prompt, workdir, recovery_log, timeout=config.codex_timeout_seconds)
+    try:
+        codex.run_codex(fix_prompt, workdir, recovery_log, timeout=config.codex_timeout_seconds)
+    except RunnerCommandError as exc:
+        return NeedsHumanRecovery(
+            issue.number,
+            "kept",
+            "local_failed",
+            attempt,
+            pr_number=number,
+            branch=branch,
+            signature=signal.signature,
+            detail=str(exc),
+        )
     gate = GateRunner(
         workdir,
         config.gate_matrix_file(),
