@@ -66,3 +66,20 @@ def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path:
         CodexDriver(dry_run=False).run_codex(prompt, tmp_path, tmp_path / "codex.log")
 
     assert "github_pat" not in str(excinfo.value)
+
+
+def test_codex_timeout_writes_redacted_log(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs.get("timeout"), output="", stderr="TOKEN=secret")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("x", encoding="utf-8")
+    log_path = tmp_path / "codex.log"
+
+    with pytest.raises(RunnerCommandError) as excinfo:
+        CodexDriver(dry_run=False).run_codex(prompt, tmp_path, log_path, timeout=1)
+
+    assert "timed out after 1 seconds" in log_path.read_text(encoding="utf-8")
+    assert "secret" not in log_path.read_text(encoding="utf-8")
+    assert "secret" not in str(excinfo.value)

@@ -17,6 +17,7 @@ create_pr: true
 codex_command: "codex"
 codex_model: null
 codex_sandbox: "workspace-write"
+codex_timeout_seconds: 1800
 state_path: ".local/codex-runner-state-p2-docs.json"
 evidence_dir: "docs/validation/local_codex_runner"
 gate_matrix_path: ".local/codex-gates.yml"

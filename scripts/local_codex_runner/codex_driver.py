@@ -67,15 +67,36 @@ class CodexDriver:
             text = f"[dry-run] would run: {command_log}\n"
             log_path.write_text(text, encoding="utf-8")
             return text
-        completed = subprocess.run(
-            command,
-            cwd=workdir,
-            capture_output=True,
-            text=True,
-            input=prompt_stdin,
-            timeout=timeout,
-            check=False,
-        )
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=workdir,
+                capture_output=True,
+                text=True,
+                input=prompt_stdin,
+                timeout=timeout,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+            if isinstance(stdout, bytes):
+                stdout = stdout.decode("utf-8", errors="replace")
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode("utf-8", errors="replace")
+            output = redact(
+                "\n".join(
+                    part
+                    for part in (
+                        f"Codex command timed out after {timeout} seconds.",
+                        stdout,
+                        f"STDERR:\n{stderr}" if stderr else "",
+                    )
+                    if part
+                )
+            )
+            log_path.write_text(truncate(output), encoding="utf-8")
+            raise RunnerCommandError(command, 124, output) from exc
         output = redact((completed.stdout or "") + ("\nSTDERR:\n" + completed.stderr if completed.stderr else ""))
         log_path.write_text(truncate(output), encoding="utf-8")
         if completed.returncode != 0:

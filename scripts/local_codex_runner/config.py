@@ -34,6 +34,7 @@ class RunnerConfig:
     codex_command_template: str | None = None
     codex_model: str | None = None
     codex_sandbox: str = "workspace-write"
+    codex_timeout_seconds: int = 1800
     allow_danger_full_access: bool = False
     allow_dirty: bool = False
     allow_push_on_local_failure: bool = False
@@ -76,6 +77,8 @@ class RunnerConfig:
             raise ConfigError(f"Missing required local Codex runner config field(s): {', '.join(missing)}")
         if self.codex_sandbox == "danger-full-access" and not self.allow_danger_full_access:
             raise ConfigError("danger-full-access requires allow_danger_full_access=true")
+        if self.codex_timeout_seconds < 1:
+            raise ConfigError("codex_timeout_seconds must be a positive integer")
         if self.allow_auto_merge and not self.allowed_pr_authors:
             raise ConfigError("allow_auto_merge requires at least one allowed_pr_authors entry")
         if self.lane_slot is not None and self.lane_slot < 1:

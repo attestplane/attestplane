@@ -12,6 +12,7 @@ def test_config_defaults_to_dry_run(tmp_path: Path) -> None:
 
     assert config.dry_run is True
     assert config.approved_label == "auto-codex-approved"
+    assert config.codex_timeout_seconds == 1800
 
 
 def test_config_requires_repo_and_workdir(tmp_path: Path) -> None:
@@ -127,6 +128,19 @@ def test_lane_slot_must_be_positive(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ConfigError, match="lane_slot"):
+        load_config(config_path)
+
+
+def test_codex_timeout_must_be_positive(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\n'
+        'workdir: "/tmp/attestplane"\n'
+        "codex_timeout_seconds: 0\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="codex_timeout_seconds"):
         load_config(config_path)
 
 
