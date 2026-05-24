@@ -245,3 +245,39 @@ def test_run_once_cleans_transient_result_files_before_live_cycle(monkeypatch, t
 
     assert result["transient_cleanup"] == ["docs/validation/local_codex_runner/issue-9/runner_result.json"]
     assert not result_file.exists()
+
+
+def test_run_once_reports_issue_list_external_error(monkeypatch, tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: true\n"
+        "cleanup_stale_state: false\n"
+        "auto_recover_needs_human: false\n"
+        "auto_advance_before_consume: false\n"
+        "max_issues_per_run: 1\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.github_cli import RunnerCommandError
+
+    class FailingGH:
+        def __init__(self, dry_run=True):
+            pass
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            raise RunnerCommandError(
+                ["gh", "issue", "list"],
+                1,
+                'Post "https://api.github.com/graphql": EOF',
+            )
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FailingGH)
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert result["processed"] == 0
+    assert result["results"] == []
+    assert result["external_errors"][0]["stage"] == "list_issues"
+    assert "api.github.com/graphql" in result["external_errors"][0]["error"]

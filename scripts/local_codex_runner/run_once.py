@@ -52,7 +52,16 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
             comment=False,
         )
         advance_summary = advance_queue(advance_args)
-    issues = gh.list_issues(config.repo or "", config.approved_label, candidate_fetch_limit(config.max_issues_per_run))
+    external_errors: list[dict[str, object]] = []
+    try:
+        issues = gh.list_issues(
+            config.repo or "",
+            config.approved_label,
+            candidate_fetch_limit(config.max_issues_per_run),
+        )
+    except RunnerCommandError as exc:
+        external_errors.append({"stage": "list_issues", "error": str(exc)})
+        issues = []
     results = []
     for issue in processable_issues(
         issues,
@@ -70,6 +79,7 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         "cleanup": cleanup_summary,
         "lane": lane_summary(config),
         "needs_human_recovery": needs_human_summary,
+        "external_errors": external_errors,
         "processed": len(results),
         "results": results,
         "transient_cleanup": transient_cleanup,
