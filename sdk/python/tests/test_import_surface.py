@@ -16,7 +16,7 @@ PY_SRC = REPO_ROOT / "sdk" / "python" / "src"
 
 
 def test_import_attestplane_smoke() -> None:
-    assert attestplane.__version__ == "1.7.10"
+    assert attestplane.__version__ == "1.8.0"
     assert attestplane.canonicalize({"a": 1}) == b'{"a":1}'
 
 
