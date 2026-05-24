@@ -22,7 +22,6 @@ from scripts.local_codex_runner.state_store import load_state, save_state
 def run_once(args: argparse.Namespace) -> dict[str, object]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
-    transient_cleanup = [] if config.dry_run else GitOps(config.workdir_path()).remove_transient_evidence()
     cleanup_summary: dict[str, object] | None = cleanup_stale_state(config, gh) if config.cleanup_stale_state else None
     include = set(config.lane_include_labels).union(args.include_label or [])
     exclude = set(config.lane_exclude_labels).union(args.exclude_label or [])
@@ -32,6 +31,7 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         include_labels=include or None,
         exclude_labels=exclude or None,
     )
+    transient_cleanup = [] if config.dry_run else GitOps(config.workdir_path()).remove_transient_evidence()
     advance_summary: dict[str, object] | None = None
     if config.auto_advance_before_consume:
         advance_args = SimpleNamespace(

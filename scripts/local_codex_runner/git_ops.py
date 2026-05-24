@@ -34,6 +34,7 @@ TRANSIENT_EVIDENCE_PATTERNS = (
     "docs/validation/local_codex_runner/issue-*/*.prompt.md",
     "docs/validation/local_codex_runner/issue-*/codex_*.log",
     "docs/validation/local_codex_runner/issue-*/code.md",
+    "docs/validation/local_codex_runner/issue-*/failure.txt",
     "docs/validation/local_codex_runner/issue-*/plan.md",
     "docs/validation/local_codex_runner/issue-*/pr_body.md",
     "docs/validation/local_codex_runner/issue-*/review.md",

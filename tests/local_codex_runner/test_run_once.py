@@ -164,6 +164,56 @@ def test_run_once_reports_needs_human_recovery(monkeypatch, tmp_path: Path) -> N
     }
 
 
+def test_run_once_recovers_needs_human_before_cleaning_transient_evidence(monkeypatch, tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-14"
+    evidence_dir.mkdir(parents=True)
+    failure_file = evidence_dir / "failure.txt"
+    failure_file.write_text("Codex usage limit reached; try again later\n", encoding="utf-8")
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: false\n"
+        "cleanup_stale_state: false\n"
+        "auto_recover_needs_human: true\n"
+        "max_issues_per_run: 0\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.models import IssueTask
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            self.issues = [IssueTask(14, "Issue 14", "", "", ["auto-codex-approved", "codex-needs-human"])]
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            return self.issues if label == "codex-needs-human" else []
+
+        def list_pull_requests(self, repo: str, base: str, limit: int):
+            return []
+
+        def ensure_labels(self, repo: str, labels: list[str]) -> None:
+            pass
+
+        def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+            pass
+
+        def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+            pass
+
+        def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
+            pass
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert result["needs_human_recovery"]["results"][0]["reason"] == "rate_limit"
+    assert result["transient_cleanup"] == ["docs/validation/local_codex_runner/issue-14/failure.txt"]
+    assert not failure_file.exists()
+
+
 def test_run_once_cleans_transient_result_files_before_live_cycle(monkeypatch, tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
     evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-9"
