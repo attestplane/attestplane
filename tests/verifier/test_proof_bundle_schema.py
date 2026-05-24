@@ -31,6 +31,8 @@ def test_strict_verifier_accepts_bundle_with_signed_attestation_schema() -> None
     assert result.error_code == VERIFY_OK
     assert result.primary_reason is None
     assert result.secondary_reasons == ()
+    assert result.schema_version == "1.7"
+    assert result.schema_version_forward_compat is False
     assert result.signed_attestation_schema_ok is True
     assert result.signed_attestation_schema_reason is None
 

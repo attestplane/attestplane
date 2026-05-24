@@ -2,7 +2,7 @@
   "artifact": {
     "canonicalization": "attestplane.restricted_jcs.v1",
     "hash_algorithm": "sha256",
-    "sha256": "0e245766eefc183139e63ccc51253ff0121cf6122a2ef50617729ac13ffcca86",
+    "sha256": "f61f2d771c98ba8a4fcf265d2f1b1de0b48403cf16309422c78ce3c74c61d77e",
     "target": "proof_bundle"
   },
   "hash_chain": {
@@ -68,6 +68,7 @@
           "obligation_id": "eu_ai_act.art12.3c.matched_input_data"
         }
       ],
+      "schema_version": "1.7",
       "verification_report": {
         "first_bad_index": null,
         "ok": true,
@@ -151,6 +152,7 @@
         "obligation_id": "eu_ai_act.art12.3c.matched_input_data"
       }
     ],
+    "schema_version": "1.7",
     "verification_report": {
       "first_bad_index": null,
       "ok": true,

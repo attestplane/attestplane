@@ -103,4 +103,16 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.signed_attestation_schema_ok).toBe(true);
     expect(result.signed_attestation_schema_reason).toBeNull();
   });
+
+  it('accepts future minor schema versions and marks forward compatibility', () => {
+    const bundle = JSON.parse(JSON.stringify(bundleWithOneEvent())) as Record<string, unknown>;
+    bundle.schema_version = '1.8';
+    bundle.future_minor_addition = { enabled: true };
+
+    const result = verifyProofBundle(bundle as unknown as ProofBundle);
+
+    expect(result.ok).toBe(true);
+    expect(result.schema_version).toBe('1.8');
+    expect(result.schema_version_forward_compat).toBe(true);
+  });
 });

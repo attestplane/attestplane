@@ -36,6 +36,7 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     captured = capsys.readouterr()
 
     assert rc == 2
+    assert json.loads(captured.out)["result"] == "reject"
     assert json.loads(captured.out)["error_code"] == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
     assert json.loads(captured.out)["primary_reason"] == "att.verify.signature_missing"
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
@@ -55,6 +56,7 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     captured = capsys.readouterr()
 
     assert rc == 2
+    assert json.loads(captured.out)["result"] == "reject"
     assert json.loads(captured.out)["error_code"] == VERIFY_REQUIRED_FIELDS_MISSING
     assert json.loads(captured.out)["primary_reason"] == "att.verify.required_field_missing"
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"

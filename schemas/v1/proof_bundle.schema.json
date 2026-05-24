@@ -4,19 +4,53 @@
   "title": "Attestplane Proof Bundle (v1)",
   "description": "Top-level export artifact bundling a chain segment with verification metadata, framework mappings, and an explicit redaction policy. Locked by ADR-0008 (event taxonomy) and the claim-safety triad in docs/policy/. Verifiers consume this shape via `attestplane verify <bundle.json>` (M5). The schema is additive: optional fields may be added in minor releases; existing required-field semantics are frozen.",
   "type": "object",
-  "additionalProperties": false,
   "required": [
     "bundle_version",
+    "schema_version",
     "chain_metadata",
     "events",
     "verification_report",
     "forbidden_fields"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "required": ["schema_version"],
+        "properties": {
+          "schema_version": {
+            "pattern": "^1\\.(?:[8-9]|[1-9][0-9]+)$"
+          }
+        }
+      },
+      "else": {
+        "propertyNames": {
+          "enum": [
+            "bundle_version",
+            "schema_version",
+            "chain_metadata",
+            "events",
+            "verification_report",
+            "framework_mappings",
+            "forbidden_fields",
+            "signature",
+            "policy_trace_refs",
+            "signatures",
+            "retention_proofs"
+          ]
+        }
+      }
+    }
   ],
   "properties": {
     "bundle_version": {
       "type": "integer",
       "const": 1,
       "description": "Frozen at 1 for the v1 bundle. Bump requires an ADR + deprecation window per ADR-0008 versioning rules."
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Proof-bundle schema contract version in MAJOR.MINOR form. Verifiers reject unsupported major versions and accept unknown additive minor versions."
     },
     "chain_metadata": {
       "type": "object",

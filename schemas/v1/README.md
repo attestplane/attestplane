@@ -24,10 +24,12 @@ Both schemas pin their version with a `const` integer (`bundle_version`
 - Adding required fields, renaming, or removing fields = breaking; new
   version + deprecation window.
 
-The `events[].event.schema_version` and `chain_metadata.schema_version`
-fields pin the substrate canonicalization version per [ADR-0002](../../docs/adr/0002-substrate-data-model-and-hash-chain-v0.md);
+The top-level `schema_version` field pins the proof-bundle verifier
+contract version. It is separate from `events[].event.schema_version`
+and `chain_metadata.schema_version`, which pin the substrate
+canonicalization version per [ADR-0002](../../docs/adr/0002-substrate-data-model-and-hash-chain-v0.md);
 `chain_metadata.evidence_taxonomy_version` pins the event-taxonomy
-version per ADR-0008. All three versions evolve independently.
+version per ADR-0008. All four versions evolve independently.
 
 For verifier JSON consumers, see
 [`docs/schema/verify-json.md`](../../docs/schema/verify-json.md) for the

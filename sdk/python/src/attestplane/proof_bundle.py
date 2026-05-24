@@ -37,6 +37,10 @@ from attestplane.storage.jsonl import _serialize_event as _serialize_chained_eve
 from attestplane.types import ChainedEvent, EventDraft
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING, VerifyErrorCode
 
+_BUNDLE_SCHEMA_MAJOR = 1
+_BUNDLE_SCHEMA_MINOR = 7
+_BUNDLE_SCHEMA_VERSION = f"{_BUNDLE_SCHEMA_MAJOR}.{_BUNDLE_SCHEMA_MINOR}"
+
 
 def _sdk_version() -> str:
     """Resolve the SDK version lazily to avoid a circular import on package init."""
@@ -370,6 +374,7 @@ class ProofBundleBuilder:
 
         return {
             "bundle_version": 1,
+            "schema_version": _BUNDLE_SCHEMA_VERSION,
             "chain_metadata": {
                 "chain_id": self.chain_id,
                 "schema_version": _CHAIN_SCHEMA_VERSION,

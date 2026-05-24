@@ -1,6 +1,7 @@
 {
   "bundle": {
     "bundle_version": 1,
+    "schema_version": "1.7",
     "chain_metadata": {
       "chain_id": "conf-negative-empty",
       "evidence_taxonomy_version": 1,

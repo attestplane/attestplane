@@ -57,6 +57,11 @@ from attestplane.verify_reason_codes import (
     VerifyReasonCodeV1,
 )
 
+_BUNDLE_SCHEMA_MAJOR = 1
+_BUNDLE_SCHEMA_MINOR = 7
+_BUNDLE_SCHEMA_VERSION = f"{_BUNDLE_SCHEMA_MAJOR}.{_BUNDLE_SCHEMA_MINOR}"
+_BUNDLE_SCHEMA_VERSION_RE = re.compile(r"^(?P<major>\d+)\.(?P<minor>\d+)$")
+
 
 class BundleVerificationError(Exception):
     """Base class for verifier failures that are NOT chain integrity failures.
@@ -95,6 +100,8 @@ class BundleVerificationResult:
     """``True`` iff the bundle's embedded report agrees with the independent re-verification."""
     event_count: int
     bundle_version: int
+    schema_version: str
+    schema_version_forward_compat: bool
     chain_id: str
     head_hash_hex: str
     metadata_ok: bool
@@ -129,6 +136,7 @@ class BundleVerificationResult:
 
 _REQUIRED_TOP_LEVEL = {
     "bundle_version",
+    "schema_version",
     "chain_metadata",
     "events",
     "verification_report",
@@ -153,19 +161,45 @@ _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+a
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
-def _validate_shape(bundle: Any) -> None:
+def _validate_shape(bundle: Any) -> bool:
     """Lightweight schema validation — sufficient to safely rehydrate.
 
     Intentionally not the full JSON Schema validator. Callers who need
     the full validator can run ``jsonschema.validate(bundle, schema)``
     against ``schemas/v1/proof_bundle.schema.json``; for the verifier
     fast path we only check what we read.
+
+    Returns ``True`` when the bundle declares a future minor schema version
+    that the verifier accepts in forward-compatible mode.
     """
     if not isinstance(bundle, dict):
         raise BundleSchemaError(f"bundle must be a JSON object, got {type(bundle).__name__}")
+    schema_version_raw = bundle.get("schema_version")
+    if schema_version_raw is None:
+        raise BundleSchemaError("schema_version_missing: bundle missing required field 'schema_version'")
+    if not isinstance(schema_version_raw, str):
+        schema_type = type(schema_version_raw).__name__
+        raise BundleSchemaError(
+            "schema_version_invalid: bundle schema_version must be a "
+            f"MAJOR.MINOR string, got {schema_type}"
+        )
+    match = _BUNDLE_SCHEMA_VERSION_RE.fullmatch(schema_version_raw)
+    if match is None:
+        raise BundleSchemaError(
+            f"schema_version_invalid: bundle schema_version={schema_version_raw!r} must use MAJOR.MINOR"
+        )
+    bundle_major = int(match.group("major"))
+    bundle_minor = int(match.group("minor"))
+    if bundle_major != _BUNDLE_SCHEMA_MAJOR:
+        raise BundleSchemaError(
+            "schema_version_major_unsupported: bundle schema_version "
+            f"major {bundle_major} exceeds supported major {_BUNDLE_SCHEMA_MAJOR}"
+        )
     unknown = set(bundle) - _ALLOWED_TOP_LEVEL
-    if unknown:
-        raise BundleSchemaError(f"bundle contains unknown top-level fields: {sorted(unknown)}")
+    if unknown and bundle_minor <= _BUNDLE_SCHEMA_MINOR:
+        raise BundleSchemaError(
+            f"unknown_field: bundle contains unknown top-level fields: {sorted(unknown)}"
+        )
     missing = _REQUIRED_TOP_LEVEL - set(bundle)
     if missing:
         raise BundleSchemaError(f"bundle missing required fields: {sorted(missing)}")
@@ -209,6 +243,7 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("policy_trace_refs must be an array when present")
     if "retention_proofs" in bundle and not isinstance(bundle["retention_proofs"], list):
         raise BundleSchemaError("retention_proofs must be an array when present")
+    return bundle_minor > _BUNDLE_SCHEMA_MINOR
 
 
 def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
@@ -351,6 +386,14 @@ def _signed_attestation_reason_code(reason: str | None) -> VerifyReasonCodeV1:
 def classify_bundle_schema_error(exc: BaseException | str) -> VerifyReasonCodeV1:
     """Map local schema failures to stable public verifier reason codes."""
     text = str(exc)
+    if "schema_version_missing" in text:
+        return VERIFY_REASON_REQUIRED_FIELD_MISSING
+    if "schema_version_major_unsupported" in text:
+        return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    if "schema_version_invalid" in text:
+        return VERIFY_REASON_SCHEMA_INVALID
+    if "unknown_field" in text:
+        return VERIFY_REASON_SCHEMA_UNKNOWN
     if "unsupported bundle_version" in text:
         return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     if "unsupported verification_method" in text:
@@ -504,7 +547,7 @@ def verify_proof_bundle(
     agreed. Set ``require_non_empty=True`` for audit/regulatory workflows
     where an empty-but-well-formed bundle should fail closed.
     """
-    _validate_shape(bundle)
+    schema_version_forward_compat = _validate_shape(bundle)
     events = _rehydrate_events(bundle["events"])
     effective_require_signed_attestation = require_signed_attestation or require_non_empty
     if effective_require_signed_attestation:
@@ -567,6 +610,8 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
+        schema_version=str(bundle["schema_version"]),
+        schema_version_forward_compat=schema_version_forward_compat,
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,

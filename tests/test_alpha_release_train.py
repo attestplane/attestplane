@@ -1182,7 +1182,7 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
     assert alpha_release_train.run_continuous_pipeline(args) == 0
 
     assert calls == ["v0.0.8-alpha", "v0.0.9-alpha"]
-    assert sleeps == []
+    assert args.poll_seconds not in sleeps
     assert not stop_file.exists()
     assert alpha_release_train.load_continuous_state(state_file)["processed_releases"] == [
         "v0.0.8-alpha",

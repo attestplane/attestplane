@@ -43,6 +43,7 @@ def test_proof_bundle_minimum_valid_instance() -> None:
     schema = _load("proof_bundle.schema.json")
     instance = {
         "bundle_version": 1,
+        "schema_version": "1.7",
         "chain_metadata": {
             "chain_id": "demo-chain",
             "schema_version": 1,
@@ -69,6 +70,7 @@ def test_proof_bundle_rejects_unknown_top_level_field() -> None:
     schema = _load("proof_bundle.schema.json")
     instance = {
         "bundle_version": 1,
+        "schema_version": "1.7",
         "chain_metadata": {
             "chain_id": "demo",
             "schema_version": 1,
@@ -93,10 +95,39 @@ def test_proof_bundle_rejects_unknown_top_level_field() -> None:
         jsonschema.validate(instance, schema)
 
 
+def test_proof_bundle_accepts_future_minor_additive_top_level_field() -> None:
+    schema = _load("proof_bundle.schema.json")
+    instance = {
+        "bundle_version": 1,
+        "schema_version": "1.8",
+        "chain_metadata": {
+            "chain_id": "demo",
+            "schema_version": 1,
+            "genesis_hash_hex": "0" * 64,
+            "head_hash_hex": "a" * 64,
+            "head_seq": -1,
+            "producer_runtime": "test-runtime",
+        },
+        "events": [],
+        "verification_report": {
+            "ok": True,
+            "first_bad_index": None,
+            "reason": None,
+            "verified_at": "2026-05-17T12:00:00.000000Z",
+            "verifier_version": "0.1.0",
+            "verification_method": "canonical-bytes-walk",
+        },
+        "forbidden_fields": ["secrets"],
+        "future_addition": {"enabled": True},
+    }
+    jsonschema.validate(instance, schema)
+
+
 def test_proof_bundle_rejects_wrong_bundle_version() -> None:
     schema = _load("proof_bundle.schema.json")
     instance = {
         "bundle_version": 99,
+        "schema_version": "1.7",
         "chain_metadata": {
             "chain_id": "demo",
             "schema_version": 1,
@@ -124,6 +155,7 @@ def test_proof_bundle_rejects_invalid_event_type_pattern() -> None:
     schema = _load("proof_bundle.schema.json")
     instance = {
         "bundle_version": 1,
+        "schema_version": "1.7",
         "chain_metadata": {
             "chain_id": "demo",
             "schema_version": 1,
