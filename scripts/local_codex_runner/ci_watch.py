@@ -43,10 +43,19 @@ def wait_for_ci(
 ) -> CIWatchResult:
     deadline = time.monotonic() + timeout_seconds
     checks: list[CheckStatus] = []
+    last_failure_summary: str | None = None
     while time.monotonic() <= deadline:
         checks = gh.pr_checks(repo, pr_number_or_branch)
         status = classify_checks(checks)
-        if status in {"PASS", "FAIL"}:
-            return CIWatchResult(status=status, summary=summarize_checks(checks), checks=checks)
+        summary = summarize_checks(checks)
+        if status == "PASS":
+            return CIWatchResult(status=status, summary=summary, checks=checks)
+        if status == "FAIL":
+            if last_failure_summary == summary or poll_seconds <= 0 or time.monotonic() + poll_seconds > deadline:
+                return CIWatchResult(status=status, summary=summary, checks=checks)
+            last_failure_summary = summary
+            time.sleep(poll_seconds)
+            continue
+        last_failure_summary = None
         time.sleep(poll_seconds)
     return CIWatchResult(status="TIMEOUT", summary=summarize_checks(checks), checks=checks)
