@@ -36,6 +36,16 @@ notes are the authoritative reference for supply-chain verification.
   prior docs-delta pattern from Issues #98, #94, #90, #85, #81, and #77
   without duplicating those summaries.
 
+### v1.6.1 boundary note
+
+- The local `v1.6.1` tag still points at
+  [`f2a55d4`](https://github.com/attestplane/attestplane/commit/f2a55d4baea9d27bfac2ea40fd835c0f3e237048)
+  (`chore(release): prepare v1.6.1`), while the only product-impacting
+  change in the audited boundary is
+  [`f181c6d`](https://github.com/attestplane/attestplane/commit/f181c6d4af6d6b792e53b17c8d5426cb2c9d805f)
+  (`fix: fetch opus planned issues after creation`). This entry records the
+  real-change boundary without retagging `v1.6.1`.
+
 ### v1.6.2 user-visible delta
 
 - `v1.6.2` documents one user-visible automation fix: planned-task
