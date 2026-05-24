@@ -25,7 +25,6 @@ ISSUE_REF_RE = re.compile(r"#(?P<number>[1-9][0-9]*)")
 SOURCE_PLANNING_RE = re.compile(r"(?im)^\s*Source planning issue:\s*#(?P<number>[1-9][0-9]*)\s*$")
 ISSUE_RANGE_RE = re.compile(r"\bIssues?\s+(?P<start>[1-9][0-9]*)\s*[–-]\s*(?P<end>[1-9][0-9]*)\b")
 ISSUE_ORDINAL_RE = re.compile(r"\bIssue\s+(?P<ordinal>[1-9][0-9]*)\b")
-EXTENDS_RE = re.compile(r"\bextends?\s+#(?P<number>[1-9][0-9]*)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -90,7 +89,6 @@ def infer_dependencies_from_siblings(issue: IssueTask, siblings: list[IssueTask]
         ordinal = int(match.group("ordinal"))
         if ordinal in by_ordinal:
             inferred.add(by_ordinal[ordinal])
-    inferred.update(int(match.group("number")) for match in EXTENDS_RE.finditer(issue.body))
     inferred.discard(issue.number)
     return sorted(inferred)
 
