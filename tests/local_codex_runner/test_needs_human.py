@@ -297,6 +297,9 @@ def test_ci_recovery_codex_failure_is_reported_without_crashing(monkeypatch, tmp
         def ensure_clean_worktree(self):
             pass
 
+        def current_branch(self):
+            return "main"
+
         def checkout_remote_branch(self, branch):
             pass
 
@@ -346,6 +349,9 @@ def test_external_codex_backend_failure_does_not_poison_attempt_cap(monkeypatch,
 
         def ensure_clean_worktree(self):
             pass
+
+        def current_branch(self):
+            return "main"
 
         def checkout_remote_branch(self, branch):
             pass
@@ -402,6 +408,9 @@ def test_ci_recovery_pushes_existing_clean_local_commit(monkeypatch, tmp_path: P
         def ensure_clean_worktree(self):
             pass
 
+        def current_branch(self):
+            return "codex/issue-33-fix"
+
         def checkout_remote_branch(self, branch):
             pass
 
@@ -447,3 +456,71 @@ def test_ci_recovery_pushes_existing_clean_local_commit(monkeypatch, tmp_path: P
     assert pushed == ["codex/issue-33-fix"]
     assert selected_gates == [CI_FAILED_GATE]
     assert gh.removed == [(33, ["codex-needs-human"])]
+
+
+def test_ci_recovery_attempt_cap_allows_existing_clean_local_commit(monkeypatch, tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    config.allowed_pr_authors = ["runner-bot"]
+    state_path = tmp_path / "state.json"
+    state_path.write_text(
+        "{\n"
+        '  "active_issue_ids": [],\n'
+        '  "branch_mappings": {},\n'
+        '  "last_result": null,\n'
+        '  "processed_issue_ids": [],\n'
+        '  "retry_counts": {"needs-human:34:ci_failed:2b01214d32c382db": 2}\n'
+        "}\n",
+        encoding="utf-8",
+    )
+    pushed: list[str] = []
+
+    class FakeGit:
+        def __init__(self, workdir):
+            pass
+
+        def run(self, args):
+            return f"worktree {tmp_path}\nHEAD abc\nbranch refs/heads/main\n\n"
+
+        def remove_transient_evidence(self):
+            pass
+
+        def ensure_clean_worktree(self):
+            pass
+
+        def current_branch(self):
+            return "codex/issue-34-fix"
+
+        def checkout_remote_branch(self, branch):
+            pass
+
+        def has_unpushed_commits(self, branch):
+            return True
+
+        def push_branch(self, branch):
+            pushed.append(branch)
+
+    class PassingGate:
+        def __init__(self, workdir, matrix_path, *, timeout_seconds):
+            pass
+
+        def run(self, labels, evidence_dir, *, preferred_gate=None):
+            return GateReport(status="PASS", selected_gate=preferred_gate or "default", commands=[])
+
+    def passing_ci(*args, **kwargs):
+        return CIWatchResult(status="PASS", summary="ok", checks=[CheckStatus("ci", "SUCCESS", "pass")])
+
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GateRunner", PassingGate)
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.wait_for_ci", passing_ci)
+
+    gh = FakeGH(
+        issues=[issue(34, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[pr(14, 34)],
+        checks=[CheckStatus("pytest", "FAILURE", "fail")],
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "fixed_ci"
+    assert summary["results"][0]["attempt"] == 3
+    assert pushed == ["codex/issue-34-fix"]

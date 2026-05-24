@@ -140,7 +140,12 @@ def recover_needs_human_for_labels(
                 )
             )
             continue
-        if attempt >= config.max_needs_human_attempts:
+        existing_clean_recovery = (
+            pr is not None
+            and signal.reason in recoverable_reasons
+            and has_existing_clean_recovery_commits(config, pr_branch(pr))
+        )
+        if attempt >= config.max_needs_human_attempts and not existing_clean_recovery:
             results.append(
                 NeedsHumanRecovery(
                     issue.number,
@@ -171,6 +176,19 @@ def recover_needs_human_for_labels(
         results.append(result)
         recoveries += 1
     return {"enabled": True, "results": [item.to_dict() for item in results]}
+
+
+def has_existing_clean_recovery_commits(config: RunnerConfig, branch: str | None) -> bool:
+    """Return whether the lane already has clean local commits to validate/push."""
+    if not branch:
+        return False
+    try:
+        git = GitOps(config.workdir_path())
+        git.remove_transient_evidence()
+        git.ensure_clean_worktree()
+        return git.current_branch() == branch and git.has_unpushed_commits(branch)
+    except (GitSafetyError, RunnerCommandError):
+        return False
 
 
 def recovery_attempt_counts_toward_cap(signal: StopSignal, result: NeedsHumanRecovery) -> bool:
