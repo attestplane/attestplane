@@ -4,7 +4,6 @@
   "title": "Attestplane Proof Bundle (v1)",
   "description": "Top-level export artifact bundling a chain segment with verification metadata, framework mappings, and an explicit redaction policy. Locked by ADR-0008 (event taxonomy) and the claim-safety triad in docs/policy/. Verifiers consume this shape via `attestplane verify <bundle.json>` (M5). The schema is additive: optional fields may be added in minor releases; existing required-field semantics are frozen.",
   "type": "object",
-  "additionalProperties": false,
   "required": [
     "bundle_version",
     "schema_version",
@@ -13,6 +12,20 @@
     "verification_report",
     "forbidden_fields"
   ],
+  "if": {
+    "required": ["schema_version"],
+    "properties": {
+      "schema_version": {
+        "pattern": "^1\\.(?:[8-9]|[1-9][0-9]+)$"
+      }
+    }
+  },
+  "then": {
+    "unevaluatedProperties": true
+  },
+  "else": {
+    "unevaluatedProperties": false
+  },
   "properties": {
     "bundle_version": {
       "type": "integer",
