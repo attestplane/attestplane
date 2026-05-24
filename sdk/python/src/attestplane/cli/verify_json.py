@@ -24,6 +24,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_INVALID,
@@ -278,6 +279,18 @@ def _bundle_failure_reason(
             elif detail.startswith("chain_metadata.schema_version="):
                 code = VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
                 path = "/chain_metadata/schema_version"
+            elif "unknown required field" in detail:
+                code = VERIFY_REASON_SCHEMA_UNKNOWN
+                match = re.match(
+                    r"^(chain_metadata|verification_report)\.([^. ]+) is an unknown required field$",
+                    detail,
+                )
+                if match is not None:
+                    path = f"/{match.group(1)}/{match.group(2)}"
+                elif detail.startswith("chain_metadata."):
+                    path = "/chain_metadata"
+                elif detail.startswith("verification_report."):
+                    path = "/verification_report"
             elif detail.startswith("chain_metadata."):
                 path = "/chain_metadata"
             else:

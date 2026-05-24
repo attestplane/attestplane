@@ -91,7 +91,8 @@ def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
         "additive_minor_ok": (True, None, ()),
         "additive_with_unknown_field_ok": (True, None, ()),
         "missing": (False, VERIFY_REASON_SCHEMA_VERSION_MISSING, ()),
-        "unknown_major": (False, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED, ()),
+        "major_version_ahead": (False, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED, ()),
+        "unknown_required_field": (False, VERIFY_REASON_SCHEMA_UNKNOWN, ()),
     }
 
     for case, (ok, primary, secondary) in expectations.items():
@@ -101,8 +102,8 @@ def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
         assert result.secondary_reasons == secondary
 
 
-def test_unknown_schema_major_keeps_canonical_mismatch_primary() -> None:
-    bundle = _schema_case("unknown_major")
+def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
+    bundle = _schema_case("major_version_ahead")
     bundle["events"][0]["event_hash_hex"] = "f" * 64
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
@@ -110,6 +111,16 @@ def test_unknown_schema_major_keeps_canonical_mismatch_primary() -> None:
     assert result.ok is False
     assert result.primary_reason == VERIFY_REASON_CANONICAL_MISMATCH
     assert VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED in result.secondary_reasons
+
+
+def test_unknown_required_field_maps_to_schema_unknown() -> None:
+    bundle = _schema_case("unknown_required_field")
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert "critical_future_field" in (result.metadata_reason or "")
 
 
 def test_verify_reason_code_taxonomy_and_format_helpers() -> None:

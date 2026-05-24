@@ -205,6 +205,24 @@ def test_verify_json_schema_error_maps_missing_version_path(
     assert reason["path"] == "/chain_metadata/schema_version"
 
 
+def test_verify_json_unknown_required_field_reports_chain_metadata_path(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = tmp_path / "unknown-required-field.json"
+    payload = ProofBundleBuilder(chain_id="unknown-required", producer_runtime="test").build()
+    payload["chain_metadata"]["critical_future_field"] = True
+    bundle.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+
+    assert rc == 1
+    assert stderr == ""
+    reason = payload["reasons"][0]  # type: ignore[index]
+    assert reason["code"] == "att.verify.schema_unknown"
+    assert reason["path"] == "/chain_metadata/critical_future_field"
+
+
 def test_verify_json_private_pointer_helpers_cover_known_paths() -> None:
     assert _canonical_path_to_pointer("payload.actor") == "/"
     assert _canonical_path_to_pointer("$.actor") == "/actor"

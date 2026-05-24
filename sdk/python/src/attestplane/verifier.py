@@ -230,6 +230,18 @@ def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | Non
     return None
 
 
+def _unknown_required_field_reason(
+    section: dict[str, Any],
+    *,
+    section_name: str,
+) -> str | None:
+    critical_fields = sorted(key for key in section if key.startswith("critical_"))
+    if not critical_fields:
+        return None
+    field = critical_fields[0]
+    return f"{section_name}.{field} is an unknown required field"
+
+
 def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
     chain: list[ChainedEvent] = []
     for idx, ev_raw in enumerate(events_raw):
@@ -408,6 +420,8 @@ def _schema_version_reason_code(metadata_reason: str | None) -> VerifyReasonCode
         return VERIFY_REASON_SCHEMA_INVALID
     if metadata_reason.startswith("chain_metadata.schema_version="):
         return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    if "unknown required field" in metadata_reason:
+        return VERIFY_REASON_SCHEMA_UNKNOWN
     return None
 
 
@@ -465,6 +479,15 @@ def _verify_metadata_closure(
             f"chain_metadata.schema_version={metadata.get('schema_version')!r}; "
             f"this verifier handles {SCHEMA_VERSION}"
         )
+    unknown_required_field = _unknown_required_field_reason(metadata, section_name="chain_metadata")
+    if unknown_required_field is not None:
+        return False, unknown_required_field
+    report_unknown_required_field = _unknown_required_field_reason(
+        report,
+        section_name="verification_report",
+    )
+    if report_unknown_required_field is not None:
+        return False, report_unknown_required_field
     if metadata["genesis_hash_hex"] != GENESIS_HASH.hex():
         return False, "chain_metadata.genesis_hash_hex does not match substrate genesis hash"
     if "evidence_taxonomy_version" in metadata and metadata["evidence_taxonomy_version"] != 1:

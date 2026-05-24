@@ -158,6 +158,17 @@ def test_verify_reason_code_schema_version_missing_from_metadata_closure() -> No
     assert result.primary_reason == VERIFY_REASON_SCHEMA_VERSION_MISSING
 
 
+def test_verify_reason_code_unknown_required_metadata_field_is_schema_unknown() -> None:
+    bundle = _signed_bundle()
+    bundle["chain_metadata"]["critical_future_field"] = True
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert "critical_future_field" in (result.metadata_reason or "")
+
+
 def test_verify_reason_code_additive_unknown_fields_are_accepted() -> None:
     bundle = _signed_bundle()
     bundle["chain_metadata"]["future_minor_field"] = {"preserved": True}

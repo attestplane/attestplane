@@ -57,7 +57,7 @@ export const VERIFY_REASON_TAXONOMY: Readonly<Record<VerifyReasonCodeV1, string>
     'A required top-level, nested, signature, or verifier-envelope field is absent.',
   [VERIFY_REASON_SCHEMA_INVALID]: 'The input shape is malformed for a known verifier schema.',
   [VERIFY_REASON_SCHEMA_UNKNOWN]:
-    'The input declares an unknown schema family or verification method namespace.',
+    'The input declares an unknown schema family, verification method namespace, or fail-closed critical/required field.',
   [VERIFY_REASON_SCHEMA_VERSION_MISSING]:
     'A known bundle, payload, signature, or verifier schema version is missing.',
   [VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED]:

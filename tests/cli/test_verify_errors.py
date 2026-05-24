@@ -93,3 +93,24 @@ def test_verify_json_includes_reasons_list_for_schema_version_failures(
     assert result["taxonomy_version"] == 1
     assert result["reasons"][0]["code"] == "att.verify.schema_version_missing"
     assert captured.err == ""
+
+
+def test_verify_json_reports_unknown_required_metadata_field(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "unknown-required-field.json"
+    payload = json.loads((FIXTURES / "valid_signed_attestation.json").read_text(encoding="utf-8"))
+    payload["chain_metadata"]["critical_future_field"] = True
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = main(["verify", "--json", str(path)])
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
+
+    assert rc == 1
+    assert result["schema_version"] == 1
+    assert result["result"] == "fail"
+    assert result["reasons"][0]["code"] == "att.verify.schema_unknown"
+    assert result["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
+    assert captured.err == ""
