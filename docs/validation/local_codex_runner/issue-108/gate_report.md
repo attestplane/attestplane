@@ -4,5 +4,5 @@ Gate: `default`
 
 ## Commands
 
-- `/Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/python -m compileall scripts`: exit=0
-- `/Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/pytest -q`: exit=0
+- `python -m compileall scripts`: exit=0
+- `pytest -q`: exit=0
