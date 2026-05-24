@@ -1,0 +1,18 @@
+{
+  "bundle_schema_version": 1,
+  "ok": false,
+  "reasons": [
+    {
+      "code": "REASON_REQUIRED_FIELD_MISSING",
+      "field": "/events",
+      "message": "events must contain at least one event"
+    },
+    {
+      "code": "REASON_STRUCTURE_INVALID",
+      "field": "/chain_metadata",
+      "message": "events must contain at least one event when require_non_empty=True"
+    }
+  ],
+  "schema_version": "1",
+  "verifier_version": "1.7.6"
+}

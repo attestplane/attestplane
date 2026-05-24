@@ -84,5 +84,6 @@ renaming an existing code is a breaking change and must be called out in
 The existing human-readable fields such as `chain_result.reason`,
 `metadata_reason`, `policy_trace_refs_reason`, `retention_proofs_reason`, and
 `signed_attestation_schema_reason` remain for one minor release as deprecated
-migration aids. SDK and CLI consumers should branch on `primary_reason` and
-`secondary_reasons` instead of matching these strings.
+migration aids. CLI consumers should branch on `verify --json` `reasons[]`
+instead of matching these strings directly. The internal `primary_reason` and
+`secondary_reasons` fields remain available for the existing verifier API.

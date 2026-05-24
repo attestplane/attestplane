@@ -47,6 +47,7 @@ from attestplane.verify_errors import (
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
@@ -126,6 +127,53 @@ class BundleVerificationResult:
             f"error_code={self.error_code} primary_reason={self.primary_reason}"
         )
 
+    def to_verify_json_report(self, *, verifier_version: str) -> VerifyJsonReport:
+        """Project the internal verifier result into the CLI JSON report."""
+        reasons = _verify_json_reasons(self)
+        return VerifyJsonReport(
+            schema_version="1",
+            bundle_schema_version=self.bundle_version,
+            ok=self.ok,
+            reasons=tuple(sorted(reasons, key=_verify_json_reason_sort_key)),
+            verifier_version=verifier_version,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class VerifyJsonReason:
+    """One machine-readable reason entry in ``verify --json`` output."""
+
+    code: str
+    field: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "code": self.code,
+            "field": self.field,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class VerifyJsonReport:
+    """Structured CLI report for ``attestplane verify --json``."""
+
+    schema_version: str
+    bundle_schema_version: int | str | None
+    ok: bool
+    reasons: tuple[VerifyJsonReason, ...]
+    verifier_version: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "bundle_schema_version": self.bundle_schema_version,
+            "ok": self.ok,
+            "reasons": [reason.to_dict() for reason in self.reasons],
+            "verifier_version": self.verifier_version,
+        }
+
 
 _REQUIRED_TOP_LEVEL = {
     "bundle_version",
@@ -151,6 +199,19 @@ _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
 }
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_SIGNATURE_REASON_POINTER = re.compile(r"signatures\[(\d+)\](?:\.(.+))?")
+_CHAIN_REASON_POINTER = re.compile(r"(seq|prev_hash|event_hash) mismatch at (?:index|seq) (\d+)")
+
+_VERIFY_JSON_REASON_CODES: dict[VerifyReasonCodeV1, str] = {
+    VERIFY_REASON_CANONICAL_MISMATCH: "REASON_CANONICAL_MISMATCH",
+    VERIFY_REASON_REQUIRED_FIELD_MISSING: "REASON_REQUIRED_FIELD_MISSING",
+    VERIFY_REASON_SCHEMA_INVALID: "REASON_SCHEMA_INVALID",
+    VERIFY_REASON_SCHEMA_UNKNOWN: "REASON_SCHEMA_UNKNOWN",
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: "REASON_SCHEMA_VERSION_UNSUPPORTED",
+    VERIFY_REASON_SIGNATURE_INVALID: "REASON_SIGNATURE_INVALID",
+    VERIFY_REASON_SIGNATURE_MISSING: "REASON_SIGNATURE_MISSING",
+    VERIFY_REASON_STRUCTURE_INVALID: "REASON_STRUCTURE_INVALID",
+}
 
 
 def _validate_shape(bundle: Any) -> None:
@@ -380,6 +441,189 @@ def _dedupe_reasons(
     return ordered[0], tuple(ordered[1:])
 
 
+def _verify_json_code(reason: VerifyReasonCodeV1) -> str:
+    return _VERIFY_JSON_REASON_CODES.get(reason, f"REASON_{reason.removeprefix('att.verify.').upper()}")
+
+
+def _json_pointer_for_chain_reason(reason: str | None) -> str:
+    if not reason:
+        return "/events"
+    match = _CHAIN_REASON_POINTER.search(reason)
+    if not match:
+        return "/events"
+    field, index = match.groups()
+    if field == "seq":
+        return f"/events/{index}/seq"
+    if field == "prev_hash":
+        return f"/events/{index}/prev_hash_hex"
+    if field == "event_hash":
+        return f"/events/{index}/event_hash_hex"
+    return "/events"
+
+
+def _json_pointer_for_signature_reason(reason: str | None) -> str:
+    if not reason:
+        return "/signatures"
+    if reason.startswith("events must contain"):
+        return "/events"
+    if reason.startswith("signatures must contain"):
+        return "/signatures"
+    match = _SIGNATURE_REASON_POINTER.search(reason)
+    if not match:
+        return "/signatures"
+    index, tail = match.groups()
+    if not tail:
+        return f"/signatures/{index}"
+    return "/signatures/" + index + "/" + tail.replace(".", "/")
+
+
+def _json_pointer_for_metadata_reason(reason: str | None) -> str:
+    if not reason:
+        return "/chain_metadata"
+    for field in (
+        "schema_version",
+        "genesis_hash_hex",
+        "evidence_taxonomy_version",
+        "head_seq",
+        "head_hash_hex",
+    ):
+        if f"chain_metadata.{field}" in reason:
+            return f"/chain_metadata/{field}"
+    for field in ("ok", "first_bad_index", "reason", "verified_at", "verifier_version"):
+        if f"verification_report.{field}" in reason:
+            return f"/verification_report/{field}"
+    if "verification_method" in reason:
+        return "/chain_metadata/verification_method"
+    if "forbidden_fields" in reason:
+        return "/forbidden_fields"
+    return "/chain_metadata"
+
+
+def _verify_json_reason_sort_key(reason: VerifyJsonReason) -> tuple[str, str, str]:
+    return (reason.code, reason.field, reason.message)
+
+
+def _verify_json_reason_from_code(
+    result: BundleVerificationResult,
+    code: VerifyReasonCodeV1,
+) -> VerifyJsonReason:
+    message = VERIFY_REASON_CODE_DESCRIPTIONS.get(code, code)
+    if code == VERIFY_REASON_CANONICAL_MISMATCH:
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field=_json_pointer_for_chain_reason(result.chain_result.reason),
+            message=result.chain_result.reason or message,
+        )
+    if code == VERIFY_REASON_SIGNATURE_MISSING:
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field=_json_pointer_for_signature_reason(result.signed_attestation_schema_reason),
+            message=result.signed_attestation_schema_reason or message,
+        )
+    if code == VERIFY_REASON_SIGNATURE_INVALID:
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field=_json_pointer_for_signature_reason(result.signed_attestation_schema_reason),
+            message=result.signed_attestation_schema_reason or message,
+        )
+    if code == VERIFY_REASON_REQUIRED_FIELD_MISSING:
+        if not result.event_count and result.error_code == VERIFY_REQUIRED_FIELDS_MISSING:
+            return VerifyJsonReason(
+                code=_verify_json_code(code),
+                field="/events",
+                message="events must contain at least one event",
+            )
+        if result.signed_attestation_schema_reason:
+            reason_text = result.signed_attestation_schema_reason
+            if reason_text.startswith("events must contain at least one event"):
+                reason_text = "events must contain at least one event"
+            return VerifyJsonReason(
+                code=_verify_json_code(code),
+                field=_json_pointer_for_signature_reason(result.signed_attestation_schema_reason),
+                message=reason_text,
+            )
+        if result.metadata_reason:
+            return VerifyJsonReason(
+                code=_verify_json_code(code),
+                field=_json_pointer_for_metadata_reason(result.metadata_reason),
+                message=result.metadata_reason,
+            )
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field="/",
+            message=message,
+        )
+    if code == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED:
+        reason_text = result.metadata_reason or message
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field=_json_pointer_for_metadata_reason(result.metadata_reason),
+            message=reason_text,
+        )
+    if code == VERIFY_REASON_SCHEMA_UNKNOWN:
+        reason_text = result.metadata_reason or message
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field=_json_pointer_for_metadata_reason(result.metadata_reason),
+            message=reason_text,
+        )
+    if code == VERIFY_REASON_SCHEMA_INVALID:
+        reason_text = result.metadata_reason or message
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field=_json_pointer_for_metadata_reason(result.metadata_reason),
+            message=reason_text,
+        )
+    if code == VERIFY_REASON_STRUCTURE_INVALID:
+        if result.policy_trace_refs_reason:
+            return VerifyJsonReason(
+                code=_verify_json_code(code),
+                field="/policy_trace_refs",
+                message=result.policy_trace_refs_reason,
+            )
+        if result.retention_proofs_reason:
+            return VerifyJsonReason(
+                code=_verify_json_code(code),
+                field="/retention_proofs",
+                message=result.retention_proofs_reason,
+            )
+        if result.metadata_reason:
+            return VerifyJsonReason(
+                code=_verify_json_code(code),
+                field=_json_pointer_for_metadata_reason(result.metadata_reason),
+                message=result.metadata_reason,
+            )
+        return VerifyJsonReason(
+            code=_verify_json_code(code),
+            field="/",
+            message=message,
+        )
+    return VerifyJsonReason(
+        code=_verify_json_code(code),
+        field="/",
+        message=message,
+    )
+
+
+def _verify_json_reasons(result: BundleVerificationResult) -> list[VerifyJsonReason]:
+    if result.ok:
+        return []
+    codes: list[VerifyReasonCodeV1] = []
+    if result.primary_reason is not None:
+        codes.append(result.primary_reason)
+    codes.extend(result.secondary_reasons)
+    reasons = [_verify_json_reason_from_code(result, code) for code in codes]
+    seen: set[tuple[str, str, str]] = set()
+    deduped: list[VerifyJsonReason] = []
+    for reason in reasons:
+        key = (reason.code, reason.field, reason.message)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(reason)
+    return deduped
+
+
 def _verification_reasons(
     *,
     chain_result: VerificationResult,
@@ -597,10 +841,53 @@ def verify_proof_bundle_file(
         raise BundleVerificationError(f"bundle file not found: {p}") from exc
     except json.JSONDecodeError as exc:
         raise BundleSchemaError(f"{p}: not valid JSON: {exc.msg}") from exc
-    return verify_proof_bundle(
-        bundle,
-        require_non_empty=require_non_empty,
-        require_signed_attestation=require_signed_attestation,
+    try:
+        return verify_proof_bundle(
+            bundle,
+            require_non_empty=require_non_empty,
+            require_signed_attestation=require_signed_attestation,
+        )
+    except BundleSchemaError as exc:
+        # Preserve the declared bundle version for CLI JSON reports even when
+        # the bundle is rejected for schema-version or shape violations.
+        exc.bundle_version = bundle.get("bundle_version")  # type: ignore[attr-defined]
+        raise
+
+
+def verify_json_report_for_error(
+    exc: BaseException,
+    *,
+    verifier_version: str,
+    bundle_schema_version: int | str | None = None,
+) -> VerifyJsonReport:
+    """Build a structured CLI report for a verifier exception."""
+    if isinstance(exc, BundleSchemaError):
+        reason_code = classify_bundle_schema_error(exc)
+        return VerifyJsonReport(
+            schema_version="1",
+            bundle_schema_version=bundle_schema_version,
+            ok=False,
+            reasons=(
+                VerifyJsonReason(
+                    code=_verify_json_code(reason_code),
+                    field="/",
+                    message=str(exc),
+                ),
+            ),
+            verifier_version=verifier_version,
+        )
+    return VerifyJsonReport(
+        schema_version="1",
+        bundle_schema_version=bundle_schema_version,
+        ok=False,
+        reasons=(
+            VerifyJsonReason(
+                code="REASON_IO_ERROR",
+                field="/",
+                message=str(exc),
+            ),
+        ),
+        verifier_version=verifier_version,
     )
 
 
@@ -641,7 +928,10 @@ __all__ = [
     "BundleSchemaError",
     "BundleVerificationError",
     "BundleVerificationResult",
+    "VerifyJsonReason",
+    "VerifyJsonReport",
     "classify_bundle_schema_error",
+    "verify_json_report_for_error",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
 ]

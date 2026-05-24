@@ -1,61 +1,71 @@
 # `attestplane verify --json`
 
-`attestplane verify --json` emits the machine-readable verifier result used by
-the v1.7.x support-task delta. It is the JSON companion to the human-facing
-`verify --explain` path.
+`attestplane verify --json` emits one deterministic JSON document to stdout.
+It is the machine-readable companion to the human-oriented `verify` summary.
+
+`verify --explain` remains the operator-friendly path when a human needs the
+failure narrative rather than the structured report.
 
 ## Output Contract
 
-The JSON payload includes the verifier outcome plus the machine-readable
-reason surface:
+The payload is a single report envelope with stable key order:
 
-- `ok`
-- `error_code`
-- `primary_reason`
-- `secondary_reasons`
-- `chain_result.reason`
-- the existing compatibility fields such as `retention_proofs_reason` and
-  `signed_attestation_schema_reason`
-
-Successful results use `primary_reason: null` and `secondary_reasons: []`.
-Rejected results should be consumed by checking the exit code first and then
-inspecting the reason list.
-
-## `verify --explain`
-
-`verify --explain` is the operator-oriented companion to `verify --json`.
-Use it when a person needs the failure summary; use `verify --json` when a CI
-job or integration needs machine-readable branching.
-
-## Reason List
-
-When you need a compact `reasons[]` view, derive it from the JSON payload:
-
-```sh
-jq -cr '"'"'[.primary_reason] + .secondary_reasons | map(select(. != null))'"'"' verify.json
+```json
+{
+  "schema_version": "1",
+  "bundle_schema_version": 1,
+  "ok": false,
+  "reasons": [
+    {
+      "code": "REASON_REQUIRED_FIELD_MISSING",
+      "field": "/events",
+      "message": "events must contain at least one event"
+    }
+  ],
+  "verifier_version": "1.7.6"
+}
 ```
 
-This keeps the exit code as the gate while still exposing the ordered
-reason list for downstream policy decisions.
+Field meaning:
 
-## CI Gating Example
+- `schema_version` identifies the CLI report schema. It is independent of the
+  bundle schema version.
+- `bundle_schema_version` echoes the bundle's schema/bundle version.
+- `ok` mirrors the verifier exit status: `true` for success, `false` for
+  rejection.
+- `reasons[]` is the ordered machine-readable failure list. It is empty when
+  `ok=true`.
+- `verifier_version` is the CLI/verifier semver string.
+
+The report is additive-only. Future fields such as `severity` may be added to
+each reason entry without breaking v1 consumers, but the current schema omits
+that field.
+
+## CI Gating
+
+Use the exit code as the gate and inspect `reasons[]` only after a non-zero
+result:
 
 ```sh
-attestplane verify "$bundle" --json > verify.json
+attestplane verify --json "$bundle" > verify.json
 rc=$?
 
-reasons=$(jq -cr '"'"'[.primary_reason] + .secondary_reasons | map(select(. != null))'"'"' verify.json)
-
 if [ "$rc" -ne 0 ]; then
-  printf '"'"'verify failed (rc=%s)\n'"'"' "$rc"
-  printf '"'"'%s\n'"'"' "$reasons" | jq -r '"'"'.[]'"'"'
+  jq -r '"'"'.reasons[] | [.code, .field, .message] | @tsv'"'"' verify.json
   exit "$rc"
 fi
 ```
 
+If you need to diff a stable snapshot, normalize the JSON first:
+
+```sh
+attestplane verify --json "$bundle" | jq -S . > actual.json
+diff -u tests/golden/verify-json/valid_minimal.json actual.json
+```
+
 ## See Also
 
-- [`docs/errors.md`](../errors.md) - `att.verify.*` reason-code taxonomy
-  reference from Issue #172.
 - [`docs/schema/verify-json.md`](../schema/verify-json.md) - schema-version
-  policy for verifier JSON consumers.
+  policy for the CLI report envelope.
+- [`docs/errors.md`](../errors.md) - the `att.verify.*` taxonomy used by the
+  internal verifier result.

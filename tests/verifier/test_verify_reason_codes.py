@@ -201,5 +201,14 @@ def test_verify_reason_code_cli_json_smoke(tmp_path: Path, capsys: pytest.Captur
     payload = json.loads(captured.out)
 
     assert rc == 2
-    assert payload["primary_reason"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["secondary_reasons"] == []
+    assert payload["schema_version"] == "1"
+    assert payload["bundle_schema_version"] == 1
+    assert payload["ok"] is False
+    assert payload["reasons"] == [
+        {
+            "code": "REASON_SIGNATURE_MISSING",
+            "field": "/signatures",
+            "message": "signatures must contain at least one signed attestation",
+        }
+    ]
+    assert captured.err == "bundle.schema.incomplete\n"

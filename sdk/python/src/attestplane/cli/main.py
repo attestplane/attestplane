@@ -25,11 +25,8 @@ from typing import Any
 from attestplane import __version__
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
-    VERIFY_IO_ERROR,
     VERIFY_REQUIRED_FIELDS_MISSING,
-    VERIFY_SCHEMA_ERROR,
 )
-from attestplane.verify_reason_codes import VERIFY_REASON_SCHEMA_INVALID
 
 VERIFY_SCOPE = "chain_report_only"
 VERIFY_SCOPE_NOTICE = (
@@ -191,7 +188,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     from attestplane.verifier import (
         BundleSchemaError,
         BundleVerificationError,
-        classify_bundle_schema_error,
+        verify_json_report_for_error,
         verify_proof_bundle_file,
     )
 
@@ -214,36 +211,27 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_signed_attestation=strict_schema,
         )
     except BundleSchemaError as exc:
+        report = verify_json_report_for_error(
+            exc,
+            verifier_version=__version__,
+            bundle_schema_version=getattr(exc, "bundle_version", None),
+        )
         _emit(
-            {
-                "ok": False,
-                "error": "schema",
-                "error_code": VERIFY_SCHEMA_ERROR,
-                "primary_reason": classify_bundle_schema_error(exc),
-                "secondary_reasons": [],
-                "detail": str(exc),
-                **_verify_scope_metadata(),
-            },
+            report.to_dict(),
             args.json_output,
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 2
     except BundleVerificationError as exc:
+        report = verify_json_report_for_error(exc, verifier_version=__version__)
         _emit(
-            {
-                "ok": False,
-                "error": "io",
-                "error_code": VERIFY_IO_ERROR,
-                "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
-                "secondary_reasons": [],
-                "detail": str(exc),
-                **_verify_scope_metadata(),
-            },
+            report.to_dict(),
             args.json_output,
             human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
 
+    report = result.to_verify_json_report(verifier_version=__version__)
     payload = {
         "ok": result.ok,
         "chain_id": result.chain_id,
@@ -275,7 +263,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
         VERIFY_REQUIRED_FIELDS_MISSING,
     }:
         sys.stderr.write(f"{result.error_code}\n")
-    _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
+    _emit(
+        report.to_dict() if args.json_output else payload,
+        args.json_output,
+        human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}",
+    )
     if result.ok:
         return 0
     if result.error_code in {

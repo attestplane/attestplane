@@ -22,15 +22,52 @@ EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
 
 
 @pytest.mark.parametrize(
-    ("flags", "valid_rc", "invalid_rc", "invalid_code"),
+    ("flags", "valid_rc", "invalid_rc", "invalid_reason", "stderr_code"),
     [
-        ([], 0, 0, None),
-        (["--require-non-empty"], 0, 2, VERIFY_REQUIRED_FIELDS_MISSING),
-        (["--strict-schema"], 0, 2, VERIFY_BUNDLE_SCHEMA_INCOMPLETE),
+        ([], 0, 0, None, None),
+        (
+            ["--require-non-empty"],
+            0,
+            2,
+            (
+                (
+                    "REASON_REQUIRED_FIELD_MISSING",
+                    "/events",
+                    "events must contain at least one event",
+                ),
+                (
+                    "REASON_STRUCTURE_INVALID",
+                    "/chain_metadata",
+                    "events must contain at least one event when require_non_empty=True",
+                ),
+            ),
+            VERIFY_REQUIRED_FIELDS_MISSING,
+        ),
+        (
+            ["--strict-schema"],
+            0,
+            2,
+            (
+                ("REASON_REQUIRED_FIELD_MISSING", "/events", "events must contain at least one event"),
+            ),
+            VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+        ),
         (
             ["--require-non-empty", "--strict-schema"],
             0,
             2,
+            (
+                (
+                    "REASON_REQUIRED_FIELD_MISSING",
+                    "/events",
+                    "events must contain at least one event",
+                ),
+                (
+                    "REASON_STRUCTURE_INVALID",
+                    "/chain_metadata",
+                    "events must contain at least one event when require_non_empty=True",
+                ),
+            ),
             VERIFY_REQUIRED_FIELDS_MISSING,
         ),
     ],
@@ -39,30 +76,35 @@ def test_verify_strict_flag_combinations(
     flags: list[str],
     valid_rc: int,
     invalid_rc: int,
-    invalid_code: str | None,
+    invalid_reason: tuple[tuple[str, str, str], ...] | None,
+    stderr_code: str | None,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc = main(["verify", str(VALID_SIGNED), *flags, "--json"])
     valid = json.loads(capsys.readouterr().out)
 
     assert rc == valid_rc
+    assert valid["schema_version"] == "1"
+    assert valid["bundle_schema_version"] == 1
     assert valid["ok"] is True
-    assert valid["require_non_empty"] is ("--require-non-empty" in flags)
-    assert valid["strict_schema"] is ("--strict-schema" in flags)
+    assert valid["reasons"] == []
 
     rc = main(["verify", str(EMPTY_BUNDLE), *flags, "--json"])
     captured = capsys.readouterr()
     invalid = json.loads(captured.out)
 
     assert rc == invalid_rc
-    assert invalid["event_count"] == 0
-    if invalid_code is None:
+    if invalid_reason is None:
         assert invalid["ok"] is True
+        assert invalid["reasons"] == []
         assert captured.err == ""
     else:
         assert invalid["ok"] is False
-        assert invalid["error_code"] == invalid_code
-        assert captured.err == f"{invalid_code}\n"
+        assert invalid["reasons"] == [
+            {"code": code, "field": field, "message": message}
+            for code, field, message in invalid_reason
+        ]
+        assert captured.err == f"{stderr_code}\n"
 
 
 def test_verify_help_lists_strict_flags_and_exit_codes(

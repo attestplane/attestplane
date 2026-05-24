@@ -1,0 +1,13 @@
+{
+  "bundle_schema_version": 1,
+  "ok": false,
+  "reasons": [
+    {
+      "code": "REASON_SIGNATURE_MISSING",
+      "field": "/signatures",
+      "message": "signatures must contain at least one signed attestation"
+    }
+  ],
+  "schema_version": "1",
+  "verifier_version": "1.7.6"
+}
