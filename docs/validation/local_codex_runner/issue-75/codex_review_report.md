@@ -30,7 +30,7 @@ only. No web lookup or external advisory service was used.
 - `git log --no-merges --pretty=tformat:%s v1.5.0..v1.5.5` shows the range includes real-work commits, not only release-prep commits.
 - `git diff --stat v1.5.0..v1.5.5` reports a non-empty delta across 39 files.
 - `git diff --check v1.5.0..v1.5.5` exited `0`.
-- [`v1.5.5-real-change-boundary.md`](v1.5.5-real-change-boundary.md), [`codex_code.log`](codex_code.log), [`codex_review.log`](codex_review.log), and [`review_guard_report.md`](review_guard_report.md) record the publish decision to ship `v1.5.5` rather than skip.
+- [`v1.5.5-real-change-boundary.md`](v1.5.5-real-change-boundary.md), [`codex_review_report.json`](codex_review_report.json), [`review_guard_report.md`](review_guard_report.md), and [`review_guard_report.json`](review_guard_report.json) record the publish decision to ship `v1.5.5` rather than skip.
 
 ## Residual Risks
 
