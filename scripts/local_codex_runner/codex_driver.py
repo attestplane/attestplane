@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import shlex
+import os
+import signal
 import subprocess
 from pathlib import Path
 
@@ -68,22 +70,10 @@ class CodexDriver:
             log_path.write_text(text, encoding="utf-8")
             return text
         try:
-            completed = subprocess.run(
-                command,
-                cwd=workdir,
-                capture_output=True,
-                text=True,
-                input=prompt_stdin,
-                timeout=timeout,
-                check=False,
-            )
+            completed = run_with_process_group_timeout(command, workdir, prompt_stdin, timeout)
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
-            if isinstance(stdout, bytes):
-                stdout = stdout.decode("utf-8", errors="replace")
-            if isinstance(stderr, bytes):
-                stderr = stderr.decode("utf-8", errors="replace")
             output = redact(
                 "\n".join(
                     part
@@ -102,3 +92,47 @@ class CodexDriver:
         if completed.returncode != 0:
             raise RunnerCommandError(command, completed.returncode, output)
         return output
+
+
+def run_with_process_group_timeout(
+    command: list[str],
+    workdir: Path,
+    prompt_stdin: str | None,
+    timeout: int | None,
+) -> subprocess.CompletedProcess[str]:
+    process = subprocess.Popen(  # noqa: S603 - command argv is assembled by CodexDriver.
+        command,
+        cwd=workdir,
+        stdin=subprocess.PIPE if prompt_stdin is not None else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = process.communicate(input=prompt_stdin, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        terminate_process_group(process)
+        try:
+            stdout, stderr = process.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            kill_process_group(process)
+            stdout, stderr = process.communicate()
+        exc.stdout = stdout
+        exc.stderr = stderr
+        raise
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
+def terminate_process_group(process: subprocess.Popen[str]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+
+
+def kill_process_group(process: subprocess.Popen[str]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return

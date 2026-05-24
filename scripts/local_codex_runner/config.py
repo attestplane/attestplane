@@ -71,6 +71,10 @@ class RunnerConfig:
     lane_slot: int | None = None
     lane_include_labels: list[str] = field(default_factory=list)
     lane_exclude_labels: list[str] = field(default_factory=list)
+    product_delta_idle_dispatch: bool = False
+    product_delta_idle_log_glob: str | None = None
+    product_delta_idle_threshold: int = 2
+    product_delta_idle_tail_lines: int = 200
 
     def validate(self) -> None:
         missing = [name for name in ("repo", "workdir") if not getattr(self, name)]
@@ -86,6 +90,10 @@ class RunnerConfig:
             raise ConfigError("allow_auto_merge requires at least one allowed_pr_authors entry")
         if self.lane_slot is not None and self.lane_slot < 1:
             raise ConfigError("lane_slot must be a positive integer")
+        if self.product_delta_idle_threshold < 1:
+            raise ConfigError("product_delta_idle_threshold must be a positive integer")
+        if self.product_delta_idle_tail_lines < 1:
+            raise ConfigError("product_delta_idle_tail_lines must be a positive integer")
 
     def workdir_path(self) -> Path:
         if self.workdir is None:

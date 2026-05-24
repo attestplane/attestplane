@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from scripts.local_codex_runner.run_once import cleanup_stale_state, run_once
+from scripts.local_codex_runner.run_once import cleanup_stale_state, product_delta_idle_summary, run_once
 
 
 def test_cleanup_stale_state_prunes_closed_active_issues(tmp_path: Path) -> None:
@@ -281,3 +281,97 @@ def test_run_once_reports_issue_list_external_error(monkeypatch, tmp_path: Path)
     assert result["results"] == []
     assert result["external_errors"][0]["stage"] == "list_issues"
     assert "api.github.com/graphql" in result["external_errors"][0]["error"]
+
+
+def test_product_delta_idle_summary_requires_consecutive_skip_events(tmp_path: Path) -> None:
+    log = tmp_path / "stable.log"
+    log.write_text(
+        "autodev-train stable: no product implementation delta since v1.7.6; skipping v1.7.7\n"
+        '{"event": "product_delta_skipped", "version": "v1.7.7"}\n'
+        '{"event": "product_delta_skipped", "version": "v1.7.8"}\n',
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: true\n"
+        "product_delta_idle_dispatch: true\n"
+        f'product_delta_idle_log_glob: "{log}"\n'
+        "product_delta_idle_threshold: 2\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.config import load_config
+
+    summary = product_delta_idle_summary(load_config(config_path))
+
+    assert summary["active"] is True
+    assert summary["consecutive_idle_events"] == 3
+
+
+def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    log = tmp_path / "stable.log"
+    log.write_text(
+        '{"event": "product_delta_skipped", "version": "v1.7.7"}\n'
+        '{"event": "product_delta_skipped", "version": "v1.7.8"}\n',
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: true\n"
+        "cleanup_stale_state: false\n"
+        "auto_advance_before_consume: false\n"
+        "product_delta_idle_dispatch: true\n"
+        f'product_delta_idle_log_glob: "{log}"\n'
+        "max_issues_per_run: 2\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.models import IssueTask, RunnerResult, RunnerStatus
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            pass
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            return [
+                IssueTask(31, "[P1][runner] Support-only runner task", "", "", ["auto-codex-approved", "priority:P1"]),
+                IssueTask(
+                    32,
+                    "[P1][sdk][verifier] Product implementation task",
+                    "Implement SDK verifier behavior.",
+                    "",
+                    ["auto-codex-approved", "priority:P1"],
+                ),
+            ]
+
+    processed: list[int] = []
+
+    def fake_run_issue(config, issue_number, include, exclude):
+        processed.append(issue_number)
+        return RunnerResult(
+            issue_number=issue_number,
+            branch=None,
+            pr_url=None,
+            status=RunnerStatus.DRY_RUN,
+            plan_path=None,
+            evidence_dir="evidence",
+        )
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
+        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
+    )
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert processed == [32]
+    assert result["product_delta_idle"]["active"] is True
