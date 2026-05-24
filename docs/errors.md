@@ -69,6 +69,10 @@ These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
 documentation and tests, but removing, renaming, or reusing an existing code
 is a breaking change and must be called out in `CHANGELOG.md`.
 
+The v1.7.x release-note delta names the same stability knob
+`reason_code_version`; in the canonical docs, the stable version is surfaced as
+`verify_reason_code_schema_version: 1` / `taxonomy_version = 1`.
+
 | Code | Meaning |
 |---|---|
 | `att.verify.anchor_invalid` | Anchor material is missing, malformed, unsupported, or failed verification. |

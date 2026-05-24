@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "The paired --explain/--json stdout/stderr example is documentation only; if CLI output formatting changes later, the prose may need a follow-up refresh."
+  ],
+  "validation": [
+    "Reviewed the local diff with git diff and git diff --stat.",
+    "Confirmed the touched files are docs/errors.md, docs/release-notes/v1.7.x-delta.md, and tests/docs/test_release_notes_links.py.",
+    "Verified the new cross-reference targets exist locally with rg --files.",
+    "Ran pytest -q tests/docs/test_release_notes_links.py and it passed (2 passed).",
+    "Ran git diff --check and it passed.",
+    "Searched local docs and tests for reason_code_version, taxonomy_version, and verify_reason_code_schema_version to confirm the terminology is consistent."
+  ],
+  "residual_risks": [
+    "This change is prose-first, so the release-note example can drift from future CLI output unless the related docs are kept in sync."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
