@@ -1,0 +1,22 @@
+{
+  "status": "FAIL",
+  "blocking_reasons": [
+    "The CI gating example in docs/release-notes/v1.7.x-delta.md:61-70 is incorrect: it reads `$?` after the `if` compound command, which returns 0 for a failed condition without an `else` branch. As written, the example can report success even when `attestplane verify --json` fails, which weakens the release-gate guidance the issue is supposed to document."
+  ],
+  "warnings": [
+    "markdownlint is not installed in this environment, so the requested markdownlint validation command could not be executed locally.",
+    "scripts/check_release_notes.py is not present at the path referenced by the task in this checkout, so that validation command could not be executed locally."
+  ],
+  "validation": [
+    "Reviewed only local repository files, local command output, and the issue prompt artifacts under docs/validation/local_codex_runner/issue-222.",
+    "Inspected the diff for docs/release-notes/v1.7.x-delta.md and confirmed the change is documentation-only.",
+    "Verified shell behavior locally: `if false | true; then :; fi` leaves `$?` as 0, confirming the exit-code capture bug in the new CI example.",
+    "Attempted `markdownlint docs/releases/v1.7.x-user-visible-delta.md`, but the command was unavailable in this environment.",
+    "Attempted `python scripts/check_release_notes.py --milestone v1.7.7`, but the script was not present in this checkout."
+  ],
+  "residual_risks": [
+    "Readers may copy the CI example verbatim and unintentionally bypass verifier failures.",
+    "The review did not execute the verifier itself; it only validated the documentation text and shell semantics locally."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
