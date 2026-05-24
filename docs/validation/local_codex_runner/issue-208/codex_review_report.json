@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed only local repository files, local command output, and the issue text supplied in the prompt.",
+    "Reviewed the tracked diff with git status --short, git diff --stat, git diff --name-only, and targeted git diff output.",
+    "Inspected the CLI/verifier changes in sdk/python/src/attestplane/cli/main.py and sdk/python/src/attestplane/verifier.py, plus the updated docs and golden JSON snapshots.",
+    "Ran pytest -q sdk/python/tests/cli/test_main.py sdk/python/tests/cli/test_verify_errors.py tests/cli/test_verify_flags.py tests/verifier/test_verify_reason_codes.py: 39 passed."
+  ],
+  "residual_risks": [
+    "Validation covered the issue-specific test slice, not a full repository gate.",
+    "The new JSON envelope is a contract change for downstream consumers; external consumers must migrate from primary_reason/secondary_reasons to reasons[]."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

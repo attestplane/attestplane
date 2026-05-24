@@ -16,6 +16,8 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import EventDraft
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
 
+GOLDEN = Path(__file__).resolve().parents[4] / "tests" / "golden" / "verify-json"
+
 
 def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     tmp_path: Path,
@@ -34,10 +36,11 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
 
     rc = main(["verify", "--bundle", str(path), "--json"])
     captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    expected = json.loads((GOLDEN / "unsigned_bundle.json").read_text(encoding="utf-8"))
 
     assert rc == 2
-    assert json.loads(captured.out)["error_code"] == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
-    assert json.loads(captured.out)["primary_reason"] == "att.verify.signature_missing"
+    assert payload == expected
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
 
@@ -53,8 +56,9 @@ def test_verify_require_events_prints_empty_code_to_stderr(
 
     rc = main(["verify", str(path), "--require-events", "--json"])
     captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    expected = json.loads((GOLDEN / "empty_required_events.json").read_text(encoding="utf-8"))
 
     assert rc == 2
-    assert json.loads(captured.out)["error_code"] == VERIFY_REQUIRED_FIELDS_MISSING
-    assert json.loads(captured.out)["primary_reason"] == "att.verify.required_field_missing"
+    assert payload == expected
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
