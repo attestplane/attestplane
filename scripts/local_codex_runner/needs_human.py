@@ -101,6 +101,10 @@ def recover_needs_human_for_labels(
 
         pr = find_issue_pr(issue.number, prs)
         signal = classify_issue_needs_human(config, issue, pr, gh)
+        if signal.reason == "ci_passed" and pr is not None:
+            results.append(recover_passed_ci_pr(config, gh, issue, pr, signal))
+            recoveries += 1
+            continue
         key = f"needs-human:{issue.number}:{signal.reason}:{signal.signature}"
         attempt = state.retry_counts.get(key, 0)
         if signal.reason not in recoverable_reasons:
@@ -188,19 +192,21 @@ def classify_issue_needs_human(
         owner_detail = validate_recovery_pr(config, issue.number, pr)
         if owner_detail is not None:
             return StopSignal(POLICY_REASON, stable_signature(owner_detail), owner_detail)
+        checks = gh.pr_checks(config.repo or "", str(pr_number(pr) or pr_branch(pr) or ""))
+        failed = [check for check in checks if check.bucket in {"fail", "cancel"}]
+        status = classify_checks(checks)
+        if status == "PASS":
+            return StopSignal("ci_passed", stable_signature("ci_passed"), "checks already pass")
         branch = pr_branch(pr)
         worktree_detail = branch_checked_out_elsewhere(config, branch)
         if worktree_detail is not None:
             return StopSignal("local_workspace_blocked", stable_signature(worktree_detail), worktree_detail)
-        checks = gh.pr_checks(config.repo or "", str(pr_number(pr) or pr_branch(pr) or ""))
-        failed = [check for check in checks if check.bucket in {"fail", "cancel"}]
-        status = classify_checks(checks)
         if status == "FAIL":
             names = ",".join(sorted(check.name for check in failed if check.name)) or "failed-check"
             return StopSignal("ci_failed", stable_signature(names), names)
         if status == "PENDING":
             return StopSignal("ci_pending", stable_signature("ci_pending"), "checks still pending")
-        return StopSignal("ci_passed", stable_signature("ci_passed"), "checks already pass")
+        return StopSignal(UNKNOWN_REASON, stable_signature("ci_unknown"), "checks are not classifiable")
 
     if config.pr_opened_label in issue.labels:
         return StopSignal("missing_pr", stable_signature("missing_pr"), "issue has PR label but no matching PR")
@@ -365,6 +371,43 @@ def requeue_issue(
         action,
         signal.reason,
         attempt,
+        signature=signal.signature,
+        detail=signal.detail,
+    )
+
+
+def recover_passed_ci_pr(
+    config: RunnerConfig,
+    gh: GitHubCLI,
+    issue: IssueTask,
+    pr: dict[str, object],
+    signal: StopSignal,
+) -> NeedsHumanRecovery:
+    branch = pr_branch(pr)
+    number = pr_number(pr)
+    if config.dry_run:
+        action = "would_mark_ci_green"
+    else:
+        action = "marked_ci_green"
+        gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
+        gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label, config.ci_green_label])
+        if number is not None:
+            gh.add_labels(config.repo or "", number, [config.ci_green_label])
+        gh.comment_issue(
+            config.repo or "",
+            issue.number,
+            (
+                f"Local Codex runner recovered `{config.needs_human_label}`: "
+                "matching PR checks are already green."
+            ),
+        )
+    return NeedsHumanRecovery(
+        issue.number,
+        action,
+        signal.reason,
+        0,
+        pr_number=number,
+        branch=branch,
         signature=signal.signature,
         detail=signal.detail,
     )

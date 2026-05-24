@@ -26,6 +26,12 @@ class FakeGH:
     def list_pull_requests(self, repo: str, base: str, limit: int):
         return self.prs[:limit]
 
+    def view_pull_request(self, repo: str, pr_number: int):
+        for item in self.prs:
+            if item.get("number") == pr_number:
+                return item
+        return {}
+
     def pr_checks(self, repo: str, pr_number_or_branch: str):
         return self.checks
 
@@ -82,6 +88,24 @@ def test_dry_run_ci_failure_is_classified_without_writing(tmp_path: Path) -> Non
     assert gh.added == []
     assert gh.removed == []
     assert not (tmp_path / "state.json").exists()
+
+
+def test_green_pr_needs_human_is_cleared_without_codex_repair(tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    config.allowed_pr_authors = ["runner-bot"]
+    gh = FakeGH(
+        issues=[issue(22, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[pr(9, 22)],
+        checks=[CheckStatus("ci", "SUCCESS", "pass")],
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "marked_ci_green"
+    assert summary["results"][0]["reason"] == "ci_passed"
+    assert gh.removed == [(22, ["codex-needs-human"])]
+    assert gh.added == [(22, ["codex-recovered", "codex-ci-green"]), (9, ["codex-ci-green"])]
+    assert gh.comments
 
 
 def test_kept_issue_does_not_consume_recovery_quota(tmp_path: Path) -> None:
