@@ -4,11 +4,11 @@
   "warnings": [],
   "validation": [
     "Reviewed only local repository files, local command output, and the issue text provided in this prompt.",
-    "Verified the affected verifier, CLI, reason-code, documentation, and conformance test diffs locally.",
-    "Ran: pytest -q tests/cli/test_verify_flags.py tests/verifier/test_proof_bundle_schema.py tests/verifier/test_verify_reason_codes.py tests/conformance/test_schema_version_vectors.py",
-    "Result: 41 passed.",
-    "Ran: pytest -q tests/conformance/test_negative_minimum_schema_vectors.py tests/conformance/test_negative_vectors.py",
-    "Result: 16 passed.",
+    "Verified the issue-specific schema-version behavior locally.",
+    "Ran: pytest -q tests/conformance/test_schema_version_vectors.py tests/cli/test_verify_errors.py tests/verifier/test_verify_reason_codes.py",
+    "Result: 28 passed.",
+    "Ran a direct verify_proof_bundle_file(...) check against the four issue-209 conformance bundles.",
+    "Result: missing -> att.verify.schema_version_missing; unknown_major -> att.verify.schema_version_unsupported; additive_minor_ok -> accepted; additive_with_unknown_field_ok -> accepted.",
     "Ran: git diff --check",
     "Result: clean."
   ],
