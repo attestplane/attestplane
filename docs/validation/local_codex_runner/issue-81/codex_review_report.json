@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed git diff for docs/release-notes/v1.5.6.draft.md.",
+    "Compared the note against release artifacts in release/artifacts/v1.5.6/.",
+    "Checked the release-cd workflow in .github/workflows/release-cd.yml.",
+    "Checked adjacent release-note patterns in docs/release-notes/v1.5.5.draft.md and docs/release-notes/v1.5.7.draft.md.",
+    "Verified git diff --check -- docs/release-notes/v1.5.6.draft.md returned exit status 0.",
+    "Reviewed docs/validation/local_codex_runner/issue-81/gate_report.json and gate_report.md; local docs gate status is PASS."
+  ],
+  "residual_risks": [
+    "The note summarizes current release-policy behavior; if the release workflow changes later, the prose may need a matching update."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
