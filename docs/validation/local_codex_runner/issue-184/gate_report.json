@@ -4,7 +4,7 @@
       "command": "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/pytest sdk/python/tests/conformance/test_verifier_conformance.py -q",
       "exit_code": 0,
       "stderr": "",
-      "stdout": "............                                                             [100%]\n12 passed in 0.18s\n"
+      "stdout": "............                                                             [100%]\n12 passed in 0.16s\n"
     },
     {
       "command": "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane/sdk/python/.venv/bin/pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_conformance_fixtures.py -q",

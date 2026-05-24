@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-import unicodedata
 
 from attestplane.canonical_text import CanonicalTextError, canonicalize_text
 
