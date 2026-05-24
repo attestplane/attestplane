@@ -33,10 +33,10 @@ def test_dependencies_for_issue_maps_plan_local_ordinals() -> None:
     assert dependencies_for_issue(siblings[3], siblings) == [121, 122, 123]
 
 
-def test_dependencies_for_issue_maps_extends_hint() -> None:
-    issue = IssueTask(124, "test", "Source planning issue: #120\nExtend #115 rather than duplicate.", "u", ["planned-task"])
+def test_dependencies_for_issue_treats_extends_as_non_blocking_reference() -> None:
+    issue = IssueTask(124, "test", "Source planning issue: #120\nExtends #115 rather than duplicate.", "u", ["planned-task"])
 
-    assert dependencies_for_issue(issue, [issue]) == [115]
+    assert dependencies_for_issue(issue, [issue]) == []
 
 
 def test_pr_gate_requires_explicit_ready_label() -> None:
