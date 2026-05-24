@@ -64,10 +64,10 @@ by `verify` paths:
   checks. Successful verifier results use `primary_reason: null` and
   `secondary_reasons: []`.
 
-These codes are namespaced under `att.verify.*`. The taxonomy is additive-only:
-adding a new code is allowed with documentation and tests, but removing or
-renaming an existing code is a breaking change and must be called out in
-`CHANGELOG.md`.
+These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
+`taxonomy_version = 1` and is additive-only: adding a new code is allowed with
+documentation and tests, but removing, renaming, or reusing an existing code
+is a breaking change and must be called out in `CHANGELOG.md`.
 
 | Code | Meaning |
 |---|---|
