@@ -46,6 +46,7 @@ def test_verify_strict_flag_combinations(
     valid = json.loads(capsys.readouterr().out)
 
     assert rc == valid_rc
+    assert valid["result"] == "accept"
     assert valid["ok"] is True
     assert valid["require_non_empty"] is ("--require-non-empty" in flags)
     assert valid["strict_schema"] is ("--strict-schema" in flags)
@@ -57,9 +58,11 @@ def test_verify_strict_flag_combinations(
     assert rc == invalid_rc
     assert invalid["event_count"] == 0
     if invalid_code is None:
+        assert invalid["result"] == "accept"
         assert invalid["ok"] is True
         assert captured.err == ""
     else:
+        assert invalid["result"] == "reject"
         assert invalid["ok"] is False
         assert invalid["error_code"] == invalid_code
         assert captured.err == f"{invalid_code}\n"
@@ -75,6 +78,7 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "2 proof-bundle contract schema/non-empty violation" in out

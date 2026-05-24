@@ -294,7 +294,7 @@ def test_verify_proof_bundle_rejects_bad_bundle_version() -> None:
 
 def test_verify_proof_bundle_rejects_missing_field() -> None:
     bundle: dict[str, object] = {"bundle_version": 1}
-    with pytest.raises(BundleSchemaError, match="missing required fields"):
+    with pytest.raises(BundleSchemaError, match="schema_version_missing"):
         verify_proof_bundle(bundle)
 
 

@@ -58,6 +58,10 @@ import {
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
 
+const BUNDLE_SCHEMA_MAJOR = 1;
+const BUNDLE_SCHEMA_MINOR = 7;
+const BUNDLE_SCHEMA_VERSION_RE = /^(\d+)\.(\d+)$/;
+
 export class BundleVerificationError extends Error {
   constructor(message: string) {
     super(message);
@@ -79,6 +83,8 @@ export interface BundleVerificationResult {
   readonly agreement: boolean;
   readonly event_count: number;
   readonly bundle_version: number;
+  readonly schema_version: string;
+  readonly schema_version_forward_compat: boolean;
   readonly chain_id: string;
   readonly head_hash_hex: string;
   readonly metadata_ok: boolean;
@@ -120,6 +126,7 @@ export function shortSummary(result: BundleVerificationResult): string {
 
 const REQUIRED_TOP_LEVEL = [
   'bundle_version',
+  'schema_version',
   'chain_metadata',
   'events',
   'verification_report',
@@ -160,16 +167,40 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-function validateShape(raw: unknown): asserts raw is ProofBundle {
+function validateShape(raw: unknown): { schemaVersion: string; schemaVersionForwardCompat: boolean } {
   if (!isPlainObject(raw)) {
     throw new BundleSchemaError(
       `bundle must be a JSON object, got ${raw === null ? 'null' : typeof raw}`,
     );
   }
-  const unknown = Object.keys(raw).filter((k) => !ALLOWED_TOP_LEVEL.has(k));
-  if (unknown.length > 0) {
+  const schemaVersion = raw.schema_version;
+  if (schemaVersion === undefined) {
     throw new BundleSchemaError(
-      `bundle contains unknown top-level fields: ${JSON.stringify(unknown.sort())}`,
+      "schema_version_missing: bundle missing required field 'schema_version'",
+    );
+  }
+  if (typeof schemaVersion !== 'string') {
+    throw new BundleSchemaError(
+      `schema_version_invalid: bundle schema_version must be a MAJOR.MINOR string, got ${typeof schemaVersion}`,
+    );
+  }
+  const schemaVersionMatch = BUNDLE_SCHEMA_VERSION_RE.exec(schemaVersion);
+  if (schemaVersionMatch === null) {
+    throw new BundleSchemaError(
+      `schema_version_invalid: bundle schema_version=${JSON.stringify(schemaVersion)} must use MAJOR.MINOR`,
+    );
+  }
+  const major = Number.parseInt(schemaVersionMatch[1] as string, 10);
+  const minor = Number.parseInt(schemaVersionMatch[2] as string, 10);
+  if (major !== BUNDLE_SCHEMA_MAJOR) {
+    throw new BundleSchemaError(
+      `schema_version_major_unsupported: bundle schema_version major ${major} exceeds supported major ${BUNDLE_SCHEMA_MAJOR}`,
+    );
+  }
+  const unknown = Object.keys(raw).filter((k) => !ALLOWED_TOP_LEVEL.has(k));
+  if (unknown.length > 0 && minor <= BUNDLE_SCHEMA_MINOR) {
+    throw new BundleSchemaError(
+      `unknown_field: bundle contains unknown top-level fields: ${JSON.stringify(unknown.sort())}`,
     );
   }
   const missing = REQUIRED_TOP_LEVEL.filter((k) => !(k in raw));
@@ -232,6 +263,10 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   if ('retention_proofs' in raw && !Array.isArray(raw.retention_proofs)) {
     throw new BundleSchemaError('retention_proofs must be an array when present');
   }
+  return {
+    schemaVersion,
+    schemaVersionForwardCompat: minor > BUNDLE_SCHEMA_MINOR,
+  };
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -445,6 +480,12 @@ function signedAttestationReasonCode(reason: string | null): VerifyReasonCodeV1 
 
 export function classifyBundleSchemaError(error: Error | string): VerifyReasonCodeV1 {
   const text = typeof error === 'string' ? error : error.message;
+  if (text.includes('schema_version_missing')) return VERIFY_REASON_REQUIRED_FIELD_MISSING;
+  if (text.includes('schema_version_major_unsupported')) {
+    return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED;
+  }
+  if (text.includes('schema_version_invalid')) return VERIFY_REASON_SCHEMA_INVALID;
+  if (text.includes('unknown_field')) return VERIFY_REASON_SCHEMA_UNKNOWN;
   if (text.includes('unsupported bundle_version')) return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED;
   if (text.includes('unsupported verification_method')) return VERIFY_REASON_SCHEMA_UNKNOWN;
   if (text.includes('missing required fields') || text.includes('missing fields')) {
@@ -643,8 +684,8 @@ export function verifyProofBundle(
   raw: unknown,
   options: VerifyProofBundleOptions = {},
 ): BundleVerificationResult {
-  validateShape(raw);
-  const bundle = raw;
+  const schemaVersionInfo = validateShape(raw);
+  const bundle = raw as ProofBundle;
   const events = rehydrateEvents(bundle.events);
   const chainResult = verifyChain(events);
   const bundleReportedOk = Boolean(bundle.verification_report.ok);
@@ -699,6 +740,8 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
+    schema_version: schemaVersionInfo.schemaVersion,
+    schema_version_forward_compat: schemaVersionInfo.schemaVersionForwardCompat,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,

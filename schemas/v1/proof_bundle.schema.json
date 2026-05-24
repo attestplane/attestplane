@@ -7,6 +7,7 @@
   "additionalProperties": false,
   "required": [
     "bundle_version",
+    "schema_version",
     "chain_metadata",
     "events",
     "verification_report",
@@ -17,6 +18,11 @@
       "type": "integer",
       "const": 1,
       "description": "Frozen at 1 for the v1 bundle. Bump requires an ADR + deprecation window per ADR-0008 versioning rules."
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Proof-bundle schema contract version in MAJOR.MINOR form. Verifiers reject unsupported major versions and accept unknown additive minor versions."
     },
     "chain_metadata": {
       "type": "object",

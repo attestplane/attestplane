@@ -28,12 +28,19 @@ def test_verify_json_docs_cover_exit_code_and_reason_list() -> None:
     schema = (ROOT / "docs" / "schema" / "verify-json.md").read_text(
         encoding="utf-8"
     )
+    policy = (ROOT / "docs" / "schema" / "schema-version-policy.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "verify --json" in cli
     assert "verify --explain" in cli
+    assert "result" in cli
     assert "primary_reason" in cli
     assert "secondary_reasons" in cli
+    assert "schema_version_forward_compat" in cli
     assert "reasons[]" in cli
     assert "schema_version" in schema
     assert "att.verify.schema_version_unsupported" in schema
     assert "negative conformance vectors" in schema
+    assert "schema_version_forward_compat" in policy
+    assert "unknown_field" in policy

@@ -62,6 +62,14 @@ def _add_format_flag(p: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_explain_flag(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--explain",
+        action="store_true",
+        help="show a human-oriented explanation of schema-version and verifier decisions",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="attestplane",
@@ -118,6 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
+    _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
 
     p_verify_pb = sub.add_parser(
@@ -187,6 +196,15 @@ def _emit(payload: dict[str, Any], json_output: bool, *, human: str) -> None:
         sys.stdout.write(human + "\n")
 
 
+def _schema_version_explain_lines(result: Any) -> list[str]:
+    lines: list[str] = []
+    if getattr(result, "schema_version_forward_compat", False):
+        lines.append(
+            f"schema_version_forward_compat: true (bundle schema_version {result.schema_version} exceeds supported 1.7; unknown top-level additions accepted)"
+        )
+    return lines
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from attestplane.verifier import (
         BundleSchemaError,
@@ -214,37 +232,45 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_signed_attestation=strict_schema,
         )
     except BundleSchemaError as exc:
+        payload = {
+            "result": "reject",
+            "ok": False,
+            "error": "schema",
+            "error_code": VERIFY_SCHEMA_ERROR,
+            "primary_reason": classify_bundle_schema_error(exc),
+            "secondary_reasons": [],
+            "detail": str(exc),
+            "schema_version_forward_compat": False,
+            **_verify_scope_metadata(),
+        }
         _emit(
-            {
-                "ok": False,
-                "error": "schema",
-                "error_code": VERIFY_SCHEMA_ERROR,
-                "primary_reason": classify_bundle_schema_error(exc),
-                "secondary_reasons": [],
-                "detail": str(exc),
-                **_verify_scope_metadata(),
-            },
+            payload,
             args.json_output,
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 2
     except BundleVerificationError as exc:
+        payload = {
+            "result": "reject",
+            "ok": False,
+            "error": "io",
+            "error_code": VERIFY_IO_ERROR,
+            "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
+            "secondary_reasons": [],
+            "detail": str(exc),
+            "schema_version_forward_compat": False,
+            **_verify_scope_metadata(),
+        }
         _emit(
-            {
-                "ok": False,
-                "error": "io",
-                "error_code": VERIFY_IO_ERROR,
-                "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
-                "secondary_reasons": [],
-                "detail": str(exc),
-                **_verify_scope_metadata(),
-            },
+            payload,
             args.json_output,
             human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
         return 1
 
+    explain_lines = _schema_version_explain_lines(result) if getattr(args, "explain", False) else []
     payload = {
+        "result": "accept" if result.ok else "reject",
         "ok": result.ok,
         "chain_id": result.chain_id,
         "event_count": result.event_count,
@@ -254,6 +280,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "strict_proof_bundle_schema": strict_bundle_mode,
         "head_hash_hex": result.head_hash_hex,
         "bundle_version": result.bundle_version,
+        "schema_version": result.schema_version,
+        "schema_version_forward_compat": result.schema_version_forward_compat,
         "agreement": result.agreement,
         "chain_result": {
             "ok": result.chain_result.ok,
@@ -275,7 +303,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
         VERIFY_REQUIRED_FIELDS_MISSING,
     }:
         sys.stderr.write(f"{result.error_code}\n")
-    _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
+    human_lines = [result.short_summary(), VERIFY_SCOPE_NOTICE]
+    human_lines.extend(explain_lines)
+    _emit(payload, args.json_output, human="\n".join(human_lines))
     if result.ok:
         return 0
     if result.error_code in {

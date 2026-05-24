@@ -21,6 +21,10 @@ import {
 } from './signing/base.js';
 import type { ChainedEvent, SubjectRef } from './types.js';
 
+const BUNDLE_SCHEMA_MAJOR = 1;
+const BUNDLE_SCHEMA_MINOR = 7;
+const BUNDLE_SCHEMA_VERSION = `${BUNDLE_SCHEMA_MAJOR}.${BUNDLE_SCHEMA_MINOR}`;
+
 export const DEFAULT_FORBIDDEN_FIELDS: readonly string[] = [
   'customer_names',
   'person_names',
@@ -58,6 +62,7 @@ export interface ProofBundleBuilderInput {
 
 export interface ProofBundle {
   readonly bundle_version: 1;
+  readonly schema_version: string;
   readonly chain_metadata: {
     readonly chain_id: string;
     readonly schema_version: number;
@@ -366,6 +371,7 @@ export class ProofBundleBuilder {
 
     const bundle: ProofBundle = {
       bundle_version: 1,
+      schema_version: BUNDLE_SCHEMA_VERSION,
       chain_metadata: chainMetadata,
       events: this._events.map(serializeChainedEvent),
       verification_report: {

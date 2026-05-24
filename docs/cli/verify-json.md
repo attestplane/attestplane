@@ -9,15 +9,18 @@ the v1.7.x support-task delta. It is the JSON companion to the human-facing
 The JSON payload includes the verifier outcome plus the machine-readable
 reason surface:
 
+- `result`
 - `ok`
 - `error_code`
 - `primary_reason`
 - `secondary_reasons`
+- `schema_version_forward_compat`
 - `chain_result.reason`
 - the existing compatibility fields such as `retention_proofs_reason` and
   `signed_attestation_schema_reason`
 
-Successful results use `primary_reason: null` and `secondary_reasons: []`.
+Successful results use `result: accept`, `primary_reason: null`, and
+`secondary_reasons: []`.
 Rejected results should be consumed by checking the exit code first and then
 inspecting the reason list.
 
@@ -26,6 +29,11 @@ inspecting the reason list.
 `verify --explain` is the operator-oriented companion to `verify --json`.
 Use it when a person needs the failure summary; use `verify --json` when a CI
 job or integration needs machine-readable branching.
+
+When a bundle is accepted through the forward-compatible additive path,
+`verify --explain` prints the `schema_version_forward_compat` note so the
+operator can see that the bundle was accepted because its minor version is
+newer than the verifier's known minor.
 
 ## Reason List
 
@@ -59,3 +67,5 @@ fi
   reference from Issue #172.
 - [`docs/schema/verify-json.md`](../schema/verify-json.md) - schema-version
   policy for verifier JSON consumers.
+- [`docs/schema/schema-version-policy.md`](../schema/schema-version-policy.md)
+  - proof-bundle `schema_version` compatibility policy.

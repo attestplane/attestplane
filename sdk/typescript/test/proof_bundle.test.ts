@@ -170,7 +170,7 @@ describe('verifyProofBundle', () => {
   });
 
   it('rejects a bundle missing required fields', () => {
-    expect(() => verifyProofBundle({ bundle_version: 1 })).toThrow(/missing required fields/);
+    expect(() => verifyProofBundle({ bundle_version: 1 })).toThrow(/schema_version_missing/);
   });
 
   it('rejects unknown top-level metadata', () => {
