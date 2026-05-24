@@ -628,7 +628,14 @@ def reconcile_unpublished_local_stable_tag() -> None:
 
 def best_effort_fetch_tags() -> None:
     try:
-        argv = ["git", *GIT_HTTP_CONFIG_ARGS, "fetch", "origin", "main", "--tags"]
+        argv = [
+            "git",
+            *GIT_HTTP_CONFIG_ARGS,
+            "fetch",
+            "origin",
+            "refs/heads/main:refs/remotes/origin/main",
+            "--tags",
+        ]
         print("+ " + " ".join(argv), flush=True)
         result = run_git_remote_probe(argv)
         echo_subprocess_output(result.stdout)
