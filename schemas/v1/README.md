@@ -29,6 +29,12 @@ fields pin the substrate canonicalization version per [ADR-0002](../../docs/adr/
 `chain_metadata.evidence_taxonomy_version` pins the event-taxonomy
 version per ADR-0008. All three versions evolve independently.
 
+For verifier JSON consumers, see
+[`docs/schema/verify-json.md`](../../docs/schema/verify-json.md) for the
+consumer-facing `schema_version` policy. That page describes how unsupported
+versions surface through `verify --json` without changing the wire-format
+versioning rules above.
+
 ## Redaction discipline
 
 `proof_bundle.forbidden_fields` is **not** advisory — it is the
