@@ -46,10 +46,15 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
 
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
-        assert set(reason) == {"code", "path", "message"}
+        expected_keys = {"code", "path", "message"}
+        if "explanation" in reason:
+            expected_keys.add("explanation")
+        assert set(reason) == expected_keys
         assert re.fullmatch(r"att\.verify\.[a-z][a-z0-9_]*", str(reason["code"]))
         assert reason["path"]
         assert reason["message"]
+        if "explanation" in reason:
+            assert reason["explanation"]
 
 
 def test_verify_result_schema_is_valid_draft_2020_12() -> None:

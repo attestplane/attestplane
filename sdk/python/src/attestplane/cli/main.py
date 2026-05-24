@@ -30,7 +30,12 @@ from attestplane.verify_errors import (
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
 )
-from attestplane.verify_reason_codes import VERIFY_REASON_SCHEMA_INVALID
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
+    VERIFY_REASON_SCHEMA_INVALID,
+    VerifyReasonCodeV1,
+)
 
 VERIFY_SCOPE = "chain_report_only"
 VERIFY_SCOPE_NOTICE = (
@@ -211,6 +216,17 @@ def _reason_entries(
     if explain and bundle is not None and result.ok:
         reasons.extend(_explain_reserved_reasons(bundle))
     return reasons
+
+
+def _write_verify_explanations(result: Any) -> None:
+    for code in (result.primary_reason, *result.secondary_reasons):
+        if code is None:
+            continue
+        _write_verify_explanation(code)
+
+
+def _write_verify_explanation(code: VerifyReasonCodeV1) -> None:
+    sys.stderr.write(f"{code}: {VERIFY_REASON_CODE_DESCRIPTIONS[code]}\n")
 
 
 _KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {
@@ -435,6 +451,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
             args.json_output,
             human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
+        if args.explain and not args.json_output:
+            _write_verify_explanation(VERIFY_REASON_SCHEMA_INVALID)
         return 1
     except json.JSONDecodeError as exc:
         _emit(
@@ -450,6 +468,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
             args.json_output,
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
+        if args.explain and not args.json_output:
+            _write_verify_explanation(VERIFY_REASON_SCHEMA_INVALID)
         return 2
     except BundleSchemaError as exc:
         _emit(
@@ -465,6 +485,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
             args.json_output,
             human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
+        if args.explain and not args.json_output:
+            _write_verify_explanation(classify_bundle_schema_error(exc))
         return 2
     except CanonicalizationError as exc:
         _emit(
@@ -472,7 +494,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 "ok": False,
                 "error": "canonicalization",
                 "error_code": VERIFY_SCHEMA_ERROR,
-                "primary_reason": classify_bundle_schema_error(exc),
+                "primary_reason": VERIFY_REASON_CANONICAL_MISMATCH,
                 "secondary_reasons": [],
                 "detail": str(exc),
                 **_verify_scope_metadata(),
@@ -480,6 +502,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
             args.json_output,
             human=f"FAIL: canonicalization error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
         )
+        if args.explain and not args.json_output:
+            _write_verify_explanation(VERIFY_REASON_CANONICAL_MISMATCH)
         return 1
 
     payload = {
@@ -515,6 +539,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
     }:
         sys.stderr.write(f"{result.error_code}\n")
     _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
+    if args.explain and not args.json_output and not result.ok:
+        _write_verify_explanations(result)
     if result.ok:
         return 0
     if result.error_code in {

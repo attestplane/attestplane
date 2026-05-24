@@ -22,6 +22,7 @@ from attestplane.verify_errors import (
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
@@ -29,6 +30,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VerifyReasonCodeV1,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
@@ -105,19 +107,22 @@ def _canonicalization_path(exc: CanonicalizationError, *, event_index: int | Non
 
 
 def _reason_entry(
-    code: str,
+    code: VerifyReasonCodeV1,
     path: str,
     *,
     summary: str,
     detail: str | None,
     explain: bool,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     message = detail if explain and detail else summary
-    return {
+    reason: dict[str, Any] = {
         "code": code,
         "path": path,
         "message": message,
     }
+    if explain:
+        reason["explanation"] = VERIFY_REASON_CODE_DESCRIPTIONS[code]
+    return reason
 
 
 def _schema_path_from_bundle_error(text: str) -> str:
@@ -142,7 +147,7 @@ def _schema_path_from_bundle_error(text: str) -> str:
     return "/"
 
 
-def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[str, str]:
+def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[VerifyReasonCodeV1, str]:
     code = classify_bundle_schema_error(exc)
     text = str(exc)
     path = _schema_path_from_bundle_error(text)
@@ -154,7 +159,7 @@ def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[str, str]:
 def _json_failure(
     *,
     bundle_digest: str,
-    reason: dict[str, str],
+    reason: dict[str, Any],
     exit_code: int,
     stderr_code: str | None = None,
 ) -> VerifyJsonOutcome:
@@ -215,7 +220,7 @@ def _bundle_failure_reason(
     result: Any | None,
     *,
     explain: bool,
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     if result is None:
         return []
 

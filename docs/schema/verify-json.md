@@ -24,6 +24,8 @@ accompanies the structured JSON contract.
   and `reasons[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
+- When `--explain` is combined with `--json`, each reason may also include an
+  `explanation` field with the stable rationale string for that reason code.
 
 ## Negative Vectors
 

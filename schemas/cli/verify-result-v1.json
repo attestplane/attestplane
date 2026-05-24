@@ -50,6 +50,10 @@
           "message": {
             "type": "string",
             "minLength": 1
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1
           }
         }
       }
