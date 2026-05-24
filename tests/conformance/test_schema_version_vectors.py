@@ -11,6 +11,7 @@ import pytest
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
 )
 
@@ -33,10 +34,16 @@ EXPECTED_CASES = {
         "primary_reason": VERIFY_REASON_SCHEMA_VERSION_MISSING,
         "extra_fields": (),
     },
-    "unknown_major": {
+    "major_version_ahead": {
         "ok": False,
         "primary_reason": VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
         "extra_fields": (),
+    },
+    "unknown_required_field": {
+        "ok": False,
+        "primary_reason": VERIFY_REASON_SCHEMA_UNKNOWN,
+        "extra_fields": (),
+        "chain_metadata_fields": ("critical_future_field",),
     },
 }
 
@@ -61,10 +68,12 @@ def test_schema_version_vectors_pin_expected_outcome(case: str) -> None:
     assert result.secondary_reasons == ()
     for field in expected["extra_fields"]:
         assert field in bundle
+    for field in expected.get("chain_metadata_fields", ()):
+        assert field in bundle["chain_metadata"]
 
 
-def test_schema_version_unknown_major_keeps_chain_mismatch_ahead_of_version_failure() -> None:
-    bundle = _bundle("unknown_major")
+def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_version_failure() -> None:
+    bundle = _bundle("major_version_ahead")
     bundle["events"][0]["event_hash_hex"] = "f" * 64
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)

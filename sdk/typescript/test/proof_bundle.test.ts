@@ -180,6 +180,20 @@ describe('verifyProofBundle', () => {
     expect(() => verifyProofBundle(bundle)).toThrow(/unknown top-level/);
   });
 
+  it('rejects unknown required metadata fields with a stable reason', () => {
+    const builder = new ProofBundleBuilder({
+      chain_id: 'unknown-required',
+      producer_runtime: 'test',
+    });
+    const bundle = builder.build() as Record<string, unknown>;
+    (bundle.chain_metadata as Record<string, unknown>).critical_future_field = true;
+
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.primary_reason).toBe('att.verify.schema_unknown');
+    expect(result.metadata_reason).toContain('critical_future_field');
+  });
+
   it('detects head metadata mismatch', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'head', producer_runtime: 'test' });
     builder.extend(buildGoodChain(2));
