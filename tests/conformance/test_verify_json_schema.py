@@ -46,8 +46,10 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
 
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
-        assert set(reason) <= {"code", "path", "message", "explanation"}
-        assert {"code", "path", "message"} <= set(reason)
+        expected_keys = {"code", "path", "message"}
+        if "explanation" in reason:
+            expected_keys.add("explanation")
+        assert set(reason) == expected_keys
         assert re.fullmatch(r"att\.verify\.[a-z][a-z0-9_]*", str(reason["code"]))
         assert reason["path"]
         assert reason["message"]

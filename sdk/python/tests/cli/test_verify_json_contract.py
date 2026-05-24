@@ -20,9 +20,9 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_STRUCTURE_INVALID,
-    VERIFY_REASON_CODE_DESCRIPTIONS,
 )
 
 ROOT = Path(__file__).resolve().parents[4]

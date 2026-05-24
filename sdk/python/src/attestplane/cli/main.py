@@ -34,6 +34,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_SCHEMA_INVALID,
+    VerifyReasonCodeV1,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -224,7 +225,7 @@ def _write_verify_explanations(result: Any) -> None:
         _write_verify_explanation(code)
 
 
-def _write_verify_explanation(code: str) -> None:
+def _write_verify_explanation(code: VerifyReasonCodeV1) -> None:
     sys.stderr.write(f"{code}: {VERIFY_REASON_CODE_DESCRIPTIONS[code]}\n")
 
 
