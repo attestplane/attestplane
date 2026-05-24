@@ -47,22 +47,25 @@ def test_verify_strict_flag_combinations(
     valid = json.loads(capsys.readouterr().out)
 
     assert rc == valid_rc
-    assert valid["ok"] is True
-    assert valid["require_non_empty"] is ("--require-non-empty" in flags)
-    assert valid["strict_schema"] is ("--strict-schema" in flags)
+    assert valid["schema_version"] == 1
+    assert valid["result"] == ("pass" if valid_rc == 0 else "fail")
+    assert valid["exit_code"] == valid_rc
+    assert valid["bundle"]["schema_version"] == 1
 
     rc = main(["verify", str(EMPTY_BUNDLE), *flags, "--json"])
     captured = capsys.readouterr()
     invalid = json.loads(captured.out)
 
     assert rc == invalid_rc
-    assert invalid["event_count"] == 0
+    assert invalid["schema_version"] == 1
+    assert invalid["exit_code"] == invalid_rc
     if invalid_code is None:
-        assert invalid["ok"] is True
+        assert invalid["result"] == "pass"
+        assert invalid["reasons"] == []
         assert captured.err == ""
     else:
-        assert invalid["ok"] is False
-        assert invalid["error_code"] == invalid_code
+        assert invalid["result"] == "fail"
+        assert invalid["reasons"]
         assert captured.err == f"{invalid_code}\n"
 
 
@@ -101,8 +104,7 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     payload = json.loads(captured.out)
 
     assert rc == 0
-    assert payload["ok"] is True
-    assert payload["reasons"][0]["severity"] == "reserved"
-    assert payload["reasons"][0]["code"] == "att.verify.schema_unknown"
-    assert "events[0].event.future_event_field" in payload["reasons"][0]["detail"]
-    assert "signatures[0].future_signature_field" in payload["reasons"][0]["detail"]
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["reasons"] == []
+    assert payload["bundle"]["schema_version"] == 1

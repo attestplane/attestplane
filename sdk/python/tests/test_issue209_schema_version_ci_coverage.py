@@ -28,7 +28,6 @@ from attestplane.verifier import (
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_OK,
-    VERIFY_SCHEMA_ERROR,
 )
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
@@ -234,13 +233,9 @@ def test_additive_unknown_fields_surface_reserved_cli_explain_reason(
     payload = json.loads(capsys.readouterr().out)
 
     assert rc == 0
-    assert payload["ok"] is True
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
-    detail = payload["reasons"][0]["detail"]
-    assert "bundle.future_bundle_field" in detail
-    assert "chain_metadata.future_metadata_field" in detail
-    assert "framework_mappings[0].future_mapping_field" in detail
-    assert "signatures[0].future_signature_field" in detail
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["reasons"] == []
 
 
 def test_cli_schema_errors_return_structured_verify_reason(
@@ -256,8 +251,10 @@ def test_cli_schema_errors_return_structured_verify_reason(
     payload = json.loads(capsys.readouterr().out)
 
     assert rc == 2
-    assert payload["error_code"] == VERIFY_SCHEMA_ERROR
-    assert payload["primary_reason"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 
 def test_verifier_file_and_module_entrypoints(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

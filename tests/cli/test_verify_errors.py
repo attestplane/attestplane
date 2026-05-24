@@ -39,8 +39,11 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     captured = capsys.readouterr()
 
     assert rc == 2
-    assert json.loads(captured.out)["error_code"] == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
-    assert json.loads(captured.out)["primary_reason"] == "att.verify.signature_missing"
+    payload = json.loads(captured.out)
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reasons"][0]["code"] == "att.verify.signature_missing"
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
 
@@ -58,8 +61,11 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     captured = capsys.readouterr()
 
     assert rc == 2
-    assert json.loads(captured.out)["error_code"] == VERIFY_REQUIRED_FIELDS_MISSING
-    assert json.loads(captured.out)["primary_reason"] == "att.verify.required_field_missing"
+    payload = json.loads(captured.out)
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reasons"][0]["code"] == "att.verify.required_field_missing"
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
 
 
@@ -77,6 +83,7 @@ def test_verify_json_includes_reasons_list_for_schema_version_failures(
     result = json.loads(captured.out)
 
     assert rc == 1
-    assert result["primary_reason"] == "att.verify.schema_version_missing"
+    assert result["schema_version"] == 1
+    assert result["result"] == "fail"
     assert result["reasons"][0]["code"] == "att.verify.schema_version_missing"
     assert captured.err == ""

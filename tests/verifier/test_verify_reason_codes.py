@@ -239,6 +239,7 @@ def test_verify_reason_code_cli_json_smoke(tmp_path: Path, capsys: pytest.Captur
     payload = json.loads(captured.out)
 
     assert rc == 2
-    assert payload["primary_reason"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["secondary_reasons"] == []
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
