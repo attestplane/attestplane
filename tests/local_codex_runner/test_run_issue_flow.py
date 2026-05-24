@@ -2,7 +2,7 @@ from pathlib import Path
 
 from scripts.local_codex_runner.config import RunnerConfig
 from scripts.local_codex_runner.models import RunnerResult, RunnerStatus
-from scripts.local_codex_runner.run_issue import append_residual_risk, run_issue
+from scripts.local_codex_runner.run_issue import append_residual_risk, parse_pr_number, run_issue
 
 
 def test_run_issue_dry_run_generates_evidence(monkeypatch, tmp_path: Path) -> None:
@@ -42,3 +42,10 @@ def test_append_residual_risk_preserves_legacy_string_value() -> None:
     append_residual_risk(result, "new exception")
 
     assert result.residual_risks == ["legacy scalar risk", "new exception"]
+
+
+def test_parse_pr_number_from_github_url() -> None:
+    assert parse_pr_number("https://github.com/attestplane/attestplane/pull/202") == 202
+    assert parse_pr_number("https://github.com/attestplane/attestplane/pull/202/") == 202
+    assert parse_pr_number(None) is None
+    assert parse_pr_number("not-a-pr-url") is None

@@ -96,6 +96,7 @@ def run_issue(
         codex = CodexDriver(
             command=config.codex_command,
             command_template=config.codex_command_template,
+            model=config.codex_model,
             sandbox=config.codex_sandbox,
             dry_run=config.dry_run,
         )
@@ -193,6 +194,9 @@ def run_issue(
             result.ci_summary = ci.summary
             if ci.status == "PASS":
                 gh.add_labels(config.repo or "", task.number, [config.ci_green_label])
+                pr_number = parse_pr_number(result.pr_url)
+                if pr_number is not None:
+                    gh.add_labels(config.repo or "", pr_number, [config.ci_green_label])
             else:
                 result.status = RunnerStatus.CI_FAILED
                 return fail_issue(config, gh, task, result, evidence_dir, state)
@@ -259,6 +263,13 @@ def safe_branch_slug(title: str) -> str:
     from scripts.local_codex_runner.git_ops import slugify
 
     return slugify(title)
+
+
+def parse_pr_number(pr_url: str | None) -> int | None:
+    if not pr_url:
+        return None
+    tail = pr_url.rstrip("/").rsplit("/", 1)[-1]
+    return int(tail) if tail.isdigit() else None
 
 
 def append_residual_risk(result: RunnerResult, risk: str) -> None:

@@ -77,6 +77,10 @@ def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> N
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
+        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
+    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
@@ -86,4 +90,40 @@ def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> N
         "exclude_labels": [],
         "name": "p0",
         "slot": 1,
+    }
+    assert result["needs_human_recovery"] == {"enabled": False, "results": []}
+
+
+def test_run_once_reports_needs_human_recovery(monkeypatch, tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: true\n"
+        "cleanup_stale_state: false\n"
+        "max_issues_per_run: 0\n",
+        encoding="utf-8",
+    )
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            pass
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            return []
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
+        lambda config, gh, include_labels=None, exclude_labels=None: {
+            "enabled": True,
+            "results": [{"issue_number": 1, "action": "kept"}],
+        },
+    )
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert result["needs_human_recovery"] == {
+        "enabled": True,
+        "results": [{"issue_number": 1, "action": "kept"}],
     }

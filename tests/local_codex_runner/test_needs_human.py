@@ -1,0 +1,222 @@
+import json
+from pathlib import Path
+
+from scripts.local_codex_runner.config import RunnerConfig
+from scripts.local_codex_runner.github_cli import CheckStatus
+from scripts.local_codex_runner.models import IssueTask
+from scripts.local_codex_runner.needs_human import (
+    branch_checked_out_elsewhere,
+    recover_needs_human,
+    recover_needs_human_for_labels,
+)
+
+
+class FakeGH:
+    def __init__(self, issues=None, prs=None, checks=None) -> None:
+        self.issues = issues or []
+        self.prs = prs or []
+        self.checks = checks or []
+        self.added: list[tuple[int, list[str]]] = []
+        self.removed: list[tuple[int, list[str]]] = []
+        self.comments: list[tuple[int, str]] = []
+
+    def list_issues(self, repo: str, label: str, limit: int):
+        return self.issues[:limit]
+
+    def list_pull_requests(self, repo: str, base: str, limit: int):
+        return self.prs[:limit]
+
+    def pr_checks(self, repo: str, pr_number_or_branch: str):
+        return self.checks
+
+    def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+        self.removed.append((issue_number, labels))
+
+    def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+        self.added.append((issue_number, labels))
+
+    def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
+        self.comments.append((issue_number, body))
+
+
+def issue(number: int, labels: list[str] | None = None) -> IssueTask:
+    return IssueTask(number, f"Issue {number}", "", "", labels or [])
+
+
+def pr(number: int, issue_number: int, author: str = "runner-bot") -> dict[str, object]:
+    return {
+        "author": {"login": author},
+        "baseRefName": "main",
+        "headRefName": f"codex/issue-{issue_number}-fix",
+        "labels": [],
+        "number": number,
+        "title": f"Fix #{issue_number}",
+    }
+
+
+def base_config(tmp_path: Path, *, dry_run: bool = True) -> RunnerConfig:
+    return RunnerConfig(
+        repo="o/r",
+        workdir=str(tmp_path),
+        dry_run=dry_run,
+        auto_recover_needs_human=True,
+        max_needs_human_recoveries_per_run=2,
+        max_needs_human_attempts=2,
+        state_path="state.json",
+    )
+
+
+def test_dry_run_ci_failure_is_classified_without_writing(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+    gh = FakeGH(
+        issues=[issue(12, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[pr(5, 12)],
+        checks=[CheckStatus("lint", "FAILURE", "fail")],
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "would_fix_ci"
+    assert summary["results"][0]["reason"] == "ci_failed"
+    assert summary["results"][0]["attempt"] == 1
+    assert gh.added == []
+    assert gh.removed == []
+    assert not (tmp_path / "state.json").exists()
+
+
+def test_kept_issue_does_not_consume_recovery_quota(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+    config.max_needs_human_recoveries_per_run = 1
+    evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-18"
+    evidence_dir.mkdir(parents=True)
+    (evidence_dir / "failure.txt").write_text("429 rate limit\n", encoding="utf-8")
+    gh = FakeGH(
+        issues=[
+            issue(17, ["auto-codex-approved", "codex-needs-human", "codex-policy-blocked"]),
+            issue(18, ["auto-codex-approved", "codex-needs-human"]),
+        ]
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert [item["issue_number"] for item in summary["results"]] == [17, 18]
+    assert summary["results"][1]["action"] == "would_requeue"
+
+
+def test_unknown_evidence_stays_human_blocked(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+    gh = FakeGH(issues=[issue(13, ["auto-codex-approved", "codex-needs-human"])])
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "kept"
+    assert summary["results"][0]["reason"] == "unknown"
+
+
+def test_rate_limit_evidence_requeues_issue(tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-14"
+    evidence_dir.mkdir(parents=True)
+    (evidence_dir / "failure.txt").write_text("Codex usage limit reached; try again later\n", encoding="utf-8")
+    gh = FakeGH(issues=[issue(14, ["auto-codex-approved", "codex-needs-human"])])
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "requeued"
+    assert summary["results"][0]["reason"] == "rate_limit"
+    assert gh.removed == [(14, ["codex-needs-human"])]
+    assert gh.added == [(14, ["codex-recovered"])]
+    assert gh.comments
+    state = json.loads((tmp_path / "state.json").read_text(encoding="utf-8"))
+    assert list(state["retry_counts"].values()) == [1]
+
+
+def test_policy_blocking_label_is_never_recovered(tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    gh = FakeGH(issues=[issue(15, ["auto-codex-approved", "codex-needs-human", "codex-policy-blocked"])])
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "kept"
+    assert summary["results"][0]["reason"] == "policy_boundary"
+    assert gh.added == []
+    assert gh.removed == []
+
+
+def test_live_pr_recovery_requires_author_allowlist(tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+    gh = FakeGH(
+        issues=[issue(16, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[pr(7, 16)],
+        checks=[CheckStatus("lint", "FAILURE", "fail")],
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "kept"
+    assert summary["results"][0]["reason"] == "policy_boundary"
+    assert "allowed_pr_authors" in summary["results"][0]["detail"]
+
+
+def test_pr_branch_must_match_issue_number(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+    wrong_branch = pr(8, 999)
+    wrong_branch["title"] = "Fix #19"
+    gh = FakeGH(
+        issues=[issue(19, ["auto-codex-approved", "codex-needs-human"])],
+        prs=[wrong_branch],
+        checks=[CheckStatus("lint", "FAILURE", "fail")],
+    )
+
+    summary = recover_needs_human(config, gh)
+
+    assert summary["results"][0]["action"] == "kept"
+    assert summary["results"][0]["reason"] == "policy_boundary"
+    assert "not runner-owned" in summary["results"][0]["detail"]
+
+
+def test_recovery_respects_lane_filters(tmp_path: Path) -> None:
+    config = base_config(tmp_path)
+    p0_evidence = tmp_path / "docs/validation/local_codex_runner/issue-20"
+    p1_evidence = tmp_path / "docs/validation/local_codex_runner/issue-21"
+    p0_evidence.mkdir(parents=True)
+    p1_evidence.mkdir(parents=True)
+    (p0_evidence / "failure.txt").write_text("429 rate limit\n", encoding="utf-8")
+    (p1_evidence / "failure.txt").write_text("429 rate limit\n", encoding="utf-8")
+    gh = FakeGH(
+        issues=[
+            issue(20, ["auto-codex-approved", "codex-needs-human", "priority-P0"]),
+            issue(21, ["auto-codex-approved", "codex-needs-human", "priority-P1"]),
+        ]
+    )
+
+    summary = recover_needs_human_for_labels(config, gh, include_labels={"priority-P1"})
+
+    assert [item["issue_number"] for item in summary["results"]] == [21]
+    assert summary["results"][0]["action"] == "would_requeue"
+
+
+def test_branch_checked_out_elsewhere_detects_other_worktree(monkeypatch, tmp_path: Path) -> None:
+    config = base_config(tmp_path, dry_run=False)
+
+    class FakeGit:
+        def __init__(self, workdir):
+            pass
+
+        def run(self, args):
+            return (
+                f"worktree {tmp_path}\n"
+                "HEAD abc\n"
+                "branch refs/heads/main\n"
+                "\n"
+                "worktree /tmp/other-lane\n"
+                "HEAD def\n"
+                "branch refs/heads/codex/issue-1-fix\n"
+                "\n"
+            )
+
+    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
+
+    assert branch_checked_out_elsewhere(config, "codex/issue-1-fix") == (
+        "branch codex/issue-1-fix is already checked out at /tmp/other-lane"
+    )

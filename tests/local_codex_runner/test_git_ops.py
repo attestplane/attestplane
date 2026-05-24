@@ -59,6 +59,26 @@ def test_remote_checkout_ref_uses_detached_origin_branch() -> None:
     assert git.commands_run == ["fetch origin main", "checkout --detach origin/main"]
 
 
+def test_remote_issue_branch_checkout_is_limited_to_codex_branches() -> None:
+    git = FakeGit({})
+
+    git.checkout_remote_branch("codex/issue-12-fix")
+
+    assert git.commands_run == [
+        "fetch origin codex/issue-12-fix",
+        "checkout -B codex/issue-12-fix origin/codex/issue-12-fix",
+    ]
+
+
+def test_remote_branch_checkout_rejects_main_and_non_codex() -> None:
+    git = FakeGit({})
+
+    with pytest.raises(GitSafetyError):
+        git.checkout_remote_branch("main")
+    with pytest.raises(GitSafetyError):
+        git.checkout_remote_branch("feature/unsafe")
+
+
 def test_forbidden_file_changed_is_rejected() -> None:
     assert is_forbidden_path(".env")
     assert is_forbidden_path("release/credentials.json")

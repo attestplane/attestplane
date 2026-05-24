@@ -92,6 +92,31 @@ def test_lane_config_accepts_label_filters(tmp_path: Path) -> None:
     assert config.lane_exclude_labels == ["codex-needs-human"]
 
 
+def test_config_accepts_needs_human_recovery_controls(tmp_path: Path) -> None:
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\n'
+        'workdir: "/tmp/attestplane-p0"\n'
+        'codex_model: "gpt-5.4-mini"\n'
+        "auto_recover_needs_human: true\n"
+        "max_needs_human_recoveries_per_run: 1\n"
+        "max_needs_human_attempts: 1\n"
+        "needs_human_policy_block_labels: []\n"
+        "needs_human_recoverable_reasons:\n"
+        '  - "rate_limit"\n',
+        encoding="utf-8",
+    )
+
+    config = load_config(config_path)
+
+    assert config.codex_model == "gpt-5.4-mini"
+    assert config.auto_recover_needs_human is True
+    assert config.max_needs_human_recoveries_per_run == 1
+    assert config.max_needs_human_attempts == 1
+    assert config.needs_human_policy_block_labels == []
+    assert config.needs_human_recoverable_reasons == ["rate_limit"]
+
+
 def test_lane_slot_must_be_positive(tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
     config_path.write_text(

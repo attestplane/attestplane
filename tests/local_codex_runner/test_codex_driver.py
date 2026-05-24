@@ -13,7 +13,27 @@ def test_codex_command_construction(tmp_path: Path) -> None:
 
     command, prompt_stdin = CodexDriver(command="codex", sandbox="workspace-write").build_command(prompt, tmp_path)
 
-    assert command == ["codex", "exec", "--ignore-user-config", "--ephemeral", "--cd", str(tmp_path), "--sandbox", "workspace-write", "-"]
+    assert command == [
+        "codex",
+        "exec",
+        "--ignore-user-config",
+        "--ephemeral",
+        "--cd",
+        str(tmp_path),
+        "--sandbox",
+        "workspace-write",
+        "-",
+    ]
+    assert prompt_stdin == "x"
+
+
+def test_codex_command_can_pin_model(tmp_path: Path) -> None:
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("x", encoding="utf-8")
+
+    command, prompt_stdin = CodexDriver(model="gpt-5.4-mini").build_command(prompt, tmp_path)
+
+    assert command[:4] == ["codex", "exec", "--model", "gpt-5.4-mini"]
     assert prompt_stdin == "x"
 
 

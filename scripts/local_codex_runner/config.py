@@ -32,6 +32,7 @@ class RunnerConfig:
     create_pr: bool = True
     codex_command: str = "codex"
     codex_command_template: str | None = None
+    codex_model: str | None = None
     codex_sandbox: str = "workspace-write"
     allow_danger_full_access: bool = False
     allow_dirty: bool = False
@@ -54,6 +55,16 @@ class RunnerConfig:
     max_pr_merges_per_run: int = 1
     max_dependency_unlocks_per_run: int = 5
     cleanup_stale_state: bool = True
+    auto_recover_needs_human: bool = False
+    max_needs_human_recoveries_per_run: int = 2
+    max_needs_human_attempts: int = 2
+    needs_human_recovered_label: str = "codex-recovered"
+    needs_human_policy_block_labels: list[str] = field(
+        default_factory=lambda: ["codex-policy-blocked", "codex-external-blocked", "do-not-merge", "hold"]
+    )
+    needs_human_recoverable_reasons: list[str] = field(
+        default_factory=lambda: ["rate_limit", "network_timeout", "ci_failed"]
+    )
     lane_name: str | None = None
     lane_slot: int | None = None
     lane_include_labels: list[str] = field(default_factory=list)
@@ -156,6 +167,8 @@ def parse_scalar(value: str) -> Any:
         return False
     if value in {"null", "None", "~"}:
         return None
+    if value == "[]":
+        return []
     try:
         return int(value)
     except ValueError:

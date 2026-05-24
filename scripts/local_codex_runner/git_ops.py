@@ -33,9 +33,13 @@ FORBIDDEN_PATTERNS = (
 TRANSIENT_EVIDENCE_PATTERNS = (
     "docs/validation/local_codex_runner/issue-*/*.prompt.md",
     "docs/validation/local_codex_runner/issue-*/codex_*.log",
+    "docs/validation/local_codex_runner/issue-*/code.md",
+    "docs/validation/local_codex_runner/issue-*/plan.md",
     "docs/validation/local_codex_runner/issue-*/pr_body.md",
+    "docs/validation/local_codex_runner/issue-*/review.md",
     "docs/validation/local_codex_runner/issue-*/runner_result.json",
     "docs/validation/local_codex_runner/issue-*/runner_result.md",
+    "docs/validation/local_codex_runner/issue-*/test.md",
 )
 
 
@@ -72,6 +76,12 @@ class GitOps:
             return
         self.run(["checkout", base_ref])
         self.run(["pull", "--ff-only", "origin", base_ref])
+
+    def checkout_remote_branch(self, branch: str) -> None:
+        if branch in {"main", "master"} or not branch.startswith("codex/"):
+            raise GitSafetyError(f"Refusing to check out non-runner branch {branch!r}")
+        self.run(["fetch", "origin", branch])
+        self.run(["checkout", "-B", branch, f"origin/{branch}"])
 
     def create_branch(self, issue_number: int, title: str) -> str:
         branch = f"codex/issue-{issue_number}-{slugify(title)}"

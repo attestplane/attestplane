@@ -120,6 +120,22 @@ class GitHubCLI:
             return []
         return [dict(item) for item in loaded]
 
+    def view_pull_request(self, repo: str, pr_number: int) -> dict[str, Any]:
+        completed = self._run(
+            [
+                "gh",
+                "pr",
+                "view",
+                str(pr_number),
+                "--repo",
+                repo,
+                "--json",
+                "number,title,url,author,baseRefName,headRefName,isDraft,mergeStateStatus,reviewDecision,labels",
+            ]
+        )
+        loaded = json.loads(completed.stdout or "{}")
+        return dict(loaded) if isinstance(loaded, dict) else {}
+
     def view_issue(self, repo: str, issue_number: int) -> IssueTask:
         completed = self._run(["gh", "issue", "view", str(issue_number), "--repo", repo, "--json", "number,title,url,labels,body"])
         return IssueTask.from_gh_json(json.loads(completed.stdout))
