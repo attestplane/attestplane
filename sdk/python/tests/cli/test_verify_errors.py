@@ -40,6 +40,8 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
+    assert payload["reason_code"] == "att.verify.signature_missing"
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == "att.verify.signature_missing"
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
@@ -62,5 +64,7 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
+    assert payload["reason_code"] == "att.verify.required_field_missing"
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == "att.verify.required_field_missing"
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"

@@ -926,6 +926,22 @@
     },
     {
       "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_TAXONOMY",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_TAXONOMY_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
       "kind": "class",
       "module": "attestplane",
       "name": "VerificationResult",
@@ -1233,6 +1249,14 @@
       "kind": "function",
       "module": "attestplane",
       "name": "verify_proof_bundle_file",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "verify_reason_code_explanation",
       "notes": "",
       "stability": "alpha_public"
     },

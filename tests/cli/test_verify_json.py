@@ -32,6 +32,8 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
     assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"] == {
         "schema_version": 1,
@@ -49,6 +51,8 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 1
+    assert payload["reason_code"] == "att.verify.canonical_mismatch"
+    assert payload["taxonomy_version"] == 1
     assert payload["bundle"]["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
     assert payload["reasons"]
@@ -65,6 +69,8 @@ def test_verify_json_and_explain_keep_json_parseable(
 
     assert rc == 1
     assert payload["result"] == "fail"
+    assert payload["reason_code"] == "att.verify.canonical_mismatch"
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]
     assert reason["code"] == "att.verify.canonical_mismatch"
     assert "Unicode-NFC" in reason["message"]

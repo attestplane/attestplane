@@ -122,6 +122,8 @@ def test_export_then_verify_json_output(
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
     assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
     assert payload["bundle"]["digest"]
@@ -143,6 +145,8 @@ def test_verify_require_events_rejects_empty_bundle(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
+    assert payload["reason_code"] == "att.verify.required_field_missing"
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == "att.verify.required_field_missing"
 
 
@@ -162,6 +166,8 @@ def test_verify_bundle_option_rejects_unsigned_bundle(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
+    assert payload["reason_code"] == "att.verify.signature_missing"
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == "att.verify.signature_missing"
 
 

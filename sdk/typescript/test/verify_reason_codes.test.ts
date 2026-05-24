@@ -7,25 +7,33 @@ import {
   ALL_VERIFY_REASON_CODES_V1,
   VERIFY_REASON_ANCHOR_INVALID,
   VERIFY_REASON_CANONICAL_MISMATCH,
+  VERIFY_REASON_CODE_DESCRIPTIONS,
   VERIFY_REASON_REQUIRED_FIELD_MISSING,
   VERIFY_REASON_SCHEMA_INVALID,
   VERIFY_REASON_SCHEMA_UNKNOWN,
+  VERIFY_REASON_SCHEMA_VERSION_MISSING,
   VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
+  VERIFY_REASON_TAXONOMY,
+  VERIFY_REASON_TAXONOMY_VERSION,
   isKnownVerifyReasonCode,
+  verifyReasonCodeExplanation,
   verifyReasonCodeMatchesFormat,
 } from '../src/verify_reason_codes.js';
 
 describe('verify reason codes', () => {
   it('pins the v1 namespaced verifier rejection taxonomy', () => {
+    expect(VERIFY_REASON_TAXONOMY_VERSION).toBe(1);
+    expect(VERIFY_REASON_CODE_DESCRIPTIONS).toBe(VERIFY_REASON_TAXONOMY);
     expect(ALL_VERIFY_REASON_CODES_V1).toEqual([
       VERIFY_REASON_ANCHOR_INVALID,
       VERIFY_REASON_CANONICAL_MISMATCH,
       VERIFY_REASON_REQUIRED_FIELD_MISSING,
       VERIFY_REASON_SCHEMA_INVALID,
       VERIFY_REASON_SCHEMA_UNKNOWN,
+      VERIFY_REASON_SCHEMA_VERSION_MISSING,
       VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
       VERIFY_REASON_SIGNATURE_INVALID,
       VERIFY_REASON_SIGNATURE_MISSING,
@@ -35,6 +43,7 @@ describe('verify reason codes', () => {
     for (const code of ALL_VERIFY_REASON_CODES_V1) {
       expect(isKnownVerifyReasonCode(code)).toBe(true);
       expect(verifyReasonCodeMatchesFormat(code)).toBe(true);
+      expect(verifyReasonCodeExplanation(code)).toBe(VERIFY_REASON_CODE_DESCRIPTIONS[code]);
     }
     expect(isKnownVerifyReasonCode('VERIFY_OK')).toBe(false);
   });

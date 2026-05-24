@@ -9,6 +9,8 @@
     "schema_version",
     "result",
     "exit_code",
+    "reason_code",
+    "taxonomy_version",
     "reasons",
     "bundle"
   ],
@@ -27,6 +29,21 @@
     "exit_code": {
       "type": "integer",
       "minimum": 0
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "taxonomy_version": {
+      "type": "integer",
+      "const": 1
     },
     "reasons": {
       "type": "array",

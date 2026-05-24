@@ -114,6 +114,14 @@
     },
     {
       "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
+      "review_by": "v1.7.0",
+      "symbol": "EmptyProofBundleError",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": false,
       "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
       "review_by": "v0.0.3-alpha",
@@ -159,6 +167,14 @@
       "review_by": "v0.0.3-alpha",
       "symbol": "InMemoryKeyProviderOptions",
       "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
+      "review_by": "v1.7.0",
+      "symbol": "IncompleteProofBundleError",
+      "typescript": false
     },
     {
       "classification": "language_specific",
@@ -239,6 +255,14 @@
       "review_by": "v0.0.3-alpha",
       "symbol": "ProofBundleBuilderInput",
       "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
+      "review_by": "v1.7.0",
+      "symbol": "ProofBundleError",
+      "typescript": false
     },
     {
       "classification": "language_specific",
@@ -714,6 +738,14 @@
     },
     {
       "classification": "language_specific",
+      "python": false,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
+      "review_by": "v1.7.5",
+      "symbol": "isKnownVerifyReasonCode",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
       "python": true,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
@@ -734,6 +766,14 @@
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.5-alpha",
       "symbol": "is_known_verify_error_code",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic snake_case in Python; TypeScript exposes the equivalent camelCase helper.",
+      "review_by": "v1.7.5",
+      "symbol": "is_known_verify_reason_code",
       "typescript": false
     },
     {
@@ -1131,6 +1171,22 @@
     {
       "classification": "language_specific",
       "python": false,
+      "reason": "Issue #236 verifier reason-code explanation helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
+      "review_by": "v1.7.11",
+      "symbol": "verifyReasonCodeExplanation",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
+      "review_by": "v1.7.5",
+      "symbol": "verifyReasonCodeMatchesFormat",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",
       "symbol": "verifyReplayManifest",
@@ -1186,27 +1242,11 @@
     },
     {
       "classification": "language_specific",
-      "python": false,
-      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
-      "review_by": "v1.7.5",
-      "symbol": "isKnownVerifyReasonCode",
-      "typescript": true
-    },
-    {
-      "classification": "language_specific",
       "python": true,
-      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic snake_case in Python; TypeScript exposes the equivalent camelCase helper.",
-      "review_by": "v1.7.5",
-      "symbol": "is_known_verify_reason_code",
+      "reason": "Issue #236 verifier reason-code explanation helper uses idiomatic snake_case in Python; TypeScript exposes the equivalent camelCase helper.",
+      "review_by": "v1.7.11",
+      "symbol": "verify_reason_code_explanation",
       "typescript": false
-    },
-    {
-      "classification": "language_specific",
-      "python": false,
-      "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
-      "review_by": "v1.7.5",
-      "symbol": "verifyReasonCodeMatchesFormat",
-      "typescript": true
     },
     {
       "classification": "language_specific",
@@ -1214,14 +1254,6 @@
       "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic snake_case in Python; TypeScript exposes the equivalent camelCase helper.",
       "review_by": "v1.7.5",
       "symbol": "verify_reason_code_matches_format",
-      "typescript": false
-    },
-    {
-      "classification": "language_specific",
-      "python": true,
-      "reason": "Python root exports the new verifier rejection reason constant for v1.7.x; the TypeScript mirror will land in a follow-up parity update.",
-      "review_by": "v1.7.7",
-      "symbol": "VERIFY_REASON_SCHEMA_VERSION_MISSING",
       "typescript": false
     },
     {
@@ -1238,30 +1270,6 @@
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.5-alpha",
       "symbol": "verify_retention_proofs",
-      "typescript": false
-    },
-    {
-      "classification": "language_specific",
-      "python": true,
-      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
-      "review_by": "v1.7.0",
-      "symbol": "EmptyProofBundleError",
-      "typescript": false
-    },
-    {
-      "classification": "language_specific",
-      "python": true,
-      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
-      "review_by": "v1.7.0",
-      "symbol": "IncompleteProofBundleError",
-      "typescript": false
-    },
-    {
-      "classification": "language_specific",
-      "python": true,
-      "reason": "Python SDK exposes typed proof-bundle exceptions; TypeScript verifier errors are surfaced through machine-readable error-code values.",
-      "review_by": "v1.7.0",
-      "symbol": "ProofBundleError",
       "typescript": false
     }
   ],

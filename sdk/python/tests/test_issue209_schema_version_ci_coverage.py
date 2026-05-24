@@ -246,6 +246,8 @@ def test_additive_unknown_fields_surface_reserved_cli_explain_reason(
     assert rc == 0
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
 
 
@@ -265,6 +267,8 @@ def test_cli_schema_errors_return_structured_verify_reason(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 
