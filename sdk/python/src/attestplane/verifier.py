@@ -46,8 +46,8 @@ from attestplane.verify_errors import (
     VerifyErrorCode,
 )
 from attestplane.verify_reason_codes import (
-    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
@@ -127,7 +127,7 @@ class BundleVerificationResult:
             f"error_code={self.error_code} primary_reason={self.primary_reason}"
         )
 
-    def to_verify_json_report(self, *, verifier_version: str) -> "VerifyJsonReport":
+    def to_verify_json_report(self, *, verifier_version: str) -> VerifyJsonReport:
         """Project the internal verifier result into the CLI JSON report."""
         reasons = _verify_json_reasons(self)
         return VerifyJsonReport(

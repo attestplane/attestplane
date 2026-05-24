@@ -34,8 +34,11 @@ No warnings.
 - Inspected the CLI/verifier changes in `sdk/python/src/attestplane/cli/main.py` and `sdk/python/src/attestplane/verifier.py`.
 - Inspected the updated docs in `docs/cli/verify-json.md`, `docs/schema/verify-json.md`, `docs/errors.md`, and `docs/release-notes/v1.7.x-delta.md`.
 - Inspected the new golden snapshots under `tests/golden/verify-json/`.
+- Ran `cd sdk/python && .venv/bin/ruff check src tests`.
+- Ran `cd sdk/python && .venv/bin/mypy`.
+- Ran `cd sdk/python && .venv/bin/pytest -q tests/conformance/test_verifier_conformance.py tests/cli/test_main.py tests/cli/test_verify_errors.py tests/cli/test_verify_cli_deterministic_json.py`.
 - Ran `pytest -q sdk/python/tests/cli/test_main.py sdk/python/tests/cli/test_verify_errors.py sdk/python/tests/cli/test_verify_cli_deterministic_json.py tests/cli/test_verify_flags.py tests/verifier/test_verify_reason_codes.py`.
-- Test result: `41 passed in 0.19s`.
+- Test result: `35 passed` for the issue-focused SDK slice, `41 passed` for the broader local slice.
 
 ## Residual Risks
 

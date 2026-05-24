@@ -6,6 +6,9 @@
     "Reviewed only local repository files, local command output, and the issue text supplied in the prompt.",
     "Reviewed the tracked diff with git status --short, git diff --stat, git diff --name-only, and targeted git diff output.",
     "Inspected the CLI/verifier changes in sdk/python/src/attestplane/cli/main.py and sdk/python/src/attestplane/verifier.py, plus the updated docs and golden JSON snapshots.",
+    "Ran cd sdk/python && .venv/bin/ruff check src tests: passed.",
+    "Ran cd sdk/python && .venv/bin/mypy: passed.",
+    "Ran cd sdk/python && .venv/bin/pytest -q tests/conformance/test_verifier_conformance.py tests/cli/test_main.py tests/cli/test_verify_errors.py tests/cli/test_verify_cli_deterministic_json.py: 35 passed.",
     "Ran pytest -q sdk/python/tests/cli/test_main.py sdk/python/tests/cli/test_verify_errors.py sdk/python/tests/cli/test_verify_cli_deterministic_json.py tests/cli/test_verify_flags.py tests/verifier/test_verify_reason_codes.py: 41 passed."
   ],
   "residual_risks": [
