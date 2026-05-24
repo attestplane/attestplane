@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
-from attestplane.verify_reason_codes import VERIFY_REASON_CODE_DESCRIPTIONS
+from attestplane.verify_reason_codes import VERIFY_REASON_CODE_DESCRIPTIONS, VERIFY_REASON_CODE_VERSION
 
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
@@ -54,6 +54,8 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["reasons"]
     reason = payload["reasons"][0]
     assert reason["code"] == "att.verify.canonical_mismatch"
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"].startswith("/events/")
     assert "canonicalization" in reason["message"]
 
@@ -67,5 +69,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert payload["result"] == "fail"
     reason = payload["reasons"][0]
     assert reason["code"] == "att.verify.canonical_mismatch"
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert "Unicode-NFC" in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]

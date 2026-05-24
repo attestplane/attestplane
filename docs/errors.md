@@ -56,7 +56,7 @@ consume in CI, audit exports, and cross-language conformance tests.
 Issue #172 adds a second, SDK-public taxonomy for rejection reasons returned
 by `verify` paths:
 
-- `verify_reason_code_schema_version`: `1`
+- `reason_code_version`: `rc.v1`
 - Python: `attestplane.verify_reason_codes`
 - TypeScript: `src/verify_reason_codes.ts`
 - Result shape: `primary_reason` is exactly one code for rejected verifier
@@ -64,10 +64,11 @@ by `verify` paths:
   checks. Successful verifier results use `primary_reason: null` and
   `secondary_reasons: []`.
 
-These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
-`taxonomy_version = 1` and is additive-only: adding a new code is allowed with
-documentation and tests, but removing, renaming, or reusing an existing code
-is a breaking change and must be called out in `CHANGELOG.md`.
+These codes are namespaced under `att.verify.*`. The canonical registry is
+pinned by `reason_code_version = rc.v1` and is additive-only: adding a new
+code is allowed with documentation and tests, but removing, renaming, or
+reusing an existing code is a breaking change and must be called out in
+`CHANGELOG.md`.
 
 | Code | Meaning |
 |---|---|
@@ -87,6 +88,12 @@ The existing human-readable fields such as `chain_result.reason`,
 `signed_attestation_schema_reason` remain for one minor release as deprecated
 migration aids. SDK and CLI consumers should branch on `primary_reason` and
 `secondary_reasons` instead of matching these strings.
+
+The canonical reason-code registry lives in
+`attestplane.verify_reason_codes` / `src/verify_reason_codes.ts` and each row
+is versioned as `reason_code_version = rc.v1`. CLI and SDK consumers should
+read code, version, and rationale from that registry instead of maintaining a
+second description table.
 
 Forward-compatible additive bundle fields are ignored by the verifier and do
 not change `ok` when the rest of the bundle is valid. Use `verify --explain`

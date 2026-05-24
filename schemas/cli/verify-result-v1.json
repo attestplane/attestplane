@@ -35,6 +35,8 @@
         "additionalProperties": false,
         "required": [
           "code",
+          "reason_code",
+          "reason_code_version",
           "path",
           "message"
         ],
@@ -42,6 +44,14 @@
           "code": {
             "type": "string",
             "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+          },
+          "reason_code": {
+            "type": "string",
+            "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+          },
+          "reason_code_version": {
+            "type": "string",
+            "const": "rc.v1"
           },
           "path": {
             "type": "string",

@@ -46,11 +46,13 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
 
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
-        expected_keys = {"code", "path", "message"}
+        expected_keys = {"code", "reason_code", "reason_code_version", "path", "message"}
         if "explanation" in reason:
             expected_keys.add("explanation")
         assert set(reason) == expected_keys
         assert re.fullmatch(r"att\.verify\.[a-z][a-z0-9_]*", str(reason["code"]))
+        assert reason["reason_code"] == reason["code"]
+        assert reason["reason_code_version"] == "rc.v1"
         assert reason["path"]
         assert reason["message"]
         if "explanation" in reason:
@@ -64,6 +66,14 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
+    assert schema["properties"]["reasons"]["items"]["required"] == [
+        "code",
+        "reason_code",
+        "reason_code_version",
+        "path",
+        "message",
+    ]
+    assert schema["properties"]["reasons"]["items"]["properties"]["reason_code_version"]["const"] == "rc.v1"
 
 
 def test_verify_json_pass_payload_matches_schema(capsys) -> None:

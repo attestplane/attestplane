@@ -14,6 +14,7 @@ from attestplane.cli.main import main
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CODE_DESCRIPTIONS,
+    VERIFY_REASON_CODE_VERSION,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -196,6 +197,30 @@ def test_verify_explain_embeds_reason_explanations_in_json(
     assert rc == expected_rc
     assert stderr == ""
     assert [reason["code"] for reason in payload["reasons"]] == expected_codes
+    assert [reason["reason_code"] for reason in payload["reasons"]] == expected_codes
+    assert {reason["reason_code_version"] for reason in payload["reasons"]} == {
+        VERIFY_REASON_CODE_VERSION
+    }
     assert [reason["explanation"] for reason in payload["reasons"]] == [
         line.split(": ", 1)[1] for line in expected_stderr_lines
     ]
+
+
+def test_verify_explain_and_json_emit_matching_reason_code(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    argv, _, _, _ = _case_canonical_mismatch(tmp_path)
+
+    rc, stdout, stderr = _run_verify(argv, capsys)
+    assert rc == 1
+    assert stdout.startswith("FAIL")
+    explain_code = stderr.splitlines()[0].split(": ", 1)[0]
+
+    rc, stdout, stderr = _run_verify(["verify", "--json", str(CANONICAL_FIXTURE)], capsys)
+    assert rc == 1
+    assert stderr == ""
+    payload = json.loads(stdout)
+    json_code = payload["reasons"][0]["reason_code"]
+
+    assert explain_code == json_code

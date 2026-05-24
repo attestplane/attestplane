@@ -32,9 +32,9 @@ from attestplane.verify_errors import (
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
-    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_SCHEMA_INVALID,
     VerifyReasonCodeV1,
+    get_verify_reason_record,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -226,7 +226,8 @@ def _write_verify_explanations(result: Any) -> None:
 
 
 def _write_verify_explanation(code: VerifyReasonCodeV1) -> None:
-    sys.stderr.write(f"{code}: {VERIFY_REASON_CODE_DESCRIPTIONS[code]}\n")
+    record = get_verify_reason_record(code)
+    sys.stderr.write(f"{record.reason_code}: {record.rationale}\n")
 
 
 _KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {

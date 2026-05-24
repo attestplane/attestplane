@@ -24,15 +24,17 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on.
-- `reasons[]` is an ordered list of `{code, path, message}` entries.
+- `reasons[]` is an ordered list of `{code, reason_code, reason_code_version,
+  path, message}` entries. `code` remains as a legacy alias; `reason_code` is
+  the canonical field.
 - When `--explain` is set, each reason may also include an `explanation`
   field with the stable human rationale string for that reason code.
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
-- The verifier reason-code taxonomy is versioned separately via
-  `taxonomy_version`. The taxonomy is additive-only: new reason codes may be
-  added, but existing codes are not renamed, removed, or reused.
+- The verifier reason-code registry is versioned separately via
+  `reason_code_version = rc.v1`. The registry is additive-only: new reason
+  codes may be added, but existing codes are not renamed, removed, or reused.
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
@@ -52,7 +54,7 @@ attestplane verify --json --explain "$bundle"
 The flag is additive: it does not bump `schema_version`, it does not change
 the `verify --json` contract documented in #220, and it does not alter the
 bundle forward-compatibility rules documented in #217. It also does not alter
-`taxonomy_version`; the shared `att.verify.*` reason-code taxonomy lives in
+`reason_code_version`; the shared `att.verify.*` reason-code registry lives in
 `docs/errors.md`.
 
 Within that taxonomy, additive unknown fields remain accepted, while
@@ -61,7 +63,8 @@ unsupported major versions and fail-closed critical/required fields surface
 respectively.
 
 When the two flags are combined, stdout remains valid JSON and the rationale
-text is carried in `reasons[].explanation`.
+text is carried in `reasons[].explanation` alongside the canonical
+`reason_code` and `reason_code_version` fields.
 
 When `--explain` is used without `--json`, rationale lines are written to
 stderr in reason-code order while stdout keeps the existing human summary.
@@ -91,6 +94,8 @@ stderr in reason-code order while stdout keeps the existing human summary.
   "reasons": [
     {
       "code": "att.verify.schema_version_unsupported",
+      "reason_code": "att.verify.schema_version_unsupported",
+      "reason_code_version": "rc.v1",
       "path": "bundle.schema_version",
       "message": "bundle schema_version 2 is not supported"
     }
@@ -112,7 +117,7 @@ result=$(jq -r '.result' verify.json)
 
 if [ "$rc" -ne 0 ] || [ "$result" != "pass" ]; then
   printf 'verify failed (rc=%s, result=%s)\n' "$rc" "$result"
-  jq -r '.reasons[]? | "\(.code) \(.path) \(.message)"' verify.json
+  jq -r '.reasons[]? | "\(.reason_code) \(.path) \(.message)"' verify.json
   exit "$rc"
 fi
 ```

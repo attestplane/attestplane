@@ -22,7 +22,6 @@ from attestplane.verify_errors import (
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
-    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
@@ -32,6 +31,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
+    get_verify_reason_record,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
@@ -115,14 +115,17 @@ def _reason_entry(
     detail: str | None,
     explain: bool,
 ) -> dict[str, Any]:
+    record = get_verify_reason_record(code)
     message = detail if explain and detail else summary
     reason: dict[str, Any] = {
         "code": code,
+        "reason_code": record.reason_code,
+        "reason_code_version": record.reason_code_version,
         "path": path,
         "message": message,
     }
     if explain:
-        reason["explanation"] = VERIFY_REASON_CODE_DESCRIPTIONS[code]
+        reason["explanation"] = record.rationale
     return reason
 
 

@@ -25,6 +25,8 @@ from attestplane.verify_reason_codes import (  # noqa: E402
     ALL_VERIFY_REASON_CODES_V1,
     VERIFY_REASON_ANCHOR_INVALID,
     VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_VERSION,
+    VERIFY_REASON_CODE_VERSIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
@@ -32,7 +34,9 @@ from attestplane.verify_reason_codes import (  # noqa: E402
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
+    VERIFY_REASON_REGISTRY_V1,
     VERIFY_REASON_STRUCTURE_INVALID,
+    get_verify_reason_record,
     is_known_verify_reason_code,
     verify_reason_code_matches_format,
 )
@@ -87,6 +91,18 @@ def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
     for code in ALL_VERIFY_REASON_CODES_V1:
         assert is_known_verify_reason_code(code)
         assert verify_reason_code_matches_format(code)
+
+
+def test_verify_reason_code_registry_is_complete_and_versioned() -> None:
+    assert len(VERIFY_REASON_REGISTRY_V1) == len(ALL_VERIFY_REASON_CODES_V1)
+    assert set(VERIFY_REASON_CODE_VERSIONS) == set(ALL_VERIFY_REASON_CODES_V1)
+
+    for code in ALL_VERIFY_REASON_CODES_V1:
+        record = get_verify_reason_record(code)
+        assert record.reason_code == code
+        assert record.reason_code_version == VERIFY_REASON_CODE_VERSION
+        assert record.rationale
+        assert VERIFY_REASON_CODE_VERSIONS[code] == VERIFY_REASON_CODE_VERSION
 
 
 def test_verify_reason_code_ok_result_has_no_rejection_reason() -> None:

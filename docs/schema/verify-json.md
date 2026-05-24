@@ -21,16 +21,18 @@ accompanies the structured JSON contract.
 - Additive unknown fields are preserved verbatim by the caller and ignored by
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code
-  taxonomy version documented in `docs/errors.md`.
-- The verifier reason-code taxonomy is versioned separately via
-  `taxonomy_version`. The taxonomy is additive-only, and code values are not
-  reused within a stable taxonomy version.
+  registry version documented in `docs/errors.md`.
+- The canonical verifier reason-code registry is additive-only, and each
+  record carries `reason_code_version = rc.v1`. Code values are not reused
+  within a stable registry version.
 - Consumers should keep branching on exit code first, then inspect `result`
   and `reasons[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
-  introduce a new schema, a new bundle policy, or a new `taxonomy_version`.
+  introduce a new schema, a new bundle policy, or a new registry version.
 - When `--explain` is combined with `--json`, each reason may also include an
   `explanation` field with the stable rationale string for that reason code.
+  The structured reason entries also include the canonical `reason_code` and
+  `reason_code_version` fields.
 
 ## Negative Vectors
 

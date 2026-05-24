@@ -21,6 +21,7 @@ from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
+    VERIFY_REASON_CODE_VERSION,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_STRUCTURE_INVALID,
 )
@@ -70,6 +71,8 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))  # type: ignore[index]
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"].startswith("/events/")
     assert "canonicalization" in reason["message"]
 
@@ -83,6 +86,8 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert stderr == ""
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert "Unicode-NFC" in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
 
@@ -100,6 +105,8 @@ def test_verify_json_reports_invalid_json(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"] == "/"
     assert str(bundle) in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
@@ -135,6 +142,8 @@ def test_verify_json_rejects_duplicate_keys(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_STRUCTURE_INVALID
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"] == "/chain_metadata"
     assert "duplicate JSON key: chain_metadata" in reason["message"]
 
@@ -152,6 +161,8 @@ def test_verify_json_rejects_non_object_root(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"] == "/"
     assert reason["message"] == "bundle must be a JSON object, got list"
 
@@ -168,6 +179,8 @@ def test_verify_json_reports_missing_bundle_path(
     assert stderr == ""
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"] == "/"
     assert "cannot read" in reason["message"]
 
@@ -187,6 +200,8 @@ def test_verify_json_schema_error_maps_missing_version_path(
     assert stderr == ""
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["path"] == "/chain_metadata/schema_version"
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
 
 
 def test_verify_json_unknown_required_field_reports_chain_metadata_path(
@@ -204,6 +219,8 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
     assert stderr == ""
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == "att.verify.schema_unknown"
+    assert reason["reason_code"] == reason["code"]
+    assert reason["reason_code_version"] == VERIFY_REASON_CODE_VERSION
     assert reason["path"] == "/chain_metadata/critical_future_field"
 
 
