@@ -150,6 +150,7 @@ _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
     "signatures",
     "retention_proofs",
 }
+_FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS = {"proof_type"}
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -167,6 +168,15 @@ def _validate_shape(bundle: Any) -> None:
     missing = _REQUIRED_TOP_LEVEL - set(bundle)
     if missing:
         raise BundleSchemaError(f"bundle missing required fields: {sorted(missing)}")
+    fail_closed_unknown_fields = sorted(
+        key
+        for key in set(bundle) - _ALLOWED_TOP_LEVEL
+        if key in _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS or key.startswith("critical_")
+    )
+    if fail_closed_unknown_fields:
+        raise BundleSchemaError(
+            f"unknown top-level fields: {fail_closed_unknown_fields}"
+        )
     if bundle["bundle_version"] != 1:
         raise BundleSchemaError(
             f"unsupported bundle_version={bundle['bundle_version']!r}; "

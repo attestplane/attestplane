@@ -242,6 +242,52 @@ _KNOWN_VERIFICATION_REPORT_FIELDS = {
     "verifier_version",
     "verification_method",
 }
+_KNOWN_EVENT_ITEM_FIELDS = {
+    "seq",
+    "prev_hash_hex",
+    "event_hash_hex",
+    "event",
+}
+_KNOWN_AUDIT_EVENT_FIELDS = {
+    "schema_version",
+    "event_id",
+    "timestamp",
+    "event_type",
+    "actor",
+    "payload",
+    "subject_ref",
+    "session_id",
+    "reference_db_ref",
+    "matched_input_ref",
+    "human_verifier",
+}
+_KNOWN_SUBJECT_REF_FIELDS = {"scheme", "value"}
+_KNOWN_SIGNATURE_FIELDS = {
+    "signature_schema_version",
+    "signed_seq",
+    "signed_event_hash_hex",
+    "signature_hex",
+    "key_id",
+    "public_key_der_b64",
+    "signing_cert_chain_b64",
+    "signed_at",
+    "signature_mode",
+    "signed_payload_b64",
+}
+_KNOWN_RETENTION_PROOF_FIELDS = {
+    "retention_proof_schema_version",
+    "proof_id",
+    "action",
+    "target_event_hash_hex",
+    "commit_event_hash_hex",
+    "reason",
+    "redacted_event_hash_hex",
+}
+_KNOWN_FRAMEWORK_MAPPING_FIELDS = {
+    "obligation_id",
+    "evidence_event_indexes",
+    "implementation_status_at_bundle_time",
+}
 
 
 def _explain_reserved_reasons(bundle: dict[str, Any]) -> list[dict[str, str]]:
@@ -257,6 +303,48 @@ def _explain_reserved_reasons(bundle: dict[str, Any]) -> list[dict[str, str]]:
     if isinstance(verification_report, dict):
         for key in sorted(set(verification_report) - _KNOWN_VERIFICATION_REPORT_FIELDS):
             extras.append(f"verification_report.{key}")
+    framework_mappings = bundle.get("framework_mappings")
+    if isinstance(framework_mappings, list):
+        for index, mapping in enumerate(framework_mappings):
+            if not isinstance(mapping, dict):
+                continue
+            for key in sorted(set(mapping) - _KNOWN_FRAMEWORK_MAPPING_FIELDS):
+                extras.append(f"framework_mappings[{index}].{key}")
+    events = bundle.get("events")
+    if isinstance(events, list):
+        for index, event in enumerate(events):
+            if not isinstance(event, dict):
+                continue
+            for key in sorted(set(event) - _KNOWN_EVENT_ITEM_FIELDS):
+                extras.append(f"events[{index}].{key}")
+            payload = event.get("event")
+            if isinstance(payload, dict):
+                _collect_nested_reserved_reasons(
+                    payload,
+                    f"events[{index}].event",
+                    _KNOWN_AUDIT_EVENT_FIELDS,
+                    extras,
+                )
+    signatures = bundle.get("signatures")
+    if isinstance(signatures, list):
+        for index, signature in enumerate(signatures):
+            if isinstance(signature, dict):
+                _collect_nested_reserved_reasons(
+                    signature,
+                    f"signatures[{index}]",
+                    _KNOWN_SIGNATURE_FIELDS,
+                    extras,
+                )
+    retention_proofs = bundle.get("retention_proofs")
+    if isinstance(retention_proofs, list):
+        for index, proof in enumerate(retention_proofs):
+            if isinstance(proof, dict):
+                _collect_nested_reserved_reasons(
+                    proof,
+                    f"retention_proofs[{index}]",
+                    _KNOWN_RETENTION_PROOF_FIELDS,
+                    extras,
+                )
     if not extras:
         return []
     return [
@@ -266,6 +354,31 @@ def _explain_reserved_reasons(bundle: dict[str, Any]) -> list[dict[str, str]]:
             "detail": f"ignored additive fields: {', '.join(extras)}",
         }
     ]
+
+
+def _collect_nested_reserved_reasons(
+    obj: dict[str, Any],
+    prefix: str,
+    known_fields: set[str],
+    extras: list[str],
+) -> None:
+    unknown = sorted(set(obj) - known_fields)
+    for key in unknown:
+        extras.append(f"{prefix}.{key}")
+    if "subject_ref" in obj and isinstance(obj["subject_ref"], dict):
+        _collect_nested_reserved_reasons(
+            obj["subject_ref"],
+            f"{prefix}.subject_ref",
+            _KNOWN_SUBJECT_REF_FIELDS,
+            extras,
+        )
+    if "human_verifier" in obj and isinstance(obj["human_verifier"], dict):
+        _collect_nested_reserved_reasons(
+            obj["human_verifier"],
+            f"{prefix}.human_verifier",
+            _KNOWN_SUBJECT_REF_FIELDS,
+            extras,
+        )
 
 
 def cmd_verify(args: argparse.Namespace) -> int:

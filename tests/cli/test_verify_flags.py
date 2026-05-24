@@ -91,6 +91,8 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     bundle["future_bundle_field"] = {"preserved": True}
     bundle["chain_metadata"]["future_metadata_field"] = "kept"
     bundle["verification_report"]["future_report_field"] = "ignored"
+    bundle["events"][0]["event"]["future_event_field"] = "kept"
+    bundle["signatures"][0]["future_signature_field"] = "kept"
     path = tmp_path / "additive.json"
     path.write_text(json.dumps(bundle), encoding="utf-8")
 
@@ -102,3 +104,5 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert payload["ok"] is True
     assert payload["reasons"][0]["severity"] == "reserved"
     assert payload["reasons"][0]["code"] == "att.verify.schema_unknown"
+    assert "events[0].event.future_event_field" in payload["reasons"][0]["detail"]
+    assert "signatures[0].future_signature_field" in payload["reasons"][0]["detail"]
