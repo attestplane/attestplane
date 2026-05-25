@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "The new assertion is narrow: it pins taxonomy_version parity on a single signed-schema fixture, while broader CLI JSON/explain parity is already covered elsewhere.",
+    "This review used focused local validation rather than a full repository gate."
+  ],
+  "validation": [
+    "Reviewed the local diff for tests/conformance/test_signed_schema_conformance_roundtrip.py.",
+    "Ran `pytest -q tests/conformance/test_signed_schema_conformance_roundtrip.py` (2 passed).",
+    "Ran `git diff --check` (clean)."
+  ],
+  "residual_risks": [
+    "If taxonomy_version semantics change across other verifier paths, this single-vector test may not be sufficient to catch all regressions.",
+    "A full repo gate was not executed as part of this self-review."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
