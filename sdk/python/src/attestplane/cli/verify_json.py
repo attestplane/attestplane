@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,13 +31,22 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
-    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
     verify_reason_code_explanation,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
 VERIFY_BUNDLE_SCHEMA_VERSION: int = 1
+VERIFY_JSON_FAILED_GATES: tuple[str, ...] = (
+    "non_empty",
+    "strict_schema",
+    "canonicalization",
+    "signature",
+)
+VERIFY_JSON_ERROR_EMPTY_BUNDLE: str = "E_EMPTY_BUNDLE"
+VERIFY_JSON_ERROR_SCHEMA_INVALID: str = "E_SCHEMA_INVALID"
+VERIFY_JSON_ERROR_CANON_MISMATCH: str = "E_CANON_MISMATCH"
+VERIFY_JSON_ERROR_SIGNATURE_INVALID: str = "E_SIGNATURE_INVALID"
 
 
 class _DuplicateKeyError(ValueError):
@@ -173,6 +183,61 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
 
+def _bundle_id(bundle: dict[str, Any]) -> str | None:
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return None
+    chain_id = chain_metadata.get("chain_id")
+    if isinstance(chain_id, str) and chain_id:
+        return chain_id
+    return None
+
+
+def _failed_gate(gate: str, error_code: str) -> dict[str, str]:
+    return {"gate": gate, "error_code": error_code}
+
+
+def _signature_failure_gate(reason: str | None) -> dict[str, str]:
+    text = reason or ""
+    if any(
+        marker in text
+        for marker in (
+            "missing fields",
+            "malformed",
+            "must be base64",
+            "canonical bundle event",
+            "signature_hex",
+            "signed_event_hash_hex",
+            "key_id",
+            "signed_at",
+            "signature_mode",
+            "signed_payload_b64",
+            "public_key_der_b64",
+            "signing_cert_chain_b64",
+        )
+    ):
+        return _failed_gate("signature", VERIFY_JSON_ERROR_SIGNATURE_INVALID)
+    return _failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)
+
+
+def _failed_gates_for_result(
+    result: Any,
+    *,
+    require_non_empty: bool,
+    require_signed_attestation: bool,
+) -> list[dict[str, str]]:
+    gates: list[dict[str, str]] = []
+    if require_non_empty and result.event_count == 0:
+        gates.append(_failed_gate("non_empty", VERIFY_JSON_ERROR_EMPTY_BUNDLE))
+    if require_signed_attestation and not result.signed_attestation_schema_ok:
+        gates.append(_signature_failure_gate(result.signed_attestation_schema_reason))
+    if not result.chain_result.ok or not result.agreement:
+        gates.append(_failed_gate("canonicalization", VERIFY_JSON_ERROR_CANON_MISMATCH))
+    if not gates:
+        gates.append(_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID))
+    return gates
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
@@ -239,24 +304,22 @@ def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[VerifyReasonCod
 
 def _json_failure(
     *,
-    bundle_digest: str,
-    reason: dict[str, Any],
+    failed_gates: list[dict[str, str]],
     exit_code: int,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    bundle_id: str | None = None,
+    vector_id: str | None = None,
 ) -> VerifyJsonOutcome:
-    payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [reason],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+    payload: dict[str, Any] = {
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "fail",
+        "failed_gates": failed_gates,
     }
+    if bundle_id is not None:
+        payload["bundle_id"] = bundle_id
+    if vector_id is not None:
+        payload["vector_id"] = vector_id
     if explanation is not None:
         payload["explanation"] = explanation
     return VerifyJsonOutcome(
@@ -268,21 +331,19 @@ def _json_failure(
 
 def _json_pass(
     *,
-    bundle_digest: str,
+    bundle_id: str | None = None,
+    vector_id: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
-    payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "pass",
-            "exit_code": 0,
-            "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+    payload: dict[str, Any] = {
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "pass",
+        "failed_gates": [],
     }
+    if bundle_id is not None:
+        payload["bundle_id"] = bundle_id
+    if vector_id is not None:
+        payload["vector_id"] = vector_id
     if explanation is not None:
         payload["explanation"] = explanation
     return VerifyJsonOutcome(
@@ -436,29 +497,29 @@ def build_verify_json_outcome(
     require_non_empty: bool,
     require_signed_attestation: bool,
     explain: bool,
+    vector_id: str | None = None,
 ) -> VerifyJsonOutcome:
+    vector_id = vector_id or os.environ.get("ATTESTPLANE_VECTOR_ID")
     try:
         raw_bytes = bundle_path.read_bytes()
     except FileNotFoundError as exc:
-        digest = _bundle_digest(str(bundle_path).encode("utf-8"))
         return _json_failure(
-            bundle_digest=digest,
-            reason=_reason_entry(
-                VERIFY_REASON_SCHEMA_INVALID,
-                "/",
-                summary=f"cannot read {bundle_path}: {exc}",
-                detail=str(exc),
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)],
             exit_code=1,
+            bundle_id=None,
+            vector_id=vector_id,
             explanation=(
-                [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"cannot read {bundle_path}: {exc}")]
+                [
+                    _explanation_entry(
+                        VERIFY_REASON_SCHEMA_INVALID,
+                        "/",
+                        f"cannot read {bundle_path}: {exc}",
+                    )
+                ]
                 if explain
                 else None
             ),
         )
-
-    bundle_digest = _bundle_digest(raw_bytes)
 
     try:
         bundle = json.loads(
@@ -467,16 +528,10 @@ def build_verify_json_outcome(
         )
     except UnicodeDecodeError as exc:
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                VERIFY_REASON_SCHEMA_INVALID,
-                "/",
-                summary="bundle is not valid UTF-8",
-                detail=str(exc),
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)],
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            vector_id=vector_id,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"bundle is not valid UTF-8: {exc}")]
                 if explain
@@ -490,16 +545,10 @@ def build_verify_json_outcome(
         if match is not None:
             path = f"/{match.group(1)}"
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                VERIFY_REASON_STRUCTURE_INVALID,
-                path,
-                summary="duplicate JSON key rejected",
-                detail=message,
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)],
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            vector_id=vector_id,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
                 if explain
@@ -508,16 +557,10 @@ def build_verify_json_outcome(
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                VERIFY_REASON_SCHEMA_INVALID,
-                "/",
-                summary=f"not valid JSON: {exc.msg}",
-                detail=f"{bundle_path}: not valid JSON: {exc.msg}",
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)],
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            vector_id=vector_id,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"{bundle_path}: not valid JSON: {exc.msg}")]
                 if explain
@@ -527,16 +570,10 @@ def build_verify_json_outcome(
 
     if not isinstance(bundle, dict):
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                VERIFY_REASON_SCHEMA_INVALID,
-                "/",
-                summary=f"bundle must be a JSON object, got {type(bundle).__name__}",
-                detail=f"bundle must be a JSON object, got {type(bundle).__name__}",
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)],
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            vector_id=vector_id,
             explanation=(
                 [
                     _explanation_entry(
@@ -554,15 +591,10 @@ def build_verify_json_outcome(
     if canonical_exc is not None:
         path = _canonicalization_path(canonical_exc, event_index=canonical_index)
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                VERIFY_REASON_CANONICAL_MISMATCH,
-                path,
-                summary="canonicalization failed",
-                detail=str(canonical_exc),
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("canonicalization", VERIFY_JSON_ERROR_CANON_MISMATCH)],
             exit_code=1,
+            bundle_id=_bundle_id(bundle),
+            vector_id=vector_id,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
                 if explain
@@ -578,17 +610,15 @@ def build_verify_json_outcome(
         )
     except BundleSchemaError as exc:
         code, path = _schema_reason_for_bundle_error(exc)
+        failed_gate = _failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)
+        if code == VERIFY_REASON_SIGNATURE_INVALID:
+            failed_gate = _failed_gate("signature", VERIFY_JSON_ERROR_SIGNATURE_INVALID)
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                code,
-                path,
-                summary="bundle schema validation failed",
-                detail=str(exc),
-                explain=explain,
-            ),
+            failed_gates=[failed_gate],
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            bundle_id=_bundle_id(bundle),
+            vector_id=vector_id,
             explanation=(
                 [_explanation_entry(code, path, str(exc))]
                 if explain
@@ -598,15 +628,10 @@ def build_verify_json_outcome(
     except CanonicalizationError as exc:
         path = "/events"
         return _json_failure(
-            bundle_digest=bundle_digest,
-            reason=_reason_entry(
-                VERIFY_REASON_CANONICAL_MISMATCH,
-                path,
-                summary="canonicalization failed",
-                detail=str(exc),
-                explain=explain,
-            ),
+            failed_gates=[_failed_gate("canonicalization", VERIFY_JSON_ERROR_CANON_MISMATCH)],
             exit_code=1,
+            bundle_id=_bundle_id(bundle),
+            vector_id=vector_id,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
                 if explain
@@ -614,13 +639,21 @@ def build_verify_json_outcome(
             ),
         )
 
+    bundle_id = _bundle_id(bundle)
     if result.ok:
         return _json_pass(
-            bundle_digest=bundle_digest,
+            bundle_id=bundle_id,
+            vector_id=vector_id,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
 
-    reasons = _bundle_failure_reason(result, explain=explain)
+    failed_gates = _failed_gates_for_result(
+        result,
+        require_non_empty=require_non_empty,
+        require_signed_attestation=require_signed_attestation,
+    )
+    if not failed_gates:
+        failed_gates = [_failed_gate("strict_schema", VERIFY_JSON_ERROR_SCHEMA_INVALID)]
     if result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
         VERIFY_REQUIRED_FIELDS_MISSING,
@@ -635,14 +668,9 @@ def build_verify_json_outcome(
         payload={
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": result.primary_reason,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": reasons,
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+            "failed_gates": failed_gates,
+            **({"bundle_id": bundle_id} if bundle_id is not None else {}),
+            **({"vector_id": vector_id} if vector_id is not None else {}),
             **(
                 {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
                 if explain

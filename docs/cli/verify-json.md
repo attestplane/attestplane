@@ -2,7 +2,8 @@
 
 `attestplane verify --json` emits the machine-readable CI-gating contract for
 `attestplane verify`. It is intentionally separate from the legacy
-human-readable report fields.
+human-readable report fields, and it writes a single-line JSON object on
+stdout. Stderr semantics are unchanged.
 
 ## Output Contract
 
@@ -12,41 +13,28 @@ The payload is fixed at schema version 1:
 {
   "schema_version": 1,
   "result": "pass",
-  "exit_code": 0,
-  "reason_code": null,
-  "taxonomy_version": 1,
-  "reasons": [],
-  "bundle": {
-    "schema_version": 1,
-    "digest": "..."
-  }
+  "failed_gates": [],
+  "bundle_id": "p3-cli-proofbundle"
 }
 ```
 
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
-- `exit_code` is the process exit code that callers should gate on.
-- `reason_code` is the machine-readable primary verifier rejection code, or
-  `null` on success.
-- `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use.
-- `reasons[]` is an ordered list of `{code, path, message}` entries.
+- `failed_gates[]` is an ordered list of `{gate, error_code}` entries.
+- The stable gate names are `non_empty`, `strict_schema`, `canonicalization`,
+  and `signature`.
+- Stable CI-facing error codes include `E_EMPTY_BUNDLE`, `E_SCHEMA_INVALID`,
+  `E_CANON_MISMATCH`, and `E_SIGNATURE_INVALID`.
+- `bundle_id` is surfaced when the bundle carries a stable identifier in the
+  verifier-visible metadata.
+- `vector_id` is surfaced when a conformance harness provides one.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
   On success, the array contains a compact summary; on rejection, it mirrors
-  the ordered rejection reasons.
-- When `--explain` is set, each `reasons[]` item may also include an
-  `explanation` field with the stable human rationale string for that reason
-  code.
-- `bundle.schema_version` is the proof-bundle schema version currently handled
-  by this verifier contract.
-- `bundle.digest` is the SHA-256 digest of the input bundle bytes.
-- The verifier reason-code taxonomy is additive-only: new reason codes may be
-  added, but existing codes are not renamed, removed, or reused within a
-  stable `taxonomy_version`.
+  the ordered rejection reasons used by the human stdout/stderr path.
 
-Consumers should keep branching on `exit_code` first and then inspect
-`result` and `reasons[]` for diagnostics.
+Consumers should keep branching on the process exit code first, then inspect
+`result` and `failed_gates[]` for diagnostics.
 
 ## `verify --explain`
 
@@ -61,18 +49,17 @@ attestplane verify --json --explain "$bundle"
 ```
 
 The flag is additive: it does not bump `schema_version`, it does not change
-the `verify --json` contract documented in #220, and it does not alter the
-bundle forward-compatibility rules documented in #217. It also does not alter
-`taxonomy_version`; the shared `att.verify.*` reason-code taxonomy lives in
-`docs/errors.md`.
+the `verify --json` contract, and it does not alter bundle forward-
+compatibility rules. It also does not change the exit-code contract or stderr
+semantics.
 
-Within that taxonomy, additive unknown fields remain accepted, while
-unsupported major versions and fail-closed critical/required fields surface
-`att.verify.schema_version_unsupported` or `att.verify.schema_unknown`
-respectively.
+Within the shared `att.verify.*` reason-code taxonomy, additive unknown fields
+remain accepted, while unsupported major versions and fail-closed
+critical/required fields surface `att.verify.schema_version_unsupported` or
+`att.verify.schema_unknown` respectively.
 
 When the two flags are combined, stdout remains valid JSON and the rationale
-text is carried in `explanation[]` and `reasons[].explanation`.
+text is carried in `explanation[]`.
 
 When `--explain` is used without `--json`, stdout prints a compact
 `OK|FAIL signer_subject=... schema_version=... anchor=...` summary and
@@ -85,19 +72,15 @@ the structured payload.
 {
   "schema_version": 1,
   "result": "pass",
-  "exit_code": 0,
-  "reasons": [],
+  "failed_gates": [],
+  "bundle_id": "p3-cli-proofbundle",
   "explanation": [
     {
       "primary_reason": null,
       "pointer": "/",
       "message": "signer_subject=key_id:... schema_version=1 anchor=absent"
     }
-  ],
-  "bundle": {
-    "schema_version": 1,
-    "digest": "..."
-  }
+  ]
 }
 ```
 
@@ -107,27 +90,63 @@ the structured payload.
 {
   "schema_version": 1,
   "result": "fail",
-  "exit_code": 1,
-  "reason_code": "att.verify.schema_version_unsupported",
-  "taxonomy_version": 1,
+  "failed_gates": [
+    {
+      "gate": "strict_schema",
+      "error_code": "E_SCHEMA_INVALID"
+    }
+  ],
+  "bundle_id": "p3-cli-proofbundle",
   "explanation": [
     {
       "primary_reason": "att.verify.schema_version_unsupported",
       "pointer": "/chain_metadata/schema_version",
       "message": "chain_metadata.schema_version=2; this verifier handles 1"
     }
-  ],
-  "reasons": [
+  ]
+}
+```
+
+The failure example uses the shared `att.verify.*` taxonomy documented in
+[`docs/errors.md`](../errors.md), and the `verify --explain` surface itself
+does not bump `schema_version`.
+
+#### Paired `--explain` / `--json` rejection example
+
+When an operator wants both the structured payload and the human summary, the
+same rejection can be observed on stdout and stderr without changing the JSON
+contract:
+
+```sh
+attestplane verify --json --explain "$bundle"
+```
+
+stderr:
+
+```text
+att.verify.schema_version_unsupported /chain_metadata/schema_version: chain_metadata.schema_version=2; this verifier handles 1
+```
+
+stdout:
+
+```json
+{
+  "schema_version": 1,
+  "result": "fail",
+  "failed_gates": [
     {
-      "code": "att.verify.schema_version_unsupported",
-      "path": "/chain_metadata/schema_version",
-      "message": "chain_metadata.schema_version=2; this verifier handles 1"
+      "gate": "strict_schema",
+      "error_code": "E_SCHEMA_INVALID"
     }
   ],
-  "bundle": {
-    "schema_version": 2,
-    "digest": "..."
-  }
+  "bundle_id": "p3-cli-proofbundle",
+  "explanation": [
+    {
+      "primary_reason": "att.verify.schema_version_unsupported",
+      "pointer": "/chain_metadata/schema_version",
+      "message": "chain_metadata.schema_version=2; this verifier handles 1"
+    }
+  ]
 }
 ```
 
@@ -136,12 +155,11 @@ the structured payload.
 ```sh
 attestplane verify --json "$bundle" > verify.json
 rc=$?
-
 result=$(jq -r '.result' verify.json)
 
 if [ "$rc" -ne 0 ] || [ "$result" != "pass" ]; then
   printf 'verify failed (rc=%s, result=%s)\n' "$rc" "$result"
-  jq -r '.reasons[]? | "\(.code) \(.path) \(.message)"' verify.json
+  jq -r '.failed_gates[]? | "\(.gate) \(.error_code)"' verify.json
   exit "$rc"
 fi
 ```

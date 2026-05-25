@@ -149,8 +149,13 @@ def test_bundle_verifier_rejects_unknown_required_metadata_field() -> None:
 
 
 def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:
-    rc = main(["verify", "--bundle", str(FIXTURES / "empty_attestations.json")])
-    out = capsys.readouterr().out
+    rc = main(["verify", "--bundle", str(FIXTURES / "empty_attestations.json"), "--json"])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
 
     assert rc == 2
-    assert "bundle.schema.incomplete" in out
+    assert payload["result"] == "fail"
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
+    assert captured.err.strip() == "bundle.schema.incomplete"

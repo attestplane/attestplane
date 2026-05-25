@@ -279,7 +279,9 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     )
     payload_non_empty = json.loads(stdout_non_empty)
     assert rc_non_empty == 2
-    assert payload_non_empty["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload_non_empty["failed_gates"] == [
+        {"gate": "non_empty", "error_code": "E_EMPTY_BUNDLE"},
+    ]
     assert payload_non_empty["explanation"][0]["primary_reason"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload_non_empty["explanation"][0]["pointer"] == "/events"
     assert stderr_non_empty == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
@@ -290,7 +292,9 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     )
     payload_strict = json.loads(stdout_strict)
     assert rc_strict == 2
-    assert payload_strict["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload_strict["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"},
+    ]
     assert payload_strict["explanation"][0]["primary_reason"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload_strict["explanation"][0]["pointer"] == "/signatures"
     assert stderr_strict == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
@@ -301,7 +305,9 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     )
     payload_schema = json.loads(stdout_schema)
     assert rc_schema == 1
-    assert payload_schema["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload_schema["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"},
+    ]
     assert payload_schema["explanation"][0]["primary_reason"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert payload_schema["explanation"][0]["pointer"] == "/chain_metadata/schema_version"
     assert stderr_schema == ""

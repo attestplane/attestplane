@@ -15,10 +15,6 @@ from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import EventDraft
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
-from attestplane.verify_reason_codes import (
-    VERIFY_REASON_REQUIRED_FIELD_MISSING,
-    VERIFY_REASON_SIGNATURE_MISSING,
-)
 
 
 def test_verify_bundle_option_prints_incomplete_code_to_stderr(
@@ -43,10 +39,9 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
 
@@ -67,8 +62,7 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload["failed_gates"] == [
+        {"gate": "non_empty", "error_code": "E_EMPTY_BUNDLE"}
+    ]
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"

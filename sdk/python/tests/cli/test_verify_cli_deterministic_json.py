@@ -42,8 +42,6 @@ def test_verify_json_is_deterministic_and_machine_readable(tmp_path: Path, capsy
     payload = json.loads(out1)
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
-    assert payload["exit_code"] == 0
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"] == []
-    assert payload["bundle"]["schema_version"] == 1
+    assert payload["failed_gates"] == []
+    assert payload["bundle_id"] == "cli-json"
+    assert out1.count("\n") == 1

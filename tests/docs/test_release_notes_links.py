@@ -26,7 +26,7 @@ def test_v17x_delta_covers_requested_user_visible_surface() -> None:
     assert "tests/conformance/canonicalization_negative_matrix.md" in text
 
 
-def test_verify_json_docs_cover_exit_code_and_reason_list() -> None:
+def test_verify_json_docs_cover_failed_gate_output() -> None:
     cli = (ROOT / "docs" / "cli" / "verify-json.md").read_text(encoding="utf-8")
     schema = (ROOT / "docs" / "schema" / "verify-json.md").read_text(
         encoding="utf-8"
@@ -35,10 +35,10 @@ def test_verify_json_docs_cover_exit_code_and_reason_list() -> None:
     assert "verify --json" in cli
     assert "verify --explain" in cli
     assert "schema_version" in cli
-    assert "exit_code" in cli
-    assert "reasons[]" in cli
-    assert "bundle.digest" in cli
+    assert "failed_gates[]" in cli
+    assert "bundle_id" in cli
+    assert "vector_id" in cli
     assert "schema_version" in schema
-    assert "att.verify.schema_version_missing" in schema
-    assert "att.verify.schema_version_unsupported" in schema
+    assert "E_EMPTY_BUNDLE" in schema
+    assert "E_SCHEMA_INVALID" in schema
     assert "negative conformance vectors" in schema

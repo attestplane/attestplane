@@ -49,8 +49,8 @@ def test_verify_strict_flag_combinations(
     assert rc == valid_rc
     assert valid["schema_version"] == 1
     assert valid["result"] == ("pass" if valid_rc == 0 else "fail")
-    assert valid["exit_code"] == valid_rc
-    assert valid["bundle"]["schema_version"] == 1
+    assert valid["failed_gates"] == []
+    assert valid["bundle_id"] == "p3-cli-proofbundle"
 
     rc = main(["verify", str(EMPTY_BUNDLE), *flags, "--json"])
     captured = capsys.readouterr()
@@ -58,14 +58,26 @@ def test_verify_strict_flag_combinations(
 
     assert rc == invalid_rc
     assert invalid["schema_version"] == 1
-    assert invalid["exit_code"] == invalid_rc
     if invalid_code is None:
         assert invalid["result"] == "pass"
-        assert invalid["reasons"] == []
+        assert invalid["failed_gates"] == []
         assert captured.err == ""
     else:
         assert invalid["result"] == "fail"
-        assert invalid["reasons"]
+        assert invalid["failed_gates"]
+        if flags == ["--require-non-empty"]:
+            assert invalid["failed_gates"] == [
+                {"gate": "non_empty", "error_code": "E_EMPTY_BUNDLE"}
+            ]
+        elif flags == ["--strict-schema"]:
+            assert invalid["failed_gates"] == [
+                {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+            ]
+        else:
+            assert invalid["failed_gates"] == [
+                {"gate": "non_empty", "error_code": "E_EMPTY_BUNDLE"},
+                {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"},
+            ]
         assert captured.err == f"{invalid_code}\n"
 
 
@@ -106,7 +118,4 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert rc == 0
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"] == []
-    assert payload["bundle"]["schema_version"] == 1
+    assert payload["failed_gates"] == []

@@ -75,7 +75,8 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     assert explain_rc == 0
     assert json_stderr == ""
     assert explain_stderr == ""
-    assert json_stdout == explain_stdout
-    assert json_payload["taxonomy_version"] == 1
-    assert explain_payload["taxonomy_version"] == 1
-    assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]
+    assert json_payload["failed_gates"] == []
+    assert explain_payload["failed_gates"] == []
+    assert json_payload["bundle_id"] == explain_payload["bundle_id"]
+    assert "explanation" not in json_payload
+    assert explain_payload["explanation"][0]["message"].startswith("signer_subject=")

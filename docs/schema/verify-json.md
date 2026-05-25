@@ -15,36 +15,41 @@ accompanies the structured JSON contract.
   `att.verify.schema_version_missing`.
 - An unsupported bundle or payload schema version should remain a rejected
   verifier result and surface `att.verify.schema_version_unsupported` in the
-  reason list.
+  human-readable explanation path.
 - A fail-closed critical/required field should remain a rejected verifier
-  result and surface `att.verify.schema_unknown` in the reason list.
-- Additive unknown fields are preserved verbatim by the caller and ignored by
-  the verifier. They do not affect `ok` when the rest of the bundle is valid.
-- `schema_version` compatibility is independent from the verifier reason-code
-  taxonomy version documented in `docs/errors.md`.
-- `taxonomy_version` pins the shared verifier rejection taxonomy used by both
-  `verify --json` and `verify --explain`.
-- `reason_code` is the top-level machine-readable primary rejection code, or
-  `null` on pass.
+  result and surface `att.verify.schema_unknown` in the human-readable
+  explanation path.
+- `failed_gates[]` is the stable machine-readable CI contract. It contains
+  `{gate, error_code}` pairs, where the gate names are
+  `non_empty`, `strict_schema`, `canonicalization`, and `signature`.
+- The stable CI-facing error codes are `E_EMPTY_BUNDLE`, `E_SCHEMA_INVALID`,
+  `E_CANON_MISMATCH`, and `E_SIGNATURE_INVALID`.
+- `bundle_id` is emitted when the input bundle exposes a stable identifier in
+  the verifier-visible metadata.
+- `vector_id` is emitted when a conformance harness supplies one.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the
-  ordered reason list.
-- The verifier reason-code taxonomy is additive-only, and code values are not
-  reused within a stable taxonomy version.
-- Consumers should keep branching on exit code first, then inspect `result`
-  and `reasons[]` for diagnostics.
+  ordered reason list used by the human stderr path.
+- Additive unknown fields are preserved verbatim by the caller and ignored by
+  the verifier. They do not affect `result` when the rest of the bundle is
+  valid.
+- The verifier reason-code taxonomy remains additive-only, and code values are
+  not reused within a stable taxonomy version.
+- Consumers should keep branching on the process exit code first, then inspect
+  `result` and `failed_gates[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
-  and exposes both `explanation[]` and the per-reason `explanation` field for
-  callers that already inspect `reasons[]`.
+  and exposes `explanation[]` for callers that already inspect the human
+  rationale.
 
 ## Negative Vectors
 
 The negative conformance vectors under
 `tests/conformance/vectors/negative/` pin the strict failure cases for
-required fields, missing signatures, and schema-version behavior.
+required fields, missing signatures, and schema-version behavior. They also
+pin the `failed_gates[]` shape used by the CLI smoke tests.
 
 ## Cross-Reference
 

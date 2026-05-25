@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import pytest
 
 from attestplane.cli.main import _explain_reserved_reasons, main
 from attestplane.cli.verify_json import (
+    VERIFY_JSON_ERROR_CANON_MISMATCH,
     _canonical_path_to_pointer,
     _reject_duplicate_keys,
     _schema_path_from_bundle_error,
@@ -20,10 +20,8 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
-    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
-    VERIFY_REASON_STRUCTURE_INVALID,
 )
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -51,41 +49,39 @@ def _assert_matches_verify_result_v1(
     assert schema["required"] == [
         "schema_version",
         "result",
-        "exit_code",
-        "reason_code",
-        "taxonomy_version",
-        "reasons",
-        "bundle",
+        "failed_gates",
     ]
 
     expected_keys = {
         "schema_version",
         "result",
-        "exit_code",
-        "reason_code",
-        "taxonomy_version",
-        "reasons",
-        "bundle",
+        "failed_gates",
     }
     if expect_explanation:
         expected_keys.add("explanation")
+    if "bundle_id" in payload:
+        expected_keys.add("bundle_id")
+    if "vector_id" in payload:
+        expected_keys.add("vector_id")
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
-    assert isinstance(payload["exit_code"], int)
-    assert payload["exit_code"] >= 0
-    assert payload["taxonomy_version"] == 1
-    assert payload["reason_code"] is None or re.fullmatch(
-        r"att\.verify\.[a-z][a-z0-9_]*",
-        str(payload["reason_code"]),
-    )
-    assert isinstance(payload["reasons"], list)
+    assert isinstance(payload["failed_gates"], list)
 
-    bundle = payload["bundle"]
-    assert isinstance(bundle, dict)
-    assert set(bundle) == {"schema_version", "digest"}
-    assert bundle["schema_version"] == 1
-    assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+    if payload["result"] == "pass":
+        assert payload["failed_gates"] == []
+    else:
+        assert payload["failed_gates"]
+        for gate in payload["failed_gates"]:
+            assert isinstance(gate, dict)
+            assert set(gate) == {"gate", "error_code"}
+            assert gate["gate"] in {"non_empty", "strict_schema", "canonicalization", "signature"}
+            assert gate["error_code"] in {
+                "E_EMPTY_BUNDLE",
+                "E_SCHEMA_INVALID",
+                "E_CANON_MISMATCH",
+                "E_SIGNATURE_INVALID",
+            }
 
     if expect_explanation:
         explanation = payload["explanation"]
@@ -97,18 +93,6 @@ def _assert_matches_verify_result_v1(
             assert item["pointer"]
             assert item["message"]
 
-    for reason in payload["reasons"]:
-        assert isinstance(reason, dict)
-        expected_keys = {"code", "path", "message"}
-        if "explanation" in reason:
-            expected_keys.add("explanation")
-        assert set(reason) == expected_keys
-        assert re.fullmatch(r"att\.verify\.[a-z][a-z0-9_]*", str(reason["code"]))
-        assert reason["path"]
-        assert reason["message"]
-        if "explanation" in reason:
-            assert reason["explanation"]
-
 
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
@@ -118,6 +102,7 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert rc == 0
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+    assert payload["bundle_id"] == "p3-cli-proofbundle"
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
@@ -128,11 +113,9 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert rc == 1
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert reason["path"].startswith("/events/")
-    assert "canonicalization" in reason["message"]
+    assert payload["failed_gates"] == [
+        {"gate": "canonicalization", "error_code": VERIFY_JSON_ERROR_CANON_MISMATCH}
+    ]
 
 
 def test_verify_json_and_explain_keep_json_parseable(
@@ -143,14 +126,13 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert rc == 1
     assert stderr == ""
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert explanation["pointer"].startswith("/events/")
     assert "Unicode-NFC" in explanation["message"]
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+    assert payload["failed_gates"] == [
+        {"gate": "canonicalization", "error_code": VERIFY_JSON_ERROR_CANON_MISMATCH}
+    ]
 
 
 def test_verify_json_reports_invalid_json(
@@ -165,16 +147,13 @@ def test_verify_json_reports_invalid_json(
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_SCHEMA_INVALID
     assert explanation["pointer"] == "/"
     assert str(bundle) in explanation["message"]
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert reason["path"] == "/"
-    assert str(bundle) in reason["message"]
-    assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_reports_invalid_utf8(
@@ -188,12 +167,9 @@ def test_verify_json_reports_invalid_utf8(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert payload["taxonomy_version"] == 1
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert reason["path"] == "/"
-    assert reason["message"] == "bundle is not valid UTF-8"
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_rejects_duplicate_keys(
@@ -207,12 +183,9 @@ def test_verify_json_rejects_duplicate_keys(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
-    assert payload["reason_code"] == VERIFY_REASON_STRUCTURE_INVALID
-    assert payload["taxonomy_version"] == 1
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_STRUCTURE_INVALID
-    assert reason["path"] == "/chain_metadata"
-    assert "duplicate JSON key: chain_metadata" in reason["message"]
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_rejects_non_object_root(
@@ -226,12 +199,9 @@ def test_verify_json_rejects_non_object_root(
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert payload["taxonomy_version"] == 1
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert reason["path"] == "/"
-    assert reason["message"] == "bundle must be a JSON object, got list"
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_reports_missing_bundle_path(
@@ -244,12 +214,9 @@ def test_verify_json_reports_missing_bundle_path(
 
     assert rc == 1
     assert stderr == ""
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert payload["taxonomy_version"] == 1
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert reason["path"] == "/"
-    assert "cannot read" in reason["message"]
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_schema_error_maps_missing_version_path(
@@ -265,8 +232,9 @@ def test_verify_json_schema_error_maps_missing_version_path(
 
     assert rc == 1
     assert stderr == ""
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["path"] == "/chain_metadata/schema_version"
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_unknown_required_field_reports_chain_metadata_path(
@@ -282,9 +250,9 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
 
     assert rc == 1
     assert stderr == ""
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
-    assert reason["path"] == "/chain_metadata/critical_future_field"
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_verify_json_private_pointer_helpers_cover_known_paths() -> None:

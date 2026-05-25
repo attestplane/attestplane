@@ -256,5 +256,7 @@ def test_verify_reason_code_cli_json_smoke(tmp_path: Path, capsys: pytest.Captur
     assert rc == 2
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
+    assert captured.err.strip() == "bundle.schema.incomplete"

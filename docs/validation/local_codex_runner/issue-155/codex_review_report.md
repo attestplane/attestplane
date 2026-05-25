@@ -1,0 +1,26 @@
+# Issue #155 Review
+
+Status: `PASS`
+
+## Findings
+
+No blocking issues found in the current diff.
+
+## Validation
+
+- Reviewed the local diff and repo context for `sdk/python/src/attestplane/cli/verify_json.py`, `sdk/python/src/attestplane/cli/main.py`, `schemas/cli/verify-result-v1.json`, `docs/cli/verify-json.md`, `docs/schema/verify-json.md`, `docs/release-notes/v1.7.x-delta.md`, and the associated CLI/conformance tests using `git diff` and `rg`.
+- Ran `PYTHONPATH=sdk/python/src UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/cli/test_verify_json.py -q` -> `4 passed`.
+- Ran `PYTHONPATH=sdk/python/src UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest sdk/python/tests/cli/test_verify_json_contract.py -q` -> `14 passed`.
+- Ran `PYTHONPATH=sdk/python/src UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest sdk/python/tests/cli/test_verify_cli_deterministic_json.py sdk/python/tests/cli/test_verify_errors.py -q` -> `3 passed`.
+- Ran `PYTHONPATH=sdk/python/src UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/cli/test_verify_flags.py tests/cli/test_verify_explain.py tests/verifier/test_proof_bundle_schema.py -q` -> `23 passed`.
+- Ran `PYTHONPATH=sdk/python/src UV_CACHE_DIR=/private/tmp/uv-cache uv run pytest tests/conformance/test_verify_json_schema.py tests/conformance/test_signed_schema_conformance_roundtrip.py -q` -> `6 passed`.
+- Ran `git diff --check` -> no whitespace or patch-format errors reported.
+
+## Residual Risks
+
+- The broader repository test suite was not run in this review, so regressions outside the focused verify-json paths remain possible.
+- `vector_id` emission depends on the conformance harness providing `ATTESTPLANE_VECTOR_ID`; that path was not exercised directly here.
+
+## Safety
+
+`no_merge_tag_publish_pypi = true`

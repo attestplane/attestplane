@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -203,6 +204,10 @@ def _emit(payload: dict[str, Any], json_output: bool, *, human: str) -> None:
         sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     else:
         sys.stdout.write(human + "\n")
+
+
+def _emit_compact_json(payload: dict[str, Any]) -> None:
+    sys.stdout.write(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n")
 
 
 def _reason_entries(
@@ -436,8 +441,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
             explain=getattr(args, "explain", False),
+            vector_id=getattr(args, "vector_id", None) or os.environ.get("ATTESTPLANE_VECTOR_ID"),
         )
-        _emit(outcome.payload, True, human="")
+        _emit_compact_json(outcome.payload)
         if outcome.stderr_code is not None:
             sys.stderr.write(f"{outcome.stderr_code}\n")
         return outcome.exit_code
@@ -561,6 +567,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
                 explain=True,
+                vector_id=getattr(args, "vector_id", None) or os.environ.get("ATTESTPLANE_VECTOR_ID"),
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
         return 1

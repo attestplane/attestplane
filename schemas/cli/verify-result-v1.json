@@ -8,11 +8,7 @@
   "required": [
     "schema_version",
     "result",
-    "exit_code",
-    "reason_code",
-    "taxonomy_version",
-    "reasons",
-    "bundle"
+    "failed_gates"
   ],
   "properties": {
     "schema_version": {
@@ -26,54 +22,44 @@
         "fail"
       ]
     },
-    "exit_code": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "reason_code": {
-      "anyOf": [
-        {
-          "type": "string",
-          "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
-        },
-        {
-          "type": "null"
-        }
-      ]
-    },
-    "taxonomy_version": {
-      "type": "integer",
-      "const": 1
-    },
-    "reasons": {
+    "failed_gates": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "code",
-          "path",
-          "message"
+          "gate",
+          "error_code"
         ],
         "properties": {
-          "code": {
+          "gate": {
             "type": "string",
-            "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+            "enum": [
+              "non_empty",
+              "strict_schema",
+              "canonicalization",
+              "signature"
+            ]
           },
-          "path": {
+          "error_code": {
             "type": "string",
-            "minLength": 1
-          },
-          "message": {
-            "type": "string",
-            "minLength": 1
-          },
-          "explanation": {
-            "type": "string",
-            "minLength": 1
+            "enum": [
+              "E_EMPTY_BUNDLE",
+              "E_SCHEMA_INVALID",
+              "E_CANON_MISMATCH",
+              "E_SIGNATURE_INVALID"
+            ]
           }
         }
       }
+    },
+    "bundle_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vector_id": {
+      "type": "string",
+      "minLength": 1
     },
     "explanation": {
       "type": "array",
@@ -105,24 +91,6 @@
             "type": "string",
             "minLength": 1
           }
-        }
-      }
-    },
-    "bundle": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "schema_version",
-        "digest"
-      ],
-      "properties": {
-        "schema_version": {
-          "type": "integer",
-          "const": 1
-        },
-        "digest": {
-          "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
         }
       }
     }

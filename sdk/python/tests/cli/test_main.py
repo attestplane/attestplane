@@ -16,10 +16,6 @@ from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
-from attestplane.verify_reason_codes import (
-    VERIFY_REASON_REQUIRED_FIELD_MISSING,
-    VERIFY_REASON_SIGNATURE_MISSING,
-)
 
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
@@ -125,12 +121,8 @@ def test_export_then_verify_json_output(
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
-    assert payload["exit_code"] == 0
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"] == []
-    assert payload["bundle"]["schema_version"] == 1
-    assert payload["bundle"]["digest"]
+    assert payload["failed_gates"] == []
+    assert payload["bundle_id"] == "cli-export"
 
 
 def test_verify_require_events_rejects_empty_bundle(
@@ -148,10 +140,9 @@ def test_verify_require_events_rejects_empty_bundle(
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload["failed_gates"] == [
+        {"gate": "non_empty", "error_code": "E_EMPTY_BUNDLE"}
+    ]
 
 
 def test_verify_bundle_option_rejects_unsigned_bundle(
@@ -169,10 +160,9 @@ def test_verify_bundle_option_rejects_unsigned_bundle(
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload["failed_gates"] == [
+        {"gate": "strict_schema", "error_code": "E_SCHEMA_INVALID"}
+    ]
 
 
 def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:
