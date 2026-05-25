@@ -4,8 +4,9 @@
   "warnings": [],
   "validation": [
     "Reviewed only local repository files, local command output, and the issue title/URL provided in the prompt.",
-    "Ran `pytest -q sdk/python/tests/conformance/test_negative_vectors.py tests/conformance/test_canonicalization_negative_coverage.py` resulting in 19 passed.",
-    "Ran `pytest -q tests/conformance/test_canonicalization_negative_coverage.py` resulting in 3 passed."
+    "Ran `./sdk/python/.venv/bin/ruff check sdk/python/tests/conformance/test_negative_vectors.py sdk/python/src/attestplane/verify_reason_codes.py sdk/python/src/attestplane/conformance/negative_vectors.py` and it passed.",
+    "Ran `./sdk/python/.venv/bin/mypy --strict sdk/python/src/attestplane/verify_reason_codes.py sdk/python/src/attestplane/conformance/negative_vectors.py` and it passed.",
+    "Ran `./sdk/python/.venv/bin/pytest -q tests/conformance/test_canonicalization_negative_coverage.py tests/conformance/test_verify_json_schema.py sdk/python/tests/conformance/test_negative_vectors.py` resulting in 23 passed."
   ],
   "residual_risks": [
     "`tests/conformance/canonicalization_negative_matrix.py` now maintains a manual allowlist of known negative reason codes, so any future legitimate reason-code addition will need a corresponding test/helper update."

@@ -12,8 +12,9 @@ No blocking findings.
 
 ## Validation
 
-- `pytest -q sdk/python/tests/conformance/test_negative_vectors.py tests/conformance/test_canonicalization_negative_coverage.py` -> 19 passed
-- `pytest -q tests/conformance/test_canonicalization_negative_coverage.py` -> 3 passed
+- `./sdk/python/.venv/bin/ruff check sdk/python/tests/conformance/test_negative_vectors.py sdk/python/src/attestplane/verify_reason_codes.py sdk/python/src/attestplane/conformance/negative_vectors.py` -> passed
+- `./sdk/python/.venv/bin/mypy --strict sdk/python/src/attestplane/verify_reason_codes.py sdk/python/src/attestplane/conformance/negative_vectors.py` -> passed
+- `./sdk/python/.venv/bin/pytest -q tests/conformance/test_canonicalization_negative_coverage.py tests/conformance/test_verify_json_schema.py sdk/python/tests/conformance/test_negative_vectors.py` -> 23 passed
 
 ## Residual Risk
 

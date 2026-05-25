@@ -13,8 +13,8 @@ from attestplane.conformance.negative_vectors import (
     materialize_negative_canonicalization_candidate,
     set_json_path,
 )
-from attestplane.verify_reason_codes import is_known_verify_reason_code
 from attestplane.conformance.run import main as run_conformance
+from attestplane.verify_reason_codes import is_known_verify_reason_code
 
 NEGATIVE_VECTORS = load_negative_canonicalization_vectors()
 
