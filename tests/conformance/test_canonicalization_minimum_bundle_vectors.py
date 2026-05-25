@@ -44,6 +44,29 @@ def _assert_recursive_unique_keys(raw: str) -> None:
     json.loads(raw, object_pairs_hook=vector_manifest.reject_duplicate_keys)
 
 
+def _classify_negative_reason_code(vector: dict[str, Any], candidate: Any) -> str:
+    expected_reason_code = vector["expected_reason_code"]
+    if expected_reason_code == "json.duplicate_key":
+        assert isinstance(candidate, str)
+        with pytest.raises(vector_manifest.DuplicateKeyError) as excinfo:
+            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+        assert "duplicate JSON key" in str(excinfo.value)
+        return expected_reason_code
+
+    if expected_reason_code == "json.non_canonical_envelope":
+        assert isinstance(candidate, str)
+        with pytest.raises(json.JSONDecodeError) as excinfo:
+            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+        assert excinfo.value.msg
+        return expected_reason_code
+
+    assert isinstance(candidate, dict)
+    with pytest.raises(CanonicalizationError) as excinfo:
+        verify_proof_bundle(candidate, **vector.get("verify_options", {}))
+    assert str(excinfo.value)
+    return expected_reason_code
+
+
 @pytest.mark.parametrize("vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"])
 def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]) -> None:
     bundle = vector_manifest.emit_positive_canonicalization_bundle(vector)
@@ -71,19 +94,5 @@ def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]
 @pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
 def test_canonicalization_minimum_bundle_negative_vectors(vector: dict[str, Any]) -> None:
     candidate = vector_manifest.materialize_negative_canonicalization_candidate(vector)
-
-    if vector["expected_error_code"] == "json.duplicate_key":
-        assert isinstance(candidate, str)
-        with pytest.raises(DuplicateKeyError):
-            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
-        return
-
-    if vector["expected_error_code"] == "json.non_canonical_envelope":
-        assert isinstance(candidate, str)
-        with pytest.raises(json.JSONDecodeError):
-            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
-        return
-
-    assert isinstance(candidate, dict)
-    with pytest.raises(CanonicalizationError):
-        verify_proof_bundle(candidate, **vector["verify_options"])
+    reason_code = _classify_negative_reason_code(vector, candidate)
+    assert reason_code == vector["expected_reason_code"], vector["case_id"]
