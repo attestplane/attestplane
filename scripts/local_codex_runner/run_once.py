@@ -16,7 +16,7 @@ from scripts.local_codex_runner.advance_queue import advance_queue
 from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
 from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError
-from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues, task_has_product_delta
+from scripts.local_codex_runner.models import IssueTask, candidate_fetch_limit, processable_issues, task_has_product_delta
 from scripts.local_codex_runner.needs_human import recover_needs_human_for_labels
 from scripts.local_codex_runner.run_issue import run_issue
 from scripts.local_codex_runner.state_store import load_state, save_state
@@ -109,12 +109,42 @@ def ensure_product_delta_idle_recovery_task(
     except RunnerCommandError as exc:
         return {"enabled": True, "action": "error", "stage": "list_planned_tasks", "error": str(exc)}
     product_tasks = [issue for issue in planned if task_has_product_delta(issue)]
-    if product_tasks:
+    include = set(config.lane_include_labels) or None
+    exclude = set(config.lane_exclude_labels) or None
+    processable_product_tasks = processable_issues(
+        product_tasks,
+        approved_label=config.approved_label,
+        pr_opened_label=config.pr_opened_label,
+        needs_human_label=config.needs_human_label,
+        max_issues_per_run=10,
+        include_labels=include,
+        exclude_labels=exclude,
+        require_product_delta=True,
+    )
+    if processable_product_tasks:
         return {
             "enabled": True,
             "action": "kept",
-            "reason": "open_product_task_exists",
-            "issue_numbers": [issue.number for issue in product_tasks[:10]],
+            "reason": "processable_product_task_exists",
+            "issue_numbers": [issue.number for issue in processable_product_tasks[:10]],
+        }
+    markable_product_tasks = [
+        issue
+        for issue in product_tasks
+        if product_delta_idle_recovery_markable_issue(issue, config, include_labels=include, exclude_labels=exclude)
+    ]
+    if markable_product_tasks:
+        issue = markable_product_tasks[0]
+        try:
+            gh.add_labels(config.repo or "", issue.number, [config.approved_label])
+        except RunnerCommandError as exc:
+            return {"enabled": True, "action": "error", "stage": "mark_product_task", "issue_number": issue.number, "error": str(exc)}
+        return {
+            "enabled": True,
+            "action": "marked",
+            "reason": "marked_existing_product_task",
+            "issue_number": issue.number,
+            "label": config.approved_label,
         }
     labels = product_delta_idle_recovery_labels(config)
     body = render_product_delta_idle_recovery_body(product_delta_idle)
@@ -129,6 +159,25 @@ def ensure_product_delta_idle_recovery_task(
         "labels": labels,
         "url": created,
     }
+
+
+def product_delta_idle_recovery_markable_issue(
+    issue: IssueTask,
+    config: RunnerConfig,
+    *,
+    include_labels: set[str] | None,
+    exclude_labels: set[str] | None,
+) -> bool:
+    labels = set(issue.labels)
+    if config.approved_label in labels:
+        return False
+    if config.pr_opened_label in labels or config.needs_human_label in labels:
+        return False
+    if include_labels and not labels.intersection(include_labels):
+        return False
+    if exclude_labels and labels.intersection(exclude_labels):
+        return False
+    return task_has_product_delta(issue)
 
 
 def product_delta_idle_recovery_labels(config: RunnerConfig) -> list[str]:
