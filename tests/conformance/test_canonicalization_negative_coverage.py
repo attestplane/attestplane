@@ -40,3 +40,12 @@ def test_canonicalization_negative_edge_matrix_covers_every_landed_vector() -> N
         for row in matrix.EDGE_ROWS
         for label in row.covered_labels
     }
+
+
+def test_canonicalization_negative_edge_matrix_reason_codes_are_known() -> None:
+    inventory = matrix.load_vector_inventory()
+
+    assert all(
+        matrix.is_known_negative_reason_code(entry["expected_reason_code"])
+        for entry in inventory
+    )
