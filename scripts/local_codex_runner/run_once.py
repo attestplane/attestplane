@@ -68,6 +68,11 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
     except RunnerCommandError as exc:
         external_errors.append({"stage": "list_issues", "error": str(exc)})
         issues = []
+    if product_delta_idle["active"]:
+        try:
+            issues = product_delta_idle_candidate_pool(config, gh, issues, include, exclude)
+        except RunnerCommandError as exc:
+            external_errors.append({"stage": "product_delta_idle_candidate_pool", "error": str(exc)})
     results = []
     for issue in processable_issues(
         issues,
@@ -93,6 +98,30 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         "results": results,
         "transient_cleanup": transient_cleanup,
     }
+
+
+def product_delta_idle_candidate_pool(
+    config: RunnerConfig,
+    gh: GitHubCLI,
+    issues: list[IssueTask],
+    include: set[str],
+    exclude: set[str],
+) -> list[IssueTask]:
+    if not config.product_delta_idle_create_task:
+        return issues
+    planned = gh.list_issues(config.repo or "", config.planned_task_label, 100)
+    existing_numbers = {issue.number for issue in issues}
+    product_candidates = processable_issues(
+        [issue for issue in planned if issue.number not in existing_numbers],
+        approved_label=config.approved_label,
+        pr_opened_label=config.pr_opened_label,
+        needs_human_label=config.needs_human_label,
+        max_issues_per_run=100,
+        include_labels=include or None,
+        exclude_labels=exclude or None,
+        require_product_delta=True,
+    )
+    return [*issues, *product_candidates]
 
 
 def ensure_product_delta_idle_recovery_task(
