@@ -75,6 +75,39 @@
         }
       }
     },
+    "explanation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "primary_reason",
+          "pointer",
+          "message"
+        ],
+        "properties": {
+          "primary_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pointer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "bundle": {
       "type": "object",
       "additionalProperties": false,

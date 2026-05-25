@@ -23,7 +23,11 @@ from pathlib import Path
 from typing import Any
 
 from attestplane import __version__
-from attestplane.cli.verify_json import build_verify_json_outcome
+from attestplane.cli.verify_json import (
+    _verify_explanations,
+    _verify_success_summary,
+    build_verify_json_outcome,
+)
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_IO_ERROR,
@@ -34,8 +38,6 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
-    VerifyReasonCodeV1,
-    verify_reason_code_explanation,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -219,15 +221,24 @@ def _reason_entries(
     return reasons
 
 
-def _write_verify_explanations(result: Any) -> None:
-    for code in (result.primary_reason, *result.secondary_reasons):
-        if code is None:
-            continue
-        _write_verify_explanation(code)
+def _verify_human_summary(
+    result: Any | None,
+    *,
+    bundle: dict[str, Any] | None = None,
+    status: str,
+) -> str:
+    if bundle is None or result is None:
+        return f"{status}"
+    return f"{status} {_verify_success_summary(bundle)}"
 
 
-def _write_verify_explanation(code: VerifyReasonCodeV1) -> None:
-    sys.stderr.write(f"{code}: {verify_reason_code_explanation(code)}\n")
+def _write_verify_explanations(entries: list[dict[str, Any]]) -> None:
+    for entry in entries:
+        primary_reason = entry.get("primary_reason")
+        pointer = entry.get("pointer", "/")
+        message = entry.get("message", "")
+        prefix = primary_reason if primary_reason is not None else "ok"
+        sys.stderr.write(f"{prefix} {pointer}: {message}\n")
 
 
 _KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {
@@ -439,6 +450,10 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_signed_attestation=strict_schema,
         )
     except FileNotFoundError as exc:
+        explain = getattr(args, "explain", False)
+        human = f"FAIL: cannot read {bundle_path}: {exc}"
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
         _emit(
             {
                 "ok": False,
@@ -450,12 +465,24 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 **_verify_scope_metadata(),
             },
             args.json_output,
-            human=f"FAIL: cannot read {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+            human=human,
         )
-        if args.explain and not args.json_output:
-            _write_verify_explanation(VERIFY_REASON_SCHEMA_INVALID)
+        if explain and not args.json_output:
+            _write_verify_explanations(
+                [
+                    {
+                        "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
+                        "pointer": "/",
+                        "message": str(exc),
+                    }
+                ]
+            )
         return 1
     except json.JSONDecodeError as exc:
+        explain = getattr(args, "explain", False)
+        human = f"FAIL: schema error in {bundle_path}: {exc}"
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
         _emit(
             {
                 "ok": False,
@@ -467,29 +494,54 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 **_verify_scope_metadata(),
             },
             args.json_output,
-            human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+            human=human,
         )
-        if args.explain and not args.json_output:
-            _write_verify_explanation(VERIFY_REASON_SCHEMA_INVALID)
+        if explain and not args.json_output:
+            _write_verify_explanations(
+                [
+                    {
+                        "primary_reason": VERIFY_REASON_SCHEMA_INVALID,
+                        "pointer": "/",
+                        "message": f"{bundle_path}: not valid JSON: {exc.msg}",
+                    }
+                ]
+            )
         return 2
     except BundleSchemaError as exc:
+        explain = getattr(args, "explain", False)
+        human = f"FAIL: schema error in {bundle_path}: {exc}"
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+        primary_reason = classify_bundle_schema_error(exc)
         _emit(
             {
                 "ok": False,
                 "error": "schema",
                 "error_code": VERIFY_SCHEMA_ERROR,
-                "primary_reason": classify_bundle_schema_error(exc),
+                "primary_reason": primary_reason,
                 "secondary_reasons": [],
                 "detail": str(exc),
                 **_verify_scope_metadata(),
             },
             args.json_output,
-            human=f"FAIL: schema error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+            human=human,
         )
-        if args.explain and not args.json_output:
-            _write_verify_explanation(classify_bundle_schema_error(exc))
+        if explain and not args.json_output:
+            _write_verify_explanations(
+                [
+                    {
+                        "primary_reason": primary_reason,
+                        "pointer": "/",
+                        "message": str(exc),
+                    }
+                ]
+            )
         return 2
     except CanonicalizationError as exc:
+        explain = getattr(args, "explain", False)
+        human = f"FAIL: canonicalization error in {bundle_path}: {exc}"
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
         _emit(
             {
                 "ok": False,
@@ -501,10 +553,16 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 **_verify_scope_metadata(),
             },
             args.json_output,
-            human=f"FAIL: canonicalization error in {bundle_path}: {exc}\n{VERIFY_SCOPE_NOTICE}",
+            human=human,
         )
-        if args.explain and not args.json_output:
-            _write_verify_explanation(VERIFY_REASON_CANONICAL_MISMATCH)
+        if explain and not args.json_output:
+            outcome = build_verify_json_outcome(
+                bundle_path,
+                require_non_empty=require_non_empty,
+                require_signed_attestation=strict_schema,
+                explain=True,
+            )
+            _write_verify_explanations(outcome.payload.get("explanation", []))
         return 1
 
     payload = {
@@ -534,14 +592,24 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
         **_verify_scope_metadata(),
     }
+    explain = getattr(args, "explain", False)
     if not result.ok and result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
         VERIFY_REQUIRED_FIELDS_MISSING,
     }:
         sys.stderr.write(f"{result.error_code}\n")
-    _emit(payload, args.json_output, human=f"{result.short_summary()}\n{VERIFY_SCOPE_NOTICE}")
-    if args.explain and not args.json_output and not result.ok:
-        _write_verify_explanations(result)
+    human = result.short_summary()
+    if explain:
+        human = _verify_human_summary(
+            result,
+            bundle=bundle,
+            status="OK" if result.ok else "FAIL",
+        )
+    else:
+        human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+    _emit(payload, args.json_output, human=human)
+    if explain and not args.json_output and not result.ok:
+        _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True)[:1])
     if result.ok:
         return 0
     if result.error_code in {

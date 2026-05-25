@@ -31,8 +31,13 @@ The payload is fixed at schema version 1:
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
-- When `--explain` is set, each reason may also include an `explanation`
-  field with the stable human rationale string for that reason code.
+- When `--explain` is set, the payload also includes a top-level
+  `explanation[]` array with `{primary_reason, pointer, message}` entries.
+  On success, the array contains a compact summary; on rejection, it mirrors
+  the ordered rejection reasons.
+- When `--explain` is set, each `reasons[]` item may also include an
+  `explanation` field with the stable human rationale string for that reason
+  code.
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
@@ -67,10 +72,12 @@ unsupported major versions and fail-closed critical/required fields surface
 respectively.
 
 When the two flags are combined, stdout remains valid JSON and the rationale
-text is carried in `reasons[].explanation`.
+text is carried in `explanation[]` and `reasons[].explanation`.
 
-When `--explain` is used without `--json`, rationale lines are written to
-stderr in reason-code order while stdout keeps the existing human summary.
+When `--explain` is used without `--json`, stdout prints a compact
+`OK|FAIL signer_subject=... schema_version=... anchor=...` summary and
+stderr prints one rationale line per rejection reason in the same order as
+the structured payload.
 
 ### Pass Example
 
@@ -80,6 +87,13 @@ stderr in reason-code order while stdout keeps the existing human summary.
   "result": "pass",
   "exit_code": 0,
   "reasons": [],
+  "explanation": [
+    {
+      "primary_reason": null,
+      "pointer": "/",
+      "message": "signer_subject=key_id:... schema_version=1 anchor=absent"
+    }
+  ],
   "bundle": {
     "schema_version": 1,
     "digest": "..."
@@ -96,11 +110,18 @@ stderr in reason-code order while stdout keeps the existing human summary.
   "exit_code": 1,
   "reason_code": "att.verify.schema_version_unsupported",
   "taxonomy_version": 1,
+  "explanation": [
+    {
+      "primary_reason": "att.verify.schema_version_unsupported",
+      "pointer": "/chain_metadata/schema_version",
+      "message": "chain_metadata.schema_version=2; this verifier handles 1"
+    }
+  ],
   "reasons": [
     {
       "code": "att.verify.schema_version_unsupported",
-      "path": "bundle.schema_version",
-      "message": "bundle schema_version 2 is not supported"
+      "path": "/chain_metadata/schema_version",
+      "message": "chain_metadata.schema_version=2; this verifier handles 1"
     }
   ],
   "bundle": {
