@@ -883,6 +883,14 @@
     },
     {
       "documented": false,
+      "kind": "constant",
+      "name": "SUPPORTED_SCHEMA_VERSIONS",
+      "notes": "",
+      "source": "src/hashchain.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
       "kind": "type",
       "name": "SerializedAuditEvent",
       "notes": "",

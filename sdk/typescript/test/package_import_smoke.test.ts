@@ -14,6 +14,7 @@ import {
   canonicalize,
   makeEventDraft,
   makeSubjectRef,
+  SUPPORTED_SCHEMA_VERSIONS,
   verifyProofBundle,
 } from '../src/index.js';
 
@@ -49,5 +50,6 @@ describe('root package export surface', () => {
     const result = verifyProofBundle(builder.build());
     expect(result.ok).toBe(true);
     expect(typeof canonicalize).toBe('function');
+    expect(SUPPORTED_SCHEMA_VERSIONS).toEqual([1]);
   });
 });

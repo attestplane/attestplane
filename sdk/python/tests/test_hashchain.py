@@ -14,6 +14,7 @@ from attestplane.canonical import canonicalize
 from attestplane.hashchain import (
     GENESIS_HASH,
     SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS,
     chain_extend,
     genesis_head,
     head_of,
@@ -36,6 +37,7 @@ def test_genesis_head_constants() -> None:
 
 def test_schema_version_is_frozen_at_v1() -> None:
     assert SCHEMA_VERSION == 1
+    assert SUPPORTED_SCHEMA_VERSIONS == (1,)
 
 
 def test_chain_extend_assigns_seq_and_links_genesis() -> None:

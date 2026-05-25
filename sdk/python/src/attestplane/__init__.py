@@ -157,6 +157,7 @@ except ImportError:  # pragma: no cover
 from attestplane.hashchain import (
     GENESIS_HASH,
     SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS,
     VerificationResult,
     chain_extend,
     genesis_head,
@@ -229,6 +230,7 @@ __all__ = [
     "ROUTING_EVENT",
     "RUNTIME_LIFECYCLE_EVENT",
     "SCHEMA_VERSION",
+    "SUPPORTED_SCHEMA_VERSIONS",
     "SETTLEMENT_EVENT",
     "STATE_TRANSITION_EVENT",
     "TOOL_CALL_EVENT",

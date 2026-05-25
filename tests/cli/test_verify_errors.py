@@ -19,11 +19,13 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_MISSING,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures" / "bundles"
+UNKNOWN_SCHEMA_VERSION = ROOT / "tests" / "fixtures" / "unknown_schema_version.json"
 
 
 def test_verify_bundle_option_prints_incomplete_code_to_stderr(
@@ -119,4 +121,21 @@ def test_verify_json_reports_unknown_required_metadata_field(
     assert result["result"] == "fail"
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert result["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
+    assert captured.err == ""
+
+
+def test_verify_json_reports_unknown_schema_version(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", "--strict-schema", "--json", str(UNKNOWN_SCHEMA_VERSION)])
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
+
+    assert rc == 1
+    assert result["schema_version"] == 1
+    assert result["result"] == "fail"
+    assert result["exit_code"] == 1
+    assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert result["reasons"][0]["path"] == "/chain_metadata/schema_version"
     assert captured.err == ""

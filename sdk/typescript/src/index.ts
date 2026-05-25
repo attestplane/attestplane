@@ -159,6 +159,7 @@ export {
 export {
   GENESIS_HASH,
   SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   chainExtend,
   genesisHead,
   hashEvent,

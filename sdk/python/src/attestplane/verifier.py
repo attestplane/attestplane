@@ -25,7 +25,7 @@ from typing import Any
 from attestplane.event_types import POLICY_CHECK_EVENT
 from attestplane.hashchain import (
     GENESIS_HASH,
-    SCHEMA_VERSION,
+    SUPPORTED_SCHEMA_VERSIONS,
     VerificationResult,
     hash_event,
     head_of,
@@ -225,7 +225,7 @@ def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | Non
     schema_version = metadata["schema_version"]
     if not isinstance(schema_version, int):
         return VERIFY_REASON_SCHEMA_INVALID
-    if schema_version != SCHEMA_VERSION:
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     return None
 
@@ -477,7 +477,7 @@ def _verify_metadata_closure(
             return False, "chain_metadata.schema_version must be an integer"
         return False, (
             f"chain_metadata.schema_version={metadata.get('schema_version')!r}; "
-            f"this verifier handles {SCHEMA_VERSION}"
+            f"this verifier handles schema_version values {SUPPORTED_SCHEMA_VERSIONS}"
         )
     unknown_required_field = _unknown_required_field_reason(metadata, section_name="chain_metadata")
     if unknown_required_field is not None:
