@@ -60,6 +60,15 @@ def _make_policy_trace_refs_empty_bundle(tmp_path: Path) -> Path:
     return _write_bundle(tmp_path, bundle, name="policy-trace-refs-empty.json")
 
 
+def _make_multi_reason_bundle(tmp_path: Path) -> Path:
+    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
+    chain_metadata = bundle["chain_metadata"]
+    assert isinstance(chain_metadata, dict)
+    chain_metadata["schema_version"] = 999
+    bundle["policy_trace_refs"] = []
+    return _write_bundle(tmp_path, bundle, name="multi-reason.json")
+
+
 def _assert_rationale_lines(
     stderr: str,
     *,
@@ -70,10 +79,10 @@ def _assert_rationale_lines(
 ) -> None:
     lines = stderr.splitlines()
     if expected_error_code is None:
-        assert len(lines) == 1
+        assert len(lines) >= 1
         rationale_line = lines[0]
     else:
-        assert len(lines) == 2
+        assert len(lines) >= 2
         assert lines[0] == expected_error_code
         rationale_line = lines[1]
     assert rationale_line.startswith(f"{reason} {pointer}: ")
@@ -196,6 +205,36 @@ def test_verify_explain_canonicalization_failure_summary_is_generic(
     assert stderr.splitlines()[0].startswith(
         f"{VERIFY_REASON_CANONICAL_MISMATCH} /events/0/event/payload/artifact_ref: "
     )
+
+
+def test_verify_explain_plain_text_emits_all_rejection_rationales(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    multi_reason_bundle = _make_multi_reason_bundle(tmp_path)
+
+    rc_json, stdout_json, stderr_json = _run_verify(
+        ["verify", "--json", "--explain", str(multi_reason_bundle)],
+        capsys,
+    )
+    payload = json.loads(stdout_json)
+    explanations = payload["explanation"]
+    assert rc_json == 1
+    assert stderr_json == ""
+    assert isinstance(explanations, list)
+    assert len(explanations) > 1
+
+    expected_lines = [
+        f"{entry['primary_reason'] or 'ok'} {entry['pointer']}: {entry['message']}"
+        for entry in explanations
+    ]
+
+    rc, stdout, stderr = _run_verify(["verify", "--explain", str(multi_reason_bundle)], capsys)
+
+    assert rc == 1
+    assert stdout.startswith("FAIL signer_subject=")
+    assert "schema_version=999" in stdout
+    assert stderr.splitlines() == expected_lines
 
 
 def test_verify_explain_compact_success_summary(

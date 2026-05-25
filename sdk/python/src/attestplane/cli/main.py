@@ -609,7 +609,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
     _emit(payload, args.json_output, human=human)
     if explain and not args.json_output and not result.ok:
-        _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True)[:1])
+        _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True))
     if result.ok:
         return 0
     if result.error_code in {
