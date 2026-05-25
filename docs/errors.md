@@ -66,7 +66,8 @@ by `verify` paths. Issue #236 threads that same taxonomy through both
   `secondary_reasons: []`.
 - CLI JSON surfaces the same taxonomy with `reason_code` and
   `taxonomy_version`, while `--explain` renders the same code set in human
-  form.
+  form and adds a top-level `explanation[]` array with
+  `{primary_reason, pointer, message}` entries.
 
 These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
 `taxonomy_version = 1` and is additive-only: adding a new code is allowed with
@@ -98,4 +99,6 @@ migration aids. SDK and CLI consumers should branch on `primary_reason` and
 
 Forward-compatible additive bundle fields are ignored by the verifier and do
 not change `ok` when the rest of the bundle is valid. Use `verify --explain`
-when you need the human-oriented summary of the rejected result.
+when you need the human-oriented summary of the rejected result; the CLI
+keeps the structured `reasons[]` contract and adds the operator-facing
+`explanation[]` array without changing exit codes.

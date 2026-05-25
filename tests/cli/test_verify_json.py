@@ -74,7 +74,33 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert payload["result"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
+    explanation = payload["explanation"]
+    assert isinstance(explanation, list)
+    assert explanation
+    first = explanation[0]
+    assert first["primary_reason"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert first["pointer"].startswith("/events/")
+    assert "Unicode-NFC" in first["message"]
     reason = payload["reasons"][0]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+
+
+def test_verify_json_explain_success_emits_compact_summary(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
+
+    assert rc == 0
+    assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    explanation = payload["explanation"]
+    assert isinstance(explanation, list)
+    assert len(explanation) == 1
+    summary = explanation[0]
+    assert summary["primary_reason"] is None
+    assert summary["pointer"] == "/"
+    assert "signer_subject=" in summary["message"]
+    assert "schema_version=1" in summary["message"]
+    assert "anchor=absent" in summary["message"]

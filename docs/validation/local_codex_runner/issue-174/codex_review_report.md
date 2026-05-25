@@ -1,0 +1,26 @@
+# Issue #174 Local Codex Review
+
+Status: `PASS`
+
+## Blocking Findings
+
+- None
+
+## Warnings
+
+- None
+
+## Validation
+
+- Updated `tests/conformance/test_verify_json_schema.py` to accept the additive `explanation[]` field on `verify --json --explain` and to compare plain-text rationale lines against ordered reason codes plus pointers.
+- Ran `sdk/python/.venv/bin/python -m pytest -q tests/cli/test_verify_explain.py tests/cli/test_verify_json.py tests/conformance/test_verify_json_schema.py`.
+- Ran `sdk/python/.venv/bin/python -m pytest -q sdk/python/tests/cli/test_verify_json_contract.py`.
+
+## Residual Risks
+
+- Other `--explain` exception branches were not exhaustively exercised beyond the focused regression suite.
+- Future taxonomy or schema changes will require updating the `explanation[]` contract assertions and snapshots.
+
+## Gate / Publish Check
+
+- `no_merge_tag_publish_pypi: true`

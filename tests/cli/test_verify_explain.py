@@ -6,30 +6,27 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
 from attestplane.cli.main import main
 from attestplane.proof_bundle import ProofBundleBuilder
+from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
 from attestplane.verify_reason_codes import (
-    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
-    VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
 )
-from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
 
 ROOT = Path(__file__).resolve().parents[2]
+PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 CANONICAL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
-MALFORMED_FIXTURE = ROOT / "tests" / "fixtures" / "proofbundle" / "malformed.json"
 SIGNED_FIXTURE = ROOT / "tests" / "fixtures" / "v1.7.0_signed.json"
 MISSING_SIGNATURES_FIXTURE = ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
 
-CaseBuilder = Callable[[Path], tuple[list[str], int, list[str], list[str]]]
+FIXED_SIGNER_SUBJECT = "key_id:4bf5122f344554c53bde2ebb8cd2b7e3"
 
 
 def _write_bundle(tmp_path: Path, bundle: dict[str, object], *, name: str) -> Path:
@@ -38,190 +35,273 @@ def _write_bundle(tmp_path: Path, bundle: dict[str, object], *, name: str) -> Pa
     return path
 
 
-def _case_canonical_mismatch(_: Path) -> tuple[list[str], int, list[str], list[str]]:
-    return (
-        ["verify", "--explain", str(CANONICAL_FIXTURE)],
-        1,
-        [VERIFY_REASON_CANONICAL_MISMATCH],
-        [
-            f"{VERIFY_REASON_CANONICAL_MISMATCH}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_CANONICAL_MISMATCH]}"
-        ],
-    )
-
-
-def _case_schema_invalid(_: Path) -> tuple[list[str], int, list[str], list[str]]:
-    return (
-        ["verify", "--explain", str(MALFORMED_FIXTURE)],
-        2,
-        [VERIFY_REASON_SCHEMA_INVALID],
-        [
-            f"{VERIFY_REASON_SCHEMA_INVALID}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_SCHEMA_INVALID]}"
-        ],
-    )
-
-
-def _case_required_field_missing(tmp_path: Path) -> tuple[list[str], int, list[str], list[str]]:
-    bundle = ProofBundleBuilder(chain_id="empty", producer_runtime="test").build()
-    path = _write_bundle(tmp_path, bundle, name="empty.json")
-    return (
-        ["verify", "--require-events", "--explain", str(path)],
-        2,
-        [VERIFY_REASON_REQUIRED_FIELD_MISSING],
-        [
-            VERIFY_REQUIRED_FIELDS_MISSING,
-            f"{VERIFY_REASON_REQUIRED_FIELD_MISSING}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_REQUIRED_FIELD_MISSING]}",
-            f"{VERIFY_REASON_STRUCTURE_INVALID}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_STRUCTURE_INVALID]}",
-        ],
-    )
-
-
-def _case_signature_missing(_: Path) -> tuple[list[str], int, list[str], list[str]]:
-    return (
-        ["verify", "--bundle", str(MISSING_SIGNATURES_FIXTURE), "--explain"],
-        2,
-        [VERIFY_REASON_SIGNATURE_MISSING],
-        [
-            VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
-            f"{VERIFY_REASON_SIGNATURE_MISSING}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_SIGNATURE_MISSING]}",
-        ],
-    )
-
-
-def _case_schema_version_unsupported(tmp_path: Path) -> tuple[list[str], int, list[str], list[str]]:
-    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
-    chain_metadata = bundle["chain_metadata"]
-    assert isinstance(chain_metadata, dict)
-    chain_metadata["schema_version"] = 2
-    path = _write_bundle(tmp_path, bundle, name="unsupported-version.json")
-    return (
-        ["verify", "--explain", str(path)],
-        1,
-        [VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED],
-        [
-            f"{VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED]}"
-        ],
-    )
-
-
-def _case_structure_invalid(tmp_path: Path) -> tuple[list[str], int, list[str], list[str]]:
-    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
-    bundle["policy_trace_refs"] = []
-    path = _write_bundle(tmp_path, bundle, name="structure-invalid.json")
-    return (
-        ["verify", "--explain", str(path)],
-        1,
-        [VERIFY_REASON_STRUCTURE_INVALID],
-        [
-            f"{VERIFY_REASON_STRUCTURE_INVALID}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_STRUCTURE_INVALID]}"
-        ],
-    )
-
-
-def _case_multi_reason_order(tmp_path: Path) -> tuple[list[str], int, list[str], list[str]]:
-    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
-    events = bundle["events"]
-    assert isinstance(events, list)
-    events[0]["event_hash_hex"] = "f" * 64  # type: ignore[index]
-    bundle["policy_trace_refs"] = []
-    path = _write_bundle(tmp_path, bundle, name="multi-reason.json")
-    return (
-        ["verify", "--bundle", str(path), "--explain"],
-        1,
-        [
-            VERIFY_REASON_CANONICAL_MISMATCH,
-            VERIFY_REASON_STRUCTURE_INVALID,
-            VERIFY_REASON_STRUCTURE_INVALID,
-        ],
-        [
-            f"{VERIFY_REASON_CANONICAL_MISMATCH}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_CANONICAL_MISMATCH]}",
-            f"{VERIFY_REASON_STRUCTURE_INVALID}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_STRUCTURE_INVALID]}",
-            f"{VERIFY_REASON_STRUCTURE_INVALID}: "
-            f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_STRUCTURE_INVALID]}",
-        ],
-    )
-
-
-HUMAN_CASES: list[tuple[str, CaseBuilder]] = [
-    ("canonical mismatch", _case_canonical_mismatch),
-    ("schema invalid", _case_schema_invalid),
-    ("required field missing", _case_required_field_missing),
-    ("signature missing", _case_signature_missing),
-    ("schema version unsupported", _case_schema_version_unsupported),
-    ("structure invalid", _case_structure_invalid),
-]
-
-
 def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, captured.out, captured.err
 
 
-@pytest.mark.parametrize("case_name, case_builder", HUMAN_CASES, ids=[name for name, _ in HUMAN_CASES])
-def test_verify_explain_writes_rationale_lines_to_stderr(
-    case_name: str,
-    case_builder: CaseBuilder,
+def _make_empty_bundle(tmp_path: Path) -> Path:
+    bundle = ProofBundleBuilder(chain_id="empty", producer_runtime="test").build()
+    return _write_bundle(tmp_path, bundle, name="empty.json")
+
+
+def _make_schema_version_unsupported_bundle(tmp_path: Path) -> Path:
+    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
+    chain_metadata = bundle["chain_metadata"]
+    assert isinstance(chain_metadata, dict)
+    chain_metadata["schema_version"] = 2
+    return _write_bundle(tmp_path, bundle, name="schema-version-unsupported.json")
+
+
+def _make_policy_trace_refs_empty_bundle(tmp_path: Path) -> Path:
+    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
+    bundle["policy_trace_refs"] = []
+    return _write_bundle(tmp_path, bundle, name="policy-trace-refs-empty.json")
+
+
+def _make_multi_reason_bundle(tmp_path: Path) -> Path:
+    bundle = json.loads(SIGNED_FIXTURE.read_text(encoding="utf-8"))
+    chain_metadata = bundle["chain_metadata"]
+    assert isinstance(chain_metadata, dict)
+    chain_metadata["schema_version"] = 999
+    bundle["policy_trace_refs"] = []
+    return _write_bundle(tmp_path, bundle, name="multi-reason.json")
+
+
+def _assert_rationale_lines(
+    stderr: str,
+    *,
+    expected_error_code: str | None,
+    reason: str,
+    pointer: str,
+    message_parts: tuple[str, ...],
+) -> None:
+    lines = stderr.splitlines()
+    if expected_error_code is None:
+        assert len(lines) >= 1
+        rationale_line = lines[0]
+    else:
+        assert len(lines) >= 2
+        assert lines[0] == expected_error_code
+        rationale_line = lines[1]
+    assert rationale_line.startswith(f"{reason} {pointer}: ")
+    for part in message_parts:
+        assert part in rationale_line
+
+
+def _assert_failure_summary(stdout: str, *, signer_subject: str, schema_version: str) -> None:
+    assert stdout.strip() == (
+        f"FAIL signer_subject={signer_subject} schema_version={schema_version} anchor=absent"
+    )
+
+
+def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
+    assert stdout.strip() == (
+        f"OK signer_subject={signer_subject} schema_version=1 anchor=absent"
+    )
+
+
+def test_verify_explain_writes_pointer_bearing_rationale_lines(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    argv, expected_rc, _, expected_stderr_lines = case_builder(tmp_path)
+    empty_bundle = _make_empty_bundle(tmp_path)
+    schema_unsupported_bundle = _make_schema_version_unsupported_bundle(tmp_path)
+    policy_trace_refs_empty_bundle = _make_policy_trace_refs_empty_bundle(tmp_path)
 
-    rc, stdout, stderr = _run_verify(argv, capsys)
-
-    assert rc == expected_rc, case_name
-    assert stdout.startswith("FAIL") or stdout.startswith("OK")
-    assert stderr.splitlines() == expected_stderr_lines
-
-
-def test_verify_explain_embeds_reason_explanations_in_json(
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    argv, expected_rc, expected_codes, expected_stderr_lines = _case_multi_reason_order(tmp_path)
-    argv = argv[:]
-    argv.insert(1, "--json")
-
-    rc, stdout, stderr = _run_verify(argv, capsys)
-    payload = json.loads(stdout)
-
-    assert rc == expected_rc
-    assert stderr == ""
-    assert payload["reason_code"] == expected_codes[0]
-    assert payload["taxonomy_version"] == 1
-    assert [reason["code"] for reason in payload["reasons"]] == expected_codes
-    assert [reason["explanation"] for reason in payload["reasons"]] == [
-        line.split(": ", 1)[1] for line in expected_stderr_lines
+    cases = [
+        (
+            ["verify", "--explain", str(CANONICAL_FIXTURE)],
+            1,
+            FIXED_SIGNER_SUBJECT,
+            "1",
+            None,
+            "generic",
+            (
+                VERIFY_REASON_CANONICAL_MISMATCH,
+                "/events/0/event/payload/artifact_ref",
+                ("Unicode-NFC",),
+            ),
+        ),
+        (
+            ["verify", "--require-non-empty", "--explain", str(empty_bundle)],
+            2,
+            "none",
+            "1",
+            VERIFY_REQUIRED_FIELDS_MISSING,
+            "compact",
+            (
+                VERIFY_REASON_REQUIRED_FIELD_MISSING,
+                "/events",
+                ("at least one event",),
+            ),
+        ),
+        (
+            ["verify", "--strict-schema", "--explain", str(MISSING_SIGNATURES_FIXTURE)],
+            2,
+            "none",
+            "1",
+            VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+            "compact",
+            (
+                VERIFY_REASON_SIGNATURE_MISSING,
+                "/signatures",
+                ("at least one signed attestation",),
+            ),
+        ),
+        (
+            ["verify", "--explain", str(schema_unsupported_bundle)],
+            1,
+            FIXED_SIGNER_SUBJECT,
+            "2",
+            None,
+            "compact",
+            (
+                VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                "/chain_metadata/schema_version",
+                ("chain_metadata.schema_version=2", "this verifier handles 1"),
+            ),
+        ),
+        (
+            ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
+            1,
+            FIXED_SIGNER_SUBJECT,
+            "1",
+            None,
+            "compact",
+            (
+                VERIFY_REASON_STRUCTURE_INVALID,
+                "/policy_trace_refs",
+                ("must be absent, not empty",),
+            ),
+        ),
     ]
 
+    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (reason, pointer, message_parts) in cases:
+        rc, stdout, stderr = _run_verify(argv, capsys)
 
-def test_verify_json_and_explain_share_primary_reason_code(
+        assert rc == expected_rc
+        if stdout_kind == "compact":
+            _assert_failure_summary(stdout, signer_subject=signer_subject, schema_version=schema_version)
+        else:
+            assert stdout.startswith("FAIL: canonicalization error in ")
+        _assert_rationale_lines(
+            stderr,
+            expected_error_code=error_code,
+            reason=reason,
+            pointer=pointer,
+            message_parts=message_parts,
+        )
+
+
+def test_verify_explain_canonicalization_failure_summary_is_generic(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    json_rc, json_stdout, json_stderr = _run_verify(["verify", "--json", str(CANONICAL_FIXTURE)], capsys)
-    json_payload = json.loads(json_stdout)
+    rc, stdout, stderr = _run_verify(["verify", "--explain", str(CANONICAL_FIXTURE)], capsys)
 
-    assert json_rc == 1
-    assert json_stderr == ""
-    assert json_payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert json_payload["taxonomy_version"] == 1
+    assert rc == 1
+    assert stdout.startswith("FAIL: canonicalization error in ")
+    assert stderr.splitlines()[0].startswith(
+        f"{VERIFY_REASON_CANONICAL_MISMATCH} /events/0/event/payload/artifact_ref: "
+    )
 
-    explain_rc, explain_stdout, explain_stderr = _run_verify(
-        ["verify", "--explain", str(CANONICAL_FIXTURE)],
+
+def test_verify_explain_plain_text_emits_all_rejection_rationales(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    multi_reason_bundle = _make_multi_reason_bundle(tmp_path)
+
+    rc_json, stdout_json, stderr_json = _run_verify(
+        ["verify", "--json", "--explain", str(multi_reason_bundle)],
         capsys,
     )
+    payload = json.loads(stdout_json)
+    explanations = payload["explanation"]
+    assert rc_json == 1
+    assert stderr_json == ""
+    assert isinstance(explanations, list)
+    assert len(explanations) > 1
 
-    assert explain_rc == 1
-    assert explain_stdout.startswith("FAIL")
-    assert explain_stderr.splitlines()[0] == (
-        f"{json_payload['reason_code']}: "
-        f"{VERIFY_REASON_CODE_DESCRIPTIONS[VERIFY_REASON_CANONICAL_MISMATCH]}"
+    expected_lines = [
+        f"{entry['primary_reason'] or 'ok'} {entry['pointer']}: {entry['message']}"
+        for entry in explanations
+    ]
+
+    rc, stdout, stderr = _run_verify(["verify", "--explain", str(multi_reason_bundle)], capsys)
+
+    assert rc == 1
+    assert stdout.startswith("FAIL signer_subject=")
+    assert "schema_version=999" in stdout
+    assert stderr.splitlines() == expected_lines
+
+
+def test_verify_explain_compact_success_summary(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, stdout, stderr = _run_verify(["verify", "--explain", str(PASS_FIXTURE)], capsys)
+
+    assert rc == 0
+    assert stderr == ""
+    _assert_pass_summary(stdout, signer_subject=FIXED_SIGNER_SUBJECT)
+
+
+def test_verify_explain_json_emits_explanation_array_for_success(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, stdout, stderr = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
+    payload = json.loads(stdout)
+
+    assert rc == 0
+    assert stderr == ""
+    explanation = payload["explanation"]
+    assert isinstance(explanation, list)
+    assert len(explanation) == 1
+    summary = explanation[0]
+    assert summary["primary_reason"] is None
+    assert summary["pointer"] == "/"
+    assert summary["message"] == (
+        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 anchor=absent"
     )
+
+
+def test_verify_explain_remains_orthogonal_to_strict_flags(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    empty_bundle = _make_empty_bundle(tmp_path)
+    schema_unsupported_bundle = _make_schema_version_unsupported_bundle(tmp_path)
+
+    rc_non_empty, stdout_non_empty, stderr_non_empty = _run_verify(
+        ["verify", "--json", "--explain", "--require-non-empty", str(empty_bundle)],
+        capsys,
+    )
+    payload_non_empty = json.loads(stdout_non_empty)
+    assert rc_non_empty == 2
+    assert payload_non_empty["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload_non_empty["explanation"][0]["primary_reason"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload_non_empty["explanation"][0]["pointer"] == "/events"
+    assert stderr_non_empty == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
+
+    rc_strict, stdout_strict, stderr_strict = _run_verify(
+        ["verify", "--json", "--explain", "--strict-schema", str(MISSING_SIGNATURES_FIXTURE)],
+        capsys,
+    )
+    payload_strict = json.loads(stdout_strict)
+    assert rc_strict == 2
+    assert payload_strict["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload_strict["explanation"][0]["primary_reason"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload_strict["explanation"][0]["pointer"] == "/signatures"
+    assert stderr_strict == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
+
+    rc_schema, stdout_schema, stderr_schema = _run_verify(
+        ["verify", "--json", "--explain", str(schema_unsupported_bundle)],
+        capsys,
+    )
+    payload_schema = json.loads(stdout_schema)
+    assert rc_schema == 1
+    assert payload_schema["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload_schema["explanation"][0]["primary_reason"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload_schema["explanation"][0]["pointer"] == "/chain_metadata/schema_version"
+    assert stderr_schema == ""

@@ -26,14 +26,19 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `explanation[]` is the additive operator-facing companion surface. Each
+  item carries `primary_reason`, `pointer`, and `message`; successful results
+  use a single compact summary item, while rejected results mirror the
+  ordered reason list.
 - The verifier reason-code taxonomy is additive-only, and code values are not
   reused within a stable taxonomy version.
 - Consumers should keep branching on exit code first, then inspect `result`
   and `reasons[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
-- When `--explain` is combined with `--json`, each reason may also include an
-  `explanation` field with the stable rationale string for that reason code.
+- When `--explain` is combined with `--json`, the payload remains valid JSON
+  and exposes both `explanation[]` and the per-reason `explanation` field for
+  callers that already inspect `reasons[]`.
 
 ## Negative Vectors
 

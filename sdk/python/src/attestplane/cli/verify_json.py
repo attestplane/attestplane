@@ -127,6 +127,85 @@ def _reason_entry(
     return reason
 
 
+def _explanation_entry(
+    primary_reason: VerifyReasonCodeV1 | None,
+    pointer: str,
+    message: str,
+) -> dict[str, Any]:
+    return {
+        "primary_reason": primary_reason,
+        "pointer": pointer,
+        "message": message,
+    }
+
+
+def _bundle_signer_subject(bundle: dict[str, Any]) -> str:
+    signatures = bundle.get("signatures")
+    if not isinstance(signatures, list) or not signatures:
+        return "none"
+    first = signatures[0]
+    if not isinstance(first, dict):
+        return "unknown"
+    key_id = first.get("key_id")
+    if isinstance(key_id, str) and key_id:
+        return f"key_id:{key_id}"
+    signed_event_hash_hex = first.get("signed_event_hash_hex")
+    if isinstance(signed_event_hash_hex, str) and signed_event_hash_hex:
+        return f"subject_hash:{signed_event_hash_hex}"
+    return "unknown"
+
+
+def _bundle_schema_version(bundle: dict[str, Any]) -> str:
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return "unknown"
+    schema_version = chain_metadata.get("schema_version")
+    if isinstance(schema_version, int):
+        return str(schema_version)
+    return "unknown"
+
+
+def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return "unknown"
+    anchor_ref = chain_metadata.get("anchor_ref")
+    return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
+
+
+def _verify_success_summary(bundle: dict[str, Any]) -> str:
+    return (
+        f"signer_subject={_bundle_signer_subject(bundle)} "
+        f"schema_version={_bundle_schema_version(bundle)} "
+        f"anchor={_bundle_anchor_state(bundle)}"
+    )
+
+
+def _verify_explanations(
+    result: Any | None,
+    *,
+    bundle: dict[str, Any] | None = None,
+    explain: bool = False,
+) -> list[dict[str, Any]]:
+    if not explain or result is None:
+        return []
+    if result.ok:
+        if bundle is None:
+            return [_explanation_entry(None, "/", "signer_subject=unknown schema_version=unknown anchor=unknown")]
+        return [_explanation_entry(None, "/", _verify_success_summary(bundle))]
+
+    explanations: list[dict[str, Any]] = []
+    for reason in _bundle_failure_reason(result, explain=explain):
+        explanations.append(
+            _explanation_entry(
+                reason["code"],
+                reason["path"],
+                str(reason["message"]),
+            )
+        )
+    return explanations
+
+
 def _schema_path_from_bundle_error(text: str) -> str:
     if "chain_metadata.schema_version" in text:
         return "/chain_metadata/schema_version"
@@ -164,9 +243,9 @@ def _json_failure(
     reason: dict[str, Any],
     exit_code: int,
     stderr_code: str | None = None,
+    explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
-    return VerifyJsonOutcome(
-        payload={
+    payload = {
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "fail",
             "exit_code": exit_code,
@@ -177,15 +256,22 @@ def _json_failure(
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-        },
+    }
+    if explanation is not None:
+        payload["explanation"] = explanation
+    return VerifyJsonOutcome(
+        payload=payload,
         exit_code=exit_code,
         stderr_code=stderr_code,
     )
 
 
-def _json_pass(*, bundle_digest: str) -> VerifyJsonOutcome:
-    return VerifyJsonOutcome(
-        payload={
+def _json_pass(
+    *,
+    bundle_digest: str,
+    explanation: list[dict[str, Any]] | None = None,
+) -> VerifyJsonOutcome:
+    payload = {
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "pass",
             "exit_code": 0,
@@ -196,7 +282,11 @@ def _json_pass(*, bundle_digest: str) -> VerifyJsonOutcome:
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-        },
+    }
+    if explanation is not None:
+        payload["explanation"] = explanation
+    return VerifyJsonOutcome(
+        payload=payload,
         exit_code=0,
         stderr_code=None,
     )
@@ -361,6 +451,11 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
+            explanation=(
+                [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"cannot read {bundle_path}: {exc}")]
+                if explain
+                else None
+            ),
         )
 
     bundle_digest = _bundle_digest(raw_bytes)
@@ -382,6 +477,11 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            explanation=(
+                [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"bundle is not valid UTF-8: {exc}")]
+                if explain
+                else None
+            ),
         )
     except _DuplicateKeyError as exc:
         message = str(exc)
@@ -400,6 +500,11 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            explanation=(
+                [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
+                if explain
+                else None
+            ),
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
@@ -413,6 +518,11 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            explanation=(
+                [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"{bundle_path}: not valid JSON: {exc.msg}")]
+                if explain
+                else None
+            ),
         )
 
     if not isinstance(bundle, dict):
@@ -427,6 +537,17 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            explanation=(
+                [
+                    _explanation_entry(
+                        VERIFY_REASON_SCHEMA_INVALID,
+                        "/",
+                        f"bundle must be a JSON object, got {type(bundle).__name__}",
+                    )
+                ]
+                if explain
+                else None
+            ),
         )
 
     canonical_index, canonical_exc = _canonicalization_probe(bundle)
@@ -442,6 +563,11 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
+            explanation=(
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
+                if explain
+                else None
+            ),
         )
 
     try:
@@ -463,6 +589,11 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
+            explanation=(
+                [_explanation_entry(code, path, str(exc))]
+                if explain
+                else None
+            ),
         )
     except CanonicalizationError as exc:
         path = "/events"
@@ -476,10 +607,18 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
+            explanation=(
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
+                if explain
+                else None
+            ),
         )
 
     if result.ok:
-        return _json_pass(bundle_digest=bundle_digest)
+        return _json_pass(
+            bundle_digest=bundle_digest,
+            explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
+        )
 
     reasons = _bundle_failure_reason(result, explain=explain)
     if result.error_code in {
@@ -504,6 +643,11 @@ def build_verify_json_outcome(
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
+            **(
+                {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
+                if explain
+                else {}
+            ),
         },
         exit_code=exit_code,
         stderr_code=stderr_code,
