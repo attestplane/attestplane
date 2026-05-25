@@ -17,7 +17,9 @@ fixtures in `tests/conformance/vectors/canonicalization/negative/*.json`. Each
 of those fixtures now carries an additive `expected_reason_code` field so the
 matrix can verify the on-disk taxonomy binding directly. Their coverage is
 tracked in `tests/conformance/canonicalization_negative_matrix.md` and enforced
-by `scripts/check-conformance-matrix.sh`.
+by `scripts/check-conformance-matrix.sh`. The minimum-bundle regression test
+also asserts that each landed vector rejects with that same stable reason code,
+so the rejection contract and the matrix stay aligned.
 
 The matrix is additive and frozen. If a future audit finds an uncovered edge
 case, add a new negative vector, update the checked-in matrix, and keep the

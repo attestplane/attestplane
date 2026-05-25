@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "The new helper classifies canonicalization.int64 and canonicalization.nfc via exception-message substrings, so future verifier message wording changes could make the test brittle without changing runtime behavior."
+  ],
+  "validation": [
+    "Reviewed only local repository files, local command output, and the issue text.",
+    "Inspected the diff for tests/conformance/test_canonicalization_minimum_bundle_vectors.py and tests/conformance/README.md.",
+    "Ran: PYTHONPATH=sdk/python/src sdk/python/.venv/bin/pytest tests/conformance/test_canonicalization_minimum_bundle_vectors.py -q -> 8 passed in 0.17s.",
+    "Confirmed the touched files stay in the test/documentation surface and do not alter release, publish, tag, or package-push logic."
+  ],
+  "residual_risks": [
+    "The reason-code helper is coupled to current verifier exception text for int64 and NFC failures.",
+    "If a future change adjusts canonicalization error wording, the test may need a small update even if behavior remains correct."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
