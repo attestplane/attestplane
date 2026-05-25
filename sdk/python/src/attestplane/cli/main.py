@@ -33,6 +33,7 @@ from attestplane.verify_errors import (
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VerifyReasonCodeV1,
     verify_reason_code_explanation,
 )
@@ -366,7 +367,7 @@ def _explain_reserved_reasons(bundle: dict[str, Any]) -> list[dict[str, str]]:
         return []
     return [
         {
-            "code": "att.verify.schema_unknown",
+            "code": VERIFY_REASON_SCHEMA_UNKNOWN,
             "severity": "reserved",
             "detail": f"ignored additive fields: {', '.join(extras)}",
         }

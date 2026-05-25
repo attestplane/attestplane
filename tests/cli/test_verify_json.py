@@ -10,11 +10,14 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
-from attestplane.verify_reason_codes import VERIFY_REASON_CODE_DESCRIPTIONS
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
-FAIL_FIXTURE = ROOT / "fixtures" / "negative" / "non_nfc_bundle.json"
+FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 
 
 def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object]]:
@@ -51,13 +54,13 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 1
-    assert payload["reason_code"] == "att.verify.canonical_mismatch"
+    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
     assert payload["bundle"]["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
     assert payload["reasons"]
     reason = payload["reasons"][0]
-    assert reason["code"] == "att.verify.canonical_mismatch"
+    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["path"].startswith("/events/")
     assert "canonicalization" in reason["message"]
 
@@ -69,9 +72,9 @@ def test_verify_json_and_explain_keep_json_parseable(
 
     assert rc == 1
     assert payload["result"] == "fail"
-    assert payload["reason_code"] == "att.verify.canonical_mismatch"
+    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]
-    assert reason["code"] == "att.verify.canonical_mismatch"
+    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
