@@ -3,6 +3,7 @@
   "blocking_reasons": [],
   "warnings": [],
   "validation": [
+    "markdownlint-cli2 docs/validation/local_codex_runner/issue-254/*.md",
     "git diff --check",
     "pytest -q tests/cli/test_verify_json.py tests/cli/test_verify_explain.py tests/cli/test_verify_errors.py tests/conformance/test_verify_json_schema.py",
     "cd sdk/python && PYTHONPATH=src pytest -q tests/cli/test_main.py tests/cli/test_verify_errors.py tests/cli/test_verify_json_contract.py",
