@@ -16,6 +16,10 @@ from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SIGNATURE_MISSING,
+)
 
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
@@ -145,9 +149,9 @@ def test_verify_require_events_rejects_empty_bundle(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
-    assert payload["reason_code"] == "att.verify.required_field_missing"
+    assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == "att.verify.required_field_missing"
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
 
 
 def test_verify_bundle_option_rejects_unsigned_bundle(
@@ -166,9 +170,9 @@ def test_verify_bundle_option_rejects_unsigned_bundle(
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
-    assert payload["reason_code"] == "att.verify.signature_missing"
+    assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == "att.verify.signature_missing"
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
 
 
 def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:

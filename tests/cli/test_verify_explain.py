@@ -24,7 +24,7 @@ from attestplane.verify_reason_codes import (
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
 
 ROOT = Path(__file__).resolve().parents[2]
-CANONICAL_FIXTURE = ROOT / "fixtures" / "negative" / "non_nfc_bundle.json"
+CANONICAL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 MALFORMED_FIXTURE = ROOT / "tests" / "fixtures" / "proofbundle" / "malformed.json"
 SIGNED_FIXTURE = ROOT / "tests" / "fixtures" / "v1.7.0_signed.json"
 MISSING_SIGNATURES_FIXTURE = ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"

@@ -22,12 +22,13 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_STRUCTURE_INVALID,
 )
 
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
-FAIL_FIXTURE = ROOT / "fixtures" / "negative" / "non_nfc_bundle.json"
+FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 
 
 def _run_verify(
@@ -219,7 +220,7 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
     assert rc == 1
     assert stderr == ""
     reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == "att.verify.schema_unknown"
+    assert reason["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert reason["path"] == "/chain_metadata/critical_future_field"
 
 
@@ -306,7 +307,7 @@ def test_verify_explain_reserved_reasons_lists_nested_additive_fields() -> None:
 
     assert reasons == [
         {
-            "code": "att.verify.schema_unknown",
+            "code": VERIFY_REASON_SCHEMA_UNKNOWN,
             "severity": "reserved",
             "detail": (
                 "ignored additive fields: bundle.top_extra, chain_metadata.extra_chain, "
