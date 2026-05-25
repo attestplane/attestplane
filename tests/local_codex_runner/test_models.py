@@ -88,6 +88,37 @@ def test_product_delta_idle_filter_skips_support_only_tasks() -> None:
     assert [issue.number for issue in queue] == [21]
 
 
+def test_product_delta_idle_filter_skips_explicit_docs_release_tasks_even_with_api_text() -> None:
+    docs_release = IssueTask(
+        67,
+        "[P1][docs][release] Publish API reference as versioned stable documentation",
+        "Publish public API reference docs for stable releases.",
+        "",
+        ["auto-codex-approved", "priority:P1", "type:docs", "area:docs", "area:release-integrity"],
+    )
+    recovery_product = IssueTask(
+        68,
+        "[P1][sdk][verifier] Add product implementation delta for stalled stable train",
+        "Implement SDK verifier behavior. Do not satisfy this task with docs-only or release-only changes.",
+        "",
+        ["auto-codex-approved", "priority:P1", "area:verifier"],
+    )
+
+    assert not task_has_product_delta(docs_release)
+    assert task_has_product_delta(recovery_product)
+
+    queue = processable_issues(
+        [docs_release, recovery_product],
+        approved_label="auto-codex-approved",
+        pr_opened_label="codex-pr-opened",
+        needs_human_label="codex-needs-human",
+        max_issues_per_run=2,
+        require_product_delta=True,
+    )
+
+    assert [issue.number for issue in queue] == [68]
+
+
 def test_state_round_trip_is_deterministic() -> None:
     state = State.from_dict(
         {

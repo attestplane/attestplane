@@ -52,6 +52,13 @@ SUPPORT_ONLY_TASK_KEYWORDS = (
     "docs",
     "release notes",
 )
+SUPPORT_ONLY_TASK_LABELS = {
+    "area:docs",
+    "area:release",
+    "area:release-integrity",
+    "type:docs",
+    "type:release",
+}
 
 
 class RunnerStatus(StrEnum):
@@ -231,6 +238,10 @@ def task_has_product_delta(task: IssueTask) -> bool:
     anchoring, or CLI implementation tasks.
     """
 
+    title = task.title.lower()
+    labels = {label.lower() for label in task.labels}
+    if labels.intersection(SUPPORT_ONLY_TASK_LABELS) or "[docs]" in title or "[release]" in title:
+        return False
     text = " ".join([task.title, task.body, *task.labels]).lower().replace("_", " ")
     product_hit = any(keyword in text for keyword in PRODUCT_DELTA_TASK_KEYWORDS)
     support_hit = any(keyword in text for keyword in SUPPORT_ONLY_TASK_KEYWORDS)
