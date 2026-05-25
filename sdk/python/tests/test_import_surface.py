@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import attestplane
+import attestplane.sdk as attestplane_sdk
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PY_SRC = REPO_ROOT / "sdk" / "python" / "src"
@@ -46,6 +47,11 @@ def test_adapter_public_symbols_exported_from_root() -> None:
     assert LangFuseAdapter.__name__ == "LangFuseAdapter"
     assert LangSmithAdapter.__name__ == "LangSmithAdapter"
     assert RuntimeEvent.__name__ == "RuntimeEvent"
+
+
+def test_supported_schema_versions_exported_from_sdk_surface() -> None:
+    assert attestplane.SUPPORTED_SCHEMA_VERSIONS == (1,)
+    assert attestplane_sdk.SUPPORTED_SCHEMA_VERSIONS == (1,)
 
 
 def test_optional_dependency_absence_keeps_core_import_surface_defined() -> None:

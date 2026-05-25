@@ -13,7 +13,8 @@ import { v7 as uuidv7 } from 'uuid';
 import { canonicalize } from './canonical.js';
 import type { AuditEvent, ChainHead, ChainedEvent, EventDraft } from './types.js';
 
-export const SCHEMA_VERSION = 1;
+export const SUPPORTED_SCHEMA_VERSIONS = [1] as const;
+export const SCHEMA_VERSION = SUPPORTED_SCHEMA_VERSIONS[0];
 export const GENESIS_HASH: Uint8Array = new Uint8Array(32);
 
 export interface VerificationResult {

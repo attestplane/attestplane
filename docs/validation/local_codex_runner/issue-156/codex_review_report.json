@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed only local repository files, git diff output, and the issue title provided in the prompt.",
+    "TypeScript lint passed: npm run lint in sdk/typescript.",
+    "TypeScript typecheck passed: npm run typecheck in sdk/typescript.",
+    "Targeted TypeScript tests passed: npm test -- --run test/proof_bundle.test.ts test/package_import_smoke.test.ts in sdk/typescript.",
+    "Markdown lint passed with the cached markdownlint-cli2 binary against docs/validation/local_codex_runner/issue-156/*.md.",
+    "git diff --check returned clean."
+  ],
+  "residual_risks": [
+    "Future schema-major support still requires synchronized updates to SUPPORTED_SCHEMA_VERSIONS, verifier logic, fixtures, and public API exports."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

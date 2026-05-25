@@ -18,7 +18,10 @@ from typing import Final
 from attestplane.canonical import canonicalize
 from attestplane.types import AuditEvent, ChainedEvent, ChainHead, EventDraft
 
-SCHEMA_VERSION: Final[int] = 1
+SUPPORTED_SCHEMA_VERSIONS: Final[tuple[int, ...]] = (1,)
+"""Supported proof-bundle schema major versions for this SDK release line."""
+
+SCHEMA_VERSION: Final[int] = SUPPORTED_SCHEMA_VERSIONS[0]
 """Canonicalization schema version for v0.0.1. Frozen by conformance vectors."""
 
 GENESIS_HASH: Final[bytes] = b"\x00" * 32
@@ -142,6 +145,7 @@ def head_of(events: list[ChainedEvent]) -> ChainHead:
 __all__ = [
     "GENESIS_HASH",
     "SCHEMA_VERSION",
+    "SUPPORTED_SCHEMA_VERSIONS",
     "VerificationResult",
     "chain_extend",
     "genesis_head",

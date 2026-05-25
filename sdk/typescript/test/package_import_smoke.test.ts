@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AttestSubstrate,
   ProofBundleBuilder,
+  SUPPORTED_SCHEMA_VERSIONS,
   VERSION,
   canonicalize,
   makeEventDraft,
@@ -49,5 +50,6 @@ describe('root package export surface', () => {
     const result = verifyProofBundle(builder.build());
     expect(result.ok).toBe(true);
     expect(typeof canonicalize).toBe('function');
+    expect(SUPPORTED_SCHEMA_VERSIONS).toEqual([1]);
   });
 });

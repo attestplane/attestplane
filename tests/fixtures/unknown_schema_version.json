@@ -1,0 +1,72 @@
+{
+  "bundle_version": 1,
+  "chain_metadata": {
+    "chain_id": "p3-cli-proofbundle",
+    "evidence_taxonomy_version": 1,
+    "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+    "head_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+    "head_seq": 0,
+    "producer_runtime": "attestplane-test",
+    "schema_version": 999
+  },
+  "events": [
+    {
+      "event": {
+        "actor": "agent://p3/test",
+        "event_id": "00000000-0000-7000-8000-000000000001",
+        "event_type": "eval_event",
+        "human_verifier": null,
+        "matched_input_ref": "sha256:matched-input-ref",
+        "payload": {
+          "artifact_ref": "local://artifact-A",
+          "score": 1
+        },
+        "reference_db_ref": null,
+        "schema_version": 1,
+        "session_id": null,
+        "subject_ref": null,
+        "timestamp": "2026-05-18T12:00:00.000000Z"
+      },
+      "event_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+      "prev_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0
+    }
+  ],
+  "forbidden_fields": [
+    "customer_names",
+    "person_names",
+    "pii",
+    "raw_documents",
+    "contracts",
+    "scripts",
+    "tickets",
+    "emails",
+    "secrets",
+    "tokens",
+    "jwts",
+    "private_keys",
+    "raw_audit_payloads"
+  ],
+  "signatures": [
+    {
+      "key_id": "4bf5122f344554c53bde2ebb8cd2b7e3",
+      "public_key_der_b64": "AQ==",
+      "signature_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "signature_mode": "per_event",
+      "signature_schema_version": 1,
+      "signed_at": "2026-05-18T12:00:00.000000Z",
+      "signed_event_hash_hex": "f43a6afd0ba426d12aa579c2102feace9f559e4c079466daf1a0172d105ace9a",
+      "signed_payload_b64": "AQ==",
+      "signed_seq": 0,
+      "signing_cert_chain_b64": []
+    }
+  ],
+  "verification_report": {
+    "first_bad_index": null,
+    "ok": true,
+    "reason": null,
+    "verification_method": "canonical-bytes-walk",
+    "verified_at": "2026-05-18T12:00:00.000000Z",
+    "verifier_version": "0.0.2a0"
+  }
+}

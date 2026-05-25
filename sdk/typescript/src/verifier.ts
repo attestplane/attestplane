@@ -20,7 +20,7 @@ import { promises as fs } from 'node:fs';
 import { POLICY_CHECK_EVENT } from './event_types.js';
 import {
   GENESIS_HASH,
-  SCHEMA_VERSION,
+  SUPPORTED_SCHEMA_VERSIONS,
   type VerificationResult,
   hashEvent,
   headOf,
@@ -534,10 +534,10 @@ function verifyMetadataClosure(
       reason: 'events must contain at least one event when requireNonEmpty=true',
     };
   }
-  if (metadata.schema_version !== SCHEMA_VERSION) {
+  if (!SUPPORTED_SCHEMA_VERSIONS.includes(metadata.schema_version as 1)) {
     return {
       ok: false,
-      reason: `chain_metadata.schema_version=${JSON.stringify(metadata.schema_version)}; this verifier handles ${SCHEMA_VERSION}`,
+      reason: `chain_metadata.schema_version=${JSON.stringify(metadata.schema_version)}; this verifier handles schema_version values ${JSON.stringify(SUPPORTED_SCHEMA_VERSIONS)}`,
     };
   }
   const metadataUnknownRequiredField = unknownRequiredFieldReason(

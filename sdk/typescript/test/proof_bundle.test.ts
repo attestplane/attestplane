@@ -194,6 +194,20 @@ describe('verifyProofBundle', () => {
     expect(result.metadata_reason).toContain('critical_future_field');
   });
 
+  it('rejects unknown schema_version majors with a stable reason', () => {
+    const builder = new ProofBundleBuilder({
+      chain_id: 'unknown-schema',
+      producer_runtime: 'test',
+    });
+    const bundle = builder.build() as Record<string, unknown>;
+    (bundle.chain_metadata as Record<string, unknown>).schema_version = 999;
+
+    const result = verifyProofBundle(bundle);
+    expect(result.ok).toBe(false);
+    expect(result.primary_reason).toBe('att.verify.schema_version_unsupported');
+    expect(result.metadata_reason).toContain('schema_version values');
+  });
+
   it('detects head metadata mismatch', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'head', producer_runtime: 'test' });
     builder.extend(buildGoodChain(2));

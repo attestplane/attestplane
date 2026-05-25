@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Public SDK convenience namespace for Attestplane."""
 
+from attestplane.hashchain import SUPPORTED_SCHEMA_VERSIONS
 from attestplane.sdk.bundle import (
     EmptyProofBundleError,
     IncompleteProofBundleError,
@@ -17,6 +18,7 @@ __all__ = [
     "IncompleteProofBundleError",
     "ProofBundleBuilder",
     "ProofBundleError",
+    "SUPPORTED_SCHEMA_VERSIONS",
     "raise_for_minimum_bundle_result",
     "verify_minimum_bundle",
     "verify_minimum_bundle_file",
