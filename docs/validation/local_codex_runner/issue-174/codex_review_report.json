@@ -1,19 +1,15 @@
 {
-  "status": "FAIL",
-  "blocking_reasons": [
-    "sdk/python/src/attestplane/cli/main.py:611-612 truncates `--explain` stderr output to the first explanation only (`[:1]`). The verifier can emit multiple ordered reasons, and `--json --explain` already preserves all three explanations for the same multi-reason vector, so the plain-text path silently drops rejection rationale and no longer stays aligned with reason codes."
-  ],
-  "warnings": [
-    "tests/cli/test_verify_explain.py no longer exercises multi-reason plain-text `--explain` output, so the regression is not covered by the new CLI tests."
-  ],
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
   "validation": [
-    "Reviewed the local diff, schema/docs changes, and verifier reason-code tests.",
-    "Ran a local reproduction with a bundle that produces three explanations: `--json --explain` emitted three entries, while plain-text `--explain` printed only one stderr rationale line.",
-    "Ran `git diff --check` with no formatting errors."
+    "Updated tests/conformance/test_verify_json_schema.py to accept the additive explanation[] field on verify --json --explain and to compare plain-text rationale lines against ordered reason codes plus pointers.",
+    "Ran sdk/python/.venv/bin/python -m pytest -q tests/cli/test_verify_explain.py tests/cli/test_verify_json.py tests/conformance/test_verify_json_schema.py.",
+    "Ran sdk/python/.venv/bin/python -m pytest -q sdk/python/tests/cli/test_verify_json_contract.py."
   ],
   "residual_risks": [
-    "Other `--explain` exception branches were not exhaustively exercised beyond the reproducer.",
-    "Future taxonomy or schema changes will require updating the new `explanation[]` contract tests and snapshots."
+    "Other --explain exception branches were not exhaustively exercised beyond the focused regression suite.",
+    "Future taxonomy or schema changes will require updating the explanation[] contract assertions and snapshots."
   ],
   "no_merge_tag_publish_pypi": true
 }

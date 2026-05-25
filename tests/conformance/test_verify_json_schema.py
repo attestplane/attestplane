@@ -10,7 +10,6 @@ from pathlib import Path
 from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
-    verify_reason_code_explanation,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -43,7 +42,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "bundle",
     ]
 
-    assert set(payload) == {
+    expected_keys = {
         "schema_version",
         "result",
         "exit_code",
@@ -52,6 +51,10 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "reasons",
         "bundle",
     }
+    if "explanation" in payload:
+        expected_keys.add("explanation")
+
+    assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
@@ -62,6 +65,14 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         str(payload["reason_code"]),
     )
     assert isinstance(payload["reasons"], list)
+    if "explanation" in payload:
+        explanation = payload["explanation"]
+        assert isinstance(explanation, list)
+        for entry in explanation:
+            assert isinstance(entry, dict)
+            assert set(entry) == {"primary_reason", "pointer", "message"}
+            assert entry["pointer"]
+            assert entry["message"]
 
     bundle = payload["bundle"]
     assert isinstance(bundle, dict)
@@ -118,8 +129,8 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
 
     assert rc == 1
     assert captured.out.startswith("FAIL")
-    explain_reason_codes = [line.split(": ", 1)[0] for line in captured.err.splitlines()]
+    explain_reason_codes = [line.split(" ", 1)[0] for line in captured.err.splitlines()]
     assert explain_reason_codes == json_reason_codes
-    assert captured.err.splitlines()[0] == (
-        f"{reason_code}: {verify_reason_code_explanation(reason_code)}"
-    )
+    first_reason = payload["reasons"][0]
+    assert isinstance(first_reason, dict)
+    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
