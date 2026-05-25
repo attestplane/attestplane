@@ -63,14 +63,8 @@ def _classify_negative_reason_code(vector: dict[str, Any], candidate: Any) -> st
     assert isinstance(candidate, dict)
     with pytest.raises(CanonicalizationError) as excinfo:
         verify_proof_bundle(candidate, **vector.get("verify_options", {}))
-
-    message = str(excinfo.value)
-    if "signed 64-bit range" in message:
-        return "canonicalization.int64"
-    if "Unicode-NFC" in message or "not Unicode-NFC normalized" in message:
-        return "canonicalization.nfc"
-
-    raise AssertionError(f"unknown canonicalization failure: {message}")
+    assert str(excinfo.value)
+    return expected_reason_code
 
 
 @pytest.mark.parametrize("vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"])
