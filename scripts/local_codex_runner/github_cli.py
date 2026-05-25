@@ -183,6 +183,15 @@ class GitHubCLI:
     def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
         self._run(["gh", "issue", "comment", str(issue_number), "--repo", repo, "--body", redact(body)], write=True)
 
+    def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
+        if labels:
+            self.ensure_labels(repo, labels)
+        command = ["gh", "issue", "create", "--repo", repo, "--title", title, "--body", redact(body)]
+        for label in labels:
+            command.extend(["--label", label])
+        completed = self._run(command, write=True)
+        return completed.stdout.strip()
+
     def create_pr(self, repo: str, title: str, body: str, base: str, head: str) -> str:
         completed = self._run(
             ["gh", "pr", "create", "--repo", repo, "--title", title, "--body", redact(body), "--base", base, "--head", head],

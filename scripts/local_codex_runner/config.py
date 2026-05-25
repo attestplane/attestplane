@@ -75,6 +75,9 @@ class RunnerConfig:
     product_delta_idle_log_glob: str | None = None
     product_delta_idle_threshold: int = 2
     product_delta_idle_tail_lines: int = 200
+    product_delta_idle_create_task: bool = False
+    product_delta_idle_task_title: str = "[P1][sdk][verifier] Add product implementation delta for stalled stable train"
+    product_delta_idle_task_labels: list[str] = field(default_factory=list)
 
     def validate(self) -> None:
         missing = [name for name in ("repo", "workdir") if not getattr(self, name)]
