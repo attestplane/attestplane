@@ -10,11 +10,11 @@ import { describe, expect, it } from 'vitest';
 import {
   AttestSubstrate,
   ProofBundleBuilder,
+  SUPPORTED_SCHEMA_VERSIONS,
   VERSION,
   canonicalize,
   makeEventDraft,
   makeSubjectRef,
-  SUPPORTED_SCHEMA_VERSIONS,
   verifyProofBundle,
 } from '../src/index.js';
 

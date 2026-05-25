@@ -21,8 +21,10 @@ PASS
 
 ## Evidence
 
-- `pytest -q tests/cli/test_verify_errors.py sdk/python/tests/test_hashchain.py sdk/python/tests/test_import_surface.py`
-- `npx vitest run test/proof_bundle.test.ts test/package_import_smoke.test.ts`
+- `npm run lint` in `sdk/typescript`
+- `npm run typecheck` in `sdk/typescript`
+- `npm test -- --run test/proof_bundle.test.ts test/package_import_smoke.test.ts` in `sdk/typescript`
+- cached `markdownlint-cli2` against `docs/validation/local_codex_runner/issue-156/*.md`
 - `git diff --check`
 
 ## Blocking Reasons
@@ -36,4 +38,3 @@ None.
 ## Residual Risks
 
 - Future schema-major support still requires synchronized updates to `SUPPORTED_SCHEMA_VERSIONS`, verifier logic, fixtures, and public API exports.
-

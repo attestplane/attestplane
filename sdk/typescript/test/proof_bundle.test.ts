@@ -195,7 +195,10 @@ describe('verifyProofBundle', () => {
   });
 
   it('rejects unknown schema_version majors with a stable reason', () => {
-    const builder = new ProofBundleBuilder({ chain_id: 'unknown-schema', producer_runtime: 'test' });
+    const builder = new ProofBundleBuilder({
+      chain_id: 'unknown-schema',
+      producer_runtime: 'test',
+    });
     const bundle = builder.build() as Record<string, unknown>;
     (bundle.chain_metadata as Record<string, unknown>).schema_version = 999;
 
