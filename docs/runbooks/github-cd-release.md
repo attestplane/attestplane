@@ -30,6 +30,11 @@ package versions, computes the npm dist-tag policy, runs build-only package
 gates, publishes through GitHub-hosted runners when `dry_run=false`, and then
 verifies PyPI and npm registry visibility.
 
+Stable API reference publication is handled by the separate
+[`api-ref-publish`](../../.github/workflows/api-ref-publish.yml) workflow.
+That workflow is triggered after `release-cd` succeeds, only publishes
+suffix-free stable tags, and keeps prerelease refs on the artifact-only path.
+
 ## Version Mapping
 
 | Git tag | PyPI version | npm version | npm dist-tag |
@@ -86,6 +91,12 @@ gh workflow run release-cd.yml \
 The real publication path publishes to PyPI and npm only after the CD preflight
 and build gates pass. It does not force-push, move existing tags, or create
 unrelated tags.
+
+The stable API reference publish path is separate from package publication. It
+can be manually dispatched in dry-run mode for a stable tag to stage the Pages
+tree without deploying it, or it can run automatically after a successful
+`release-cd` run for the same stable tag. Prerelease tags remain artifact-only
+and must not move the public `latest` docs pointer.
 
 ## Required Pre-Dispatch Checks
 

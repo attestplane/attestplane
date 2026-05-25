@@ -1,0 +1,174 @@
+name: api-ref-publish
+run-name: api-ref-publish ${{ inputs.release_tag || github.event.workflow_run.display_title }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Stable release tag to publish, e.g. v1.5.0"
+        required: true
+        type: string
+      dry_run:
+        description: "Build and stage only; do not deploy to GitHub Pages"
+        required: false
+        default: true
+        type: boolean
+  workflow_run:
+    workflows:
+      - release-cd
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: api-ref-publish-${{ github.event.workflow_run.id || inputs.release_tag }}
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  resolve_release:
+    name: Resolve release tag
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.resolve.outputs.release_tag }}
+      release_line: ${{ steps.resolve.outputs.release_line }}
+      is_stable: ${{ steps.resolve.outputs.is_stable }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Resolve release tag from event payload
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            release_tag="${{ inputs.release_tag }}"
+          else
+            release_tag="${{ github.event.workflow_run.head_branch }}"
+            if [ -z "$release_tag" ] || ! printf '%s' "$release_tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              release_tag="${{ github.event.workflow_run.display_title }}"
+              release_tag="${release_tag#release-cd }"
+            fi
+          fi
+
+          if printf '%s' "$release_tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            stable=true
+            release_line="v$(printf '%s' "$release_tag" | cut -d. -f1 | sed 's/^v//').$(printf '%s' "$release_tag" | cut -d. -f2)"
+          else
+            stable=false
+            release_line=""
+          fi
+
+          {
+            echo "release_tag=$release_tag"
+            echo "release_line=$release_line"
+            echo "is_stable=$stable"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize release resolution
+        run: |
+          {
+            echo "## API reference publish resolution"
+            echo ""
+            echo "- release_tag: \`${{ steps.resolve.outputs.release_tag }}\`"
+            echo "- release_line: \`${{ steps.resolve.outputs.release_line }}\`"
+            echo "- is_stable: \`${{ steps.resolve.outputs.is_stable }}\`"
+            echo "- dry_run: \`${{ inputs.dry_run || false }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Generate and stage API reference site
+    needs: resolve_release
+    if: needs.resolve_release.outputs.is_stable == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve_release.outputs.release_tag }}
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: sdk/python/pyproject.toml
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Install Python SDK + pdoc
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install -e 'sdk/python[dev]' pdoc
+
+      - name: Render Python API reference
+        run: |
+          .venv/bin/pdoc \
+            -o api-ref-python \
+            sdk/python/src/attestplane \
+            --no-show-source \
+            --logo "https://www.bestpractices.dev/projects/12924/badge"
+
+      - name: Install TypeScript SDK dependencies
+        working-directory: sdk/typescript
+        run: npm install
+
+      - name: Install typedoc (ephemeral)
+        working-directory: sdk/typescript
+        run: npm install --no-save typedoc
+
+      - name: Render TypeScript API reference
+        working-directory: sdk/typescript
+        run: npx typedoc --out api-ref-typescript src/index.ts --tsconfig tsconfig.json
+
+      - name: Stage versioned API reference site
+        run: |
+          python scripts/docs/stage_api_reference_site.py \
+            --release-tag "${{ needs.resolve_release.outputs.release_tag }}" \
+            --python-dir api-ref-python \
+            --typescript-dir sdk/typescript/api-ref-typescript \
+            --site-root api-ref-site
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: api-ref-python-${{ needs.resolve_release.outputs.release_tag }}
+          path: api-ref-python
+          retention-days: 60
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: api-ref-typescript-${{ needs.resolve_release.outputs.release_tag }}
+          path: sdk/typescript/api-ref-typescript
+          retention-days: 60
+          if-no-files-found: error
+
+      - uses: actions/upload-pages-artifact@v3
+        if: inputs.dry_run != true
+        with:
+          path: api-ref-site
+
+  deploy:
+    name: Deploy API reference site to GitHub Pages
+    needs: [resolve_release, build]
+    if: inputs.dry_run != true && needs.resolve_release.outputs.is_stable == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

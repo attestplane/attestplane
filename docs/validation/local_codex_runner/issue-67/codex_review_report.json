@@ -1,0 +1,20 @@
+{
+  "status": "FAIL",
+  "blocking_reasons": [
+    "The new `.github/workflows/api-ref-publish.yml` auto-triggers on any successful `release-cd` workflow_run, but `release-cd` defaults to `dry_run: true`. Because the publish workflow cannot observe the source workflow's inputs, a successful validation-only `release-cd` run can still deploy the Pages site for a stable tag. That weakens the release gate by allowing live docs publication without the actual release publish path."
+  ],
+  "warnings": [
+    "The workflow's release-tag resolution is based on `workflow_run.head_branch` with a fallback to `display_title`; that is brittle and only text-validated locally.",
+    "The Pages deployment path was not exercised end-to-end locally; validation relied on repository-local tests and workflow text inspection."
+  ],
+  "validation": [
+    "Reviewed local diff and workflow text in `.github/workflows/api-ref-publish.yml`, `scripts/docs/stage_api_reference_site.py`, and `tests/docs/test_api_reference_publish.py`.",
+    "Ran `sdk/python/.venv/bin/pytest tests/docs/test_api_reference_publish.py -q` -> `8 passed`.",
+    "Ran `git diff --check` with no whitespace or patch-format errors.",
+    "Used only local repository files, local command output, and the issue text for this review."
+  ],
+  "residual_risks": [
+    "The workflow still depends on GitHub Actions runtime behavior for `workflow_run` payload fields, which was not verified against a live dispatch in this runner."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
