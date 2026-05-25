@@ -375,3 +375,143 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
 
     assert processed == [32]
     assert result["product_delta_idle"]["active"] is True
+
+
+def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exist(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    log = tmp_path / "stable.log"
+    log.write_text(
+        '{"event": "product_delta_skipped", "version": "v1.8.1"}\n'
+        '{"event": "product_delta_skipped", "version": "v1.8.1"}\n',
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: true\n"
+        "cleanup_stale_state: false\n"
+        "auto_advance_before_consume: false\n"
+        "product_delta_idle_dispatch: true\n"
+        "product_delta_idle_create_task: true\n"
+        f'product_delta_idle_log_glob: "{log}"\n'
+        "max_issues_per_run: 1\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.models import IssueTask, RunnerResult, RunnerStatus
+
+    created: list[dict[str, object]] = []
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            self.issues = [
+                IssueTask(
+                    31,
+                    "[P1][runner] Support-only runner task",
+                    "Support-only local runner task.",
+                    "",
+                    ["planned-task", "priority:P1"],
+                )
+            ]
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            if label == "planned-task":
+                return self.issues
+            if label == "auto-codex-approved":
+                return [issue for issue in self.issues if "auto-codex-approved" in issue.labels]
+            return []
+
+        def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
+            created.append({"title": title, "body": body, "labels": labels})
+            self.issues.append(IssueTask(32, title, body, "https://example/issues/32", labels))
+            return "https://example/issues/32"
+
+    processed: list[int] = []
+
+    def fake_run_issue(config, issue_number, include, exclude):
+        processed.append(issue_number)
+        return RunnerResult(
+            issue_number=issue_number,
+            branch=None,
+            pr_url=None,
+            status=RunnerStatus.DRY_RUN,
+            plan_path=None,
+            evidence_dir="evidence",
+        )
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
+        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
+    )
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert created
+    assert created[0]["title"] == "[P1][sdk][verifier] Add product implementation delta for stalled stable train"
+    assert "auto-codex-approved" in created[0]["labels"]
+    assert "runner-only" in created[0]["body"]
+    assert result["product_delta_recovery"]["action"] == "created"
+    assert processed == [32]
+
+
+def test_run_once_product_delta_idle_does_not_create_recovery_task_when_product_task_exists(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    log = tmp_path / "stable.log"
+    log.write_text(
+        '{"event": "product_delta_skipped", "version": "v1.8.1"}\n'
+        '{"event": "product_delta_skipped", "version": "v1.8.1"}\n',
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "runner.yml"
+    config_path.write_text(
+        'repo: "o/r"\n'
+        f'workdir: "{tmp_path}"\n'
+        "dry_run: true\n"
+        "cleanup_stale_state: false\n"
+        "auto_advance_before_consume: false\n"
+        "product_delta_idle_dispatch: true\n"
+        "product_delta_idle_create_task: true\n"
+        f'product_delta_idle_log_glob: "{log}"\n'
+        "max_issues_per_run: 1\n",
+        encoding="utf-8",
+    )
+
+    from scripts.local_codex_runner.models import IssueTask
+
+    class FakeGH:
+        def __init__(self, dry_run=True):
+            pass
+
+        def list_issues(self, repo: str, label: str, limit: int):
+            if label == "planned-task":
+                return [
+                    IssueTask(
+                        32,
+                        "[P1][sdk][verifier] Product implementation task",
+                        "Implement SDK verifier behavior.",
+                        "",
+                        ["planned-task", "priority:P1"],
+                    )
+                ]
+            return []
+
+        def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
+            raise AssertionError("must not create a duplicate product recovery task")
+
+    monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
+        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
+    )
+
+    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+
+    assert result["product_delta_recovery"]["action"] == "kept"
+    assert result["product_delta_recovery"]["issue_numbers"] == [32]

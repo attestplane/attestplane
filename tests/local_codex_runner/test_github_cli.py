@@ -29,6 +29,39 @@ def test_issue_list_can_include_closed_siblings(monkeypatch: pytest.MonkeyPatch)
     assert GitHubCLI(dry_run=False).list_issues("o/r", "planned-task", 100, state="all") == []
 
 
+def test_create_issue_ensures_labels_and_uses_write_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command, capture_output, text, check):
+        commands.append(command)
+        if command[:3] == ["gh", "issue", "create"]:
+            return subprocess.CompletedProcess(command, 0, "https://example/issues/1\n", "")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    created = GitHubCLI(dry_run=False).create_issue("o/r", "title", "body", ["planned-task", "auto-codex-approved"])
+
+    assert created == "https://example/issues/1"
+    assert commands[0][:3] == ["gh", "label", "create"]
+    assert commands[1][:3] == ["gh", "label", "create"]
+    assert commands[2] == [
+        "gh",
+        "issue",
+        "create",
+        "--repo",
+        "o/r",
+        "--title",
+        "title",
+        "--body",
+        "body",
+        "--label",
+        "planned-task",
+        "--label",
+        "auto-codex-approved",
+    ]
+
+
 def test_label_add_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch) -> None:
     called = False
 

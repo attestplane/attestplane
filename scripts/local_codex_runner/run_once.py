@@ -16,7 +16,7 @@ from scripts.local_codex_runner.advance_queue import advance_queue
 from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
 from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError
-from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues
+from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues, task_has_product_delta
 from scripts.local_codex_runner.needs_human import recover_needs_human_for_labels
 from scripts.local_codex_runner.run_issue import run_issue
 from scripts.local_codex_runner.state_store import load_state, save_state
@@ -57,6 +57,7 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
             product_delta_idle=product_delta_idle["active"],
         )
         advance_summary = advance_queue(advance_args)
+    product_delta_recovery = ensure_product_delta_idle_recovery_task(config, gh, product_delta_idle)
     external_errors: list[dict[str, object]] = []
     try:
         issues = gh.list_issues(
@@ -85,12 +86,87 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
         "cleanup": cleanup_summary,
         "lane": lane_summary(config),
         "needs_human_recovery": needs_human_summary,
+        "product_delta_recovery": product_delta_recovery,
         "external_errors": external_errors,
         "processed": len(results),
         "product_delta_idle": product_delta_idle,
         "results": results,
         "transient_cleanup": transient_cleanup,
     }
+
+
+def ensure_product_delta_idle_recovery_task(
+    config: RunnerConfig,
+    gh: GitHubCLI,
+    product_delta_idle: dict[str, object],
+) -> dict[str, object]:
+    if not product_delta_idle.get("active"):
+        return {"enabled": False, "reason": "idle_inactive"}
+    if not config.product_delta_idle_create_task:
+        return {"enabled": False, "reason": "disabled"}
+    try:
+        planned = gh.list_issues(config.repo or "", config.planned_task_label, 100)
+    except RunnerCommandError as exc:
+        return {"enabled": True, "action": "error", "stage": "list_planned_tasks", "error": str(exc)}
+    product_tasks = [issue for issue in planned if task_has_product_delta(issue)]
+    if product_tasks:
+        return {
+            "enabled": True,
+            "action": "kept",
+            "reason": "open_product_task_exists",
+            "issue_numbers": [issue.number for issue in product_tasks[:10]],
+        }
+    labels = product_delta_idle_recovery_labels(config)
+    body = render_product_delta_idle_recovery_body(product_delta_idle)
+    try:
+        created = gh.create_issue(config.repo or "", config.product_delta_idle_task_title, body, labels)
+    except RunnerCommandError as exc:
+        return {"enabled": True, "action": "error", "stage": "create_recovery_task", "error": str(exc)}
+    return {
+        "enabled": True,
+        "action": "created",
+        "title": config.product_delta_idle_task_title,
+        "labels": labels,
+        "url": created,
+    }
+
+
+def product_delta_idle_recovery_labels(config: RunnerConfig) -> list[str]:
+    labels = [
+        config.planned_task_label,
+        config.approved_label,
+        "priority:P1",
+        "area:verifier",
+        "area:conformance",
+    ]
+    labels.extend(config.product_delta_idle_task_labels)
+    deduped: list[str] = []
+    for label in labels:
+        if label not in deduped:
+            deduped.append(label)
+    return deduped
+
+
+def render_product_delta_idle_recovery_body(product_delta_idle: dict[str, object]) -> str:
+    log_path = product_delta_idle.get("log", "unknown")
+    idle_events = product_delta_idle.get("consecutive_idle_events", "unknown")
+    return (
+        "Source planning issue: product-delta idle recovery\n\n"
+        "Plan ID: `product-delta-idle-recovery`\n\n"
+        "The stable train has repeatedly skipped the next release because only support/docs/release deltas are present.\n\n"
+        "Scope:\n"
+        "- Implement a small user-visible product behavior in the SDK, verifier, CLI, ProofBundle, canonicalization, or conformance surface.\n"
+        "- Include focused tests that exercise the new behavior.\n"
+        "- Do not satisfy this task with docs-only, release-only, runner-only, or support-only changes.\n\n"
+        "Acceptance criteria:\n"
+        "- The diff includes at least one product implementation file under `sdk/` or a verifier/CLI product surface.\n"
+        "- The diff includes focused regression coverage for the behavior.\n"
+        "- Local validation passes for the touched SDK/verifier/conformance path.\n\n"
+        "Validation commands:\n"
+        "- Run the relevant focused pytest or npm test command for the touched product path.\n"
+        "- Run `bash scripts/check-public-api.sh` when public API manifests change.\n\n"
+        f"Recovery evidence:\n- product_delta_idle.consecutive_idle_events: {idle_events}\n- train log: `{log_path}`\n"
+    )
 
 
 def product_delta_idle_summary(config: RunnerConfig) -> dict[str, object]:
