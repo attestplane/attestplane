@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed only local repository files, local command output, and the issue title/URL provided in the prompt.",
+    "Ran `pytest -q sdk/python/tests/conformance/test_negative_vectors.py tests/conformance/test_canonicalization_negative_coverage.py` resulting in 19 passed.",
+    "Ran `pytest -q tests/conformance/test_canonicalization_negative_coverage.py` resulting in 3 passed."
+  ],
+  "residual_risks": [
+    "`tests/conformance/canonicalization_negative_matrix.py` now maintains a manual allowlist of known negative reason codes, so any future legitimate reason-code addition will need a corresponding test/helper update."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

@@ -13,6 +13,7 @@ from attestplane.conformance.negative_vectors import (
     materialize_negative_canonicalization_candidate,
     set_json_path,
 )
+from attestplane.verify_reason_codes import is_known_verify_reason_code
 from attestplane.conformance.run import main as run_conformance
 
 NEGATIVE_VECTORS = load_negative_canonicalization_vectors()
@@ -34,6 +35,13 @@ def test_negative_canonicalization_vector_set_is_complete() -> None:
         "canonicalization-negative-schema-version-mismatch-v1",
         "canonicalization-negative-trailing-whitespace-v1",
     }
+
+
+def test_negative_canonicalization_vector_reason_codes_are_known() -> None:
+    assert all(
+        is_known_verify_reason_code(vector["expected"]["reason_code"])
+        for vector in NEGATIVE_VECTORS
+    )
 
 
 @pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])

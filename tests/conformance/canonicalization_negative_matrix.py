@@ -14,6 +14,27 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 NEGATIVE_ROOT = ROOT / "tests" / "conformance" / "vectors" / "canonicalization" / "negative"
 MATRIX_PATH = ROOT / "tests" / "conformance" / "canonicalization_negative_matrix.md"
+VERIFY_REASON_CODES_V1: tuple[str, ...] = (
+    "att.verify.anchor_invalid",
+    "att.verify.canonical_mismatch",
+    "att.verify.required_field_missing",
+    "att.verify.schema_invalid",
+    "att.verify.schema_unknown",
+    "att.verify.schema_version_missing",
+    "att.verify.schema_version_unsupported",
+    "att.verify.signature_invalid",
+    "att.verify.signature_missing",
+    "att.verify.structure_invalid",
+)
+KNOWN_MATRIX_REASON_CODES: frozenset[str] = frozenset(
+    {
+        "json.non_canonical_envelope",
+        "json.duplicate_key",
+        "canonicalization.int64",
+        "canonicalization.nfc",
+        *VERIFY_REASON_CODES_V1,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,6 +232,7 @@ def load_vector_inventory() -> list[dict[str, Any]]:
             )
         assert vector["case_id"] == spec.case_id, spec.path
         assert expected_reason_code == spec.expected_reason_code, spec.path
+        assert expected_reason_code in KNOWN_MATRIX_REASON_CODES, spec.path
         inventory.append(
             {
                 "label": spec.label,
@@ -300,3 +322,7 @@ def assert_negative_coverage_matrix_matches_disk() -> None:
     expected = render_negative_coverage_matrix()
     actual = MATRIX_PATH.read_text(encoding="utf-8")
     assert actual == expected, MATRIX_PATH
+
+
+def is_known_negative_reason_code(reason_code: str) -> bool:
+    return reason_code in KNOWN_MATRIX_REASON_CODES
