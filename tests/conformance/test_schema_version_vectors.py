@@ -44,6 +44,12 @@ def test_schema_version_vectors_pin_expected_outcome(vector: dict[str, object]) 
         assert field in bundle
     for field in vector.get("chain_metadata_fields", ()):
         assert field in bundle["chain_metadata"]
+    if case in {"additive_with_unknown_field_ok", "schema_version_additive_positive"}:
+        assert bundle["future_bundle_field"] == {"preserved": True}
+        assert bundle["chain_metadata"]["future_metadata_field"] == "kept"
+        assert bundle["verification_report"]["future_report_field"] == "ignored"
+    if case in {"unknown_required_field", "schema_version_unknown_required"}:
+        assert bundle["chain_metadata"]["critical_future_field"] is True
 
 
 def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_version_failure() -> None:
