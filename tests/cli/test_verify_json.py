@@ -18,6 +18,14 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+SCHEMA_VERSION_ADDITIVE_FIXTURE = (
+    ROOT
+    / "tests"
+    / "conformance"
+    / "schema_version"
+    / "additive_with_unknown_field_ok"
+    / "bundle.json"
+)
 
 
 def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object]]:
@@ -104,3 +112,23 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "signer_subject=" in summary["message"]
     assert "schema_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
+
+
+def test_verify_json_additive_optional_schema_fixture_emits_clean_pass(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload = _run_verify(["verify", "--json", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)], capsys)
+
+    assert rc == 0
+    assert payload == {
+        "schema_version": 1,
+        "result": "pass",
+        "exit_code": 0,
+        "reason_code": None,
+        "taxonomy_version": 1,
+        "reasons": [],
+        "bundle": {
+            "schema_version": 1,
+            "digest": payload["bundle"]["digest"],
+        },
+    }

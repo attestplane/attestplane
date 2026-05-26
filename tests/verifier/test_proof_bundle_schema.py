@@ -116,6 +116,18 @@ def test_bundle_verifier_accepts_additive_unknown_fields() -> None:
     assert result.secondary_reasons == ()
 
 
+def test_bundle_verifier_accepts_optional_future_metadata_field() -> None:
+    bundle = _load_fixture("valid_signed_attestation.json")
+    bundle["chain_metadata"]["future_metadata_field"] = "kept"
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.error_code == VERIFY_OK
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
+
+
 def test_bundle_verifier_rejects_missing_schema_version() -> None:
     bundle = _load_fixture("valid_signed_attestation.json")
     del bundle["chain_metadata"]["schema_version"]
