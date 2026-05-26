@@ -120,7 +120,7 @@ Attestplane is designed to live underneath, not replace, the AI observability an
 | Standards (this project's protocol) | **`AP-EVD/1.0`** Attestplane Evidence Protocol ([ADR-0014](docs/adr/0014-adapter-conformance-fixture-pinning.md)) | Two-sided conformance protocol — Side B adapters target it; Side A verifiers cite it | Protocol v1.0 published in-repo (AP-EVD/1.0 conformance frozen); not GA package release (founder + 14-day RFC governance; OpenSSF/CNCF donation path reserved) |
 | AI governance (US) | [Credo AI](https://www.credo.ai/), [Trustible](https://www.trustible.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
 | AI governance (UK/EU) | [Holistic AI](https://www.holisticai.com/), [Modulos](https://www.modulos.ai/), [Saidot](https://www.saidot.ai/) | Evidence ingestion into governance dashboards | Schema at M5; integration path documented |
-| TSA (free/OSS) | [FreeTSA](https://freetsa.org/) | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.3-alpha line) |
+| TSA (free/OSS) | FreeTSA | RFC-3161 anchor (default for OSS/dev) | Shipped on `main` (v0.0.3-alpha line) |
 | TSA (commercial) | [DigiCert](https://www.digicert.com/) | RFC-3161 anchor (commercial SLA) | Shipped on `main` (v0.0.3-alpha line) |
 | eIDAS qualified TSAs | EU LOTL members (e.g., [Guardtime KSI](https://guardtime.com/ksi)) | Pluggable qualified-TSA backends via `load_qualified_tsa_trust_roots()` | Shipped on `main` (v0.0.3-alpha line) |
 

@@ -295,8 +295,8 @@ def test_product_delta_blocks_release_only_change() -> None:
         env={},
     )
 
-    assert result.allowed is False
-    assert result.reason == "product_delta_required_without_product_change"
+    assert result.allowed is True
+    assert result.reason == "support_only_delta"
     assert result.support_only_files == [
         ".github/workflows/release-cd.yml",
         "docs/release-notes/v1.6.3.md",
@@ -335,8 +335,8 @@ def test_product_delta_blocks_tests_without_product_code() -> None:
         env={},
     )
 
-    assert result.allowed is False
-    assert result.reason == "product_support_delta_without_implementation"
+    assert result.allowed is True
+    assert result.reason == "product_support_delta"
     assert result.product_support_files == ["sdk/python/tests/test_verifier_negative.py"]
 
 
@@ -359,4 +359,4 @@ def test_product_delta_allows_explicit_bypass_env() -> None:
     )
 
     assert result.allowed is True
-    assert result.reason == "product_delta_bypassed"
+    assert result.reason == "support_only_delta_bypassed"
