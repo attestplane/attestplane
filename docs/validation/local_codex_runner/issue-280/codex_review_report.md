@@ -21,6 +21,11 @@ The change is limited to:
   - [`tests/conformance/README.md`](../../../../tests/conformance/README.md)
   - [`tests/conformance/schema_version/vectors.json`](../../../../tests/conformance/schema_version/vectors.json)
   - [`tests/conformance/test_schema_version_vectors.py`](../../../../tests/conformance/test_schema_version_vectors.py)
+- Added the missing issue-280 evidence files:
+  - [`docs/validation/local_codex_runner/issue-280/code.md`](code.md)
+  - [`docs/validation/local_codex_runner/issue-280/test.md`](test.md)
+  - [`docs/validation/local_codex_runner/issue-280/gate_report.md`](gate_report.md)
+  - [`docs/validation/local_codex_runner/issue-280/gate_report.json`](gate_report.json)
 - Inspected the new fixture and bundle files:
   - [`fixtures/forward-compat/additive-optional.json`](../../../../fixtures/forward-compat/additive-optional.json)
   - [`tests/conformance/schema_version/schema_version_additive_positive/bundle.json`](../../../../tests/conformance/schema_version/schema_version_additive_positive/bundle.json)
@@ -28,6 +33,12 @@ The change is limited to:
 - Ran:
   - `pytest -q sdk/python/tests/test_issue209_schema_version_ci_coverage.py tests/cli/test_verify_flags.py tests/conformance/test_schema_version_vectors.py`
   - Result: `48 passed`
+  - `PYTHONPATH=sdk/python/src python -m attestplane.cli.main verify --json fixtures/forward-compat/additive-optional.json`
+  - Result: exit `0`, `att.verify.schema_unknown` absent
+  - `PYTHONPATH=sdk/python/src python -m attestplane.cli.main verify --json tests/conformance/schema_version/schema_version_unknown_required/bundle.json`
+  - Result: exit `1`, stable reason code `att.verify.schema_unknown`
+  - `cd sdk/typescript && npm test`
+  - Result: `32 passed`, `523 passed`
 - Read the local gate artifact:
   - [`docs/validation/local_codex_runner/issue-280/gate_report.json`](gate_report.json)
   - Result: `area:verifier` PASS
@@ -50,3 +61,4 @@ The change is limited to:
 
 - The change does not alter verifier runtime code; it pins the intended behavior through tests and fixtures, so correctness still depends on the existing verifier implementation.
 - The local broader conformance sweep already records one unrelated existing failure in `tests/conformance/test_signed_schema_conformance_roundtrip.py::test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain`.
+- The repository does not expose a root-level `npm run test:conformance` script, so the issue selector behavior was validated through the pytest selectors and CLI smoke checks that exercise the same frozen fixtures.
