@@ -26,6 +26,9 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- For `verify --json`, the stable exit-code split is `0` for accept, `1` for
+  verifier rejection, and `2` for usage, input, or I/O failures that prevent
+  the verifier from evaluating the bundle.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the

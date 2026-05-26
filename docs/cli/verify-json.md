@@ -46,7 +46,10 @@ The payload is fixed at schema version 1:
   stable `taxonomy_version`.
 
 Consumers should keep branching on `exit_code` first and then inspect
-`result` and `reasons[]` for diagnostics.
+`result` and `reasons[]` for diagnostics. In v1, `exit_code = 0` means the
+bundle was accepted, `exit_code = 1` means verifier rejection, and
+`exit_code = 2` means the CLI could not evaluate the bundle because of a
+usage, input, or I/O problem.
 
 ## `verify --explain`
 

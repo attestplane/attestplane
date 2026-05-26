@@ -477,7 +477,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 1
+        return 2
     except json.JSONDecodeError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: schema error in {bundle_path}: {exc}"

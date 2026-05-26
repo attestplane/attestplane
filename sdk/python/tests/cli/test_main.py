@@ -208,7 +208,7 @@ def test_verify_missing_file(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     rc = main(["verify", str(tmp_path / "missing.json")])
-    assert rc == 1
+    assert rc == 2
     out = capsys.readouterr().out
     assert "FAIL" in out
 
