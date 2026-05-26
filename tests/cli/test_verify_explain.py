@@ -160,7 +160,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             (
                 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
                 "/chain_metadata/schema_version",
-                ("chain_metadata.schema_version=2", "this verifier handles 1"),
+                ("chain_metadata.schema_version=2", "schema_version values (1,)"),
             ),
         ),
         (
