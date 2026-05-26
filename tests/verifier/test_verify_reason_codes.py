@@ -183,6 +183,18 @@ def test_verify_reason_code_additive_unknown_fields_are_accepted() -> None:
     assert result.secondary_reasons == ()
 
 
+def test_verify_reason_code_optional_future_metadata_field_is_accepted() -> None:
+    bundle = _signed_bundle()
+    bundle["chain_metadata"]["future_metadata_field"] = "kept"
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.error_code == "VERIFY_OK"
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
+
+
 def test_verify_reason_code_canonical_mismatch_keeps_primary_before_schema_version() -> None:
     bundle = _signed_bundle()
     bundle["events"][0]["event_hash_hex"] = "f" * 64

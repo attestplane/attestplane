@@ -25,6 +25,14 @@ PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 CANONICAL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 SIGNED_FIXTURE = ROOT / "tests" / "fixtures" / "v1.7.0_signed.json"
 MISSING_SIGNATURES_FIXTURE = ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
+SCHEMA_VERSION_ADDITIVE_FIXTURE = (
+    ROOT
+    / "tests"
+    / "conformance"
+    / "schema_version"
+    / "additive_with_unknown_field_ok"
+    / "bundle.json"
+)
 
 FIXED_SIGNER_SUBJECT = "key_id:4bf5122f344554c53bde2ebb8cd2b7e3"
 
@@ -150,19 +158,19 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 ("at least one signed attestation",),
             ),
         ),
-        (
-            ["verify", "--explain", str(schema_unsupported_bundle)],
-            1,
-            FIXED_SIGNER_SUBJECT,
-            "2",
-            None,
-            "compact",
             (
-                VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
-                "/chain_metadata/schema_version",
-                ("chain_metadata.schema_version=2", "this verifier handles 1"),
+                ["verify", "--explain", str(schema_unsupported_bundle)],
+                1,
+                FIXED_SIGNER_SUBJECT,
+                "2",
+                None,
+                "compact",
+                (
+                    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                    "/chain_metadata/schema_version",
+                    ("chain_metadata.schema_version=2", "this verifier handles schema_version values (1,)"),
+                ),
             ),
-        ),
         (
             ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
             1,
@@ -264,6 +272,40 @@ def test_verify_explain_json_emits_explanation_array_for_success(
     assert summary["message"] == (
         f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 anchor=absent"
     )
+
+
+def test_verify_explain_json_emits_clean_acceptance_for_additive_schema_fixture(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, stdout, stderr = _run_verify(
+        ["verify", "--json", "--explain", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)],
+        capsys,
+    )
+    payload = json.loads(stdout)
+
+    assert rc == 0
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    assert payload["reasons"] == []
+    assert set(payload) == {
+        "schema_version",
+        "result",
+        "exit_code",
+        "reason_code",
+        "taxonomy_version",
+        "reasons",
+        "bundle",
+        "explanation",
+    }
+    explanation = payload["explanation"]
+    assert isinstance(explanation, list)
+    assert len(explanation) == 1
+    summary = explanation[0]
+    assert summary["primary_reason"] is None
+    assert summary["pointer"] == "/"
+    assert "schema_version=1" in summary["message"]
+    assert stderr == ""
 
 
 def test_verify_explain_remains_orthogonal_to_strict_flags(
