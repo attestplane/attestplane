@@ -115,9 +115,11 @@ def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
 
 def test_unknown_required_field_maps_to_schema_unknown() -> None:
     vector = next(
-        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field"
+        item
+        for item in SCHEMA_VERSION_VECTORS
+        if item["case_id"] == "schema_version_unknown_required"
     )
-    bundle = _schema_case("unknown_required_field")
+    bundle = _schema_case("schema_version_unknown_required")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 
