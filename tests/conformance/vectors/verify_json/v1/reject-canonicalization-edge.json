@@ -1,0 +1,19 @@
+{
+  "bundle": {
+    "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",
+    "schema_version": 1
+  },
+  "exit_code": 1,
+  "reason_code": "att.verify.canonical_mismatch",
+  "reasons": [
+    {
+      "code": "att.verify.canonical_mismatch",
+      "message": "canonicalization failed",
+      "path": "/events/0/event/payload/artifact_ref"
+    }
+  ],
+  "result": "fail",
+  "schema_version": 1,
+  "taxonomy_version": 1,
+  "verdict": "fail"
+}

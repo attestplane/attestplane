@@ -28,3 +28,9 @@ fixture hash lock in sync in the same change.
 The schema-version replay cases under `tests/conformance/schema_version/` are
 likewise data-driven via `vectors.json`, which binds each case to its stable
 expected reason code without changing the proof-bundle fixtures themselves.
+
+The `verify --json` contract fixtures live under
+`tests/conformance/vectors/verify_json/v1/`. They pin the current top-level
+shape for CI consumers: `schema_version`, `verdict`, `result`,
+`taxonomy_version`, `reason_code`, `reasons[]`, and `bundle.digest`, while
+allowing additive top-level keys in future releases.

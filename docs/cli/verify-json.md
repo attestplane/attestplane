@@ -11,6 +11,7 @@ The payload is fixed at schema version 1:
 ```json
 {
   "schema_version": 1,
+  "verdict": "pass",
   "result": "pass",
   "exit_code": 0,
   "reason_code": null,
@@ -24,6 +25,7 @@ The payload is fixed at schema version 1:
 ```
 
 - `schema_version` is the CLI result schema version.
+- `verdict` is the stable pass/fail field that CI consumers should pin.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on.
 - `reason_code` is the machine-readable primary verifier rejection code, or
@@ -31,6 +33,9 @@ The payload is fixed at schema version 1:
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
+- The top-level contract is additive-only at v1: new optional top-level keys
+  may be added, but required keys are not renamed or removed without a
+  contract bump.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
   On success, the array contains a compact summary; on rejection, it mirrors
@@ -46,7 +51,8 @@ The payload is fixed at schema version 1:
   stable `taxonomy_version`.
 
 Consumers should keep branching on `exit_code` first and then inspect
-`result` and `reasons[]` for diagnostics.
+`verdict`, `reason_code`, and `reasons[]` for diagnostics. `result` remains
+present as a compatibility alias for older consumers.
 
 ## `verify --explain`
 
@@ -84,6 +90,7 @@ the structured payload.
 ```json
 {
   "schema_version": 1,
+  "verdict": "pass",
   "result": "pass",
   "exit_code": 0,
   "reasons": [],
@@ -106,6 +113,7 @@ the structured payload.
 ```json
 {
   "schema_version": 1,
+  "verdict": "fail",
   "result": "fail",
   "exit_code": 1,
   "reason_code": "att.verify.schema_version_unsupported",
@@ -137,10 +145,10 @@ the structured payload.
 attestplane verify --json "$bundle" > verify.json
 rc=$?
 
-result=$(jq -r '.result' verify.json)
+verdict=$(jq -r '.verdict' verify.json)
 
-if [ "$rc" -ne 0 ] || [ "$result" != "pass" ]; then
-  printf 'verify failed (rc=%s, result=%s)\n' "$rc" "$result"
+if [ "$rc" -ne 0 ] || [ "$verdict" != "pass" ]; then
+  printf 'verify failed (rc=%s, verdict=%s)\n' "$rc" "$verdict"
   jq -r '.reasons[]? | "\(.code) \(.path) \(.message)"' verify.json
   exit "$rc"
 fi

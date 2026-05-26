@@ -47,9 +47,10 @@ def _assert_matches_verify_result_v1(
 ) -> None:
     schema = json.loads((ROOT / "schemas" / "cli" / "verify-result-v1.json").read_text(encoding="utf-8"))
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-    assert schema["additionalProperties"] is False
+    assert schema["additionalProperties"] is True
     assert schema["required"] == [
         "schema_version",
+        "verdict",
         "result",
         "exit_code",
         "reason_code",
@@ -60,6 +61,7 @@ def _assert_matches_verify_result_v1(
 
     expected_keys = {
         "schema_version",
+        "verdict",
         "result",
         "exit_code",
         "reason_code",
@@ -69,9 +71,11 @@ def _assert_matches_verify_result_v1(
     }
     if expect_explanation:
         expected_keys.add("explanation")
-    assert set(payload) == expected_keys
+    assert expected_keys <= set(payload)
     assert payload["schema_version"] == 1
+    assert payload["verdict"] in {"pass", "fail"}
     assert payload["result"] in {"pass", "fail"}
+    assert payload["verdict"] == payload["result"]
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] >= 0
     assert payload["taxonomy_version"] == 1
@@ -118,6 +122,7 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert rc == 0
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+    assert payload["verdict"] == "pass"
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
@@ -128,6 +133,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert rc == 1
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+    assert payload["verdict"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
@@ -144,6 +150,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert stderr == ""
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["verdict"] == "fail"
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert explanation["pointer"].startswith("/events/")
@@ -166,6 +173,7 @@ def test_verify_json_reports_invalid_json(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["verdict"] == "fail"
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_SCHEMA_INVALID
     assert explanation["pointer"] == "/"

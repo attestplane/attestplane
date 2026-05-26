@@ -49,6 +49,7 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     assert rc == 2
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
+    assert payload["verdict"] == "fail"
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
@@ -73,6 +74,7 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert rc == 2
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
+    assert payload["verdict"] == "fail"
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
@@ -96,6 +98,7 @@ def test_verify_json_includes_reasons_list_for_schema_version_failures(
 
     assert rc == 1
     assert result["schema_version"] == 1
+    assert result["verdict"] == "fail"
     assert result["result"] == "fail"
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
     assert result["taxonomy_version"] == 1
@@ -118,6 +121,7 @@ def test_verify_json_reports_unknown_required_metadata_field(
 
     assert rc == 1
     assert result["schema_version"] == 1
+    assert result["verdict"] == "fail"
     assert result["result"] == "fail"
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert result["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
@@ -133,6 +137,7 @@ def test_verify_json_reports_unknown_schema_version(
 
     assert rc == 1
     assert result["schema_version"] == 1
+    assert result["verdict"] == "fail"
     assert result["result"] == "fail"
     assert result["exit_code"] == 1
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED

@@ -1,0 +1,16 @@
+{
+  "branch": null,
+  "ci_summary": null,
+  "commands_run": [],
+  "evidence_dir": "/Users/macworkers/Projects/attestplane-lane-p1-1/docs/validation/local_codex_runner/issue-256",
+  "finished_at_utc": "2026-05-26T17:56:06.770673+00:00",
+  "issue_number": 256,
+  "local_test_summary": null,
+  "plan_path": null,
+  "pr_url": null,
+  "residual_risks": [
+    "Worktree is not clean; pass --allow-dirty only for supervised local recovery."
+  ],
+  "started_at_utc": "2026-05-26T17:55:56.935898+00:00",
+  "status": "LOCAL_FAILED"
+}

@@ -33,7 +33,9 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
 
     assert rc == 0
     assert payload["schema_version"] == 1
+    assert payload["verdict"] == "pass"
     assert payload["result"] == "pass"
+    assert payload["verdict"] == payload["result"]
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
     assert payload["taxonomy_version"] == 1
@@ -52,7 +54,9 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 
     assert rc == 1
     assert payload["schema_version"] == 1
+    assert payload["verdict"] == "fail"
     assert payload["result"] == "fail"
+    assert payload["verdict"] == payload["result"]
     assert payload["exit_code"] == 1
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
@@ -71,6 +75,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     rc, payload = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
 
     assert rc == 1
+    assert payload["verdict"] == "fail"
     assert payload["result"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
@@ -93,6 +98,7 @@ def test_verify_json_explain_success_emits_compact_summary(
     rc, payload = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
 
     assert rc == 0
+    assert payload["verdict"] == "pass"
     assert payload["result"] == "pass"
     assert payload["reason_code"] is None
     explanation = payload["explanation"]

@@ -4,9 +4,10 @@
   "title": "Attestplane CLI verify result (v1)",
   "description": "Machine-readable CI-gating output for `attestplane verify --json`.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "schema_version",
+    "verdict",
     "result",
     "exit_code",
     "reason_code",
@@ -18,6 +19,13 @@
     "schema_version": {
       "type": "integer",
       "const": 1
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
     },
     "result": {
       "type": "string",

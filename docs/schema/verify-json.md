@@ -22,10 +22,15 @@ accompanies the structured JSON contract.
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code
   taxonomy version documented in `docs/errors.md`.
+- `verdict` is the stable pass/fail alias for CI consumers; `result` remains
+  present for backward compatibility.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- The top-level JSON contract is additive-only: extra optional top-level
+  keys may be introduced, but required keys are not renamed or removed
+  without an intentional contract bump.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the
@@ -33,7 +38,7 @@ accompanies the structured JSON contract.
 - The verifier reason-code taxonomy is additive-only, and code values are not
   reused within a stable taxonomy version.
 - Consumers should keep branching on exit code first, then inspect `result`
-  and `reasons[]` for diagnostics.
+  and `reasons[]` for diagnostics. CI consumers should prefer `verdict`.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
 - When `--explain` is combined with `--json`, the payload remains valid JSON

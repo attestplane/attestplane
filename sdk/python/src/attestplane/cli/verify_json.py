@@ -247,6 +247,7 @@ def _json_failure(
 ) -> VerifyJsonOutcome:
     payload = {
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+            "verdict": "fail",
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": reason["code"],
@@ -273,6 +274,7 @@ def _json_pass(
 ) -> VerifyJsonOutcome:
     payload = {
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+            "verdict": "pass",
             "result": "pass",
             "exit_code": 0,
             "reason_code": None,
@@ -634,6 +636,7 @@ def build_verify_json_outcome(
     return VerifyJsonOutcome(
         payload={
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+            "verdict": "fail",
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,

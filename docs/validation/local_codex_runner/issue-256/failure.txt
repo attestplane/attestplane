@@ -1,0 +1,1 @@
+Worktree is not clean; pass --allow-dirty only for supervised local recovery.
