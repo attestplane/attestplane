@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -29,6 +30,7 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+FORWARD_COMPAT_FIXTURE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
 
 
 def _run_verify(
@@ -118,6 +120,22 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert rc == 0
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+
+
+def test_verify_json_forward_compat_additive_fixture_passes_and_pins_digest(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(["verify", "--json", str(FORWARD_COMPAT_FIXTURE)], capsys)
+
+    assert rc == 0
+    assert stderr == ""
+    _assert_matches_verify_result_v1(payload)
+    assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    assert payload["reasons"] == []
+    assert payload["bundle"]["digest"] == hashlib.sha256(
+        FORWARD_COMPAT_FIXTURE.read_bytes()
+    ).hexdigest()
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(

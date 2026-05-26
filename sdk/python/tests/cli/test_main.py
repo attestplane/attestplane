@@ -21,6 +21,9 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
 )
 
+ROOT = Path(__file__).resolve().parents[4]
+FORWARD_COMPAT_FIXTURE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
+
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
     backend = JsonlStorageBackend(path)
@@ -202,6 +205,17 @@ def test_verify_detects_tampered_bundle(
     assert rc == 1
     out = capsys.readouterr().out
     assert out.startswith("FAIL")
+
+
+def test_verify_forward_compat_fixture_passes(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", str(FORWARD_COMPAT_FIXTURE)])
+    captured = capsys.readouterr()
+
+    assert rc == 0
+    assert captured.out.startswith("OK")
+    assert captured.err == ""
 
 
 def test_verify_missing_file(
