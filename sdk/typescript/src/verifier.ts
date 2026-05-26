@@ -55,6 +55,7 @@ import {
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
+  VERIFY_REASON_TAXONOMY_VERSION,
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
 
@@ -79,6 +80,7 @@ export interface BundleVerificationResult {
   readonly agreement: boolean;
   readonly event_count: number;
   readonly bundle_version: number;
+  readonly taxonomy_version: number;
   readonly chain_id: string;
   readonly head_hash_hex: string;
   readonly metadata_ok: boolean;
@@ -726,6 +728,7 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
+    taxonomy_version: VERIFY_REASON_TAXONOMY_VERSION,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,
