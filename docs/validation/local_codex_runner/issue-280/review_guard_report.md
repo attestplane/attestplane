@@ -2,8 +2,8 @@
 
 ## Blocking Reasons
 
-- None.
+- None
 
 ## Warnings
 
-- None.
+- None
