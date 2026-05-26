@@ -31,3 +31,23 @@ def test_support_only_files_are_allowed_without_a_bypass() -> None:
     assert result.reason == "product_support_delta"
     assert "sdk/python/tests/test_issue209_schema_version_ci_coverage.py" in result.product_support_files
     assert "docs/validation/local_codex_runner/issue-280/runner_result.md" in result.support_only_files
+
+
+def test_support_only_files_are_allowed_without_product_changes() -> None:
+    result = release_gate.classify_product_delta(
+        [
+            "docs/validation/local_codex_runner/issue-280/runner_result.md",
+            "scripts/local_codex_runner/run_issue.py",
+        ],
+        labels=[],
+        env=os.environ,
+    )
+
+    assert result.allowed is True
+    assert result.reason == "support_only_delta"
+    assert result.product_files == []
+    assert result.product_support_files == []
+    assert result.support_only_files == [
+        "docs/validation/local_codex_runner/issue-280/runner_result.md",
+        "scripts/local_codex_runner/run_issue.py",
+    ]

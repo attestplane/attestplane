@@ -204,6 +204,24 @@ def classify_product_delta(
             support_only_files=support_only_files,
             ignored_files=ignored_files,
         )
+    if support_only_files:
+        if product_delta_bypassed(labels, env):
+            return ProductDeltaVerification(
+                allowed=True,
+                reason="support_only_delta_bypassed",
+                product_files=product_files,
+                product_support_files=product_support_files,
+                support_only_files=support_only_files,
+                ignored_files=ignored_files,
+            )
+        return ProductDeltaVerification(
+            allowed=True,
+            reason="support_only_delta",
+            product_files=product_files,
+            product_support_files=product_support_files,
+            support_only_files=support_only_files,
+            ignored_files=ignored_files,
+        )
     if product_delta_bypassed(labels, env):
         return ProductDeltaVerification(
             allowed=True,
