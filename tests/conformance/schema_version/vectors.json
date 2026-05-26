@@ -1,15 +1,9 @@
 {
   "cases": [
     {
-      "case_id": "additive_minor_ok",
-      "expected_reason_code": null,
-      "expected_secondary_reasons": [],
-      "ok": true
-    },
-    {
-      "case_id": "additive_with_unknown_field_ok",
-      "extra_fields": [
-        "future_bundle_field"
+      "case_id": "schema_version_additive_positive",
+      "chain_metadata_fields": [
+        "future_metadata_field"
       ],
       "expected_reason_code": null,
       "expected_secondary_reasons": [],
@@ -37,7 +31,7 @@
       "ok": false
     },
     {
-      "case_id": "unknown_required_field",
+      "case_id": "schema_version_unknown_required",
       "chain_metadata_fields": [
         "critical_future_field"
       ],

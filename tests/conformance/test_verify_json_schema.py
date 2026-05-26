@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "schemas" / "cli" / "verify-result-v1.json"
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+FORWARD_COMPAT_FIXTURE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
+FORWARD_COMPAT_DIGEST = "abd14b349bbf5eccc9760ef2a6df00b913b6862d6591fe7407427367c06b0b1c"
 
 
 def _schema() -> dict[str, object]:
@@ -134,3 +136,13 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
     assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+
+
+def test_forward_compat_fixture_has_pinned_digest(capsys) -> None:
+    payload = _payload(["verify", "--json", str(FORWARD_COMPAT_FIXTURE)], capsys)
+    _assert_matches_verify_result_v1(payload)
+
+    assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    assert payload["bundle"]["schema_version"] == 1
+    assert payload["bundle"]["digest"] == FORWARD_COMPAT_DIGEST

@@ -128,6 +128,21 @@ def test_unknown_required_field_maps_to_schema_unknown() -> None:
     assert "critical_future_field" in (result.metadata_reason or "")
 
 
+def test_schema_version_additive_positive_accepts_unknown_optional_field() -> None:
+    vector = next(
+        item
+        for item in SCHEMA_VERSION_VECTORS
+        if item["case_id"] == "schema_version_additive_positive"
+    )
+    bundle = _schema_case("schema_version_additive_positive")
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.primary_reason == vector["expected_reason_code"]
+    assert "future_metadata_field" in bundle["chain_metadata"]
+
+
 def test_verify_reason_code_taxonomy_and_format_helpers() -> None:
     for code in ALL_VERIFY_REASON_CODES_V1:
         assert is_known_verify_reason_code(code)

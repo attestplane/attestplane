@@ -28,3 +28,7 @@ fixture hash lock in sync in the same change.
 The schema-version replay cases under `tests/conformance/schema_version/` are
 likewise data-driven via `vectors.json`, which binds each case to its stable
 expected reason code without changing the proof-bundle fixtures themselves.
+Current selector IDs include `schema_version_additive_positive` for the
+forward-compatible acceptance fixture and `schema_version_unknown_required`
+for the regression guard that must continue to fail closed with
+`att.verify.schema_unknown`.

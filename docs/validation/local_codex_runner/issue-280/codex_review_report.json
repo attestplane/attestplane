@@ -2,15 +2,18 @@
   "status": "PASS",
   "blocking_reasons": [],
   "warnings": [
-    "The recorded validation gate is Python-only; the TypeScript verifier mirror was not re-run in the local gate bundle."
+    "The new forward-compatibility acceptance is pinned by fixture content and a digest assertion; if canonicalization rules change later, the expected digest will need to be refreshed."
   ],
   "validation": [
-    "Reviewed the local diff for sdk/python/tests/cli/test_main.py, sdk/python/tests/cli/test_verify_json_contract.py, sdk/python/tests/test_issue209_schema_version_ci_coverage.py, tests/conformance/schema_version/vectors.json, and the new fixture directories.",
-    "Confirmed the implementation is fixture-and-test pinning only; sdk/python/src/attestplane/verifier.py and sdk/typescript/src/verifier.ts were not modified.",
-    "Verified the local gate report at docs/validation/local_codex_runner/issue-280/gate_report.{md,json} is PASS, with pytest passing for sdk/python/tests/conformance/test_verifier_conformance.py and tests/verifier/test_proof_bundle_schema.py plus tests/verifier/test_conformance_fixtures.py."
+    "Reviewed only local repository files, local command output, and the issue text.",
+    "git diff --check -> clean.",
+    "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane-lane-p1-1/sdk/python/.venv/bin/pytest tests/conformance/test_verify_json_schema.py sdk/python/tests/test_issue209_schema_version_ci_coverage.py -q -> 30 passed.",
+    "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane-lane-p1-1/sdk/python/.venv/bin/python -m attestplane.cli.main verify --json fixtures/forward-compat/additive-optional.json -> pass with pinned digest abd14b349bbf5eccc9760ef2a6df00b913b6862d6591fe7407427367c06b0b1c.",
+    "env PYTHONPATH=sdk/python/src /Users/macworkers/Projects/attestplane-lane-p1-1/sdk/python/.venv/bin/python -m attestplane.cli.main verify fixtures/forward-compat/additive-optional.json -> OK.",
+    "Issue-local gate_report.json reports PASS for area:verifier."
   ],
   "residual_risks": [
-    "The change is pinned by Python-side fixtures and conformance coverage; if the TypeScript verifier ever drifts independently, this review bundle does not prove parity."
+    "The change depends on digest stability for the forward-compat fixture; if serialization or canonicalization semantics evolve, the pinned digest test will need an update."
   ],
   "no_merge_tag_publish_pypi": true
 }
