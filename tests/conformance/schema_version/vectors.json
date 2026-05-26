@@ -25,15 +25,6 @@
       "ok": true
     },
     {
-      "case_id": "schema_version_additive_positive",
-      "chain_metadata_fields": [
-        "future_metadata_field"
-      ],
-      "expected_reason_code": null,
-      "expected_secondary_reasons": [],
-      "ok": true
-    },
-    {
       "case_id": "missing",
       "expected_reason_code": "att.verify.schema_version_missing",
       "expected_secondary_reasons": [],

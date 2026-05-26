@@ -4,7 +4,7 @@ Status: **PASS**
 
 ## Scope
 
-Issue: [P1][conformance] Pin the positive forward-compatible path — verifier accepts unknown additive optional fields under schema_version
+Issue: [P1][conformance] Pin the positive forward-compatible path — verifier accepts unknown additive optional fields under `schema_version`
 
 This review used only local repository files, local command output, and the issue text supplied in the prompt. No network access was used.
 
@@ -17,7 +17,7 @@ This review used only local repository files, local command output, and the issu
 | 2. Diff lowered severity | PASS: no severity lowering found |
 | 3. Diff leaked or logged secrets | PASS: no secret leak found |
 | 4. Diff modified publish/tag logic | PASS: no publish/tag logic modified |
-| 5. Diff deleted key tests | PASS: no key test deletion found |
+| 5. Diff deleted key tests | PASS: one duplicate positive vector was removed, but the case remains covered once and is still pinned by verifier tests |
 | 6. Diff implemented behavior without tests or evidence | PASS: tests and gate evidence present |
 | 7. Diff introduced uncertain external dependencies | PASS: no new external dependency found |
 | 8. Diff avoided merge, tag, package publish, and PyPI push | PASS |
@@ -26,21 +26,20 @@ This review used only local repository files, local command output, and the issu
 
 No blocking findings.
 
-No warnings.
+Warnings:
+
+- `npm run test:conformance -- schema_version_additive_positive` is not defined in this checkout; the local proof used the direct Python verifier/conformance path instead.
 
 ## Validation Evidence
 
-- Reviewed the local diff with `git status --short`, `git diff --stat`, and `git diff` for `[tests/conformance/schema_version/vectors.json](/Users/macworkers/Projects/attestplane-lane-p0/tests/conformance/schema_version/vectors.json)` and `[tests/verifier/test_proof_bundle_schema.py](/Users/macworkers/Projects/attestplane-lane-p0/tests/verifier/test_proof_bundle_schema.py)`.
-- Checked the new local fixture and conformance bundle at `[fixtures/forward-compat/additive-optional.json](/Users/macworkers/Projects/attestplane-lane-p0/fixtures/forward-compat/additive-optional.json)` and `[tests/conformance/schema_version/schema_version_additive_positive/bundle.json](/Users/macworkers/Projects/attestplane-lane-p0/tests/conformance/schema_version/schema_version_additive_positive/bundle.json)`.
-- Confirmed `[tests/conformance/test_schema_version_vectors.py](/Users/macworkers/Projects/attestplane-lane-p0/tests/conformance/test_schema_version_vectors.py)` consumes `[tests/conformance/schema_version/vectors.json](/Users/macworkers/Projects/attestplane-lane-p0/tests/conformance/schema_version/vectors.json)` and asserts the bundle fields listed in each case.
-- Used `[docs/validation/local_codex_runner/issue-280/gate_report.json](/Users/macworkers/Projects/attestplane-lane-p0/docs/validation/local_codex_runner/issue-280/gate_report.json)` as local evidence:
-  - `env PYTHONPATH=sdk/python/src pytest sdk/python/tests/conformance/test_verifier_conformance.py -q`
-  - `env PYTHONPATH=sdk/python/src pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_conformance_fixtures.py -q`
-  - Both commands passed.
+- Reviewed the final local diff with `git status --short`, `git diff --stat`, `git diff -- [tests/conformance/schema_version/vectors.json](/Users/macworkers/Projects/attestplane-lane-p0/tests/conformance/schema_version/vectors.json)`, and `git show HEAD:tests/conformance/schema_version/vectors.json`.
+- Confirmed the deleted `schema_version_additive_positive` entry was duplicated in `HEAD`; the working tree still keeps one positive additive forward-compatibility vector and the conformance harness still exercises it once.
+- Checked `[tests/conformance/test_schema_version_vectors.py](/Users/macworkers/Projects/attestplane-lane-p0/tests/conformance/test_schema_version_vectors.py)` and `[tests/verifier/test_proof_bundle_schema.py](/Users/macworkers/Projects/attestplane-lane-p0/tests/verifier/test_proof_bundle_schema.py)` to confirm the positive additive path remains pinned by conformance and unit coverage.
+- Used `[docs/validation/local_codex_runner/issue-280/test.md](/Users/macworkers/Projects/attestplane-lane-p0/docs/validation/local_codex_runner/issue-280/test.md)` and `[docs/validation/local_codex_runner/issue-280/gate_report.json](/Users/macworkers/Projects/attestplane-lane-p0/docs/validation/local_codex_runner/issue-280/gate_report.json)` as local evidence for the Python verifier/conformance checks, the unknown-required negative case, the TypeScript test suite, and `git diff --check`.
 
 ## Residual Risks
 
-None identified in the local evidence set.
+- One duplicate explicit positive conformance vector was removed, so the matrix has less redundancy even though the behavior is still covered by the remaining vector and verifier-side tests.
 
 ## Redline Statement
 
