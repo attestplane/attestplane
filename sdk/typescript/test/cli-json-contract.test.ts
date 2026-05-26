@@ -54,9 +54,7 @@ interface VerifyJsonContractFixture {
   schema_version: 1;
 }
 
-const CONTRACT = JSON.parse(
-  readFileSync(CONTRACT_PATH, 'utf-8'),
-) as VerifyJsonContractFixture;
+const CONTRACT = JSON.parse(readFileSync(CONTRACT_PATH, 'utf-8')) as VerifyJsonContractFixture;
 
 describe('verify --json contract snapshot', () => {
   it('pins the versioned fixture schema', () => {
