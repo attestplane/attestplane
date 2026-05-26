@@ -26,6 +26,8 @@ The diff stays in the test and conformance-vector layer. It does not touch relea
 - `git diff --check`
 - `python -m py_compile tests/verifier/test_proof_bundle_schema.py tests/verifier/test_verify_reason_codes.py tests/cli/test_verify_json.py tests/cli/test_verify_explain.py tests/conformance/test_schema_version_vectors.py`
 - Local JSON sanity check loading `tests/conformance/schema_version/vectors.json` and `tests/conformance/schema_version/additive_with_unknown_field_ok/bundle.json`
+- Sanitized `docs/validation/local_codex_runner/issue-275/03_fix_ci_round_1.prompt.md` so it no longer contains external GitHub URLs that can trip link checks.
+- Verified the issue evidence directory no longer contains external URL text.
 - Attempted `python -m pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_verify_reason_codes.py tests/cli/test_verify_json.py tests/cli/test_verify_explain.py tests/conformance/test_schema_version_vectors.py -q`, but the default interpreter does not have `pytest`
 - Attempted `ask_opus.sh reviewer ...`, but the helper reported `Not logged in`
 
