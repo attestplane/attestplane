@@ -75,7 +75,18 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     assert explain_rc == 0
     assert json_stderr == ""
     assert explain_stderr == ""
-    assert json_stdout == explain_stdout
     assert json_payload["taxonomy_version"] == 1
     assert explain_payload["taxonomy_version"] == 1
     assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]
+    assert json_payload["schema_version"] == explain_payload["schema_version"] == 1
+    assert json_payload["result"] == explain_payload["result"] == "pass"
+    assert json_payload["bundle"] == explain_payload["bundle"]
+    assert json_payload["reasons"] == explain_payload["reasons"] == []
+    assert "explanation" not in json_payload
+    assert explain_payload["explanation"] == [
+        {
+            "primary_reason": None,
+            "pointer": "/",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+        }
+    ]

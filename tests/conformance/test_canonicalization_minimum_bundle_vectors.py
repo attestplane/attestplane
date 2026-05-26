@@ -75,6 +75,11 @@ def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]
 
     assert result.ok is vector["expected_ok"]
     assert result.error_code == VERIFY_OK
+    extra_bundle_fields = vector.get("extra_bundle_fields", {})
+    for field, expected in extra_bundle_fields.items():
+        assert bundle[field] == expected
+        canonical_fragment = json.dumps(expected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        assert f'"{field}":{canonical_fragment}' in raw
     for assertion in vector["assertions"]:
         if assertion == "recursive_unique_keys":
             _assert_recursive_unique_keys(raw)

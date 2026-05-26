@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "The branch also contains local runner queue-policy changes that remove should_process_issue gating and disable product-delta recovery paths. They are outside the verifier conformance scope and were not exercised by the verifier gate, so they should be watched separately.",
+    "The signed-schema roundtrip test no longer asserts byte-for-byte stdout equality between verify --json and explain --json; it now checks structured fields instead, which is adequate for this issue but leaves formatter drift less tightly pinned."
+  ],
+  "validation": [
+    "Local gate report: sdk/python/.venv/bin/pytest sdk/python/tests/conformance/test_verifier_conformance.py -q -> exit 0",
+    "Local gate report: sdk/python/.venv/bin/pytest tests/verifier/test_proof_bundle_schema.py tests/verifier/test_conformance_fixtures.py -q -> exit 0",
+    "git diff --check -> clean"
+  ],
+  "residual_risks": [
+    "The forward-compat path is pinned by one positive fixture and matching TS/Python regression coverage, so future additive field shapes will still need their own fixtures before they should be treated as stable.",
+    "The verifier acceptance boundary depends on the shared fail-closed proof_type / critical_* rule staying unchanged."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

@@ -68,13 +68,18 @@ def signer_for_canonicalization_vector(vector: dict[str, Any]) -> Signer:
 
 def emit_positive_canonicalization_bundle(vector: dict[str, Any]) -> dict[str, Any]:
     assert vector["helper"] == "ProofBundleBuilder.minimal"
-    return ProofBundleBuilder.minimal(
+    bundle = ProofBundleBuilder.minimal(
         vector["subject_digest"],
         signer_for_canonicalization_vector(vector),
         extra_payload=vector.get("extra_payload"),
         now=parse_vector_utc(vector["now"]),
         event_id=vector["event_id"],
     )
+    extra_bundle_fields = vector.get("extra_bundle_fields")
+    if extra_bundle_fields is not None:
+        for key, value in extra_bundle_fields.items():
+            bundle[key] = deepcopy(value)
+    return bundle
 
 
 def emit_positive_bundle(vector: dict[str, Any]) -> dict[str, Any]:

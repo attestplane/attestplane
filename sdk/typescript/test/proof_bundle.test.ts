@@ -5,9 +5,11 @@
  * sdk/python/tests/test_proof_bundle.py.
  */
 
+import { readFileSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -15,6 +17,7 @@ import { chainExtend, genesisHead } from '../src/hashchain.js';
 import {
   DEFAULT_FORBIDDEN_FIELDS,
   type FrameworkMapping,
+  type ProofBundle,
   ProofBundleBuilder,
   buildAuditorExport,
 } from '../src/proof_bundle.js';
@@ -26,6 +29,17 @@ import {
   verifyProofBundle,
   verifyProofBundleFile,
 } from '../src/verifier.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FORWARD_COMPAT_FIXTURE = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'fixtures',
+  'forward-compat',
+  'additive-optional.json',
+);
 
 function buildGoodChain(n: number): ChainedEvent[] {
   const ts = new Date('2026-05-17T12:00:00.000Z');
@@ -178,6 +192,18 @@ describe('verifyProofBundle', () => {
     const bundle = builder.build() as unknown as Record<string, unknown>;
     bundle.proof_type = 'critical-unknown';
     expect(() => verifyProofBundle(bundle)).toThrow(/unknown top-level/);
+  });
+
+  it('accepts additive optional bundle fields under schema_version 1', () => {
+    const bundle = JSON.parse(readFileSync(FORWARD_COMPAT_FIXTURE, 'utf-8')) as ProofBundle;
+    const before = JSON.stringify(bundle);
+    const result = verifyProofBundle(bundle);
+
+    expect(result.ok).toBe(true);
+    expect(result.error_code).toBe('VERIFY_OK');
+    expect(result.primary_reason).toBeNull();
+    expect(result.metadata_ok).toBe(true);
+    expect(JSON.stringify(bundle)).toBe(before);
   });
 
   it('rejects unknown required metadata fields with a stable reason', () => {

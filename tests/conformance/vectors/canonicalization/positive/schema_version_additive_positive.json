@@ -1,0 +1,23 @@
+{
+  "assertions": [
+    "canonical_json_has_no_bom_or_trailing_bytes"
+  ],
+  "case_id": "schema_version_additive_positive",
+  "description": "Helper-emitted minimum bundle with an additive top-level field preserved under schema_version 1.",
+  "event_id": "00000000-0000-7000-8000-000000137005",
+  "expected_ok": true,
+  "extra_bundle_fields": {
+    "future_bundle_field": {
+      "preserved": true
+    }
+  },
+  "helper": "ProofBundleBuilder.minimal",
+  "now": "2026-05-22T00:00:04.000000Z",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.positive.v1",
+  "seed_hex": "1370000000000000000000000000000000000000000000000000000000000005",
+  "subject_digest": "1370000000000000000000000000000000000000000000000000000000000005",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}

@@ -15,6 +15,13 @@ from attestplane.verify_reason_codes import (
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION_DIR = ROOT / "tests" / "conformance" / "schema_version"
+SCHEMA_VERSION_BUNDLE_DIRS = {
+    "additive_minor_ok": "additive_minor_ok",
+    "schema_version_additive_positive": "additive_with_unknown_field_ok",
+    "missing": "missing",
+    "major_version_ahead": "major_version_ahead",
+    "schema_version_unknown_required": "unknown_required_field",
+}
 SCHEMA_VERSION_VECTORS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
 )["cases"]
@@ -22,12 +29,14 @@ SCHEMA_VERSION_CASE_IDS = {str(vector["case_id"]) for vector in SCHEMA_VERSION_V
 
 
 def _bundle(case: str) -> dict:
-    return json.loads((SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8"))
+    bundle_dir = SCHEMA_VERSION_BUNDLE_DIRS[case]
+    return json.loads((SCHEMA_VERSION_DIR / bundle_dir / "bundle.json").read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("case", sorted(SCHEMA_VERSION_CASE_IDS))
 def test_schema_version_vector_set_is_complete(case: str) -> None:
-    assert (SCHEMA_VERSION_DIR / case / "bundle.json").exists()
+    bundle_dir = SCHEMA_VERSION_BUNDLE_DIRS[case]
+    assert (SCHEMA_VERSION_DIR / bundle_dir / "bundle.json").exists()
 
 
 @pytest.mark.parametrize("vector", SCHEMA_VERSION_VECTORS, ids=lambda vector: vector["case_id"])

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import io
 import json
 import sys
@@ -46,6 +47,14 @@ from attestplane.verify_reason_codes import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = REPO_ROOT / "tests" / "fixtures" / "bundles"
 SCHEMA_VERSION_DIR = REPO_ROOT / "tests" / "conformance" / "schema_version"
+FORWARD_COMPAT_FIXTURE = REPO_ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
+SCHEMA_VERSION_BUNDLE_DIRS = {
+    "additive_minor_ok": "additive_minor_ok",
+    "schema_version_additive_positive": "additive_with_unknown_field_ok",
+    "missing": "missing",
+    "major_version_ahead": "major_version_ahead",
+    "schema_version_unknown_required": "unknown_required_field",
+}
 SCHEMA_VERSION_VECTORS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
 )["cases"]
@@ -56,7 +65,8 @@ def _fixture(name: str) -> dict:
 
 
 def _schema_case(name: str) -> dict:
-    return json.loads((SCHEMA_VERSION_DIR / name / "bundle.json").read_text(encoding="utf-8"))
+    bundle_dir = SCHEMA_VERSION_BUNDLE_DIRS[name]
+    return json.loads((SCHEMA_VERSION_DIR / bundle_dir / "bundle.json").read_text(encoding="utf-8"))
 
 
 def _unsigned_bundle() -> dict:
@@ -115,15 +125,35 @@ def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
 
 def test_unknown_required_field_maps_to_schema_unknown() -> None:
     vector = next(
-        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field"
+        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "schema_version_unknown_required"
     )
-    bundle = _schema_case("unknown_required_field")
+    bundle = _schema_case("schema_version_unknown_required")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 
     assert result.ok is False
     assert result.primary_reason == vector["expected_reason_code"]
     assert "critical_future_field" in (result.metadata_reason or "")
+
+
+def test_forward_compat_fixture_verifies_and_has_stable_digest(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    raw_bytes = FORWARD_COMPAT_FIXTURE.read_bytes()
+    expected_digest = hashlib.sha256(raw_bytes).hexdigest()
+    bundle = json.loads(raw_bytes.decode("utf-8"))
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+    assert result.ok is True
+    assert result.primary_reason is None
+    assert result.error_code == VERIFY_OK
+
+    rc = cli_main(["verify", "--json", str(FORWARD_COMPAT_FIXTURE)])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["result"] == "pass"
+    assert payload["bundle"]["digest"] == expected_digest
 
 
 def test_verify_reason_code_taxonomy_and_format_helpers() -> None:
