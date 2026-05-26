@@ -13,6 +13,7 @@ from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -104,3 +105,36 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "signer_subject=" in summary["message"]
     assert "schema_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
+
+
+def test_verify_json_taxonomy_version_pin_is_additive_and_closed(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", "--json", str(PASS_FIXTURE)])
+    base_stdout = capsys.readouterr().out
+
+    rc_match = main(["verify", "--json", str(PASS_FIXTURE), "--require-taxonomy-version", "1"])
+    match_stdout = capsys.readouterr().out
+
+    assert rc == 0
+    assert rc_match == 0
+    assert base_stdout == match_stdout
+
+    rc_mismatch = main(
+        ["verify", "--json", str(PASS_FIXTURE), "--require-taxonomy-version", "0.0.0"]
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc_mismatch == 1
+    assert captured.err == ""
+    assert payload["result"] == "fail"
+    assert payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert payload["taxonomy_version"] == 1
+    assert payload["reasons"] == [
+        {
+            "code": VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+            "path": "/taxonomy_version",
+            "message": "taxonomy version pin check failed",
+        }
+    ]

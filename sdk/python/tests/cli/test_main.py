@@ -19,6 +19,12 @@ from attestplane.types import ChainHead, EventDraft
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SIGNATURE_MISSING,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+)
+
+ROOT = Path(__file__).resolve().parents[4]
+MISSING_SIGNATURES_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
 )
 
 
@@ -64,6 +70,7 @@ def test_verify_help_declares_partial_scope(capsys: pytest.CaptureFixture[str]) 
     assert "policy_trace_refs closure" in normalized
     assert "signature verification" in normalized
     assert "anchor verification" in normalized
+    assert "--require-taxonomy-version" in normalized
 
 
 def test_doctor_command(capsys: pytest.CaptureFixture[str]) -> None:
@@ -173,6 +180,55 @@ def test_verify_bundle_option_rejects_unsigned_bundle(
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+
+
+def test_verify_taxonomy_version_pin_is_additive_and_closed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    chain_path = tmp_path / "chain.jsonl"
+    bundle_path = tmp_path / "bundle.json"
+    _seed_jsonl_chain(chain_path, n=2)
+    assert main(["export", str(chain_path), "--out", str(bundle_path)]) == 0
+    capsys.readouterr()
+
+    rc_base = main(["verify", "--json", str(bundle_path)])
+    base_stdout = capsys.readouterr().out
+
+    rc_match = main(["verify", "--json", str(bundle_path), "--require-taxonomy-version", "1"])
+    match_stdout = capsys.readouterr().out
+
+    assert rc_base == 0
+    assert rc_match == 0
+    assert base_stdout == match_stdout
+
+    rc_mismatch = main(
+        ["verify", "--json", str(bundle_path), "--require-taxonomy-version", "0.0.0"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc_mismatch == 1
+    assert payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert payload["reasons"][0]["path"] == "/taxonomy_version"
+
+
+def test_verify_taxonomy_version_pin_does_not_downgrade_strict_schema_failure(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(
+        [
+            "verify",
+            "--strict-schema",
+            "--require-taxonomy-version",
+            "0.0.0",
+            str(MISSING_SIGNATURES_FIXTURE),
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 2
+    assert out.startswith("FAIL")
+    assert "taxonomy_version=1 does not match required 0.0.0" not in out
 
 
 def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:

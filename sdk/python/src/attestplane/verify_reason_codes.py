@@ -27,6 +27,7 @@ VerifyReasonCodeV1 = Literal[
     "att.verify.signature_invalid",
     "att.verify.signature_missing",
     "att.verify.structure_invalid",
+    "att.verify.taxonomy_version_mismatch",
 ]
 
 VERIFY_REASON_CANONICAL_MISMATCH: Final[VerifyReasonCodeV1] = "att.verify.canonical_mismatch"
@@ -44,6 +45,9 @@ VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
     "att.verify.required_field_missing"
 )
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
+VERIFY_REASON_TAXONOMY_VERSION_MISMATCH: Final[VerifyReasonCodeV1] = (
+    "att.verify.taxonomy_version_mismatch"
+)
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
 
 ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
@@ -57,6 +61,7 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 )
 
 VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
@@ -81,6 +86,9 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
     VERIFY_REASON_SIGNATURE_INVALID: "Signature material is present but malformed or fails verifier checks.",
     VERIFY_REASON_SIGNATURE_MISSING: "Strict verification requires signature material but none is present.",
     VERIFY_REASON_STRUCTURE_INVALID: "Known bundle relationships are malformed, duplicated, dangling, or out of order.",
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH: (
+        "The verifier emitted a taxonomy_version that does not match the requested pin."
+    ),
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
@@ -120,6 +128,7 @@ __all__ = [
     "VERIFY_REASON_SIGNATURE_INVALID",
     "VERIFY_REASON_SIGNATURE_MISSING",
     "VERIFY_REASON_STRUCTURE_INVALID",
+    "VERIFY_REASON_TAXONOMY_VERSION_MISMATCH",
     "VerifyReasonCodeV1",
     "is_known_verify_reason_code",
     "verify_reason_code_explanation",

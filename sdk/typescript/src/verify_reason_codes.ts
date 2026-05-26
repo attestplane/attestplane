@@ -22,6 +22,8 @@ export const VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED =
 export const VERIFY_REASON_SIGNATURE_INVALID = 'att.verify.signature_invalid' as const;
 export const VERIFY_REASON_SIGNATURE_MISSING = 'att.verify.signature_missing' as const;
 export const VERIFY_REASON_STRUCTURE_INVALID = 'att.verify.structure_invalid' as const;
+export const VERIFY_REASON_TAXONOMY_VERSION_MISMATCH =
+  'att.verify.taxonomy_version_mismatch' as const;
 
 export type VerifyReasonCodeV1 =
   | typeof VERIFY_REASON_ANCHOR_INVALID
@@ -33,7 +35,8 @@ export type VerifyReasonCodeV1 =
   | typeof VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
   | typeof VERIFY_REASON_SIGNATURE_INVALID
   | typeof VERIFY_REASON_SIGNATURE_MISSING
-  | typeof VERIFY_REASON_STRUCTURE_INVALID;
+  | typeof VERIFY_REASON_STRUCTURE_INVALID
+  | typeof VERIFY_REASON_TAXONOMY_VERSION_MISMATCH;
 
 export const ALL_VERIFY_REASON_CODES_V1 = [
   VERIFY_REASON_ANCHOR_INVALID,
@@ -46,6 +49,7 @@ export const ALL_VERIFY_REASON_CODES_V1 = [
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
+  VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 ] as const satisfies readonly VerifyReasonCodeV1[];
 
 export const VERIFY_REASON_TAXONOMY: Readonly<Record<VerifyReasonCodeV1, string>> = {
@@ -68,6 +72,8 @@ export const VERIFY_REASON_TAXONOMY: Readonly<Record<VerifyReasonCodeV1, string>
     'Strict verification requires signature material but none is present.',
   [VERIFY_REASON_STRUCTURE_INVALID]:
     'Known bundle relationships are malformed, duplicated, dangling, or out of order.',
+  [VERIFY_REASON_TAXONOMY_VERSION_MISMATCH]:
+    'The verifier emitted a taxonomy_version that does not match the requested pin.',
 };
 
 export const VERIFY_REASON_CODE_DESCRIPTIONS: Readonly<Record<VerifyReasonCodeV1, string>> =

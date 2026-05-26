@@ -48,6 +48,20 @@ The payload is fixed at schema version 1:
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
 
+## `verify --require-taxonomy-version`
+
+`attestplane verify --require-taxonomy-version <v>` adds a consumer-side pin on
+the emitted `taxonomy_version` without changing the output contract when the
+pin matches.
+
+- On match, `--json`, `--explain`, and the combined `--json --explain` mode
+  remain byte-stable relative to the same invocation without the flag.
+- On mismatch, the verifier fails closed with
+  `att.verify.taxonomy_version_mismatch` in `reason_code` and in the
+  human-readable rationale path, and the rejection points at `/taxonomy_version`.
+- The flag is optional and additive; omitting it preserves the current
+  behavior exactly.
+
 ## `verify --explain`
 
 `verify --explain` is the operator-oriented companion to `verify --json`.
