@@ -18,8 +18,16 @@ The diff implements the requested forward-compatible path for known `schema_vers
 
 - `sdk/python/.venv/bin/pytest tests/conformance/test_schema_version_vectors.py sdk/python/tests/test_issue209_schema_version_ci_coverage.py -q`
   - Result: `36 passed`
+- `sdk/python/.venv/bin/python -m attestplane.cli.main verify fixtures/forward-compat/additive-optional.json`
+  - Result: `exit 0`
+- `cd sdk/typescript && npm run lint`
+  - Result: `pass`
+- `cd sdk/typescript && npm run typecheck`
+  - Result: `pass`
 - `cd sdk/typescript && npm test -- --run test/proof_bundle.test.ts`
   - Result: `31 passed`
+- `cd sdk/typescript && npm test`
+  - Result: `524 passed`
 - `git diff --check`
   - Result: clean
 

@@ -7,7 +7,11 @@
   ],
   "validation": [
     "sdk/python/.venv/bin/pytest tests/conformance/test_schema_version_vectors.py sdk/python/tests/test_issue209_schema_version_ci_coverage.py -q -> 36 passed",
+    "sdk/python/.venv/bin/python -m attestplane.cli.main verify fixtures/forward-compat/additive-optional.json -> exit 0",
+    "cd sdk/typescript && npm run lint -> pass",
+    "cd sdk/typescript && npm run typecheck -> pass",
     "cd sdk/typescript && npm test -- --run test/proof_bundle.test.ts -> 31 passed",
+    "cd sdk/typescript && npm test -> 524 passed",
     "git diff --check -> clean"
   ],
   "residual_risks": [
