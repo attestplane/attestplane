@@ -166,10 +166,12 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
       `bundle must be a JSON object, got ${raw === null ? 'null' : typeof raw}`,
     );
   }
-  const unknown = Object.keys(raw).filter((k) => !ALLOWED_TOP_LEVEL.has(k));
-  if (unknown.length > 0) {
+  const failClosedUnknownFields = Object.keys(raw)
+    .filter((k) => !ALLOWED_TOP_LEVEL.has(k) && (k === 'proof_type' || k.startsWith('critical_')))
+    .sort();
+  if (failClosedUnknownFields.length > 0) {
     throw new BundleSchemaError(
-      `bundle contains unknown top-level fields: ${JSON.stringify(unknown.sort())}`,
+      `unknown top-level fields: ${JSON.stringify(failClosedUnknownFields)}`,
     );
   }
   const missing = REQUIRED_TOP_LEVEL.filter((k) => !(k in raw));

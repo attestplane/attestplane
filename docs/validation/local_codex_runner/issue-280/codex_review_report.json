@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "The TS verifier now accepts all non-ALLOWED top-level fields except the fail-closed proof_type and critical_* boundary; that matches the Python verifier, but future additive field classes will still need explicit conformance coverage if they carry special semantics.",
+    "The signed-schema roundtrip test no longer asserts byte-for-byte stdout equality between verify --json and explain --json; it now checks structured fields instead, which is adequate for this change but leaves some formatter drift unpinned."
+  ],
+  "validation": [
+    "sdk/python/.venv/bin/pytest tests/conformance/test_schema_version_vectors.py sdk/python/tests/test_issue209_schema_version_ci_coverage.py -q -> 36 passed",
+    "cd sdk/typescript && npm test -- --run test/proof_bundle.test.ts -> 31 passed",
+    "git diff --check -> clean"
+  ],
+  "residual_risks": [
+    "The forward-compat path is pinned by one positive fixture and one TS regression test, so any later additive field shape with different nesting will need its own fixture before it should be considered stable.",
+    "Because the verifier acceptance boundary is broader than the specific future_bundle_field fixture, behavior for other unknown optional top-level fields depends on the shared fail-closed proof_type / critical_* rule staying unchanged."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

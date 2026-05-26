@@ -7,7 +7,7 @@
       "ok": true
     },
     {
-      "case_id": "additive_with_unknown_field_ok",
+      "case_id": "schema_version_additive_positive",
       "extra_fields": [
         "future_bundle_field"
       ],
@@ -28,7 +28,7 @@
       "ok": false
     },
     {
-      "case_id": "unknown_required_field",
+      "case_id": "schema_version_unknown_required",
       "chain_metadata_fields": [
         "critical_future_field"
       ],
