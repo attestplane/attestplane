@@ -17,7 +17,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -29,6 +29,11 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+CONTRACT_FIXTURE = (
+    ROOT / "sdk" / "python" / "tests" / "conformance" / "verify_json_contract_vectors.json"
+)
+
+CONTRACT_VECTORS = json.loads(CONTRACT_FIXTURE.read_text(encoding="utf-8"))
 
 
 def _run_verify(
@@ -38,6 +43,13 @@ def _run_verify(
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out), captured.err
+
+
+def _contract_case(name: str) -> dict[str, object]:
+    for case in CONTRACT_VECTORS["cases"]:
+        if case["name"] == name:
+            return case
+    raise AssertionError(f"missing contract case: {name}")
 
 
 def _assert_matches_verify_result_v1(
@@ -114,18 +126,21 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    expected = _contract_case("pass_minimal_fixture")
 
-    assert rc == 0
+    assert rc == expected["expected_exit_code"]
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+    assert payload == expected["output"]
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    expected = _contract_case("fail_canonicalization_edge_fixture")
 
-    assert rc == 1
+    assert rc == expected["expected_exit_code"]
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
@@ -133,6 +148,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["path"].startswith("/events/")
     assert "canonicalization" in reason["message"]
+    assert payload == expected["output"]
 
 
 def test_verify_json_and_explain_keep_json_parseable(
@@ -242,8 +258,9 @@ def test_verify_json_reports_missing_bundle_path(
 
     rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == 1
-    assert stderr == ""
+    assert rc == 2
+    assert stderr == f"{VERIFY_IO_ERROR}\n"
+    assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]

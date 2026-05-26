@@ -13,6 +13,12 @@ notes are the authoritative reference for supply-chain verification.
 
 ### v1.7.x verifier/docs delta
 
+- Pinned the `attestplane verify --json` exit-code contract with a
+  versioned output snapshot that locks the `schema_version`, `exit_code`,
+  `reason_code`, `taxonomy_version`, ordered `reasons[]`, and `bundle.digest`
+  fields for a known-good and known-bad fixture. `0` remains accept, `1`
+  remains verifier rejection, and `2` now covers usage/input/I/O failures so
+  the rejection lane stays stable for CI gating.
 - Refreshed the user-facing v1.7.x verifier note to point readers at
   [docs/release-notes/v1.7.x-delta.md](docs/release-notes/v1.7.x-delta.md)
   for the landed `--explain` / `--json` / `schema_version` and
