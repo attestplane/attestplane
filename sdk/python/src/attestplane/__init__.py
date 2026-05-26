@@ -215,7 +215,7 @@ from attestplane.verify_reason_codes import (
     verify_reason_code_matches_format,
 )
 
-__version__ = "1.8.3"
+__version__ = "1.8.4"
 
 __all__ = [
     "ALL_EVENT_TYPES_V1",
