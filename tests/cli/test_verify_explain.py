@@ -14,10 +14,12 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -160,7 +162,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             (
                 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
                 "/chain_metadata/schema_version",
-                ("chain_metadata.schema_version=2", "this verifier handles 1"),
+                ("chain_metadata.schema_version=2", "schema_version values (1,)"),
             ),
         ),
         (
@@ -305,3 +307,82 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     assert payload_schema["explanation"][0]["primary_reason"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert payload_schema["explanation"][0]["pointer"] == "/chain_metadata/schema_version"
     assert stderr_schema == ""
+
+
+def test_verify_explain_taxonomy_version_pin_is_additive_and_closed(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc_base, stdout_base, stderr_base = _run_verify(
+        ["verify", "--json", "--explain", str(PASS_FIXTURE)],
+        capsys,
+    )
+    rc_match, stdout_match, stderr_match = _run_verify(
+        [
+            "verify",
+            "--json",
+            "--explain",
+            str(PASS_FIXTURE),
+            "--require-taxonomy-version",
+            "1",
+        ],
+        capsys,
+    )
+
+    assert rc_base == 0
+    assert rc_match == 0
+    assert stdout_match == stdout_base
+    assert stderr_base == stderr_match == ""
+
+    rc_mismatch_json, stdout_mismatch_json, stderr_mismatch_json = _run_verify(
+        [
+            "verify",
+            "--json",
+            "--explain",
+            str(PASS_FIXTURE),
+            "--require-taxonomy-version",
+            "0.0.0",
+        ],
+        capsys,
+    )
+    payload = json.loads(stdout_mismatch_json)
+
+    assert rc_mismatch_json == 1
+    assert stderr_mismatch_json == ""
+    assert payload["result"] == "fail"
+    assert payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert payload["reasons"] == [
+        {
+            "code": VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+            "path": "/taxonomy_version",
+            "message": "taxonomy_version=1 does not match required 0.0.0",
+            "explanation": VERIFY_REASON_CODE_DESCRIPTIONS[
+                VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+            ],
+        }
+    ]
+    assert payload["explanation"] == [
+        {
+            "primary_reason": VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+            "pointer": "/taxonomy_version",
+            "message": "taxonomy_version=1 does not match required 0.0.0",
+        }
+    ]
+
+    rc_mismatch_human, stdout_mismatch_human, stderr_mismatch_human = _run_verify(
+        [
+            "verify",
+            "--explain",
+            str(PASS_FIXTURE),
+            "--require-taxonomy-version",
+            "0.0.0",
+        ],
+        capsys,
+    )
+
+    assert rc_mismatch_human == 1
+    assert stdout_mismatch_human.startswith("FAIL signer_subject=")
+    assert stderr_mismatch_json == ""
+    assert stderr_mismatch_human == (
+        f"{VERIFY_REASON_TAXONOMY_VERSION_MISMATCH} /taxonomy_version: "
+        "taxonomy_version=1 does not match required 0.0.0\n"
+    )

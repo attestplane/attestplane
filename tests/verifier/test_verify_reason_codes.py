@@ -33,6 +33,7 @@ from attestplane.verify_reason_codes import (  # noqa: E402
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     VERIFY_REASON_TAXONOMY_VERSION,
     is_known_verify_reason_code,
     verify_reason_code_explanation,
@@ -84,6 +85,7 @@ def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
         VERIFY_REASON_SIGNATURE_INVALID,
         VERIFY_REASON_SIGNATURE_MISSING,
         VERIFY_REASON_STRUCTURE_INVALID,
+        VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     )
 
     assert ALL_VERIFY_REASON_CODES_V1 == expected

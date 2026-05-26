@@ -90,12 +90,17 @@ The v1.7.x release-note delta names the same stability knob
 | `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |
 | `att.verify.signature_missing` | Strict verification requires signature material but none is present. |
 | `att.verify.structure_invalid` | Known bundle relationships are malformed, duplicated, dangling, or out of order. |
+| `att.verify.taxonomy_version_mismatch` | The emitted verifier `taxonomy_version` does not match the requested pin. |
 
 The existing human-readable fields such as `chain_result.reason`,
 `metadata_reason`, `policy_trace_refs_reason`, `retention_proofs_reason`, and
 `signed_attestation_schema_reason` remain for one minor release as deprecated
 migration aids. SDK and CLI consumers should branch on `primary_reason` and
 `secondary_reasons` instead of matching these strings.
+
+When a caller pins `verify --require-taxonomy-version`, a mismatch surfaces as
+`att.verify.taxonomy_version_mismatch` in both the JSON `reason_code` field and
+the human-readable `--explain` rationale.
 
 Forward-compatible additive bundle fields are ignored by the verifier and do
 not change `ok` when the rest of the bundle is valid. Use `verify --explain`

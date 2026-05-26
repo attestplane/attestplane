@@ -1,0 +1,17 @@
+{
+  "status": "FAIL",
+  "blocking_reasons": [
+    "The new taxonomy pin check short-circuits before existing verifier checks in `sdk/python/src/attestplane/cli/verify_json.py:593-601` and `sdk/python/src/attestplane/cli/main.py:439-649`, so a bundle that would normally fail with exit 2 (for example `--strict-schema` missing signatures) is downgraded to exit 1 when `--require-taxonomy-version` is wrong. That weakens the release gate and masks stricter verifier failures."
+  ],
+  "warnings": [
+    "The added tests only exercise pin mismatch against passing fixtures; they do not cover the downgrade path where a stronger pre-existing verifier failure is masked by the pin check."
+  ],
+  "validation": [
+    "Ran `pytest -q tests/cli/test_verify_json.py tests/cli/test_verify_explain.py tests/conformance/test_signed_schema_conformance_roundtrip.py tests/verifier/test_verify_reason_codes.py -q` (passed).",
+    "Manually reproed the downgrade with `attestplane verify --json --strict-schema tests/fixtures/bundles/missing_signatures.json` returning exit 2, then the same command with `--require-taxonomy-version 0.0.0` returning exit 1 and `att.verify.taxonomy_version_mismatch`."
+  ],
+  "residual_risks": [
+    "If this lands without a fix, consumers can treat a structurally invalid bundle as a simple taxonomy-pin mismatch and miss the stronger diagnostic."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

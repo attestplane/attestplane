@@ -30,6 +30,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
     verify_reason_code_explanation,
@@ -178,6 +179,44 @@ def _verify_success_summary(bundle: dict[str, Any]) -> str:
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
         f"anchor={_bundle_anchor_state(bundle)}"
+    )
+
+
+def _taxonomy_version_mismatch_detail(require_taxonomy_version: str) -> str:
+    return (
+        f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} does not match "
+        f"required {require_taxonomy_version}"
+    )
+
+
+def _taxonomy_version_mismatch_outcome(
+    bundle_digest: str,
+    *,
+    require_taxonomy_version: str,
+    explain: bool,
+) -> VerifyJsonOutcome:
+    detail = _taxonomy_version_mismatch_detail(require_taxonomy_version)
+    return _json_failure(
+        bundle_digest=bundle_digest,
+        reason=_reason_entry(
+            VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+            "/taxonomy_version",
+            summary="taxonomy version pin check failed",
+            detail=detail,
+            explain=explain,
+        ),
+        exit_code=1,
+        explanation=(
+            [
+                _explanation_entry(
+                    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+                    "/taxonomy_version",
+                    detail,
+                )
+            ]
+            if explain
+            else None
+        ),
     )
 
 
@@ -435,6 +474,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: str | None = None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -548,6 +588,16 @@ def build_verify_json_outcome(
                 if explain
                 else None
             ),
+        )
+
+    if (
+        require_taxonomy_version is not None
+        and require_taxonomy_version != str(VERIFY_REASON_TAXONOMY_VERSION)
+    ):
+        return _taxonomy_version_mismatch_outcome(
+            bundle_digest,
+            require_taxonomy_version=require_taxonomy_version,
+            explain=explain,
         )
 
     canonical_index, canonical_exc = _canonicalization_probe(bundle)

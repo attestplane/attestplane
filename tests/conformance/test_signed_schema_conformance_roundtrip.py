@@ -16,6 +16,7 @@ import pytest
 from attestplane.cli.main import main
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_errors import VERIFY_OK
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
 
 ROOT = Path(__file__).resolve().parents[2]
 SIGNED_SCHEMA_FIXTURE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
@@ -75,7 +76,64 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     assert explain_rc == 0
     assert json_stderr == ""
     assert explain_stderr == ""
-    assert json_stdout == explain_stdout
     assert json_payload["taxonomy_version"] == 1
     assert explain_payload["taxonomy_version"] == 1
     assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]
+    assert json_payload["result"] == explain_payload["result"] == "pass"
+    assert json_payload["reason_code"] is None
+    assert explain_payload["reason_code"] is None
+
+
+def test_signed_schema_taxonomy_version_pin_is_stable_and_closed(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle_path = str(SIGNED_SCHEMA_FIXTURE)
+
+    json_rc, json_stdout, json_stderr = _run_verify(
+        ["verify", "--json", bundle_path, "--require-taxonomy-version", "1"],
+        capsys,
+    )
+    explain_rc, explain_stdout, explain_stderr = _run_verify(
+        ["verify", "--json", "--explain", bundle_path, "--require-taxonomy-version", "1"],
+        capsys,
+    )
+
+    baseline_json_rc, baseline_json_stdout, baseline_json_stderr = _run_verify(
+        ["verify", "--json", bundle_path],
+        capsys,
+    )
+    baseline_explain_rc, baseline_explain_stdout, baseline_explain_stderr = _run_verify(
+        ["verify", "--json", "--explain", bundle_path],
+        capsys,
+    )
+
+    assert json_rc == baseline_json_rc == 0
+    assert explain_rc == baseline_explain_rc == 0
+    assert json_stdout == baseline_json_stdout
+    assert explain_stdout == baseline_explain_stdout
+    assert json_stderr == baseline_json_stderr == ""
+    assert explain_stderr == baseline_explain_stderr == ""
+
+    mismatch_json_rc, mismatch_json_stdout, mismatch_json_stderr = _run_verify(
+        ["verify", "--json", bundle_path, "--require-taxonomy-version", "0.0.0"],
+        capsys,
+    )
+    mismatch_explain_rc, mismatch_explain_stdout, mismatch_explain_stderr = _run_verify(
+        ["verify", "--json", "--explain", bundle_path, "--require-taxonomy-version", "0.0.0"],
+        capsys,
+    )
+
+    mismatch_json_payload = json.loads(mismatch_json_stdout)
+    mismatch_explain_payload = json.loads(mismatch_explain_stdout)
+
+    assert mismatch_json_rc == 1
+    assert mismatch_explain_rc == 1
+    assert mismatch_json_stderr == ""
+    assert mismatch_explain_stderr == ""
+    assert mismatch_json_payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert mismatch_explain_payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert mismatch_json_payload["reasons"][0]["code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert mismatch_explain_payload["reasons"][0]["code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert mismatch_json_payload["reasons"][0]["path"] == "/taxonomy_version"
+    assert mismatch_explain_payload["reasons"][0]["path"] == "/taxonomy_version"
+    assert mismatch_explain_payload["explanation"][0]["primary_reason"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
