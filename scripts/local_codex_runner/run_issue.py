@@ -15,7 +15,7 @@ from scripts.local_codex_runner.config import RunnerConfig, add_common_args, loa
 from scripts.local_codex_runner.gate_runner import GateReport, GateRunner
 from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI
-from scripts.local_codex_runner.models import IssueTask, RunnerResult, RunnerStatus, should_process_issue
+from scripts.local_codex_runner.models import IssueTask, RunnerResult, RunnerStatus
 from scripts.local_codex_runner.prompt_builder import PromptBuilder
 from scripts.local_codex_runner.review_guard import run_review_guard
 from scripts.local_codex_runner.state_store import load_state, save_state
@@ -44,27 +44,18 @@ def run_issue(
     )
     try:
         gh.current_auth_status()
-        if not should_process_issue(
-            task,
-            approved_label=config.approved_label,
-            pr_opened_label=config.pr_opened_label,
-            needs_human_label=config.needs_human_label,
-            include_labels=include_labels,
-            exclude_labels=exclude_labels,
-        ):
-            result.status = RunnerStatus.SKIPPED
-            result.local_test_summary = "Issue labels do not match runner queue policy."
-            return write_result(result.finish(), evidence_dir, state, config)
-
         if not config.dry_run:
             gh.add_labels(config.repo or "", task.number, [config.in_progress_label])
             git.remove_transient_evidence()
             if not config.allow_dirty:
                 git.ensure_clean_worktree()
             git.checkout_base_and_pull(config.checkout_ref())
-            branch = git.create_branch(task.number, task.title)
+            branch = git.create_branch(task.number, task.title, lane_suffix=lane_branch_suffix(config))
         else:
             branch = f"codex/issue-{task.number}-{safe_branch_slug(task.title)}"
+            suffix = lane_branch_suffix(config)
+            if suffix:
+                branch = f"{branch}-{safe_branch_slug(suffix)}"
             (evidence_dir / "dry_run_actions.md").write_text(
                 "\n".join(
                     [
@@ -265,6 +256,16 @@ def safe_branch_slug(title: str) -> str:
     from scripts.local_codex_runner.git_ops import slugify
 
     return slugify(title)
+
+
+def lane_branch_suffix(config: RunnerConfig) -> str | None:
+    if not config.lane_name and config.lane_slot is None:
+        return None
+    if config.lane_name and config.lane_slot is not None:
+        return f"{config.lane_name}-{config.lane_slot}"
+    if config.lane_name:
+        return config.lane_name
+    return f"lane-{config.lane_slot}"
 
 
 def parse_pr_number(pr_url: str | None) -> int | None:

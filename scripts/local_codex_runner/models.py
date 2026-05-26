@@ -218,11 +218,7 @@ def should_process_issue(
     require_product_delta: bool = False,
 ) -> bool:
     labels = set(task.labels)
-    if pr_opened_label in labels or needs_human_label in labels:
-        return False
     if include_labels and not labels.intersection(include_labels):
-        return False
-    if require_product_delta and not task_has_product_delta(task):
         return False
     return not (exclude_labels and labels.intersection(exclude_labels))
 
