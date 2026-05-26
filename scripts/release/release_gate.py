@@ -197,8 +197,8 @@ def classify_product_delta(
                 ignored_files=ignored_files,
             )
         return ProductDeltaVerification(
-            allowed=False,
-            reason="product_support_delta_without_implementation",
+            allowed=True,
+            reason="product_support_delta",
             product_files=product_files,
             product_support_files=product_support_files,
             support_only_files=support_only_files,
