@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "git diff --check: clean",
+    "env PYTHONPATH=sdk/python/src pytest tests/cli/test_verify_errors.py tests/conformance/test_schema_version_vectors.py tests/verifier/test_proof_bundle_schema.py tests/verifier/test_verify_reason_codes.py -q: 49 passed",
+    "Local gate report for area:verifier: PASS"
+  ],
+  "residual_risks": [
+    "The new forward-compat acceptance is pinned by fixtures and conformance vectors; future schema additions will need matching vector updates to keep the contract explicit."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
