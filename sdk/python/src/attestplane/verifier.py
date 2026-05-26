@@ -475,9 +475,10 @@ def _verify_metadata_closure(
             return False, "chain_metadata.schema_version is missing"
         if schema_reason is VERIFY_REASON_SCHEMA_INVALID:
             return False, "chain_metadata.schema_version must be an integer"
+        supported_versions = ", ".join(str(version) for version in SUPPORTED_SCHEMA_VERSIONS)
         return False, (
             f"chain_metadata.schema_version={metadata.get('schema_version')!r}; "
-            f"this verifier handles schema_version values {SUPPORTED_SCHEMA_VERSIONS}"
+            f"this verifier handles {supported_versions}"
         )
     unknown_required_field = _unknown_required_field_reason(metadata, section_name="chain_metadata")
     if unknown_required_field is not None:

@@ -28,3 +28,9 @@ fixture hash lock in sync in the same change.
 The schema-version replay cases under `tests/conformance/schema_version/` are
 likewise data-driven via `vectors.json`, which binds each case to its stable
 expected reason code without changing the proof-bundle fixtures themselves.
+
+The CLI JSON output contract is pinned separately under
+`tests/conformance/vectors/verify_json/v1/`. Those snapshots freeze the
+`attestplane verify --json` pass/fail payloads, including `taxonomy_version`,
+`reason_code`, ordered `reasons[]`, `bundle.digest`, and the stable exit-code
+split between accept (`0`) and verifier rejection (`1`).

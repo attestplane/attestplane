@@ -29,6 +29,9 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+CONTRACT_FIXTURE_DIR = ROOT / "tests" / "conformance" / "vectors" / "verify_json" / "v1"
+PASS_SNAPSHOT = CONTRACT_FIXTURE_DIR / "pass.json"
+FAIL_SNAPSHOT = CONTRACT_FIXTURE_DIR / "fail.json"
 
 
 def _run_verify(
@@ -110,6 +113,10 @@ def _assert_matches_verify_result_v1(
             assert reason["explanation"]
 
 
+def _snapshot_payload(path: Path) -> dict[str, object]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -133,6 +140,24 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["path"].startswith("/events/")
     assert "canonicalization" in reason["message"]
+
+
+def test_verify_json_contract_snapshots_are_pinned(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cases = [
+        (PASS_FIXTURE, PASS_SNAPSHOT, 0),
+        (FAIL_FIXTURE, FAIL_SNAPSHOT, 1),
+    ]
+
+    for bundle_path, snapshot_path, expected_rc in cases:
+        rc, payload, stderr = _run_verify(["verify", "--json", str(bundle_path)], capsys)
+
+        assert rc == expected_rc
+        assert rc == payload["exit_code"]
+        assert stderr == ""
+        assert payload == _snapshot_payload(snapshot_path)
+        _assert_matches_verify_result_v1(payload)
 
 
 def test_verify_json_and_explain_keep_json_parseable(

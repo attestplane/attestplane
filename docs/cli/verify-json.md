@@ -26,6 +26,8 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on.
+  `0` means accept, `1` means a verifier rejection, and `2` means a usage,
+  I/O, or schema-contract error.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -47,6 +49,10 @@ The payload is fixed at schema version 1:
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
+
+The v1 contract is pinned by the versioned snapshots in
+`tests/conformance/vectors/verify_json/v1/`, so unannounced output-shape
+changes fail CI before they reach downstream consumers.
 
 ## `verify --explain`
 

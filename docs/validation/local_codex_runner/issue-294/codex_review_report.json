@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "Python-side runtime validation could not be executed in this environment because `pytest` is not installed."
+  ],
+  "validation": [
+    "Reviewed local repository state with `git status --short`, `git diff --stat`, and `git diff`.",
+    "Validated the new TypeScript selector with `npm test -- cli-json-contract` in `sdk/typescript` (passed).",
+    "Attempted `python -m pytest sdk/python/tests/cli/test_verify_json_contract.py -q`, but the environment does not have `pytest` available."
+  ],
+  "residual_risks": [
+    "The new `verify --json` snapshots intentionally freeze the current output contract, so any future contract change will need coordinated snapshot and fixture-hash updates in the same change."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
