@@ -1,0 +1,52 @@
+# Queue policy: consume open GitHub issues directly. Live runner configs keep
+# recovery, product-delta, and advance shortcuts disabled.
+repo: "attestplane/attestplane"
+workdir: "/Users/macworkers/Projects/attestplane-lane-p0"
+base_branch: "main"
+base_checkout_ref: "origin/main"
+approved_label: "auto-codex-approved"
+candidate_label: "auto-codex-candidate"
+in_progress_label: "codex-in-progress"
+pr_opened_label: "codex-pr-opened"
+ci_green_label: "codex-ci-green"
+needs_human_label: "codex-needs-human"
+max_issues_per_run: 1
+max_local_fix_rounds: 2
+max_ci_fix_rounds: 1
+dry_run: false
+watch_ci: true
+create_pr: true
+codex_command: "codex"
+codex_model: "gpt-5.4-mini"
+codex_sandbox: "workspace-write"
+state_path: ".local/codex-runner-state-p0.json"
+evidence_dir: "docs/validation/local_codex_runner"
+gate_matrix_path: ".local/codex-gates.yml"
+gate_timeout_seconds: 900
+ci_timeout_seconds: 1800
+ci_poll_seconds: 30
+cleanup_stale_state: true
+auto_recover_needs_human: false
+max_needs_human_recoveries_per_run: 1
+max_needs_human_attempts: 2
+needs_human_recovered_label: "codex-recovered"
+auto_advance_before_consume: false
+allow_auto_merge: false
+allow_dependency_unlock: false
+auto_merge_ready_label: "codex-ci-green"
+planned_task_label: "planned-task"
+waiting_deps_label: "status:waiting-deps"
+blocking_pr_labels:
+  - "do-not-merge"
+  - "hold"
+  - "wip"
+allowed_pr_authors:
+  - "merchloubna70-dot"
+max_pr_merges_per_run: 3
+max_dependency_unlocks_per_run: 0
+lane_name: "p0"
+lane_slot: 1
+product_delta_idle_dispatch: false
+product_delta_idle_log_glob: "/Users/macworkers/Projects/attestplane/release/alpha-train/reports/continuous-autodev-train-tmux-*.log"
+product_delta_idle_threshold: 2
+product_delta_idle_tail_lines: 240

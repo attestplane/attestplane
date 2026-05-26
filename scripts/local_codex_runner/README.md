@@ -38,22 +38,18 @@ python -m scripts.local_codex_runner.run_once --config .local-codex-runner.yml
 ```
 
 Open issues are polled directly. Lane configs no longer narrow the queue by
-priority or issue area; they only differ in worktree, merge, and product-delta
-behavior. `codex-pr-opened` and `codex-needs-human` are handled by the separate
-recovery paths below.
+priority or issue area; they only differ in worktree, state file, and tmux
+session identity. The live runner configs do not enable recovery,
+product-delta, or queue-advance shortcuts.
 
 Set `cleanup_stale_state: true` to prune local active/branch mappings for issues
 that GitHub already reports as closed before each poll cycle. This lets the
 runner recover from stale local state such as closed issues that were previously
 left in `active_issue_ids`.
 
-Set `auto_recover_needs_human: true` only after a dry-run canary. The recovery
-step classifies `codex-needs-human` issues before normal queue consumption and
-only acts on whitelisted stop reasons. By default it may requeue local
-rate-limit/network timeout evidence, and it may plan a CI repair for a matching
-runner-owned PR. Unknown failures, policy/external blocking labels, missing
-approval, stale PR labels, non-`codex/issue-N-*` branches, and live PR recovery
-without an author allowlist stay human-blocked.
+The dedicated `needs_human` recovery flow remains available for manual use, but
+it is disabled in the live runner configs and does not participate in the
+default poll cycle.
 
 Codex/ChatGPT backend errors during an attempted CI repair are classified as
 `external_model_api_blocker`. That result keeps the issue blocked for the
@@ -114,20 +110,10 @@ not share the same state file.
 
 ## Queue Advance
 
-The queue advance command handles two states that otherwise leave the stable
-train correctly idle:
-
-- open Codex PRs that are green but not merged;
-- planned-task issues blocked on explicit dependencies.
-
-It is safe-by-default. PRs are never merged unless `allow_auto_merge: true`,
-`allowed_pr_authors` is non-empty, the PR has `auto-merge-ready`, checks are
-green, the merge state is clean, the base branch matches, and no blocking label
-is present. Planned-task issues are never approved unless
-`allow_dependency_unlock: true` and their `Depends on: #N` dependencies are
-closed. For existing plan-to-issues output, the dependency unlocker also maps
-same-plan prose such as `Issue 1`, `Issues 1-3`, and `extends #115` to concrete
-issue numbers in dry-run output before taking any write action.
+The queue advance command remains available as a manual utility for green PRs
+and planned tasks, but it is not part of the live runner poll cycle. Live
+configs keep `auto_advance_before_consume: false`, `allow_auto_merge: false`,
+and `allow_dependency_unlock: false`.
 
 ```bash
 python -m scripts.local_codex_runner.advance_queue \
@@ -148,9 +134,9 @@ required checks, and reviewer policy have been verified in dry-run output.
 - No PyPI push.
 - No default live external tests.
 - No default `danger-full-access` sandbox.
-- No processing of issues already marked `codex-pr-opened` or
-  `codex-needs-human` in the primary queue; use the dedicated recovery flows for
-  those states.
+- No special queue exclusion for `codex-pr-opened` or `codex-needs-human` in
+  the primary queue. Live configs keep the recovery flows disabled; those labels
+  are handled by explicit manual workflows if needed.
 - No severity downgrade.
 - No release gate weakening.
 - No secret, token, cookie, private key, `.pypirc`, `.npmrc`, or credential

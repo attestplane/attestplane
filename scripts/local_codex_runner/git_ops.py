@@ -94,8 +94,10 @@ class GitOps:
         count = self.run(["rev-list", "--count", f"origin/{branch}..HEAD"]).strip()
         return int(count or "0") > 0
 
-    def create_branch(self, issue_number: int, title: str) -> str:
+    def create_branch(self, issue_number: int, title: str, *, lane_suffix: str | None = None) -> str:
         branch = f"codex/issue-{issue_number}-{slugify(title)}"
+        if lane_suffix:
+            branch = f"{branch}-{slugify(lane_suffix)}"
         self.run(["checkout", "-B", branch])
         return branch
 
