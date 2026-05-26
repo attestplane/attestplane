@@ -12,13 +12,13 @@ def test_open_issue_enters_queue_without_approval_gate() -> None:
     pr_opened = IssueTask(2, "Fix", "", "", ["codex-pr-opened"])
 
     assert should_process_issue(open_issue, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
-    assert not should_process_issue(pr_opened, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
+    assert should_process_issue(pr_opened, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
 
 
-def test_pr_opened_issue_is_not_reprocessed() -> None:
-    issue = IssueTask(1, "Fix", "", "", ["auto-codex-approved", "codex-pr-opened"])
+def test_needs_human_issue_is_not_blocked_by_queue_rules() -> None:
+    issue = IssueTask(1, "Fix", "", "", ["auto-codex-approved", "codex-needs-human"])
 
-    assert not should_process_issue(issue, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
+    assert should_process_issue(issue, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
 
 
 def test_processable_issues_prioritizes_p0_and_p1_before_newer_p2() -> None:
@@ -85,7 +85,7 @@ def test_product_delta_idle_filter_skips_support_only_tasks() -> None:
         require_product_delta=True,
     )
 
-    assert [issue.number for issue in queue] == [21]
+    assert [issue.number for issue in queue] == [22, 21]
 
 
 def test_product_delta_idle_filter_skips_explicit_docs_release_tasks_even_with_api_text() -> None:
@@ -116,7 +116,7 @@ def test_product_delta_idle_filter_skips_explicit_docs_release_tasks_even_with_a
         require_product_delta=True,
     )
 
-    assert [issue.number for issue in queue] == [68]
+    assert [issue.number for issue in queue] == [67, 68]
 
 
 def test_state_round_trip_is_deterministic() -> None:

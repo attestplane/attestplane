@@ -69,7 +69,7 @@ def test_cleanup_stale_state_reports_github_errors_without_crashing(tmp_path: Pa
     assert "codex/103" in state_path.read_text(encoding="utf-8")
 
 
-def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> None:
+def test_run_once_prioritizes_open_issues_by_title(monkeypatch, tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
     config_path.write_text(
         'repo: "o/r"\n'
@@ -91,16 +91,17 @@ def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> N
             pass
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            return [
-                IssueTask(1, "[P1][sdk] SDK", "", "", ["auto-codex-approved", "priority:P1"]),
-                IssueTask(2, "[P0][release] Release", "", "", ["auto-codex-approved", "priority-P0"]),
-            ]
+            if label is None:
+                return [
+                    IssueTask(1, "[P1][sdk] SDK", "", "", ["priority:P1"]),
+                    IssueTask(2, "[P0][release] Release", "", "", ["priority-P0"]),
+                ]
+            return []
 
     processed: list[int] = []
 
-    def fake_run_issue(config, issue_number, include, exclude):
+    def fake_run_issue(config, issue_number):
         processed.append(issue_number)
-        assert include == {"priority-P0"}
         return RunnerResult(
             issue_number=issue_number,
             branch=None,
@@ -112,10 +113,6 @@ def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> N
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
@@ -129,7 +126,7 @@ def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> N
     assert result["needs_human_recovery"] == {"enabled": False, "results": []}
 
 
-def test_run_once_reports_needs_human_recovery(monkeypatch, tmp_path: Path) -> None:
+def test_run_once_reports_needs_human_recovery_is_disabled(monkeypatch, tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
     config_path.write_text(
         'repo: "o/r"\n'
@@ -148,23 +145,13 @@ def test_run_once_reports_needs_human_recovery(monkeypatch, tmp_path: Path) -> N
             return []
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {
-            "enabled": True,
-            "results": [{"issue_number": 1, "action": "kept"}],
-        },
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert result["needs_human_recovery"] == {
-        "enabled": True,
-        "results": [{"issue_number": 1, "action": "kept"}],
-    }
+    assert result["needs_human_recovery"] == {"enabled": False, "results": []}
 
 
-def test_run_once_recovers_needs_human_before_cleaning_transient_evidence(monkeypatch, tmp_path: Path) -> None:
+def test_run_once_cleans_transient_evidence_without_needs_human_recovery(monkeypatch, tmp_path: Path) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
     evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-14"
     evidence_dir.mkdir(parents=True)
@@ -176,7 +163,7 @@ def test_run_once_recovers_needs_human_before_cleaning_transient_evidence(monkey
         f'workdir: "{tmp_path}"\n'
         "dry_run: false\n"
         "cleanup_stale_state: false\n"
-        "auto_recover_needs_human: true\n"
+        "auto_recover_needs_human: false\n"
         "max_issues_per_run: 0\n",
         encoding="utf-8",
     )
@@ -185,31 +172,16 @@ def test_run_once_recovers_needs_human_before_cleaning_transient_evidence(monkey
 
     class FakeGH:
         def __init__(self, dry_run=True):
-            self.issues = [IssueTask(14, "Issue 14", "", "", ["auto-codex-approved", "codex-needs-human"])]
+            self.issues = [IssueTask(14, "Issue 14", "", "", ["codex-needs-human"])]
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            return self.issues if label == "codex-needs-human" else []
-
-        def list_pull_requests(self, repo: str, base: str, limit: int):
             return []
-
-        def ensure_labels(self, repo: str, labels: list[str]) -> None:
-            pass
-
-        def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
-            pass
-
-        def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
-            pass
-
-        def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
-            pass
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert result["needs_human_recovery"]["results"][0]["reason"] == "rate_limit"
+    assert result["needs_human_recovery"] == {"enabled": False, "results": []}
     assert result["transient_cleanup"] == ["docs/validation/local_codex_runner/issue-14/failure.txt"]
     assert not failure_file.exists()
 
@@ -283,7 +255,7 @@ def test_run_once_reports_issue_list_external_error(monkeypatch, tmp_path: Path)
     assert "api.github.com/graphql" in result["external_errors"][0]["error"]
 
 
-def test_product_delta_idle_summary_requires_consecutive_skip_events(tmp_path: Path) -> None:
+def test_product_delta_idle_summary_is_disabled(tmp_path: Path) -> None:
     log = tmp_path / "stable.log"
     log.write_text(
         "autodev-train stable: no product implementation delta since v1.7.6; skipping v1.7.7\n"
@@ -296,7 +268,7 @@ def test_product_delta_idle_summary_requires_consecutive_skip_events(tmp_path: P
         'repo: "o/r"\n'
         f'workdir: "{tmp_path}"\n'
         "dry_run: true\n"
-        "product_delta_idle_dispatch: true\n"
+        "product_delta_idle_dispatch: false\n"
         f'product_delta_idle_log_glob: "{log}"\n'
         "product_delta_idle_threshold: 2\n",
         encoding="utf-8",
@@ -306,8 +278,7 @@ def test_product_delta_idle_summary_requires_consecutive_skip_events(tmp_path: P
 
     summary = product_delta_idle_summary(load_config(config_path))
 
-    assert summary["active"] is True
-    assert summary["consecutive_idle_events"] == 3
+    assert summary == {"active": False, "reason": "disabled"}
 
 
 def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
@@ -327,7 +298,7 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
         "dry_run: true\n"
         "cleanup_stale_state: false\n"
         "auto_advance_before_consume: false\n"
-        "product_delta_idle_dispatch: true\n"
+        "product_delta_idle_dispatch: false\n"
         f'product_delta_idle_log_glob: "{log}"\n'
         "max_issues_per_run: 2\n",
         encoding="utf-8",
@@ -340,20 +311,16 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
             pass
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            return [
-                IssueTask(31, "[P1][runner] Support-only runner task", "", "", ["auto-codex-approved", "priority:P1"]),
-                IssueTask(
-                    32,
-                    "[P1][sdk][verifier] Product implementation task",
-                    "Implement SDK verifier behavior.",
-                    "",
-                    ["auto-codex-approved", "priority:P1"],
-                ),
-            ]
+            if label is None:
+                return [
+                    IssueTask(31, "[P1][runner] Support-only runner task", "", "", ["priority:P1"]),
+                    IssueTask(32, "[P1][sdk][verifier] Product implementation task", "Implement SDK verifier behavior.", "", ["priority:P1"]),
+                ]
+            return []
 
     processed: list[int] = []
 
-    def fake_run_issue(config, issue_number, include, exclude):
+    def fake_run_issue(config, issue_number):
         processed.append(issue_number)
         return RunnerResult(
             issue_number=issue_number,
@@ -366,15 +333,11 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert processed == [32]
-    assert result["product_delta_idle"]["active"] is True
+    assert processed == [31, 32]
+    assert result["product_delta_idle"] == {"active": False, "reason": "disabled"}
 
 
 def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exist(
@@ -394,18 +357,14 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
         "dry_run: true\n"
         "cleanup_stale_state: false\n"
         "auto_advance_before_consume: false\n"
-        "product_delta_idle_dispatch: true\n"
-        "product_delta_idle_create_task: true\n"
+        "product_delta_idle_dispatch: false\n"
+        "product_delta_idle_create_task: false\n"
         f'product_delta_idle_log_glob: "{log}"\n'
-        "lane_include_labels:\n"
-        '  - "priority:P1"\n'
         "max_issues_per_run: 1\n",
         encoding="utf-8",
     )
 
     from scripts.local_codex_runner.models import IssueTask, RunnerResult, RunnerStatus
-
-    created: list[dict[str, object]] = []
 
     class FakeGH:
         def __init__(self, dry_run=True):
@@ -415,32 +374,25 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
                     "[P2][sdk] Existing product task for another lane",
                     "Implement SDK verifier behavior.",
                     "",
-                    ["planned-task", "auto-codex-approved", "priority:P2"],
+                    ["priority:P2"],
                 ),
                 IssueTask(
                     31,
                     "[P1][runner] Support-only runner task",
                     "Support-only local runner task.",
                     "",
-                    ["planned-task", "priority:P1"],
+                    ["priority:P1"],
                 )
             ]
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            if label == "planned-task":
+            if label is None:
                 return self.issues
-            if label == "auto-codex-approved":
-                return [issue for issue in self.issues if "auto-codex-approved" in issue.labels]
             return []
-
-        def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
-            created.append({"title": title, "body": body, "labels": labels})
-            self.issues.append(IssueTask(32, title, body, "https://example/issues/32", labels))
-            return "https://example/issues/32"
 
     processed: list[int] = []
 
-    def fake_run_issue(config, issue_number, include, exclude):
+    def fake_run_issue(config, issue_number):
         processed.append(issue_number)
         return RunnerResult(
             issue_number=issue_number,
@@ -453,19 +405,11 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert created
-    assert created[0]["title"] == "[P1][sdk][verifier] Add product implementation delta for stalled stable train"
-    assert "auto-codex-approved" in created[0]["labels"]
-    assert "runner-only" in created[0]["body"]
-    assert result["product_delta_recovery"]["action"] == "created"
-    assert processed == [32]
+    assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
+    assert processed == [31]
 
 
 def test_run_once_product_delta_idle_keeps_lane_product_task_when_it_is_open(
@@ -485,11 +429,9 @@ def test_run_once_product_delta_idle_keeps_lane_product_task_when_it_is_open(
         "dry_run: true\n"
         "cleanup_stale_state: false\n"
         "auto_advance_before_consume: false\n"
-        "product_delta_idle_dispatch: true\n"
-        "product_delta_idle_create_task: true\n"
+        "product_delta_idle_dispatch: false\n"
+        "product_delta_idle_create_task: false\n"
         f'product_delta_idle_log_glob: "{log}"\n'
-        "lane_include_labels:\n"
-        '  - "priority:P1"\n'
         "max_issues_per_run: 1\n",
         encoding="utf-8",
     )
@@ -506,25 +448,16 @@ def test_run_once_product_delta_idle_keeps_lane_product_task_when_it_is_open(
                     "[P1][sdk][verifier] Product implementation task",
                     "Implement SDK verifier behavior.",
                     "",
-                    ["planned-task", "priority:P1"],
+                    ["priority:P1"],
                 )
             ]
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            if label == "planned-task":
+            if label is None:
                 return self.issues
-            if label == "auto-codex-approved":
-                return [issue for issue in self.issues if "auto-codex-approved" in issue.labels]
             return []
 
-        def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
-            issue = self.issues[0]
-            self.issues[0] = IssueTask(issue.number, issue.title, issue.body, issue.url, [*issue.labels, *labels])
-
-        def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
-            raise AssertionError("must not create a duplicate product recovery task")
-
-    def fake_run_issue(config, issue_number, include, exclude):
+    def fake_run_issue(config, issue_number):
         processed.append(issue_number)
         return RunnerResult(
             issue_number=issue_number,
@@ -537,15 +470,10 @@ def test_run_once_product_delta_idle_keeps_lane_product_task_when_it_is_open(
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert result["product_delta_recovery"]["action"] == "kept"
-    assert result["product_delta_recovery"]["issue_numbers"] == [32]
+    assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [32]
 
 
@@ -566,11 +494,9 @@ def test_run_once_product_delta_idle_keeps_approved_lane_product_task_without_du
         "dry_run: true\n"
         "cleanup_stale_state: false\n"
         "auto_advance_before_consume: false\n"
-        "product_delta_idle_dispatch: true\n"
-        "product_delta_idle_create_task: true\n"
+        "product_delta_idle_dispatch: false\n"
+        "product_delta_idle_create_task: false\n"
         f'product_delta_idle_log_glob: "{log}"\n'
-        "lane_include_labels:\n"
-        '  - "priority:P1"\n'
         "max_issues_per_run: 1\n",
         encoding="utf-8",
     )
@@ -587,24 +513,22 @@ def test_run_once_product_delta_idle_keeps_approved_lane_product_task_without_du
                     "[P1][sdk][verifier] Product implementation task",
                     "Implement SDK verifier behavior.",
                     "",
-                    ["planned-task", "auto-codex-approved", "priority:P1"],
+                    ["priority:P1"],
                 )
             ]
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            if label == "planned-task":
-                return self.issues
-            if label == "auto-codex-approved":
+            if label is None:
                 return self.issues
             return []
 
         def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
-            raise AssertionError("approved product task must not be relabeled")
+            raise AssertionError("product delta recovery is disabled")
 
         def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
-            raise AssertionError("must not create a duplicate product recovery task")
+            raise AssertionError("product delta recovery is disabled")
 
-    def fake_run_issue(config, issue_number, include, exclude):
+    def fake_run_issue(config, issue_number):
         processed.append(issue_number)
         return RunnerResult(
             issue_number=issue_number,
@@ -617,15 +541,10 @@ def test_run_once_product_delta_idle_keeps_approved_lane_product_task_without_du
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert result["product_delta_recovery"]["action"] == "kept"
-    assert result["product_delta_recovery"]["issue_numbers"] == [32]
+    assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [32]
 
 
@@ -646,11 +565,9 @@ def test_run_once_product_delta_idle_consumes_approved_product_task_outside_cand
         "dry_run: true\n"
         "cleanup_stale_state: false\n"
         "auto_advance_before_consume: false\n"
-        "product_delta_idle_dispatch: true\n"
-        "product_delta_idle_create_task: true\n"
+        "product_delta_idle_dispatch: false\n"
+        "product_delta_idle_create_task: false\n"
         f'product_delta_idle_log_glob: "{log}"\n'
-        "lane_include_labels:\n"
-        '  - "priority:P1"\n'
         "max_issues_per_run: 1\n",
         encoding="utf-8",
     )
@@ -666,23 +583,15 @@ def test_run_once_product_delta_idle_consumes_approved_product_task_outside_cand
                 "[P1][sdk][verifier] Old approved product implementation task",
                 "Implement SDK verifier behavior.",
                 "",
-                ["planned-task", "auto-codex-approved", "priority:P1"],
+                ["priority:P1"],
             )
 
         def list_issues(self, repo: str, label: str | None, limit: int):
-            if label == "planned-task":
+            if label is None:
                 return [self.product_issue]
-            if label == "auto-codex-approved":
-                return []
             return []
 
-        def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
-            raise AssertionError("already approved product task must not be relabeled")
-
-        def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
-            raise AssertionError("must not create a duplicate product recovery task")
-
-    def fake_run_issue(config, issue_number, include, exclude):
+    def fake_run_issue(config, issue_number):
         processed.append(issue_number)
         return RunnerResult(
             issue_number=issue_number,
@@ -695,13 +604,8 @@ def test_run_once_product_delta_idle_consumes_approved_product_task_outside_cand
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
-    monkeypatch.setattr(
-        "scripts.local_codex_runner.run_once.recover_needs_human_for_labels",
-        lambda config, gh, include_labels=None, exclude_labels=None: {"enabled": False, "results": []},
-    )
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert result["product_delta_recovery"]["action"] == "kept"
-    assert result["product_delta_recovery"]["issue_numbers"] == [67]
+    assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [67]
