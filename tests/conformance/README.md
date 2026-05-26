@@ -28,3 +28,10 @@ fixture hash lock in sync in the same change.
 The schema-version replay cases under `tests/conformance/schema_version/` are
 likewise data-driven via `vectors.json`, which binds each case to its stable
 expected reason code without changing the proof-bundle fixtures themselves.
+The issue-facing positive selector is `schema_version_additive_positive`, which
+replays the additive optional field fixture and pins the preserved bundle/report
+fields exactly. The regression guard selector is
+`schema_version_unknown_required`, which replays the existing `critical_*`
+negative case and must continue to fail with `att.verify.schema_unknown`.
+For the CLI smoke command used in issue #280, the checked-in compatibility
+fixture lives at `fixtures/forward-compat/additive-optional.json`.

@@ -20,6 +20,7 @@ FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
 SIGNED_BUNDLE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+FORWARD_COMPAT_BUNDLE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
 
 
 @pytest.mark.parametrize(
@@ -110,3 +111,17 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
+
+
+def test_forward_compat_fixture_path_verifies_successfully(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", "--json", str(FORWARD_COMPAT_BUNDLE)])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+    assert payload["reasons"] == []

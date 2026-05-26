@@ -102,6 +102,21 @@ def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
             assert field in bundle["chain_metadata"]
 
 
+def test_schema_version_additive_positive_selector_accepts_additive_optional_field() -> None:
+    vector = next(
+        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "schema_version_additive_positive"
+    )
+    bundle = _schema_case("schema_version_additive_positive")
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.primary_reason == vector["expected_reason_code"]
+    assert bundle["future_bundle_field"] == {"preserved": True}
+    assert bundle["chain_metadata"]["future_metadata_field"] == "kept"
+    assert bundle["verification_report"]["future_report_field"] == "ignored"
+
+
 def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
     bundle = _schema_case("major_version_ahead")
     bundle["events"][0]["event_hash_hex"] = "f" * 64
@@ -118,6 +133,19 @@ def test_unknown_required_field_maps_to_schema_unknown() -> None:
         item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field"
     )
     bundle = _schema_case("unknown_required_field")
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == vector["expected_reason_code"]
+    assert "critical_future_field" in (result.metadata_reason or "")
+
+
+def test_schema_version_unknown_required_selector_still_maps_to_schema_unknown() -> None:
+    vector = next(
+        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "schema_version_unknown_required"
+    )
+    bundle = _schema_case("schema_version_unknown_required")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 
