@@ -607,7 +607,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         **_verify_scope_metadata(),
     }
     explain = getattr(args, "explain", False)
-    if taxonomy_version_mismatch:
+    if result.ok and taxonomy_version_mismatch:
         mismatch_detail = (
             f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} does not match "
             f"required {require_taxonomy_version}"

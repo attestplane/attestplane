@@ -590,16 +590,6 @@ def build_verify_json_outcome(
             ),
         )
 
-    if (
-        require_taxonomy_version is not None
-        and require_taxonomy_version != str(VERIFY_REASON_TAXONOMY_VERSION)
-    ):
-        return _taxonomy_version_mismatch_outcome(
-            bundle_digest,
-            require_taxonomy_version=require_taxonomy_version,
-            explain=explain,
-        )
-
     canonical_index, canonical_exc = _canonicalization_probe(bundle)
     if canonical_exc is not None:
         path = _canonicalization_path(canonical_exc, event_index=canonical_index)
@@ -665,6 +655,15 @@ def build_verify_json_outcome(
         )
 
     if result.ok:
+        if (
+            require_taxonomy_version is not None
+            and require_taxonomy_version != str(VERIFY_REASON_TAXONOMY_VERSION)
+        ):
+            return _taxonomy_version_mismatch_outcome(
+                bundle_digest,
+                require_taxonomy_version=require_taxonomy_version,
+                explain=explain,
+            )
         return _json_pass(
             bundle_digest=bundle_digest,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,

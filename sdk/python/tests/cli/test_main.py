@@ -22,6 +22,11 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 )
 
+ROOT = Path(__file__).resolve().parents[4]
+MISSING_SIGNATURES_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
+)
+
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
     backend = JsonlStorageBackend(path)
@@ -205,6 +210,25 @@ def test_verify_taxonomy_version_pin_is_additive_and_closed(
     assert payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
     assert payload["reasons"][0]["code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
     assert payload["reasons"][0]["path"] == "/taxonomy_version"
+
+
+def test_verify_taxonomy_version_pin_does_not_downgrade_strict_schema_failure(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(
+        [
+            "verify",
+            "--strict-schema",
+            "--require-taxonomy-version",
+            "0.0.0",
+            str(MISSING_SIGNATURES_FIXTURE),
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 2
+    assert out.startswith("FAIL")
+    assert "taxonomy_version=1 does not match required 0.0.0" not in out
 
 
 def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:
