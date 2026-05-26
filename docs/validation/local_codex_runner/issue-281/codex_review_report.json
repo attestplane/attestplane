@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [
+    "Validation was limited to the new SDK verify test and TypeScript typecheck; a full sdk test run was not performed in this review."
+  ],
+  "validation": [
+    "Reviewed the diff in sdk/typescript/src/verifier.ts and the new test sdk/typescript/test/sdk/verify.test.ts using only local repository files and local command output.",
+    "Ran `npm --prefix sdk/typescript test -- test/sdk/verify.test.ts` successfully.",
+    "Ran `npm --prefix sdk/typescript run typecheck` successfully."
+  ],
+  "residual_risks": [
+    "The review only exercised the targeted verify path; other sdk/package surfaces were not rerun in this session."
+  ],
+  "no_merge_tag_publish_pypi": true
+}
