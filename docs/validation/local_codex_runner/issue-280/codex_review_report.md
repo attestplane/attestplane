@@ -16,20 +16,20 @@ The change is limited to:
 ## Validation
 
 - Reviewed the local diff for:
-  - `sdk/python/tests/test_issue209_schema_version_ci_coverage.py`
-  - `tests/cli/test_verify_flags.py`
-  - `tests/conformance/README.md`
-  - `tests/conformance/schema_version/vectors.json`
-  - `tests/conformance/test_schema_version_vectors.py`
+  - [`sdk/python/tests/test_issue209_schema_version_ci_coverage.py`](../../../../sdk/python/tests/test_issue209_schema_version_ci_coverage.py)
+  - [`tests/cli/test_verify_flags.py`](../../../../tests/cli/test_verify_flags.py)
+  - [`tests/conformance/README.md`](../../../../tests/conformance/README.md)
+  - [`tests/conformance/schema_version/vectors.json`](../../../../tests/conformance/schema_version/vectors.json)
+  - [`tests/conformance/test_schema_version_vectors.py`](../../../../tests/conformance/test_schema_version_vectors.py)
 - Inspected the new fixture and bundle files:
-  - `fixtures/forward-compat/additive-optional.json`
-  - `tests/conformance/schema_version/schema_version_additive_positive/bundle.json`
-  - `tests/conformance/schema_version/schema_version_unknown_required/bundle.json`
+  - [`fixtures/forward-compat/additive-optional.json`](../../../../fixtures/forward-compat/additive-optional.json)
+  - [`tests/conformance/schema_version/schema_version_additive_positive/bundle.json`](../../../../tests/conformance/schema_version/schema_version_additive_positive/bundle.json)
+  - [`tests/conformance/schema_version/schema_version_unknown_required/bundle.json`](../../../../tests/conformance/schema_version/schema_version_unknown_required/bundle.json)
 - Ran:
   - `pytest -q sdk/python/tests/test_issue209_schema_version_ci_coverage.py tests/cli/test_verify_flags.py tests/conformance/test_schema_version_vectors.py`
   - Result: `48 passed`
 - Read the local gate artifact:
-  - `docs/validation/local_codex_runner/issue-280/gate_report.json`
+  - [`docs/validation/local_codex_runner/issue-280/gate_report.json`](gate_report.json)
   - Result: `area:verifier` PASS
 - Attempted the mandated Opus reviewer helper:
   - `ask_opus.sh reviewer ...`
