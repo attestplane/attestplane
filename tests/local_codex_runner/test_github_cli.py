@@ -9,11 +9,12 @@ def test_issue_list_json_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(command, capture_output, text, check):
         assert command[:3] == ["gh", "issue", "list"]
         assert "open" in command
+        assert "--label" not in command
         return subprocess.CompletedProcess(command, 0, '[{"number":7,"title":"Fix","url":"u","body":"b","labels":[{"name":"auto-codex-approved"}]}]', "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    issues = GitHubCLI(dry_run=False).list_issues("o/r", "auto-codex-approved", 10)
+    issues = GitHubCLI(dry_run=False).list_issues("o/r", None, 10)
 
     assert issues[0].number == 7
     assert issues[0].labels == ["auto-codex-approved"]

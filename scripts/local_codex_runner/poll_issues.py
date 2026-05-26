@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 The Attestplane Authors
 # SPDX-License-Identifier: Apache-2.0
-"""Poll GitHub issues eligible for local Codex repair."""
+"""Poll open GitHub issues for local Codex repair."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from scripts.local_codex_runner.models import candidate_fetch_limit, processable
 def poll_queue(args: argparse.Namespace) -> list[dict[str, object]]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
-    issues = gh.list_issues(config.repo or "", config.approved_label, candidate_fetch_limit(config.max_issues_per_run))
+    issues = gh.list_issues(config.repo or "", None, candidate_fetch_limit(config.max_issues_per_run))
     include = set(args.include_label or [])
     exclude = set(args.exclude_label or [])
     if not getattr(args, "retry_needs_human", False):

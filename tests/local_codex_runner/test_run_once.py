@@ -90,7 +90,7 @@ def test_run_once_uses_configured_lane_filters(monkeypatch, tmp_path: Path) -> N
         def __init__(self, dry_run=True):
             pass
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             return [
                 IssueTask(1, "[P1][sdk] SDK", "", "", ["auto-codex-approved", "priority:P1"]),
                 IssueTask(2, "[P0][release] Release", "", "", ["auto-codex-approved", "priority-P0"]),
@@ -144,7 +144,7 @@ def test_run_once_reports_needs_human_recovery(monkeypatch, tmp_path: Path) -> N
         def __init__(self, dry_run=True):
             pass
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             return []
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
@@ -187,7 +187,7 @@ def test_run_once_recovers_needs_human_before_cleaning_transient_evidence(monkey
         def __init__(self, dry_run=True):
             self.issues = [IssueTask(14, "Issue 14", "", "", ["auto-codex-approved", "codex-needs-human"])]
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             return self.issues if label == "codex-needs-human" else []
 
         def list_pull_requests(self, repo: str, base: str, limit: int):
@@ -236,7 +236,7 @@ def test_run_once_cleans_transient_result_files_before_live_cycle(monkeypatch, t
         def __init__(self, dry_run=True):
             pass
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             return []
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
@@ -266,7 +266,7 @@ def test_run_once_reports_issue_list_external_error(monkeypatch, tmp_path: Path)
         def __init__(self, dry_run=True):
             pass
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             raise RunnerCommandError(
                 ["gh", "issue", "list"],
                 1,
@@ -339,7 +339,7 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
         def __init__(self, dry_run=True):
             pass
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             return [
                 IssueTask(31, "[P1][runner] Support-only runner task", "", "", ["auto-codex-approved", "priority:P1"]),
                 IssueTask(
@@ -426,7 +426,7 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
                 )
             ]
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             if label == "planned-task":
                 return self.issues
             if label == "auto-codex-approved":
@@ -468,7 +468,7 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
     assert processed == [32]
 
 
-def test_run_once_product_delta_idle_marks_lane_product_task_when_it_is_not_approved(
+def test_run_once_product_delta_idle_keeps_lane_product_task_when_it_is_open(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
@@ -510,7 +510,7 @@ def test_run_once_product_delta_idle_marks_lane_product_task_when_it_is_not_appr
                 )
             ]
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             if label == "planned-task":
                 return self.issues
             if label == "auto-codex-approved":
@@ -544,9 +544,8 @@ def test_run_once_product_delta_idle_marks_lane_product_task_when_it_is_not_appr
 
     result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
 
-    assert result["product_delta_recovery"]["action"] == "marked"
-    assert result["product_delta_recovery"]["issue_number"] == 32
-    assert result["product_delta_recovery"]["label"] == "auto-codex-approved"
+    assert result["product_delta_recovery"]["action"] == "kept"
+    assert result["product_delta_recovery"]["issue_numbers"] == [32]
     assert processed == [32]
 
 
@@ -592,7 +591,7 @@ def test_run_once_product_delta_idle_keeps_approved_lane_product_task_without_du
                 )
             ]
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             if label == "planned-task":
                 return self.issues
             if label == "auto-codex-approved":
@@ -670,7 +669,7 @@ def test_run_once_product_delta_idle_consumes_approved_product_task_outside_cand
                 ["planned-task", "auto-codex-approved", "priority:P1"],
             )
 
-        def list_issues(self, repo: str, label: str, limit: int):
+        def list_issues(self, repo: str, label: str | None, limit: int):
             if label == "planned-task":
                 return [self.product_issue]
             if label == "auto-codex-approved":

@@ -55,14 +55,6 @@ def run_issue(
             result.status = RunnerStatus.SKIPPED
             result.local_test_summary = "Issue labels do not match runner queue policy."
             return write_result(result.finish(), evidence_dir, state, config)
-        if (
-            config.in_progress_label in task.labels
-            and str(task.number) not in state.branch_mappings
-            and not config.dry_run
-        ):
-            result.status = RunnerStatus.SKIPPED
-            result.local_test_summary = "Issue is already in progress and not owned by local state."
-            return write_result(result.finish(), evidence_dir, state, config)
 
         if not config.dry_run:
             gh.add_labels(config.repo or "", task.number, [config.in_progress_label])
@@ -229,9 +221,9 @@ def run_issue(
 def fetch_task(gh: GitHubCLI, config: RunnerConfig, issue_number: int | None) -> IssueTask:
     if issue_number is not None:
         return gh.view_issue(config.repo or "", issue_number)
-    issues = gh.list_issues(config.repo or "", config.approved_label, config.max_issues_per_run)
+    issues = gh.list_issues(config.repo or "", None, config.max_issues_per_run)
     if not issues:
-        raise RuntimeError("No open approved issues found")
+        raise RuntimeError("No open issues found")
     return issues[0]
 
 

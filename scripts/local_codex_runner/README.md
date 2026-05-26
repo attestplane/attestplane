@@ -1,11 +1,11 @@
 # Local Codex Auto-Repair Runner
 
 This directory contains the local-only Attestplane auto-repair runner. GitHub CI
-and Sentinel jobs discover failures and open issues; this runner polls approved
-issues from a local Mac mini and uses the local Codex CLI to produce a branch and
-PR for human review.
+and Sentinel jobs discover failures and open issues; this runner polls open
+issues from a local Mac mini and uses the local Codex CLI to produce a branch
+and PR for human review.
 
-The runner defaults to `dry_run: true`. In dry-run mode it reads eligible issues,
+The runner defaults to `dry_run: true`. In dry-run mode it reads open issues,
 renders prompts, writes evidence, and records planned actions, but does not write
 GitHub labels, commit, push, open PRs, merge, tag, publish packages, or push PyPI.
 When dry-run is explicitly disabled, local commits are created with DCO sign-off
@@ -37,8 +37,10 @@ python -m scripts.local_codex_runner.run_issue \
 python -m scripts.local_codex_runner.run_once --config .local-codex-runner.yml
 ```
 
-Only open issues with `auto-codex-approved` are eligible. Issues with
-`codex-pr-opened` or `codex-needs-human` are skipped by default.
+Open issues are polled directly. Lane configs no longer narrow the queue by
+priority or issue area; they only differ in worktree, merge, and product-delta
+behavior. `codex-pr-opened` and `codex-needs-human` are handled by the separate
+recovery paths below.
 
 Set `cleanup_stale_state: true` to prune local active/branch mappings for issues
 that GitHub already reports as closed before each poll cycle. This lets the
@@ -95,7 +97,7 @@ quota fits the global 2-3 merges per cycle budget.
 
 ## Label State Machine
 
-- Eligible: open issue with `auto-codex-approved`.
+- Eligible: open issue matching the lane's filter set, if any.
 - Start: add `codex-in-progress`.
 - PR opened: add `codex-pr-opened`, remove `codex-in-progress`.
 - CI pass: add `codex-ci-green`.
@@ -105,9 +107,10 @@ quota fits the global 2-3 merges per cycle budget.
   otherwise keep the label and report the non-recoverable reason.
 - Dry-run: print and record planned label actions without changing GitHub.
 
-If an issue has `codex-in-progress` but local state does not map it to the
-current run, the runner treats it as unsafe to duplicate work and skips or marks
-it for human recovery depending on the orchestrator path.
+If an issue already has `codex-in-progress`, the runner still accepts it as part
+of the open queue and reclaims ownership through the local state mapping when it
+starts work. Keep the branch/worktree isolation intact so two live runners do
+not share the same state file.
 
 ## Queue Advance
 
@@ -145,7 +148,9 @@ required checks, and reviewer policy have been verified in dry-run output.
 - No PyPI push.
 - No default live external tests.
 - No default `danger-full-access` sandbox.
-- No processing without `auto-codex-approved`.
+- No processing of issues already marked `codex-pr-opened` or
+  `codex-needs-human` in the primary queue; use the dedicated recovery flows for
+  those states.
 - No severity downgrade.
 - No release gate weakening.
 - No secret, token, cookie, private key, `.pypirc`, `.npmrc`, or credential

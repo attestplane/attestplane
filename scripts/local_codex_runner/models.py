@@ -218,8 +218,6 @@ def should_process_issue(
     require_product_delta: bool = False,
 ) -> bool:
     labels = set(task.labels)
-    if approved_label not in labels:
-        return False
     if pr_opened_label in labels or needs_human_label in labels:
         return False
     if include_labels and not labels.intersection(include_labels):
@@ -253,9 +251,9 @@ def task_has_product_delta(task: IssueTask) -> bool:
 def candidate_fetch_limit(max_issues_per_run: int) -> int:
     """Fetch a candidate pool larger than the per-cycle processing limit.
 
-    GitHub issue queries are label-only. The runner must filter out already-opened
-    PRs and human-blocked issues locally, so fetching only the per-cycle limit can
-    starve ready issues behind an ineligible queue head.
+    GitHub issue queries return open issues directly. The runner still filters
+    out already-opened PRs and human-blocked issues locally, so fetching only
+    the per-cycle limit can starve ready issues behind an ineligible queue head.
     """
     if max_issues_per_run < 1:
         return DEFAULT_CANDIDATE_FETCH_FLOOR

@@ -77,24 +77,23 @@ class GitHubCLI:
                 exc.stderr + "\nRun `gh auth login` locally; do not store tokens in runner config.",
             ) from exc
 
-    def list_issues(self, repo: str, label: str, limit: int, *, state: str = "open") -> list[IssueTask]:
-        completed = self._run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--repo",
-                repo,
-                "--state",
-                state,
-                "--label",
-                label,
-                "--json",
-                "number,title,url,labels,body",
-                "--limit",
-                str(limit),
-            ]
-        )
+    def list_issues(self, repo: str, label: str | None, limit: int, *, state: str = "open") -> list[IssueTask]:
+        command = [
+            "gh",
+            "issue",
+            "list",
+            "--repo",
+            repo,
+            "--state",
+            state,
+            "--json",
+            "number,title,url,labels,body",
+            "--limit",
+            str(limit),
+        ]
+        if label:
+            command.extend(["--label", label])
+        completed = self._run(command)
         return [IssueTask.from_gh_json(item) for item in json.loads(completed.stdout or "[]")]
 
     def list_pull_requests(self, repo: str, base: str, limit: int) -> list[dict[str, Any]]:

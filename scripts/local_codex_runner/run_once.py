@@ -62,7 +62,7 @@ def run_once(args: argparse.Namespace) -> dict[str, object]:
     try:
         issues = gh.list_issues(
             config.repo or "",
-            config.approved_label,
+            None,
             candidate_fetch_limit(config.max_issues_per_run),
         )
     except RunnerCommandError as exc:
