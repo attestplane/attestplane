@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "blocking_reasons": [],
+  "warnings": [],
+  "validation": [
+    "Reviewed the local diff, the issue text, and the repository runbook context only.",
+    "PYTHONPATH=sdk/python/src pytest -q sdk/python/tests/cli/test_verify_json_contract.py -> 15 passed.",
+    "cd sdk/typescript && npm test -- cli-json-contract -> 1 test passed."
+  ],
+  "residual_risks": [
+    "The frozen fixture pins the current verify --json digest and exit-code behavior, so any legitimate future contract change will require an explicit fixture and expectation update."
+  ],
+  "no_merge_tag_publish_pypi": true
+}

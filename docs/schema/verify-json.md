@@ -8,6 +8,10 @@ Its fields are additive-only for v1.7.x consumers, while bundle
 `schema_version`, and it only enriches the human-readable rejection text that
 accompanies the structured JSON contract.
 
+The frozen output-contract fixture for this report lives at
+`sdk/python/tests/conformance/verify_json_contract_v1.json`. It is the
+CI-facing snapshot for the JSON shape documented here.
+
 ## Policy
 
 - A supported bundle schema version should verify normally.
@@ -24,6 +28,9 @@ accompanies the structured JSON contract.
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
   `verify --json` and `verify --explain`.
+- The exit-code contract is stable within this fixture version: `0` means
+  accepted verification, `1` means verification failure, and `2` is reserved
+  for usage / I/O / schema-contract errors.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `explanation[]` is the additive operator-facing companion surface. Each

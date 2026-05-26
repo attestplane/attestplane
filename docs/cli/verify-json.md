@@ -4,6 +4,11 @@
 `attestplane verify`. It is intentionally separate from the legacy
 human-readable report fields.
 
+The JSON surface shipped in #155/#183 is now frozen by the versioned fixture
+`sdk/python/tests/conformance/verify_json_contract_v1.json`, which is exercised
+by the Python and TypeScript contract tests. Any unannounced change to the
+payload shape or exit-code mapping should fail that fixture-backed gate.
+
 ## Output Contract
 
 The payload is fixed at schema version 1:
@@ -26,6 +31,8 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on.
+  For the current v1 contract, `0` means accept, `1` means verifier failure,
+  and `2` is reserved for usage / I/O / schema-contract errors.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -47,6 +54,9 @@ The payload is fixed at schema version 1:
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
+
+For CI, pin both the runtime behavior and the output shape against the frozen
+contract fixture rather than re-deriving expectations ad hoc.
 
 ## `verify --explain`
 

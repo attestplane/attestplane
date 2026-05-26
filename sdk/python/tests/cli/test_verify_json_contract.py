@@ -27,8 +27,9 @@ from attestplane.verify_reason_codes import (
 )
 
 ROOT = Path(__file__).resolve().parents[4]
-PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
-FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+CONTRACT_FIXTURE = ROOT / "sdk" / "python" / "tests" / "conformance" / "verify_json_contract_v1.json"
+PASS_FIXTURE = (CONTRACT_FIXTURE.parent / "../../../../fixtures/positive/minimal.json").resolve()
+FAIL_FIXTURE = (CONTRACT_FIXTURE.parent / "../../../../fixtures/reject/canonicalization-edge.json").resolve()
 
 
 def _run_verify(
@@ -38,6 +39,22 @@ def _run_verify(
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out), captured.err
+
+
+def _load_contract_fixture() -> dict[str, object]:
+    return json.loads(CONTRACT_FIXTURE.read_text(encoding="utf-8"))
+
+
+def _contract_cases() -> list[dict[str, object]]:
+    fixture = _load_contract_fixture()
+    assert fixture["fixture_version"] == 1
+    cases = fixture["cases"]
+    assert isinstance(cases, list)
+    return cases
+
+
+def _bundle_fixture_path(case: dict[str, object]) -> Path:
+    return (CONTRACT_FIXTURE.parent / str(case["bundle_fixture"])).resolve()
 
 
 def _assert_matches_verify_result_v1(
@@ -110,24 +127,47 @@ def _assert_matches_verify_result_v1(
             assert reason["explanation"]
 
 
+def test_verify_json_contract_fixture_is_stable(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fixture = _load_contract_fixture()
+    for case in fixture["cases"]:
+        assert isinstance(case, dict)
+        bundle_fixture = _bundle_fixture_path(case)
+        rc, payload, stderr = _run_verify(["verify", "--json", str(bundle_fixture)], capsys)
+
+        assert rc == case["expected_exit_code"]
+        assert stderr == case["expected_stderr"]
+        assert payload == case["expected_stdout"]
+        _assert_matches_verify_result_v1(payload)
+
+
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    case = next(case for case in _contract_cases() if case["case_id"] == "verify_json_pass_minimal")
+    bundle_fixture = _bundle_fixture_path(case)
+    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle_fixture)], capsys)
 
     assert rc == 0
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+    assert payload == case["expected_stdout"]
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    case = next(
+        case for case in _contract_cases() if case["case_id"] == "verify_json_fail_canonicalization_edge"
+    )
+    bundle_fixture = _bundle_fixture_path(case)
+    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle_fixture)], capsys)
 
     assert rc == 1
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+    assert payload == case["expected_stdout"]
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
