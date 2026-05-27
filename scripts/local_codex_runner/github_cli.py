@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +20,21 @@ SECRET_PATTERNS = (
     re.compile(r"(sk-[A-Za-z0-9]{12,})"),
     re.compile(r"(?i)(token|password|secret|cookie)=\S+"),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
+)
+
+READ_RETRY_ATTEMPTS = 3
+READ_RETRY_BACKOFF_SECONDS = (1.0, 2.0)
+TRANSIENT_GH_STDERR_PATTERNS = (
+    "post \"https://api.github.com/graphql\": eof",
+    "post \"https://api.github.com/graphql\": unexpected eof",
+    "connection reset by peer",
+    "i/o timeout",
+    "tls handshake timeout",
+    "net/http: request canceled",
+    "temporary failure in name resolution",
+    "502 bad gateway",
+    "503 service unavailable",
+    "504 gateway timeout",
 )
 
 
@@ -57,15 +73,24 @@ class GitHubCLI:
         self.commands_run: list[str] = []
 
     def _run(self, command: list[str], *, write: bool = False) -> subprocess.CompletedProcess[str]:
-        self.commands_run.append(" ".join(command))
         if self.dry_run and write:
+            self.commands_run.append(" ".join(command))
             return subprocess.CompletedProcess(command, 0, stdout="[dry-run]\n", stderr="")
-        completed = subprocess.run(command, capture_output=True, text=True, check=False)
-        completed.stdout = redact(completed.stdout)
-        completed.stderr = redact(completed.stderr)
-        if completed.returncode != 0:
-            raise RunnerCommandError(command, completed.returncode, completed.stderr)
-        return completed
+        attempts = 1 if write else READ_RETRY_ATTEMPTS
+        last_completed: subprocess.CompletedProcess[str] | None = None
+        for attempt in range(attempts):
+            self.commands_run.append(" ".join(command))
+            completed = subprocess.run(command, capture_output=True, text=True, check=False)
+            completed.stdout = redact(completed.stdout)
+            completed.stderr = redact(completed.stderr)
+            if completed.returncode == 0:
+                return completed
+            last_completed = completed
+            if attempt + 1 >= attempts or not is_transient_read_error(command, completed.stderr):
+                break
+            time.sleep(READ_RETRY_BACKOFF_SECONDS[min(attempt, len(READ_RETRY_BACKOFF_SECONDS) - 1)])
+        assert last_completed is not None
+        raise RunnerCommandError(command, last_completed.returncode, last_completed.stderr)
 
     def current_auth_status(self) -> str:
         try:
@@ -220,6 +245,13 @@ class GitHubCLI:
 
 def check_from_json(data: dict[str, Any]) -> CheckStatus:
     return CheckStatus(name=str(data.get("name", "")), state=str(data.get("state", "")), bucket=str(data.get("bucket", "")), link=data.get("link"))
+
+
+def is_transient_read_error(command: list[str], stderr: str) -> bool:
+    if not command or command[0] != "gh":
+        return False
+    normalized = stderr.lower()
+    return any(pattern in normalized for pattern in TRANSIENT_GH_STDERR_PATTERNS)
 
 
 def label_color(label: str) -> str:

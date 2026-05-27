@@ -44,6 +44,8 @@ STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_TARGET_QUEUE = ROOT / "release" / "autodev-train-targets.json"
 DEFAULT_ABANDONED_STABLE_TAGS = ROOT / "release" / "abandoned-stable-tags.json"
+DEFAULT_STALE_PRODUCT_DELTA_PLAN_STATE = ROOT / ".local" / "stable-autodev-product-planning.json"
+DEFAULT_STALE_PRODUCT_DELTA_PLAN_LOCK = ROOT / ".local" / "stable-autodev-product-planning.lock"
 DEFAULT_POLL_SECONDS = 300
 GIT_HTTP_VERSION = "HTTP/1.1"
 # Low-speed cut-off so a stalled curl tunnel (proxy/GFW flake during long
@@ -133,6 +135,9 @@ RELEASE_PREP_SUBJECT_REGEX = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.
 # range are release-prep commits. Documented in
 # docs/runbooks/autodev-train.md ("Cadence limiter").
 FORCE_CADENCE_ENV = "ATTESTPLANE_AUTODEV_TRAIN_FORCE_CADENCE"
+STALE_PRODUCT_DELTA_PLAN_ENV = "ATTESTPLANE_AUTODEV_TRAIN_STALE_PRODUCT_PLAN"
+STALE_PRODUCT_DELTA_PLAN_WORKFLOW = "architecture-audit.yml"
+STALE_PRODUCT_DELTA_PLAN_COOLDOWN_SECONDS = 30 * 60
 ABANDONED_STABLE_TAG_REQUIRED_FIELDS = frozenset({"commit", "reason", "abandoned_at", "evidence"})
 ABANDONED_STABLE_TAG_ALLOWED_FIELDS = ABANDONED_STABLE_TAG_REQUIRED_FIELDS | frozenset(
     {"successor_candidate"}
@@ -917,6 +922,177 @@ def product_delta_for_target(target: ReleaseTarget, previous: StableVersion) -> 
         labels=[],
         env=os.environ,
     )
+
+
+def open_actionable_product_planned_tasks() -> list[int]:
+    raw_issues = capture(
+        [
+            "gh",
+            "issue",
+            "list",
+            "--state",
+            "open",
+            "--label",
+            "planned-task",
+            "--limit",
+            "100",
+            "--json",
+            "number,labels",
+        ],
+        timeout=30,
+    )
+    issues = json.loads(raw_issues or "[]")
+    actionable: list[int] = []
+    for issue in issues:
+        label_names = {label.get("name") for label in issue.get("labels", []) if isinstance(label, dict)}
+        if "auto-codex-approved" not in label_names:
+            continue
+        if label_names.intersection({"codex-needs-human", "codex-in-progress"}):
+            continue
+        actionable.append(int(issue["number"]))
+    return actionable
+
+
+def stale_product_delta_plan_recently_dispatched(
+    *,
+    state_path: Path,
+    planning_tag: str,
+    now: float,
+    cooldown_seconds: int = STALE_PRODUCT_DELTA_PLAN_COOLDOWN_SECONDS,
+) -> bool:
+    if not state_path.is_file():
+        return False
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    if payload.get("planning_tag") != planning_tag:
+        return False
+    try:
+        dispatched_at = float(payload["dispatched_at_epoch"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    return now - dispatched_at < cooldown_seconds
+
+
+def record_stale_product_delta_plan_dispatch(*, state_path: Path, planning_tag: str, target_tag: str, now: float) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_stale_product_delta_planning.v1",
+                "planning_tag": planning_tag,
+                "target_tag": target_tag,
+                "dispatched_at": utc_now_iso(),
+                "dispatched_at_epoch": now,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def acquire_stale_product_delta_plan_lock(lock_path: Path) -> int | None:
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        return None
+    os.write(fd, f"{os.getpid()}\n".encode("utf-8"))
+    return fd
+
+
+def release_stale_product_delta_plan_lock(*, fd: int, lock_path: Path) -> None:
+    os.close(fd)
+    try:
+        lock_path.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def maybe_dispatch_stale_product_delta_planning(target: ReleaseTarget, previous: StableVersion) -> None:
+    if not truthy_env(os.environ.get(STALE_PRODUCT_DELTA_PLAN_ENV, "1")):
+        emit_event(
+            "stale_product_delta_planning_disabled",
+            previous_tag=previous.tag,
+            target_tag=target.version.tag,
+        )
+        return
+    try:
+        actionable = open_actionable_product_planned_tasks()
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+        emit_event(
+            "stale_product_delta_planning_probe_failed",
+            previous_tag=previous.tag,
+            target_tag=target.version.tag,
+            error=str(exc),
+        )
+        return
+    if actionable:
+        emit_event(
+            "stale_product_delta_planning_skipped",
+            previous_tag=previous.tag,
+            target_tag=target.version.tag,
+            reason="actionable_planned_tasks_exist",
+            planned_tasks=actionable,
+        )
+        return
+
+    lock_fd = acquire_stale_product_delta_plan_lock(DEFAULT_STALE_PRODUCT_DELTA_PLAN_LOCK)
+    if lock_fd is None:
+        emit_event(
+            "stale_product_delta_planning_skipped",
+            previous_tag=previous.tag,
+            target_tag=target.version.tag,
+            reason="lock_active",
+        )
+        return
+
+    now = time.time()
+    try:
+        if stale_product_delta_plan_recently_dispatched(
+            state_path=DEFAULT_STALE_PRODUCT_DELTA_PLAN_STATE,
+            planning_tag=previous.tag,
+            now=now,
+        ):
+            emit_event(
+                "stale_product_delta_planning_skipped",
+                previous_tag=previous.tag,
+                target_tag=target.version.tag,
+                reason="cooldown_active",
+            )
+            return
+
+        run(
+            [
+                "gh",
+                "workflow",
+                "run",
+                STALE_PRODUCT_DELTA_PLAN_WORKFLOW,
+                "--ref",
+                "main",
+                "-f",
+                f"milestone_tag={previous.tag}",
+            ],
+            timeout=30,
+        )
+        record_stale_product_delta_plan_dispatch(
+            state_path=DEFAULT_STALE_PRODUCT_DELTA_PLAN_STATE,
+            planning_tag=previous.tag,
+            target_tag=target.version.tag,
+            now=now,
+        )
+        emit_event(
+            "stale_product_delta_planning_dispatched",
+            previous_tag=previous.tag,
+            target_tag=target.version.tag,
+            workflow=STALE_PRODUCT_DELTA_PLAN_WORKFLOW,
+            milestone_tag=previous.tag,
+        )
+    finally:
+        release_stale_product_delta_plan_lock(fd=lock_fd, lock_path=DEFAULT_STALE_PRODUCT_DELTA_PLAN_LOCK)
 
 
 def assert_product_delta_allows_target(target: ReleaseTarget, previous: StableVersion) -> None:
@@ -1763,6 +1939,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
                 f"{previous.tag}; skipping {version.tag} ({product_delta.reason})",
                 flush=True,
             )
+            maybe_dispatch_stale_product_delta_planning(target, previous)
             return previous.tag
 
     if local_target_tag_exists or remote_tag_exists(version.tag):
