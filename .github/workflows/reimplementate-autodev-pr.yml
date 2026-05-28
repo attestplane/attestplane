@@ -149,8 +149,6 @@ jobs:
       - name: Re-run Codex with review feedback
         if: steps.retries.outputs.exceeded == 'false'
         env:
-          OPENAI_BASE_URL: https://api.deepseek.com/v1
-          OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           ISSUE_TITLE: ${{ steps.context.outputs.issue_title }}
           ISSUE_BODY: ${{ steps.context.outputs.issue_body }}
           REVIEW_BODY: ${{ steps.context.outputs.review_body }}
@@ -171,7 +169,7 @@ jobs:
             printf '%s\n' "4. 不得执行 git push、git tag、git merge、npm publish、twine upload"
             printf '%s\n' "5. 只修改解决审查意见所需的最小文件集"
           } > /tmp/autodev_reimplement_prompt.txt
-          codex exec --sandbox workspace-write --model deepseek-v4-pro "$(cat /tmp/autodev_reimplement_prompt.txt)"
+          codex exec --sandbox workspace-write --model o4-mini "$(cat /tmp/autodev_reimplement_prompt.txt)"
 
       - name: Commit and push fix
         if: steps.retries.outputs.exceeded == 'false'

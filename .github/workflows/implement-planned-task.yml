@@ -81,8 +81,6 @@ jobs:
 
       - name: Run Codex CLI to implement task
         env:
-          OPENAI_BASE_URL: https://api.deepseek.com/v1
-          OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           ISSUE_TITLE: ${{ steps.issue.outputs.title }}
           ISSUE_BODY: ${{ steps.issue.outputs.body }}
         run: |
@@ -102,7 +100,7 @@ jobs:
             printf '%s\n' "6. 不得修改 CHANGELOG.md（由发布流水线管理）"
             printf '%s\n' "7. 只修改实现任务所需的最小文件集"
           } > /tmp/autodev_prompt.txt
-          codex exec --sandbox workspace-write --model deepseek-v4-pro "$(cat /tmp/autodev_prompt.txt)"
+          codex exec --sandbox workspace-write --model o4-mini "$(cat /tmp/autodev_prompt.txt)"
 
       - name: Check for real changes
         id: changes
