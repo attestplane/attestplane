@@ -78,17 +78,17 @@ jobs:
           RETRY_COUNT="${{ steps.retries.outputs.count }}"
           gh pr edit "${{ github.event.pull_request.number }}" \
             --add-label "needs-human"
+          printf '%s\n\n%s\n\n%s\n%s\n%s\n%s\n\n%s\n' \
+            "⛔ **autodev-train: 已达最大重试次数（${RETRY_COUNT}/${MAX_RETRIES}）**" \
+            "自动实现流水线无法在 ${MAX_RETRIES} 次尝试内通过 AI 审查，已停止自动重试。" \
+            "**建议操作：**" \
+            "1. 查看上方历次 \`autodev-review\` 评论中的审查意见" \
+            "2. 手动修改代码并推送到此分支（推送后 review 会自动重新运行）" \
+            "3. 或关闭此 PR，优化 Issue 描述后重新触发流水线" \
+            "*已添加 \`needs-human\` 标签以便筛选。*" \
+            > /tmp/escalate_body.txt
           gh pr comment "${{ github.event.pull_request.number }}" \
-            --body "⛔ **autodev-train: 已达最大重试次数（${RETRY_COUNT}/${MAX_RETRIES}）**
-
-自动实现流水线无法在 ${MAX_RETRIES} 次尝试内通过 AI 审查，已停止自动重试。
-
-**建议操作：**
-1. 查看上方历次 \`autodev-review\` 评论中的审查意见
-2. 手动修改代码并推送到此分支（推送后 review 会自动重新运行）
-3. 或关闭此 PR，优化 Issue 描述后重新触发流水线
-
-*已添加 \`needs-human\` 标签以便筛选。*"
+            --body "$(cat /tmp/escalate_body.txt)"
           echo "Escalated to needs-human after ${RETRY_COUNT} retries."
 
       # ── Path B: retry within limit ───────────────────────────────────────
@@ -97,6 +97,7 @@ jobs:
         id: context
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           set -euo pipefail
           PR="${{ github.event.pull_request.number }}"
@@ -117,7 +118,7 @@ jobs:
             ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
           else
             ISSUE_BODY="（未找到关联 Issue）"
-            ISSUE_TITLE="${{ github.event.pull_request.title }}"
+            ISSUE_TITLE="${PR_TITLE}"
           fi
 
           {
@@ -138,40 +139,39 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RETRY_NUM=$(( ${{ steps.retries.outputs.count }} + 1 ))
+          printf '%s\n\n%s\n' \
+            "🔄 **autodev-train: 正在重新实现（第 ${RETRY_NUM}/${MAX_RETRIES} 次）**" \
+            "已收到审查意见，Codex CLI 正在修复中，请稍候..." \
+            > /tmp/retry_progress_body.txt
           gh pr comment "${{ github.event.pull_request.number }}" \
-            --body "🔄 **autodev-train: 正在重新实现（第 ${RETRY_NUM}/${MAX_RETRIES} 次）**
-
-已收到审查意见，Codex CLI 正在修复中，请稍候..."
+            --body "$(cat /tmp/retry_progress_body.txt)"
 
       - name: Re-run Codex with review feedback
         if: steps.retries.outputs.exceeded == 'false'
         env:
           OPENAI_BASE_URL: https://api.deepseek.com/v1
           OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          ISSUE_TITLE: ${{ steps.context.outputs.issue_title }}
+          ISSUE_BODY: ${{ steps.context.outputs.issue_body }}
+          REVIEW_BODY: ${{ steps.context.outputs.review_body }}
         run: |
           set -euo pipefail
           RETRY_NUM=$(( ${{ steps.retries.outputs.count }} + 1 ))
-          PROMPT="按照 AGENTS.md 和项目规范修复以下代码审查意见。这是第 ${RETRY_NUM} 次重试。
-
-## 原始任务标题
-${{ steps.context.outputs.issue_title }}
-
-## 原始任务描述
-${{ steps.context.outputs.issue_body }}
-
-## 审查意见（必须全部修复）
-${{ steps.context.outputs.review_body }}
-
-## 修复要求（严格遵守）
-1. 逐条修复上方所有 ❌ 标注的问题，✅ 项保持不变
-2. 不得修改 .github/workflows/、scripts/release/、CHANGELOG.md
-3. 新建文件必须在文件头部包含 REUSE 合规头：
-   - SPDX-License-Identifier: Apache-2.0
-   - SPDX-FileCopyrightText: 2026 Attestplane Contributors
-4. 不得执行 git push、git tag、git merge、npm publish、twine upload
-5. 只修改解决审查意见所需的最小文件集"
-
-          codex --approval-mode full-auto --model deepseek-v4-pro "$PROMPT"
+          {
+            printf '按照 AGENTS.md 和项目规范修复以下代码审查意见。这是第 %s 次重试。\n\n' "${RETRY_NUM}"
+            printf '## 原始任务标题\n%s\n\n' "${ISSUE_TITLE}"
+            printf '## 原始任务描述\n%s\n\n' "${ISSUE_BODY}"
+            printf '## 审查意见（必须全部修复）\n%s\n\n' "${REVIEW_BODY}"
+            printf '%s\n' "## 修复要求（严格遵守）"
+            printf '%s\n' "1. 逐条修复上方所有 ❌ 标注的问题，✅ 项保持不变"
+            printf '%s\n' "2. 不得修改 .github/workflows/、scripts/release/、CHANGELOG.md"
+            printf '%s\n' "3. 新建文件必须在文件头部包含 REUSE 合规头："
+            printf '%s\n' "   - SPDX-License-Identifier: Apache-2.0"
+            printf '%s\n' "   - SPDX-FileCopyrightText: 2026 Attestplane Contributors"
+            printf '%s\n' "4. 不得执行 git push、git tag、git merge、npm publish、twine upload"
+            printf '%s\n' "5. 只修改解决审查意见所需的最小文件集"
+          } > /tmp/autodev_reimplement_prompt.txt
+          codex --approval-mode full-auto --model deepseek-v4-pro "$(cat /tmp/autodev_reimplement_prompt.txt)"
 
       - name: Commit and push fix
         if: steps.retries.outputs.exceeded == 'false'
@@ -182,24 +182,20 @@ ${{ steps.context.outputs.review_body }}
           git add -A
           RETRY_NUM=$(( ${{ steps.retries.outputs.count }} + 1 ))
 
+          PR_NUM="${{ github.event.pull_request.number }}"
           if git diff --staged --quiet; then
-            gh pr comment "${{ github.event.pull_request.number }}" \
-              --body "⚠️ autodev-train: 第 ${RETRY_NUM} 次重实现未产生任何文件变更。
-
-可能原因：Codex 认为现有代码已满足审查要求，或无法理解具体意见。
-
-如果审查仍未通过，请人工检查审查意见并手动修复。"
+            printf '%s\n\n%s\n\n%s\n' \
+              "⚠️ autodev-train: 第 ${RETRY_NUM} 次重实现未产生任何文件变更。" \
+              "可能原因：Codex 认为现有代码已满足审查要求，或无法理解具体意见。" \
+              "如果审查仍未通过，请人工检查审查意见并手动修复。" \
+              > /tmp/no_changes_body.txt
+            gh pr comment "${PR_NUM}" --body "$(cat /tmp/no_changes_body.txt)"
           else
-            git commit \
-              --signoff \
-              -m "fix: autodev retry ${RETRY_NUM} — address review feedback
-
-Automated fix for review feedback on PR #${{ github.event.pull_request.number }}.
-
-Retry: ${RETRY_NUM}/${MAX_RETRIES}
-PR: #${{ github.event.pull_request.number }}
-
-Signed-off-by: ${AUTODEV_BOT_NAME} <${AUTODEV_BOT_EMAIL}>"
+            printf '%s\n\nRetry: %s/%s\nPR: #%s\n' \
+              "fix: autodev retry ${RETRY_NUM} -- address review feedback" \
+              "${RETRY_NUM}" "${MAX_RETRIES}" "${PR_NUM}" \
+              > /tmp/commit_msg.txt
+            git commit --signoff --file /tmp/commit_msg.txt
             git push origin HEAD --force-with-lease
-            echo "✅ Fix committed and pushed (retry ${RETRY_NUM}). review-autodev-pr.yml will re-trigger."
+            echo "Fix committed and pushed (retry ${RETRY_NUM}). review-autodev-pr.yml will re-trigger."
           fi

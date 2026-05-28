@@ -51,13 +51,15 @@ jobs:
           PR_TITLE=$(gh pr view "$PR" --json title -q .title)
 
           # --auto: wait for all required status checks before merging
+          printf '%s\n\n%s\n' \
+            "Squash-merged by autodev-train after AI review approval and CI passage." \
+            "Pipeline: implement-planned-task -> review-autodev-pr -> automerge-autodev-pr" \
+            > /tmp/merge_body.txt
           gh pr merge "$PR" \
             --squash \
             --auto \
             --subject "${PR_TITLE} [autodev]" \
-            --body "Squash-merged by autodev-train after AI review approval and CI passage.
-
-Pipeline: implement-planned-task → review-autodev-pr → automerge-autodev-pr"
+            --body "$(cat /tmp/merge_body.txt)"
 
           echo "✅ Auto-merge enabled for PR #${PR}. GitHub will merge when all CI checks pass."
 

@@ -70,82 +70,8 @@ jobs:
           ISSUE_BODY: ${{ steps.issue.outputs.body }}
         run: |
           set -euo pipefail
-          python3 /dev/stdin <<'PYEOF'
-          import os, json, urllib.request, sys
-
-          api_key  = os.environ["DEEPSEEK_API_KEY"]
-          issue_body = os.environ.get("ISSUE_BODY", "（无关联 Issue）")
-
-          with open("/tmp/autodev_pr.diff") as f:
-              diff = f.read()
-
-          # Truncate to stay within context limits
-          if len(diff) > 40_000:
-              diff = diff[:40_000] + "\n\n[... diff truncated at 40 000 chars ...]"
-
-          prompt = f"""你是 Attestplane 项目的自动化代码审查员。
-
-## 任务来源（planned-task Issue 描述）
-{issue_body}
-
-## PR Diff
-```diff
-{diff}
-```
-
-## 审查标准（逐项检查）
-1. **实现完整性** — 代码是否覆盖了 Issue 中所有验收标准？
-2. **REUSE 合规** — 新增文件是否包含 SPDX-License-Identifier 和 SPDX-FileCopyrightText 头部？
-3. **代码正确性** — 逻辑是否正确，有无明显 bug 或边界条件遗漏？
-4. **安全性** — 无硬编码密钥，无命令注入，无路径穿越。
-5. **项目规范** — 未修改 .github/workflows/、scripts/release/、CHANGELOG.md。
-
-## 输出格式（严格遵守）
-第一行必须且只能是以下两个词之一（不加任何标点或空格）：
-APPROVE
-或
-REQUEST_CHANGES
-
-第二行起输出详细审查说明（中文），通过项用 ✅，不通过项用 ❌ 并给出修复建议。"""
-
-          payload = json.dumps({
-              "model": "deepseek-v4-pro",
-              "messages": [{"role": "user", "content": prompt}],
-              "max_tokens": 2048,
-          }).encode()
-
-          req = urllib.request.Request(
-              "https://api.deepseek.com/v1/chat/completions",
-              data=payload,
-              headers={
-                  "Authorization": f"Bearer {api_key}",
-                  "Content-Type": "application/json",
-              },
-          )
-
-          try:
-              with urllib.request.urlopen(req, timeout=120) as resp:
-                  result = json.loads(resp.read())
-                  content = result["choices"][0]["message"]["content"].strip()
-          except Exception as exc:
-              # Safe fallback: never silently approve on API error
-              content = f"REQUEST_CHANGES\n\n❌ AI review API 调用失败: {exc}\n\n请重新运行 review 工作流或人工审查。"
-
-          with open("/tmp/review_output.txt", "w") as f:
-              f.write(content)
-
-          # Extract decision (first line)
-          first_line = content.splitlines()[0].strip()
-          decision = first_line if first_line in ("APPROVE", "REQUEST_CHANGES") else "REQUEST_CHANGES"
-          print(f"DECISION={decision}")
-          PYEOF
-
-          # Read decision into step output
-          DECISION=$(python3 -c "
-          with open('/tmp/review_output.txt') as f:
-              line = f.readline().strip()
-          print(line if line in ('APPROVE','REQUEST_CHANGES') else 'REQUEST_CHANGES')
-          ")
+          python3 scripts/autodev/review.py
+          DECISION=$(python3 -c "import sys; line=open('/tmp/review_output.txt').readline().strip(); print(line if line in ('APPROVE','REQUEST_CHANGES') else 'REQUEST_CHANGES')")
           echo "decision=${DECISION}" >> "$GITHUB_OUTPUT"
           echo "Review decision: ${DECISION}"
 
@@ -155,18 +81,16 @@ REQUEST_CHANGES
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # Body = everything after the first line
+          PR="${{ github.event.pull_request.number }}"
           BODY=$(tail -n +2 /tmp/review_output.txt)
-          gh pr review "${{ github.event.pull_request.number }}" \
-            --approve \
-            --body "### autodev-review: APPROVE ✅
-
-${BODY}
-
----
-*Reviewed by autodev-train · DeepSeek v4.0 Pro*"
-          gh pr edit "${{ github.event.pull_request.number }}" \
-            --add-label "review-passed"
+          printf '%s\n\n%s\n\n%s\n%s\n' \
+            "### autodev-review: APPROVE" \
+            "${BODY}" \
+            "---" \
+            "*Reviewed by autodev-train - DeepSeek v4.0 Pro*" \
+            > /tmp/approve_body.txt
+          gh pr review "${PR}" --approve --body-file /tmp/approve_body.txt
+          gh pr edit "${PR}" --add-label "review-passed"
 
       - name: Post request-changes review
         if: steps.ai_review.outputs.decision == 'REQUEST_CHANGES'
@@ -174,14 +98,13 @@ ${BODY}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          PR="${{ github.event.pull_request.number }}"
           BODY=$(tail -n +2 /tmp/review_output.txt)
-          gh pr review "${{ github.event.pull_request.number }}" \
-            --request-changes \
-            --body "### autodev-review: REQUEST_CHANGES ❌
-
-${BODY}
-
----
-*Reviewed by autodev-train · DeepSeek v4.0 Pro*
-
-**Retry:** 修复上述问题后向此分支推送新 commit，review 将自动重新运行。"
+          printf '%s\n\n%s\n\n%s\n%s\n\n%s\n' \
+            "### autodev-review: REQUEST_CHANGES" \
+            "${BODY}" \
+            "---" \
+            "*Reviewed by autodev-train - DeepSeek v4.0 Pro*" \
+            "Retry: push a new commit to this branch; review will re-run automatically." \
+            > /tmp/rc_body.txt
+          gh pr review "${PR}" --request-changes --body-file /tmp/rc_body.txt
