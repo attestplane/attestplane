@@ -39,4 +39,3 @@ def test_quarantined_bundle_fixture_fails_closed() -> None:
     assert result.metadata_ok is False
     assert "anchor_status=quarantined" in (result.metadata_reason or "")
     assert export["chain_summary"]["anchor_status"] == "quarantined"
-

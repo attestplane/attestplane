@@ -24,6 +24,7 @@ _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 def _serial_of_leaf(authority: TestTSAAuthority) -> int:
     from asn1crypto import x509 as asn1_x509
+
     leaf = asn1_x509.Certificate.load(authority.materials().leaf_cert_der)
     return int(leaf.serial_number)
 

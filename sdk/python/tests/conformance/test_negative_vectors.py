@@ -38,10 +38,7 @@ def test_negative_canonicalization_vector_set_is_complete() -> None:
 
 
 def test_negative_canonicalization_vector_reason_codes_are_known() -> None:
-    assert all(
-        is_known_verify_reason_code(vector["expected"]["reason_code"])
-        for vector in NEGATIVE_VECTORS
-    )
+    assert all(is_known_verify_reason_code(vector["expected"]["reason_code"]) for vector in NEGATIVE_VECTORS)
 
 
 @pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
