@@ -124,6 +124,8 @@ def _assert_matches_verify_result_v1(
         "reasons",
         "bundle",
     }
+    if "required_taxonomy_version" in payload:
+        expected_keys.add("required_taxonomy_version")
     if expect_explanation:
         expected_keys.add("explanation")
     assert set(payload) == expected_keys
@@ -132,6 +134,9 @@ def _assert_matches_verify_result_v1(
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] >= 0
     assert payload["taxonomy_version"] == 1
+    if "required_taxonomy_version" in payload:
+        assert isinstance(payload["required_taxonomy_version"], int)
+        assert payload["required_taxonomy_version"] >= 1
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
@@ -196,7 +201,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent",
         }
     ]
 

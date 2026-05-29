@@ -24,6 +24,10 @@ accompanies the structured JSON contract.
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
   `verify --json` and `verify --explain`.
+- When `--require-taxonomy-version` is used, the output also includes
+  `required_taxonomy_version`, echoing the caller-supplied pin. A mismatch
+  remains a verifier rejection with exit code `1` and reason code
+  `att.verify.taxonomy_version_mismatch`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `explanation[]` is the additive operator-facing companion surface. Each

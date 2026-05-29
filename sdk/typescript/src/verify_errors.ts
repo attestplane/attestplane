@@ -21,6 +21,7 @@ export const ALL_VERIFY_ERROR_CODES_V1 = [
   'VERIFY_RETENTION_PROOF_FAILED',
   'VERIFY_ARTIFACT_HASH_FAILED',
   'VERIFY_REQUIRED_FIELDS_MISSING',
+  'VERIFY_TAXONOMY_VERSION_MISMATCH',
   'VERIFY_EXTENSION_INVALID_INPUT',
   'VERIFY_EXTENSION_UNSUPPORTED',
   'VERIFY_EXTENSION_FAILED',
@@ -38,6 +39,8 @@ export const VERIFY_POLICY_TRACE_REFS_FAILED: VerifyErrorCode = 'VERIFY_POLICY_T
 export const VERIFY_RETENTION_PROOF_FAILED: VerifyErrorCode = 'VERIFY_RETENTION_PROOF_FAILED';
 export const VERIFY_ARTIFACT_HASH_FAILED: VerifyErrorCode = 'VERIFY_ARTIFACT_HASH_FAILED';
 export const VERIFY_REQUIRED_FIELDS_MISSING: VerifyErrorCode = 'VERIFY_REQUIRED_FIELDS_MISSING';
+export const VERIFY_TAXONOMY_VERSION_MISMATCH: VerifyErrorCode =
+  'VERIFY_TAXONOMY_VERSION_MISMATCH';
 export const VERIFY_EXTENSION_INVALID_INPUT: VerifyErrorCode = 'VERIFY_EXTENSION_INVALID_INPUT';
 export const VERIFY_EXTENSION_UNSUPPORTED: VerifyErrorCode = 'VERIFY_EXTENSION_UNSUPPORTED';
 export const VERIFY_EXTENSION_FAILED: VerifyErrorCode = 'VERIFY_EXTENSION_FAILED';
@@ -57,6 +60,8 @@ export const VERIFY_ERROR_DESCRIPTIONS: Record<VerifyErrorCode, string> = {
   VERIFY_ARTIFACT_HASH_FAILED:
     'The envelope artifact hash does not match the embedded proof bundle.',
   VERIFY_REQUIRED_FIELDS_MISSING: 'A required verifier-envelope field is missing.',
+  VERIFY_TAXONOMY_VERSION_MISMATCH:
+    'The surfaced verifier taxonomy version does not match the caller-required version.',
   VERIFY_EXTENSION_INVALID_INPUT: 'Requested signature or anchor extension input is malformed.',
   VERIFY_EXTENSION_UNSUPPORTED:
     'Requested signature or anchor extension input uses an unsupported mode.',

@@ -34,6 +34,9 @@ The payload is fixed at schema version 1:
   `--json` and `--explain` use.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- `required_taxonomy_version` is present only when
+  `--require-taxonomy-version` is used. It echoes the caller-supplied pin so
+  downstream automation can record the gate that was applied.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
@@ -48,6 +51,10 @@ The payload is fixed at schema version 1:
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
+- `att.verify.taxonomy_version_mismatch` is the stable rejection code for the
+  `--require-taxonomy-version` consumer pinning gate. When the surfaced
+  `taxonomy_version` does not match the caller-supplied pin, the verifier
+  returns exit code `1` and that reason code.
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
@@ -57,6 +64,11 @@ Consumers should keep branching on `exit_code` first and then inspect
 `verify --explain` is the operator-oriented companion to `verify --json`.
 Use it with `--json` when a CI gate needs machine-readable output and a human
 still needs a plain-language rejection summary.
+
+`--require-taxonomy-version <v>` is additive and opt-in. It rejects any
+bundle whose surfaced `taxonomy_version` differs from the caller-supplied
+version, while leaving the default `verify` path unchanged when the flag is
+absent.
 
 Synopsis:
 

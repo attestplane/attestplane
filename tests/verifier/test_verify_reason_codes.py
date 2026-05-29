@@ -33,6 +33,7 @@ from attestplane.verify_reason_codes import (  # noqa: E402
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     VERIFY_REASON_TAXONOMY_VERSION,
     is_known_verify_reason_code,
     verify_reason_code_explanation,
@@ -81,6 +82,7 @@ def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
         VERIFY_REASON_SCHEMA_UNKNOWN,
         VERIFY_REASON_SCHEMA_VERSION_MISSING,
         VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+        VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
         VERIFY_REASON_SIGNATURE_INVALID,
         VERIFY_REASON_SIGNATURE_MISSING,
         VERIFY_REASON_STRUCTURE_INVALID,
@@ -181,6 +183,19 @@ def test_verify_reason_code_additive_unknown_fields_are_accepted() -> None:
     assert result.error_code == "VERIFY_OK"
     assert result.primary_reason is None
     assert result.secondary_reasons == ()
+
+
+def test_verify_reason_code_taxonomy_version_mismatch_uses_stable_reason_and_error() -> None:
+    result = verify_proof_bundle(
+        _signed_bundle(),
+        require_taxonomy_version=999,
+    )
+
+    assert result.ok is False
+    assert result.error_code == "VERIFY_TAXONOMY_VERSION_MISMATCH"
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
+    assert result.required_taxonomy_version == 999
+    assert result.primary_reason == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
 
 
 def test_verify_reason_code_canonical_mismatch_keeps_primary_before_schema_version() -> None:

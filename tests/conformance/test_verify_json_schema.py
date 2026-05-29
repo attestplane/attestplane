@@ -52,6 +52,8 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "reasons",
         "bundle",
     }
+    if "required_taxonomy_version" in payload:
+        expected_keys.add("required_taxonomy_version")
     if "explanation" in payload:
         expected_keys.add("explanation")
 
@@ -61,6 +63,9 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] >= 0
     assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
+    if "required_taxonomy_version" in payload:
+        assert isinstance(payload["required_taxonomy_version"], int)
+        assert payload["required_taxonomy_version"] >= 1
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),

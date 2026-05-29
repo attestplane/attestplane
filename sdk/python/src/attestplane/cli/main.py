@@ -135,6 +135,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        help="fail closed unless the surfaced verifier taxonomy_version matches this value",
+    )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
 
@@ -435,6 +441,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -448,6 +455,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
         )
     except FileNotFoundError as exc:
         explain = getattr(args, "explain", False)
@@ -560,6 +568,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))

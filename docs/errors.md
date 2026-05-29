@@ -34,6 +34,7 @@ renaming existing v1 codes.
 | `VERIFY_RETENTION_PROOF_FAILED` | Retention/deletion proof refs are malformed or dangling. |
 | `VERIFY_ARTIFACT_HASH_FAILED` | The envelope artifact hash does not match the embedded proof bundle. |
 | `VERIFY_REQUIRED_FIELDS_MISSING` | A required verifier-envelope field is missing. |
+| `VERIFY_TAXONOMY_VERSION_MISMATCH` | The surfaced verifier taxonomy version does not match the caller-required version. |
 | `VERIFY_EXTENSION_INVALID_INPUT` | Requested signature or anchor extension input is malformed. |
 | `VERIFY_EXTENSION_UNSUPPORTED` | Requested signature or anchor extension input uses an unsupported mode. |
 | `VERIFY_EXTENSION_FAILED` | Requested signature or anchor extension verification failed. |
@@ -87,6 +88,7 @@ The v1.7.x release-note delta names the same stability knob
 | `att.verify.schema_unknown` | The input declares an unknown schema family, verification method namespace, or fail-closed critical/required field. |
 | `att.verify.schema_version_missing` | A known bundle, payload, signature, or verifier schema version is missing. |
 | `att.verify.schema_version_unsupported` | A known bundle, payload, signature, or verifier schema version is unsupported. |
+| `att.verify.taxonomy_version_mismatch` | The surfaced verifier taxonomy version does not match the caller-required version. |
 | `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |
 | `att.verify.signature_missing` | Strict verification requires signature material but none is present. |
 | `att.verify.structure_invalid` | Known bundle relationships are malformed, duplicated, dangling, or out of order. |

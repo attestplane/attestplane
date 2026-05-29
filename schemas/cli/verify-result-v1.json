@@ -45,6 +45,10 @@
       "type": "integer",
       "const": 1
     },
+    "required_taxonomy_version": {
+      "type": "integer",
+      "minimum": 1
+    },
     "reasons": {
       "type": "array",
       "items": {

@@ -42,6 +42,7 @@ from attestplane.verify_errors import (
     VERIFY_OK,
     VERIFY_POLICY_TRACE_REFS_FAILED,
     VERIFY_REQUIRED_FIELDS_MISSING,
+    VERIFY_TAXONOMY_VERSION_MISMATCH,
     VERIFY_RETENTION_PROOF_FAILED,
     VerifyErrorCode,
 )
@@ -55,6 +56,8 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
 )
 
@@ -98,6 +101,8 @@ class BundleVerificationResult:
     bundle_version: int
     chain_id: str
     head_hash_hex: str
+    taxonomy_version: int
+    required_taxonomy_version: int | None
     metadata_ok: bool
     metadata_reason: str | None
     policy_trace_refs_ok: bool
@@ -111,10 +116,13 @@ class BundleVerificationResult:
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
 
     def short_summary(self) -> str:
+        pin = f" taxonomy_version={self.taxonomy_version}"
+        if self.required_taxonomy_version is not None:
+            pin += f" required_taxonomy_version={self.required_taxonomy_version}"
         if self.ok:
             return (
                 f"OK chain_id={self.chain_id!r} events={self.event_count} "
-                f"head={self.head_hash_hex[:16]}…"
+                f"head={self.head_hash_hex[:16]}…{pin}"
             )
         bad = self.chain_result.first_bad_index
         return (
@@ -124,7 +132,7 @@ class BundleVerificationResult:
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
             f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
-            f"error_code={self.error_code} primary_reason={self.primary_reason}"
+            f"error_code={self.error_code} primary_reason={self.primary_reason}{pin}"
         )
 
 
@@ -430,6 +438,7 @@ def _verification_reasons(
     chain_result: VerificationResult,
     agreement: bool,
     require_non_empty: bool,
+    taxonomy_version_ok: bool,
     events: list[ChainedEvent],
     signed_schema_ok: bool,
     signed_schema_reason: str | None,
@@ -455,6 +464,8 @@ def _verification_reasons(
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if not retention_ok:
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+    if not taxonomy_version_ok:
+        reasons.append(VERIFY_REASON_TAXONOMY_VERSION_MISMATCH)
     return _dedupe_reasons(reasons)
 
 
@@ -555,6 +566,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -567,6 +579,10 @@ def verify_proof_bundle(
     _validate_shape(bundle)
     events = _rehydrate_events(bundle["events"])
     effective_require_signed_attestation = require_signed_attestation or require_non_empty
+    taxonomy_version = VERIFY_REASON_TAXONOMY_VERSION
+    taxonomy_version_ok = (
+        require_taxonomy_version is None or require_taxonomy_version == taxonomy_version
+    )
     if effective_require_signed_attestation:
         signed_schema_ok, signed_schema_reason = _validate_minimum_signed_attestation_schema(
             bundle,
@@ -601,10 +617,13 @@ def verify_proof_bundle(
         error_code = VERIFY_POLICY_TRACE_REFS_FAILED
     elif not retention_result.ok:
         error_code = VERIFY_RETENTION_PROOF_FAILED
+    elif not taxonomy_version_ok:
+        error_code = VERIFY_TAXONOMY_VERSION_MISMATCH
     primary_reason, secondary_reasons = _verification_reasons(
         chain_result=chain_result,
         agreement=agreement,
         require_non_empty=require_non_empty,
+        taxonomy_version_ok=taxonomy_version_ok,
         events=events,
         signed_schema_ok=signed_schema_ok,
         signed_schema_reason=signed_schema_reason,
@@ -621,6 +640,7 @@ def verify_proof_bundle(
             and policy_ok
             and retention_result.ok
             and signed_schema_ok
+            and taxonomy_version_ok
         ),
         chain_result=chain_result,
         bundle_reported_ok=bundle_reported_ok,
@@ -629,6 +649,8 @@ def verify_proof_bundle(
         bundle_version=int(bundle["bundle_version"]),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
+        taxonomy_version=taxonomy_version,
+        required_taxonomy_version=require_taxonomy_version,
         metadata_ok=metadata_ok,
         metadata_reason=metadata_reason,
         policy_trace_refs_ok=policy_ok,
@@ -648,6 +670,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -661,6 +684,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 
