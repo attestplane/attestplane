@@ -18,8 +18,8 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  https_proxy: "http://127.0.0.1:7897"
-  http_proxy: "http://127.0.0.1:7897"
+  # No proxy here: this job runs on ubuntu-latest (GitHub-hosted),
+  # not behind GFW. Proxy is only needed on self-hosted macOS runners.
 
 jobs:
   automerge:
