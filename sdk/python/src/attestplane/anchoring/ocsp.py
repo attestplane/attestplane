@@ -43,8 +43,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.anchoring.ocsp requires the 'anchor' extras. "
-        "Install with: pip install attestplane[anchor]"
+        "attestplane.anchoring.ocsp requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
     ) from exc
 
 from attestplane.anchoring.base import AnchorVerificationError
@@ -101,9 +100,7 @@ def parse_and_verify_ocsp(
     try:
         ocsp_resp = ocsp.OCSPResponse.load(response_der)
     except Exception as exc:
-        raise AnchorVerificationError(
-            f"OCSP response is not valid DER: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"OCSP response is not valid DER: {exc}") from exc
 
     status = ocsp_resp["response_status"].native
     if status != "successful":
@@ -112,8 +109,7 @@ def parse_and_verify_ocsp(
     bytes_value = ocsp_resp["response_bytes"]
     if bytes_value["response_type"].native != "basic_ocsp_response":
         raise AnchorVerificationError(
-            f"OCSP response type is not basic_ocsp_response: "
-            f"{bytes_value['response_type'].native}"
+            f"OCSP response type is not basic_ocsp_response: {bytes_value['response_type'].native}"
         )
     basic: ocsp.BasicOCSPResponse = bytes_value["response"].parsed
 
@@ -122,9 +118,7 @@ def parse_and_verify_ocsp(
     signature = bytes(basic["signature"].native)
     sig_algo = basic["signature_algorithm"]["algorithm"].native
     if sig_algo not in ("rsassa_pkcs1v15", "sha256_rsa"):
-        raise AnchorVerificationError(
-            f"v1 supports only RSA-PKCS1v15 OCSP signatures; got {sig_algo}"
-        )
+        raise AnchorVerificationError(f"v1 supports only RSA-PKCS1v15 OCSP signatures; got {sig_algo}")
 
     # Responder cert: either embedded in the response, or the issuer.
     embedded_certs = basic["certs"]
@@ -132,9 +126,7 @@ def parse_and_verify_ocsp(
     try:
         issuer_cert = x509.load_der_x509_certificate(issuer_cert_der)
     except Exception as exc:
-        raise AnchorVerificationError(
-            f"issuer_cert_der is not valid DER: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"issuer_cert_der is not valid DER: {exc}") from exc
 
     if embedded_certs is not None and len(embedded_certs) > 0:
         responder_asn1 = embedded_certs[0]
@@ -148,9 +140,7 @@ def parse_and_verify_ocsp(
         responder_key = issuer_cert.public_key()
 
     if not isinstance(responder_key, RSAPublicKey):
-        raise AnchorVerificationError(
-            f"v1 supports RSA OCSP signer keys only; got {type(responder_key).__name__}"
-        )
+        raise AnchorVerificationError(f"v1 supports RSA OCSP signer keys only; got {type(responder_key).__name__}")
 
     try:
         responder_key.verify(
@@ -160,9 +150,7 @@ def parse_and_verify_ocsp(
             hashes.SHA256(),
         )
     except InvalidSignature as exc:
-        raise AnchorVerificationError(
-            "OCSP responder signature does not verify"
-        ) from exc
+        raise AnchorVerificationError("OCSP responder signature does not verify") from exc
 
     # Find the SingleResponse matching expected_serial.
     responses = basic["tbs_response_data"]["responses"]
@@ -173,9 +161,7 @@ def parse_and_verify_ocsp(
             matching = single
             break
     if matching is None:
-        raise AnchorVerificationError(
-            f"OCSP response contains no entry for serial {expected_serial}"
-        )
+        raise AnchorVerificationError(f"OCSP response contains no entry for serial {expected_serial}")
 
     cert_status_choice = matching["cert_status"]
     chosen_name = cert_status_choice.name
@@ -190,9 +176,7 @@ def parse_and_verify_ocsp(
         cert_status = "unknown"
         revocation_time = None
     else:
-        raise AnchorVerificationError(
-            f"unexpected OCSP cert_status: {chosen_name}"
-        )
+        raise AnchorVerificationError(f"unexpected OCSP cert_status: {chosen_name}")
 
     this_update = matching["this_update"].native
     if this_update.tzinfo is None:
@@ -213,13 +197,9 @@ def parse_and_verify_ocsp(
     # Freshness check.
     when = verification_time or datetime.now(UTC)
     if when < this_update:
-        raise AnchorVerificationError(
-            f"verification_time {when} precedes OCSP thisUpdate {this_update}"
-        )
+        raise AnchorVerificationError(f"verification_time {when} precedes OCSP thisUpdate {this_update}")
     if next_update is not None and when > next_update:
-        raise AnchorVerificationError(
-            f"verification_time {when} exceeds OCSP nextUpdate {next_update}"
-        )
+        raise AnchorVerificationError(f"verification_time {when} exceeds OCSP nextUpdate {next_update}")
 
     return ParsedOcsp(
         cert_status=cert_status,

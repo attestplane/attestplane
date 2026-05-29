@@ -57,9 +57,7 @@ class MultiTSAProvider:
             raise ValueError("MultiTSAProvider requires at least one provider")
         seen_ids = {p.provider_id for p in providers}
         if len(seen_ids) != len(providers):
-            raise ValueError(
-                "MultiTSAProvider providers must have distinct provider_id values"
-            )
+            raise ValueError("MultiTSAProvider providers must have distinct provider_id values")
         for p in providers:
             if p.schema_version != ANCHOR_SCHEMA_VERSION:
                 raise ValueError(
@@ -75,7 +73,9 @@ class MultiTSAProvider:
         return tuple(p.provider_id for p in self._providers)
 
     def request_timestamps(
-        self, request: TimestampRequest, **kwargs: object,
+        self,
+        request: TimestampRequest,
+        **kwargs: object,
     ) -> list[AnchorRecord]:
         """Fan out ``request`` to every provider; return the AnchorRecord list.
 

@@ -135,9 +135,7 @@ def _build_inputs() -> list[dict[str, Any]]:
                 "event_type": "ai_decision",
                 "actor": "agent://test/v1",
                 "payload": {
-                    "blob_b64u": base64.urlsafe_b64encode(b"\x00\x01\x02")
-                    .rstrip(b"=")
-                    .decode(),
+                    "blob_b64u": base64.urlsafe_b64encode(b"\x00\x01\x02").rstrip(b"=").decode(),
                 },
             },
         },

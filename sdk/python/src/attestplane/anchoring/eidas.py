@@ -129,15 +129,16 @@ def parse_trusted_list(xml_bytes: bytes) -> list[QualifiedTsaEntry]:
                 cert_der = b64decode(b64_text)
             except Exception as exc:
                 raise TrustedListParseError(
-                    f"failed to decode X509Certificate base64 for service "
-                    f"{service_name!r}: {exc}"
+                    f"failed to decode X509Certificate base64 for service {service_name!r}: {exc}"
                 ) from exc
-            entries.append(QualifiedTsaEntry(
-                service_name=service_name,
-                service_type=service_type,
-                status=status,
-                cert_der=cert_der,
-            ))
+            entries.append(
+                QualifiedTsaEntry(
+                    service_name=service_name,
+                    service_type=service_type,
+                    status=status,
+                    cert_der=cert_der,
+                )
+            )
 
     return entries
 

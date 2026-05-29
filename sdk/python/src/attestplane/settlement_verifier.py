@@ -118,10 +118,7 @@ def check_settlement_precondition(
             continue
 
         if event_type == "lease_lifecycle_event":
-            if (
-                payload.get("lifecycle") == "consumed"
-                and payload.get("lease_id_hash") == claim.lease_id_hash
-            ):
+            if payload.get("lifecycle") == "consumed" and payload.get("lease_id_hash") == claim.lease_id_hash:
                 if lease_consumed_seq is None or seq < lease_consumed_seq:
                     lease_consumed_seq = seq
         elif event_type == "settlement_event":
@@ -155,13 +152,10 @@ def check_settlement_precondition(
             lease_consumed_seq=lease_consumed_seq,
             settlement_event_seq=settlement_event_seq,
         )
-    if (
-        claim.expected_settlement_amount_hash is not None
-        and (
-            not isinstance(claim.expected_settlement_amount_hash, str)
-            or len(claim.expected_settlement_amount_hash) != 64
-            or any(c not in _HEX64 for c in claim.expected_settlement_amount_hash)
-        )
+    if claim.expected_settlement_amount_hash is not None and (
+        not isinstance(claim.expected_settlement_amount_hash, str)
+        or len(claim.expected_settlement_amount_hash) != 64
+        or any(c not in _HEX64 for c in claim.expected_settlement_amount_hash)
     ):
         return SettlementVerificationResult(
             ok=False,
