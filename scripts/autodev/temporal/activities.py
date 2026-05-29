@@ -393,8 +393,8 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
         ["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]
     ).strip()
 
-    # ── wait for CI to complete (up to 5 minutes) ──────────────────────────────
-    ci_wait_deadline = _time.monotonic() + 300
+    # ── wait for CI to complete (up to 20 minutes) ─────────────────────────────
+    ci_wait_deadline = _time.monotonic() + 1200
     while True:
         pr_info = json.loads(_gh(
             ["pr", "view", str(pr_number), "--repo", REPO_SLUG,
@@ -538,9 +538,13 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
 
     # Poll mergeStateStatus — avoids the broken `gh pr checks --json required` field.
     # CLEAN      → all checks passed, safe to merge.
-    # UNSTABLE   → only non-required checks failed; GitHub allows merge → proceed.
+    # UNSTABLE   → non-required checks failed; inspect failures:
+    #              if pytest/mypy/ruff fail → real code quality issue → close.
+    #              if only link-check/lint fail → cosmetic → proceed to merge.
     # BLOCKED    → required check failed OR pending → wait; if all done and any FAILURE, close.
     # CONFLICTING → merge conflict → proceed to rebase below.
+    _CRITICAL_CHECK_KEYWORDS = ("pytest", "mypy", "ruff", "typecheck", "test")
+
     activity.logger.info("Waiting for CI on PR #%d ...", pr_number)
     ci_deadline = _time.monotonic() + 600
     while True:
@@ -552,8 +556,38 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
         mergeable = pr_info.get("mergeable", "UNKNOWN")
         checks = pr_info.get("statusCheckRollup", [])
 
-        if merge_state in ("CLEAN", "UNSTABLE"):
-            activity.logger.info("CI passed for PR #%d (%s) — proceeding to merge", pr_number, merge_state)
+        if merge_state == "CLEAN":
+            activity.logger.info("CI passed for PR #%d (CLEAN)", pr_number)
+            break
+        if merge_state == "UNSTABLE":
+            # Non-required checks failing. Close only if it's a real code quality failure.
+            critical_failures = [
+                c for c in checks
+                if c.get("conclusion") == "FAILURE" and
+                any(kw in c.get("name", "").lower() for kw in _CRITICAL_CHECK_KEYWORDS)
+            ]
+            if critical_failures:
+                names = ", ".join(c.get("name", "?") for c in critical_failures[:3])
+                activity.logger.error(
+                    "CI FAILED for PR #%d (UNSTABLE, critical failures: %s) — closing PR",
+                    pr_number, names,
+                )
+                try:
+                    _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
+                         "--comment",
+                         f"Closed by autodev-train: CI critical checks failed ({names}). Fix and reopen."])
+                except RuntimeError:
+                    pass
+                db.upsert_run(issue_number, stage="failed")
+                db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=UNSTABLE_CRITICAL")
+                try:
+                    _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+                except RuntimeError:
+                    pass
+                return {"merged": False, "reason": "ci_unstable_critical"}
+            activity.logger.info(
+                "CI UNSTABLE for PR #%d but only cosmetic failures — proceeding to merge", pr_number
+            )
             break
         if merge_state == "BLOCKED":
             # If all checks completed and at least one failed → CI is done and broken
