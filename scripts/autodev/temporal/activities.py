@@ -315,8 +315,37 @@ async def post_review_activity(
 
 @activity.defn(name="merge_pr")
 async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
-    """Squash-merge the PR. Rebases on main first if there is a merge conflict."""
+    """Squash-merge the PR. Waits for CI, then rebases on main before merging."""
     branch = _gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]).strip()
+
+    # Wait for CI checks to complete (up to 10 minutes).
+    # Polls every 30 s; fails fast on any required-check failure.
+    activity.logger.info("Waiting for CI checks on PR #%d ...", pr_number)
+    import time as _time
+    ci_deadline = _time.monotonic() + 600
+    while True:
+        checks_json = _gh([
+            "pr", "checks", str(pr_number), "--repo", REPO_SLUG,
+            "--json", "name,state,required",
+        ])
+        checks = __import__("json").loads(checks_json or "[]")
+        required = [c for c in checks if c.get("required")]
+        failed = [c for c in required if c.get("state") in ("FAILURE", "ERROR", "CANCELLED")]
+        pending = [c for c in required if c.get("state") in ("PENDING", "IN_PROGRESS", "QUEUED")]
+        if failed:
+            raise RuntimeError(
+                f"PR #{pr_number}: required CI checks failed: {[c['name'] for c in failed]}"
+            )
+        if not pending:
+            activity.logger.info("CI checks passed for PR #%d", pr_number)
+            break
+        if _time.monotonic() > ci_deadline:
+            activity.logger.warning(
+                "CI timeout for PR #%d — still pending: %s; merging anyway",
+                pr_number, [c["name"] for c in pending],
+            )
+            break
+        await asyncio.sleep(30)
     worktree = str(MAIN_REPO.parent / f"attestplane-merge-{issue_number}")
     main = str(MAIN_REPO)
 
