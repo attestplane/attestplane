@@ -35,19 +35,33 @@ def name_set(manifest: dict[str, Any]) -> set[str]:
 
 
 def alpha_names(manifest: dict[str, Any]) -> set[str]:
-    return {str(item["name"]) for item in entries(manifest) if item.get("stability") == "alpha_public"}
+    return {
+        str(item["name"])
+        for item in entries(manifest)
+        if item.get("stability") == "alpha_public"
+    }
 
 
 def documented_names(manifest: dict[str, Any]) -> set[str]:
-    return {str(item["name"]) for item in entries(manifest) if item.get("documented") is True}
+    return {
+        str(item["name"])
+        for item in entries(manifest)
+        if item.get("documented") is True
+    }
 
 
-def require_schema(manifest: dict[str, Any], expected: str, path: Path, errors: list[str]) -> None:
+def require_schema(
+    manifest: dict[str, Any], expected: str, path: Path, errors: list[str]
+) -> None:
     if manifest.get("schema_version") != expected:
-        errors.append(f"{path}: expected schema_version {expected!r}, got {manifest.get('schema_version')!r}")
+        errors.append(
+            f"{path}: expected schema_version {expected!r}, got {manifest.get('schema_version')!r}"
+        )
 
 
-def validate_manifest_shape(manifest: dict[str, Any], path: Path, errors: list[str]) -> None:
+def validate_manifest_shape(
+    manifest: dict[str, Any], path: Path, errors: list[str]
+) -> None:
     require_schema(manifest, MANIFEST_SCHEMA, path, errors)
     if manifest.get("language") not in {"python", "typescript"}:
         errors.append(f"{path}: language must be python or typescript")
@@ -55,15 +69,30 @@ def validate_manifest_shape(manifest: dict[str, Any], path: Path, errors: list[s
         name = item.get("name")
         if not isinstance(name, str) or not name:
             errors.append(f"{path}: manifest entry missing non-empty name")
-        if item.get("stability") not in {"alpha_public", "experimental", "internal_exported"}:
-            errors.append(f"{path}: {name}: invalid stability {item.get('stability')!r}")
-        if item.get("kind") not in {"function", "class", "constant", "module", "type", "interface"}:
+        if item.get("stability") not in {
+            "alpha_public",
+            "experimental",
+            "internal_exported",
+        }:
+            errors.append(
+                f"{path}: {name}: invalid stability {item.get('stability')!r}"
+            )
+        if item.get("kind") not in {
+            "function",
+            "class",
+            "constant",
+            "module",
+            "type",
+            "interface",
+        }:
             errors.append(f"{path}: {name}: invalid kind {item.get('kind')!r}")
         if "documented" not in item:
             errors.append(f"{path}: {name}: missing documented flag")
 
 
-def validate_allowlist(allowlist: dict[str, Any], path: Path, errors: list[str]) -> None:
+def validate_allowlist(
+    allowlist: dict[str, Any], path: Path, errors: list[str]
+) -> None:
     require_schema(allowlist, ALLOWLIST_SCHEMA, path, errors)
     seen: set[str] = set()
     for item in allowlist.get("allowed_asymmetries", []):
@@ -72,8 +101,16 @@ def validate_allowlist(allowlist: dict[str, Any], path: Path, errors: list[str])
             errors.append(f"{path}: allowlist entry missing symbol")
             continue
         seen.add(symbol)
-        if item.get("classification") not in {"intentional", "roadmap", "language_specific", "deprecated", "experimental"}:
-            errors.append(f"{path}: {symbol}: invalid classification {item.get('classification')!r}")
+        if item.get("classification") not in {
+            "intentional",
+            "roadmap",
+            "language_specific",
+            "deprecated",
+            "experimental",
+        }:
+            errors.append(
+                f"{path}: {symbol}: invalid classification {item.get('classification')!r}"
+            )
         if not item.get("reason"):
             errors.append(f"{path}: {symbol}: missing reason")
         if not item.get("review_by"):
@@ -97,11 +134,17 @@ def check_current_against_baseline(
     new_unrecorded = sorted(current_names - baseline_names)
     missing_documented = sorted(documented_names(baseline) - current_names)
     if missing_alpha:
-        errors.append(f"{label}: alpha_public symbols missing from current export: {', '.join(missing_alpha)}")
+        errors.append(
+            f"{label}: alpha_public symbols missing from current export: {', '.join(missing_alpha)}"
+        )
     if new_unrecorded:
-        errors.append(f"{label}: current export has unrecorded symbols: {', '.join(new_unrecorded)}")
+        errors.append(
+            f"{label}: current export has unrecorded symbols: {', '.join(new_unrecorded)}"
+        )
     if missing_documented:
-        errors.append(f"{label}: documented symbols missing from current export: {', '.join(missing_documented)}")
+        errors.append(
+            f"{label}: documented symbols missing from current export: {', '.join(missing_documented)}"
+        )
 
 
 def check_cross_language_allowlist(
@@ -117,15 +160,21 @@ def check_cross_language_allowlist(
     missing = sorted(asymmetries - allowed)
     stale = sorted(allowed - asymmetries)
     if missing:
-        errors.append(f"cross-language: asymmetries missing allowlist entries: {', '.join(missing)}")
+        errors.append(
+            f"cross-language: asymmetries missing allowlist entries: {', '.join(missing)}"
+        )
     if stale:
-        errors.append(f"cross-language: stale allowlist entries are no longer asymmetric: {', '.join(stale)}")
+        errors.append(
+            f"cross-language: stale allowlist entries are no longer asymmetric: {', '.join(stale)}"
+        )
 
 
 def deterministic_check(path: Path, data: dict[str, Any], errors: list[str]) -> None:
     expected = json.dumps(data, indent=2, sort_keys=True) + "\n"
     if path.read_text(encoding="utf-8") != expected:
-        errors.append(f"{path}: JSON is not deterministic; run the extractor/checker with sorted output")
+        errors.append(
+            f"{path}: JSON is not deterministic; run the extractor/checker with sorted output"
+        )
 
 
 def run(args: argparse.Namespace) -> int:
@@ -136,7 +185,9 @@ def run(args: argparse.Namespace) -> int:
         args.typescript_baseline,
         args.allowlist,
     ]
-    py_current, ts_current, py_baseline, ts_baseline, allowlist = [load_json(path) for path in paths]
+    py_current, ts_current, py_baseline, ts_baseline, allowlist = [
+        load_json(path) for path in paths
+    ]
     errors: list[str] = []
     for manifest, path in [
         (py_current, args.python_current),
@@ -148,8 +199,12 @@ def run(args: argparse.Namespace) -> int:
         deterministic_check(path, manifest, errors)
     validate_allowlist(allowlist, args.allowlist, errors)
     deterministic_check(args.allowlist, allowlist, errors)
-    check_current_against_baseline(current=py_current, baseline=py_baseline, label="python", errors=errors)
-    check_current_against_baseline(current=ts_current, baseline=ts_baseline, label="typescript", errors=errors)
+    check_current_against_baseline(
+        current=py_current, baseline=py_baseline, label="python", errors=errors
+    )
+    check_current_against_baseline(
+        current=ts_current, baseline=ts_baseline, label="typescript", errors=errors
+    )
     check_cross_language_allowlist(py_baseline, ts_baseline, allowlist, errors)
     if errors:
         print("Public API manifest check FAILED", file=sys.stderr)

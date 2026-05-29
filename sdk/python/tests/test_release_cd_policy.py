@@ -24,7 +24,7 @@ def _write_package_versions(root: Path, *, python_version: str, npm_version: str
     package_json = root / "sdk/typescript/package.json"
     pyproject.parent.mkdir(parents=True)
     package_json.parent.mkdir(parents=True)
-    pyproject.write_text(f"[project]\nversion = \"{python_version}\"\n", encoding="utf-8")
+    pyproject.write_text(f'[project]\nversion = "{python_version}"\n', encoding="utf-8")
     package_json.write_text(json.dumps({"version": npm_version}), encoding="utf-8")
 
 

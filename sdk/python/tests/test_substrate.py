@@ -39,10 +39,7 @@ def test_append_assigns_chain_fields() -> None:
 
 def test_three_appends_link_correctly_and_verify() -> None:
     sub = AttestSubstrate()
-    events = [
-        sub.append(_draft(i), now=datetime(2026, 5, 17, 12, 0, 0, i, tzinfo=UTC))
-        for i in range(3)
-    ]
+    events = [sub.append(_draft(i), now=datetime(2026, 5, 17, 12, 0, 0, i, tzinfo=UTC)) for i in range(3)]
     assert [e.seq for e in events] == [0, 1, 2]
     assert events[1].prev_hash == events[0].event_hash
     assert events[2].prev_hash == events[1].event_hash

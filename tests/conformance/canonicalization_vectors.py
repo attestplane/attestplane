@@ -48,8 +48,7 @@ def load_negative_vectors() -> list[dict[str, Any]]:
 
 def positive_canonicalization_vectors_by_case() -> dict[str, dict[str, Any]]:
     return {
-        vector["case_id"]: vector
-        for vector in load_positive_canonicalization_vectors()
+        vector["case_id"]: vector for vector in load_positive_canonicalization_vectors()
     }
 
 
@@ -128,7 +127,7 @@ def materialize_negative_canonicalization_candidate(
         assert needle in raw
         return raw.replace(needle, replacement, 1)
     if mutation["kind"] == "wrap_raw_json":
-        return f'{mutation["prefix"]}{canonical_json_text(source)}{mutation["suffix"]}'
+        return f"{mutation['prefix']}{canonical_json_text(source)}{mutation['suffix']}"
     raise AssertionError(f"unknown mutation kind: {mutation['kind']}")
 
 

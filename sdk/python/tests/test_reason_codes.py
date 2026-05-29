@@ -17,9 +17,7 @@ from attestplane.reason_codes import (
     reason_code_matches_format,
 )
 
-_VECTORS_PATH = (
-    Path(__file__).resolve().parent / "conformance" / "reason_codes_vectors.json"
-)
+_VECTORS_PATH = Path(__file__).resolve().parent / "conformance" / "reason_codes_vectors.json"
 
 
 def _load_vectors() -> dict:
@@ -97,18 +95,39 @@ def test_all_codes_match_regex() -> None:
 @pytest.mark.parametrize(
     "prefix,group",
     [
-        ("CHAIN_", {"CHAIN_OK", "CHAIN_SEQ_MISMATCH",
-                    "CHAIN_PREV_HASH_MISMATCH", "CHAIN_EVENT_HASH_MISMATCH"}),
-        ("SIGNATURE_", {"SIGNATURE_OK", "SIGNATURE_INVALID",
-                        "SIGNATURE_UNKNOWN_KEY", "SIGNATURE_EXPIRED_KEY",
-                        "SIGNATURE_SCHEMA_MISMATCH", "SIGNATURE_PAYLOAD_MISMATCH"}),
-        ("ANCHOR_", {"ANCHOR_OK", "ANCHOR_INVALID", "ANCHOR_CERT_EXPIRED",
-                     "ANCHOR_OCSP_FAILED", "ANCHOR_MISSING_LTV_ARTIFACTS"}),
-        ("PAYLOAD_", {"PAYLOAD_OK", "PAYLOAD_MISSING_REQUIRED_FIELD",
-                      "PAYLOAD_FIELD_TYPE_MISMATCH",
-                      "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
-                      "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
-                      "PAYLOAD_SCHEMA_VERSION_MISMATCH"}),
+        ("CHAIN_", {"CHAIN_OK", "CHAIN_SEQ_MISMATCH", "CHAIN_PREV_HASH_MISMATCH", "CHAIN_EVENT_HASH_MISMATCH"}),
+        (
+            "SIGNATURE_",
+            {
+                "SIGNATURE_OK",
+                "SIGNATURE_INVALID",
+                "SIGNATURE_UNKNOWN_KEY",
+                "SIGNATURE_EXPIRED_KEY",
+                "SIGNATURE_SCHEMA_MISMATCH",
+                "SIGNATURE_PAYLOAD_MISMATCH",
+            },
+        ),
+        (
+            "ANCHOR_",
+            {
+                "ANCHOR_OK",
+                "ANCHOR_INVALID",
+                "ANCHOR_CERT_EXPIRED",
+                "ANCHOR_OCSP_FAILED",
+                "ANCHOR_MISSING_LTV_ARTIFACTS",
+            },
+        ),
+        (
+            "PAYLOAD_",
+            {
+                "PAYLOAD_OK",
+                "PAYLOAD_MISSING_REQUIRED_FIELD",
+                "PAYLOAD_FIELD_TYPE_MISMATCH",
+                "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
+                "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
+                "PAYLOAD_SCHEMA_VERSION_MISMATCH",
+            },
+        ),
     ],
 )
 def test_prefix_namespacing(prefix: str, group: set[str]) -> None:

@@ -20,10 +20,16 @@ from scripts.local_codex_runner.config import (
 from scripts.local_codex_runner.github_cli import CheckStatus, GitHubCLI
 from scripts.local_codex_runner.models import IssueTask, task_has_product_delta
 
-DEPENDENCY_LINE_RE = re.compile(r"(?im)^\s*(?:depends\s+on|depends-on|dependencies)\s*:\s*(?P<refs>.+)$")
+DEPENDENCY_LINE_RE = re.compile(
+    r"(?im)^\s*(?:depends\s+on|depends-on|dependencies)\s*:\s*(?P<refs>.+)$"
+)
 ISSUE_REF_RE = re.compile(r"#(?P<number>[1-9][0-9]*)")
-SOURCE_PLANNING_RE = re.compile(r"(?im)^\s*Source planning issue:\s*#(?P<number>[1-9][0-9]*)\s*$")
-ISSUE_RANGE_RE = re.compile(r"\bIssues?\s+(?P<start>[1-9][0-9]*)\s*[–-]\s*(?P<end>[1-9][0-9]*)\b")
+SOURCE_PLANNING_RE = re.compile(
+    r"(?im)^\s*Source planning issue:\s*#(?P<number>[1-9][0-9]*)\s*$"
+)
+ISSUE_RANGE_RE = re.compile(
+    r"\bIssues?\s+(?P<start>[1-9][0-9]*)\s*[–-]\s*(?P<end>[1-9][0-9]*)\b"
+)
 ISSUE_ORDINAL_RE = re.compile(r"\bIssue\s+(?P<ordinal>[1-9][0-9]*)\b")
 EXTENDS_RE = re.compile(r"\bextends?\s+#(?P<number>[1-9][0-9]*)\b", re.IGNORECASE)
 
@@ -59,7 +65,10 @@ def parse_dependencies(body: str) -> list[int]:
 
     dependencies: set[int] = set()
     for match in DEPENDENCY_LINE_RE.finditer(body):
-        dependencies.update(int(ref.group("number")) for ref in ISSUE_REF_RE.finditer(match.group("refs")))
+        dependencies.update(
+            int(ref.group("number"))
+            for ref in ISSUE_REF_RE.finditer(match.group("refs"))
+        )
     return sorted(dependencies)
 
 
@@ -68,7 +77,9 @@ def source_planning_issue(body: str) -> int | None:
     return int(match.group("number")) if match else None
 
 
-def infer_dependencies_from_siblings(issue: IssueTask, siblings: list[IssueTask]) -> list[int]:
+def infer_dependencies_from_siblings(
+    issue: IssueTask, siblings: list[IssueTask]
+) -> list[int]:
     """Infer plan-local dependencies from generated issue prose.
 
     The plan-to-issues workflow emits "Issue 1", "Issue 3", and "Issues 1-3"
@@ -78,7 +89,12 @@ def infer_dependencies_from_siblings(issue: IssueTask, siblings: list[IssueTask]
     share the same "Source planning issue" header.
     """
 
-    by_ordinal = {index: sibling.number for index, sibling in enumerate(sorted(siblings, key=lambda item: item.number), start=1)}
+    by_ordinal = {
+        index: sibling.number
+        for index, sibling in enumerate(
+            sorted(siblings, key=lambda item: item.number), start=1
+        )
+    }
     inferred: set[int] = set()
     for match in ISSUE_RANGE_RE.finditer(issue.body):
         start = int(match.group("start"))
@@ -90,13 +106,19 @@ def infer_dependencies_from_siblings(issue: IssueTask, siblings: list[IssueTask]
         ordinal = int(match.group("ordinal"))
         if ordinal in by_ordinal:
             inferred.add(by_ordinal[ordinal])
-    inferred.update(int(match.group("number")) for match in EXTENDS_RE.finditer(issue.body))
+    inferred.update(
+        int(match.group("number")) for match in EXTENDS_RE.finditer(issue.body)
+    )
     inferred.discard(issue.number)
     return sorted(inferred)
 
 
 def dependencies_for_issue(issue: IssueTask, siblings: list[IssueTask]) -> list[int]:
-    return sorted(set(parse_dependencies(issue.body)).union(infer_dependencies_from_siblings(issue, siblings)))
+    return sorted(
+        set(parse_dependencies(issue.body)).union(
+            infer_dependencies_from_siblings(issue, siblings)
+        )
+    )
 
 
 def decide_pr_action(pr: PullRequestState, config: RunnerConfig) -> AdvanceDecision:
@@ -125,7 +147,13 @@ def decide_pr_action(pr: PullRequestState, config: RunnerConfig) -> AdvanceDecis
         waiting_on.append("checks:not-green")
 
     if waiting_on:
-        return AdvanceDecision("comment", "pr", pr.number, "waiting_for_merge_requirements", sorted(waiting_on))
+        return AdvanceDecision(
+            "comment",
+            "pr",
+            pr.number,
+            "waiting_for_merge_requirements",
+            sorted(waiting_on),
+        )
     if not config.allow_auto_merge:
         return AdvanceDecision("skip", "pr", pr.number, "auto_merge_disabled")
     return AdvanceDecision("merge", "pr", pr.number, "all_merge_requirements_satisfied")
@@ -140,21 +168,35 @@ def decide_dependency_unlock(
     labels = set(issue.labels)
     if config.approved_label in labels:
         return AdvanceDecision("skip", "issue", issue.number, "already_approved")
-    dependencies = dependencies if dependencies is not None else parse_dependencies(issue.body)
+    dependencies = (
+        dependencies if dependencies is not None else parse_dependencies(issue.body)
+    )
     if not dependencies:
         if not config.allow_dependency_unlock:
-            return AdvanceDecision("skip", "issue", issue.number, "dependency_unlock_disabled")
+            return AdvanceDecision(
+                "skip", "issue", issue.number, "dependency_unlock_disabled"
+            )
         return AdvanceDecision("unlock", "issue", issue.number, "no_dependencies")
 
-    waiting_on = [f"issue:{number}:{dependency_states.get(number, 'UNKNOWN')}" for number in dependencies if dependency_states.get(number) != "CLOSED"]
+    waiting_on = [
+        f"issue:{number}:{dependency_states.get(number, 'UNKNOWN')}"
+        for number in dependencies
+        if dependency_states.get(number) != "CLOSED"
+    ]
     if waiting_on:
-        return AdvanceDecision("comment", "issue", issue.number, "waiting_for_dependencies", waiting_on)
+        return AdvanceDecision(
+            "comment", "issue", issue.number, "waiting_for_dependencies", waiting_on
+        )
     if not config.allow_dependency_unlock:
-        return AdvanceDecision("skip", "issue", issue.number, "dependency_unlock_disabled")
+        return AdvanceDecision(
+            "skip", "issue", issue.number, "dependency_unlock_disabled"
+        )
     return AdvanceDecision("unlock", "issue", issue.number, "dependencies_satisfied")
 
 
-def pr_state_from_gh_json(data: dict[str, Any], checks: list[CheckStatus]) -> PullRequestState:
+def pr_state_from_gh_json(
+    data: dict[str, Any], checks: list[CheckStatus]
+) -> PullRequestState:
     author = data.get("author") or {}
     return PullRequestState(
         number=int(data["number"]),
@@ -162,7 +204,11 @@ def pr_state_from_gh_json(data: dict[str, Any], checks: list[CheckStatus]) -> Pu
         url=str(data.get("url", "")),
         base_branch=str(data.get("baseRefName", "")),
         author=str(author.get("login", author.get("name", ""))),
-        labels=[str(label.get("name", label)) for label in data.get("labels", []) if label.get("name", label)],
+        labels=[
+            str(label.get("name", label))
+            for label in data.get("labels", [])
+            if label.get("name", label)
+        ],
         is_draft=bool(data.get("isDraft", False)),
         merge_state_status=str(data.get("mergeStateStatus", "")),
         review_decision=data.get("reviewDecision"),
@@ -171,12 +217,20 @@ def pr_state_from_gh_json(data: dict[str, Any], checks: list[CheckStatus]) -> Pu
 
 
 def raw_labels(data: dict[str, Any]) -> set[str]:
-    return {str(label.get("name", label)) for label in data.get("labels", []) if label.get("name", label)}
+    return {
+        str(label.get("name", label))
+        for label in data.get("labels", [])
+        if label.get("name", label)
+    }
 
 
-def matches_label_filters(data: dict[str, Any], include: list[str], exclude: list[str]) -> bool:
+def matches_label_filters(
+    data: dict[str, Any], include: list[str], exclude: list[str]
+) -> bool:
     labels = raw_labels(data)
-    return all(label in labels for label in include) and not labels.intersection(exclude)
+    return all(label in labels for label in include) and not labels.intersection(
+        exclude
+    )
 
 
 def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
@@ -188,48 +242,96 @@ def advance_queue(args: argparse.Namespace) -> dict[str, Any]:
     exclude_label = getattr(args, "exclude_label", []) or []
 
     if args.mode in {"all", "prs"}:
-        pr_fetch_limit = max(args.pr_limit, 50) if include_label or exclude_label else args.pr_limit
+        pr_fetch_limit = (
+            max(args.pr_limit, 50) if include_label or exclude_label else args.pr_limit
+        )
         raw_prs = [
             raw_pr
-            for raw_pr in gh.list_pull_requests(config.repo or "", config.base_branch, limit=pr_fetch_limit)
+            for raw_pr in gh.list_pull_requests(
+                config.repo or "", config.base_branch, limit=pr_fetch_limit
+            )
             if matches_label_filters(raw_pr, include_label, exclude_label)
         ][: args.pr_limit]
         for raw_pr in raw_prs:
             pr_number = str(raw_pr["number"])
-            pr = pr_state_from_gh_json(raw_pr, gh.pr_checks(config.repo or "", pr_number))
+            pr = pr_state_from_gh_json(
+                raw_pr, gh.pr_checks(config.repo or "", pr_number)
+            )
             decision = decide_pr_action(pr, config)
             decisions.append(decision)
             if decision.action == "merge" and writes < config.max_pr_merges_per_run:
                 gh.merge_pr(config.repo or "", decision.target_number)
                 writes += 1
             elif decision.action == "comment" and args.comment:
-                gh.comment_pr(config.repo or "", decision.target_number, render_decision_comment(decision))
+                gh.comment_pr(
+                    config.repo or "",
+                    decision.target_number,
+                    render_decision_comment(decision),
+                )
 
     if args.mode in {"all", "deps"}:
-        issues = gh.list_issues(config.repo or "", config.planned_task_label, args.issue_limit)
-        sibling_issues = gh.list_issues(config.repo or "", config.planned_task_label, args.issue_limit, state="all")
+        issues = gh.list_issues(
+            config.repo or "", config.planned_task_label, args.issue_limit
+        )
+        sibling_issues = gh.list_issues(
+            config.repo or "", config.planned_task_label, args.issue_limit, state="all"
+        )
         product_delta_idle = bool(getattr(args, "product_delta_idle", False))
         if product_delta_idle:
             issues = [issue for issue in issues if task_has_product_delta(issue)]
         siblings_by_source: dict[int | None, list[IssueTask]] = {}
         for issue in sibling_issues:
-            siblings_by_source.setdefault(source_planning_issue(issue.body), []).append(issue)
+            siblings_by_source.setdefault(source_planning_issue(issue.body), []).append(
+                issue
+            )
         issue_dependencies = {
-            issue.number: dependencies_for_issue(issue, siblings_by_source.get(source_planning_issue(issue.body), [issue])) for issue in issues
+            issue.number: dependencies_for_issue(
+                issue,
+                siblings_by_source.get(source_planning_issue(issue.body), [issue]),
+            )
+            for issue in issues
         }
-        dependency_numbers = sorted({number for dependencies in issue_dependencies.values() for number in dependencies})
-        dependency_states = {number: gh.view_issue_state(config.repo or "", number) for number in dependency_numbers}
+        dependency_numbers = sorted(
+            {
+                number
+                for dependencies in issue_dependencies.values()
+                for number in dependencies
+            }
+        )
+        dependency_states = {
+            number: gh.view_issue_state(config.repo or "", number)
+            for number in dependency_numbers
+        }
         for issue in issues:
-            decision = decide_dependency_unlock(issue, dependency_states, config, issue_dependencies[issue.number])
+            decision = decide_dependency_unlock(
+                issue, dependency_states, config, issue_dependencies[issue.number]
+            )
             decisions.append(decision)
-            if decision.action == "unlock" and writes < config.max_dependency_unlocks_per_run:
-                gh.add_labels(config.repo or "", decision.target_number, [config.approved_label])
+            if (
+                decision.action == "unlock"
+                and writes < config.max_dependency_unlocks_per_run
+            ):
+                gh.add_labels(
+                    config.repo or "", decision.target_number, [config.approved_label]
+                )
                 if config.waiting_deps_label in issue.labels:
-                    gh.remove_labels(config.repo or "", decision.target_number, [config.waiting_deps_label])
+                    gh.remove_labels(
+                        config.repo or "",
+                        decision.target_number,
+                        [config.waiting_deps_label],
+                    )
                 writes += 1
             elif decision.action == "comment" and args.comment:
-                gh.add_labels(config.repo or "", decision.target_number, [config.waiting_deps_label])
-                gh.comment_issue(config.repo or "", decision.target_number, render_decision_comment(decision))
+                gh.add_labels(
+                    config.repo or "",
+                    decision.target_number,
+                    [config.waiting_deps_label],
+                )
+                gh.comment_issue(
+                    config.repo or "",
+                    decision.target_number,
+                    render_decision_comment(decision),
+                )
 
     return {
         "commands_run": gh.commands_run,
@@ -251,7 +353,11 @@ def main() -> int:
     parser.add_argument("--mode", choices=["all", "prs", "deps"], default="all")
     parser.add_argument("--pr-limit", type=int, default=20)
     parser.add_argument("--issue-limit", type=int, default=50)
-    parser.add_argument("--comment", action="store_true", help="write waiting-state comments/labels when not dry-run")
+    parser.add_argument(
+        "--comment",
+        action="store_true",
+        help="write waiting-state comments/labels when not dry-run",
+    )
     parser.add_argument(
         "--product-delta-idle",
         action="store_true",

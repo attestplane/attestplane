@@ -248,6 +248,7 @@ nightly 工作流（`.github/workflows/nightly-anchor.yml`）：对真 FreeTSA e
 |---|---|
 | `verify_chain_with_anchors(..., trust_roots_der=[...])` 返回 `cert_status="VALID"`（含真 RFC-3161 签名 + 真 OCSP good 状态 + 完整 cert chain） | `field_supported` / `verified_in_test` |
 | 仅 `verify_chain_with_anchors(events, anchors)`（无 trust_roots_der），`cert_status="VALID_UNVERIFIED"` | `designed_toward` |
+| live TSA/provider_id 需要 claim-safe 确认但无法确认时进入 `verification_status="quarantined"` | `designed_toward`（never claim-safe verified） |
 | 仅 `MockTSAProvider`（无真签名） | `designed_toward` |
 | `FreeTSAProvider` / `DigiCertProvider` 对真 endpoint 成功验证 | `verified_in_test`（基于 nightly 工作流证据） |
 | `load_qualified_tsa_trust_roots()` + 上述真验证路径 | `field_supported` for eIDAS qualified-TSA； `designed_toward` for full LOTL chain validation（XML 签名校验未 ship） |

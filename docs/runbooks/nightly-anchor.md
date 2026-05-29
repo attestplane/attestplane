@@ -33,6 +33,11 @@ ADR-0003 § 4 explicitly accepts TSA unavailability as a known outcome:
 anchoring is off the substrate's critical path. The neutral exit is the
 discipline that keeps "TSA flake" from polluting the alert backlog.
 
+A live TSA response that cannot be cryptographically confirmed is a
+distinct claim-safe terminal state: the verifier report must surface
+`anchor_verification_status="quarantined"` and must not claim the bundle
+is verified.
+
 ## Triage
 
 ### Step 1 — Read the workflow log
@@ -50,6 +55,7 @@ Common diagnoses:
 | `signature does not verify against leaf cert` | FreeTSA rotated their leaf cert; our parser missed the new one | Check `parsed.leafCertDer` matches a cert in FreeTSA's published chain |
 | `leaf cert issuer DN does not match any configured trust root` | FreeTSA rotated their root; our cached `cacert.pem` is stale | Re-download `https://freetsa.org/files/cacert.pem`, verify out-of-band, update the workflow's pin if we add one |
 | `verification_time exceeds leaf cert not_after` | FreeTSA leaf cert expired between issuance and our verification | Should be impossible (TSA always returns currently-valid certs); investigate as a substrate bug |
+| `anchor_verification_status="quarantined"` | The TSA response was received, but local verification could not confirm it claim-safely | Treat as quarantine, not as a verified anchor. Reproduce locally and fix the verifier or the live trust-root path. |
 | `message_imprint does not match expected digest` | The TSA response didn't echo our digest correctly, or there's a substrate-side hash drift | Diff the chain's `event_hash` against what was sent |
 
 ### Step 2 — Decide: TSA-side or substrate-side?

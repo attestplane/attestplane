@@ -31,7 +31,9 @@ class CodexDriver:
         self.dry_run = dry_run
         self.commands_run: list[str] = []
 
-    def build_command(self, prompt_file: Path, workdir: Path) -> tuple[list[str], str | None]:
+    def build_command(
+        self, prompt_file: Path, workdir: Path
+    ) -> tuple[list[str], str | None]:
         if self.command_template:
             command = shlex.split(
                 self.command_template.format(
@@ -58,7 +60,13 @@ class CodexDriver:
             command[2:2] = ["--model", self.model]
         return command, prompt_file.read_text(encoding="utf-8")
 
-    def run_codex(self, prompt_file: Path, workdir: Path, log_path: Path, timeout: int | None = None) -> str:
+    def run_codex(
+        self,
+        prompt_file: Path,
+        workdir: Path,
+        log_path: Path,
+        timeout: int | None = None,
+    ) -> str:
         command, prompt_stdin = self.build_command(prompt_file, workdir)
         command_log = " ".join(command)
         if prompt_stdin is not None:
@@ -70,7 +78,9 @@ class CodexDriver:
             log_path.write_text(text, encoding="utf-8")
             return text
         try:
-            completed = run_with_process_group_timeout(command, workdir, prompt_stdin, timeout)
+            completed = run_with_process_group_timeout(
+                command, workdir, prompt_stdin, timeout
+            )
         except subprocess.TimeoutExpired as exc:
             stdout = exc.stdout or ""
             stderr = exc.stderr or ""
@@ -87,7 +97,10 @@ class CodexDriver:
             )
             log_path.write_text(truncate(output), encoding="utf-8")
             raise RunnerCommandError(command, 124, output) from exc
-        output = redact((completed.stdout or "") + ("\nSTDERR:\n" + completed.stderr if completed.stderr else ""))
+        output = redact(
+            (completed.stdout or "")
+            + ("\nSTDERR:\n" + completed.stderr if completed.stderr else "")
+        )
         log_path.write_text(truncate(output), encoding="utf-8")
         if completed.returncode != 0:
             raise RunnerCommandError(command, completed.returncode, output)

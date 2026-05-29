@@ -42,8 +42,8 @@ def test_verify_proofbundle_help_declares_alpha_boundaries(
     out = " ".join(capsys.readouterr().out.split())
     assert "Alpha local ProofBundle verifier" in out
     assert "no network access" in out
-    assert "signature verification" in out
-    assert "anchor verification" in out
+    assert "signature material verification" in out
+    assert "anchor material verification" in out
     assert "compliance certification" in out
 
 
@@ -54,6 +54,7 @@ def test_verify_proofbundle_valid_minimal_fixture(
 
     assert rc == 0
     assert payload["ok"] is True
+    assert payload["status"] == "ok"
     assert payload["exit_code"] == 0
     assert payload["verification_scope"] == "proofbundle_alpha_local"
     assert payload["network_access_performed"] is False
@@ -81,28 +82,30 @@ def test_verify_proofbundle_valid_minimal_fixture(
 
 
 @pytest.mark.parametrize(
-    ("fixture", "expected_exit", "expected_check"),
+    ("fixture", "expected_exit", "expected_status", "expected_check"),
     [
-        ("missing_required_field.json", 2, "required_fields"),
-        ("malformed.json", 2, "json_parse"),
-        ("invalid_hash_format.json", 2, "artifact_hash"),
-        ("tampered_artifact_hash.json", 1, "artifact_hash"),
-        ("broken_hash_chain.json", 1, "hash_chain_recompute"),
-        ("unsupported_version.json", 2, "schema_version"),
-        ("missing_dsse_shape.json", 2, "required_fields"),
-        ("missing_storage_compat.json", 2, "required_fields"),
-        ("missing_provenance_shape.json", 2, "required_fields"),
+        ("missing_required_field.json", 3, "output_contract_error", "required_fields"),
+        ("malformed.json", 3, "output_contract_error", "json_parse"),
+        ("invalid_hash_format.json", 3, "output_contract_error", "artifact_hash"),
+        ("tampered_artifact_hash.json", 2, "invalid_signature_or_anchor", "artifact_hash"),
+        ("broken_hash_chain.json", 2, "invalid_signature_or_anchor", "hash_chain_recompute"),
+        ("unsupported_version.json", 3, "output_contract_error", "schema_version"),
+        ("missing_dsse_shape.json", 3, "output_contract_error", "required_fields"),
+        ("missing_storage_compat.json", 3, "output_contract_error", "required_fields"),
+        ("missing_provenance_shape.json", 3, "output_contract_error", "required_fields"),
     ],
 )
 def test_verify_proofbundle_negative_fixtures_fail_closed(
     fixture: str,
     expected_exit: int,
+    expected_status: str,
     expected_check: str,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc, payload = _run_fixture(fixture, capsys)
     assert rc == expected_exit
     assert payload["ok"] is False
+    assert payload["status"] == expected_status
     assert payload["exit_code"] == expected_exit
     failed = [check for check in payload["checks"] if check["status"] == "fail"]
     assert failed
@@ -122,6 +125,7 @@ def test_p3_2_default_flags_keep_p3_1_compatibility(
     rc, payload = _run_with_flags("valid_minimal.json", capsys, flags=())
     assert rc == 0
     assert payload["ok"] is True
+    assert payload["status"] == "ok"
     assert payload["signature_verification_requested"] is False
     assert payload["signature_verification_performed"] is False
     assert payload["signature_verification_status"] == "skipped"
@@ -134,10 +138,9 @@ def test_p3_2_signature_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries signature_material but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "signature_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("signature_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
+    assert payload["status"] == "ok"
     assert payload["signature_verification_status"] == "skipped"
 
 
@@ -145,10 +148,9 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries anchor_records but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "anchor_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("anchor_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
+    assert payload["status"] == "ok"
     assert payload["anchor_verification_status"] == "skipped"
 
 
@@ -221,7 +223,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             2,
             "anchor_verification_status",
             "invalid_input",
-            "missing_trust_roots",
+            "anchor_extras_missing",
         ),
         (
             "invalid_anchor_chain.json",
@@ -229,7 +231,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             2,
             "anchor_verification_status",
             "invalid_input",
-            "missing_trust_roots",
+            "anchor_extras_missing",
         ),
         (
             "anchor_shape_valid_but_not_requested.json",
@@ -237,7 +239,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             2,
             "anchor_verification_status",
             "invalid_input",
-            "missing_trust_roots",
+            "anchor_extras_missing",
         ),
     ],
 )
@@ -253,6 +255,7 @@ def test_p3_2_signature_anchor_extension_fail_closed(
     rc, payload = _run_with_flags(fixture, capsys, flags=flags)
     assert rc == expected_exit
     assert payload["ok"] is False
+    assert payload["status"] == "invalid_signature_or_anchor"
     assert payload[expected_field] == expected_status
     # Honest no-go claims preserved
     assert payload["signature_verification_performed"] is False
@@ -277,6 +280,7 @@ def test_p3_2_both_flags_missing_material_fails_closed(
     )
     assert rc == 2
     assert payload["ok"] is False
+    assert payload["status"] == "invalid_signature_or_anchor"
     assert payload["signature_verification_status"] == "invalid_input"
     assert payload["anchor_verification_status"] == "invalid_input"
     assert payload["signature_verification_performed"] is False
@@ -373,6 +377,7 @@ def test_p3_4_verify_signature_real_dsse_passes(
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["ok"] is True
+    assert payload["status"] == "ok"
     assert payload["signature_verification_status"] == "passed"
     assert payload["signature_verification_performed"] is True
     assert payload["signature_verification_summary"]["verified_signature_count"] == 1
@@ -404,8 +409,9 @@ def test_p3_4_verify_signature_tampered_signature_fails(
 
     rc = main(["verify-proofbundle", str(path), "--verify-signature"])
     payload = json.loads(capsys.readouterr().out)
-    assert rc == 1
+    assert rc == 2
     assert payload["ok"] is False
+    assert payload["status"] == "invalid_signature_or_anchor"
     assert payload["signature_verification_status"] == "failed"
     assert payload["signature_verification_performed"] is False
     assert payload["signature_verification_summary"]["reason"] == "signature_does_not_verify"
@@ -478,6 +484,7 @@ def test_p3_4_verify_anchor_real_rfc3161_passes(
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["ok"] is True
+    assert payload["status"] == "ok"
     assert payload["anchor_verification_status"] == "passed"
     assert payload["anchor_verification_performed"] is True
     assert payload["anchor_verification_summary"]["verified_anchor_count"] == 1
@@ -488,11 +495,13 @@ def test_p3_4_verify_anchor_real_rfc3161_passes(
     assert payload["anchor_verification_claims"]["long_term_archival_trust"] is False
 
 
-def test_p3_4_verify_anchor_wrong_trust_root_fails(
+def test_p3_4_verify_anchor_wrong_trust_root_quarantines(
     tmp_path,  # type: ignore[no-untyped-def]
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Anchor signed by authority A but verified against root of authority B fails."""
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
     import base64
     import json as json_mod
     from datetime import UTC, datetime
@@ -513,8 +522,9 @@ def test_p3_4_verify_anchor_wrong_trust_root_fails(
 
     rc = main(["verify-proofbundle", str(path), "--verify-anchor"])
     payload = json.loads(capsys.readouterr().out)
-    assert rc == 1
+    assert rc == 4
     assert payload["ok"] is False
-    assert payload["anchor_verification_status"] == "failed"
+    assert payload["status"] == "quarantined"
+    assert payload["anchor_verification_status"] == "quarantined"
     assert payload["anchor_verification_performed"] is False
-    assert payload["anchor_verification_summary"]["reason"] == "rfc3161_verify_failed"
+    assert payload["anchor_verification_summary"]["reason"] == "anchor_unverifiable"

@@ -52,7 +52,9 @@ class PromptBuilder:
         output.write_text(redact(rendered), encoding="utf-8")
         return output
 
-    def build_pr_body(self, task: IssueTask, *, validation: str, evidence: str, residual_risks: str) -> str:
+    def build_pr_body(
+        self, task: IssueTask, *, validation: str, evidence: str, residual_risks: str
+    ) -> str:
         template = (PROMPT_DIR / "05_pr_body.md").read_text(encoding="utf-8")
         return redact(
             render_template(
@@ -74,4 +76,3 @@ def render_template(template: str, values: dict[str, str]) -> str:
     for key, value in values.items():
         rendered = rendered.replace("{{" + key + "}}", redact(str(value)))
     return rendered
-

@@ -16,8 +16,9 @@ codes:
 | Exit code | Meaning |
 |---|---|
 | 0 | Valid local alpha verification envelope. |
-| 1 | Verification failed, for example a recomputed hash or chain link mismatch. |
-| 2 | Invalid input, malformed JSON, missing required metadata, or unsupported version. |
+| 2 | Invalid signature or anchor material, or a fail-closed signature/anchor request with unsupported or missing verification input. |
+| 3 | Schema or output-contract error, including malformed JSON, missing required metadata, or unsupported version. |
+| 4 | Quarantined or anchor-unverifiable material. The JSON report stays deterministic, but the anchor cannot be trusted for gating. |
 
 ## Checks
 
@@ -37,17 +38,20 @@ The alpha verifier checks:
 ## Boundary
 
 This command is local, read-only, and alpha-grade. It does not perform network
-access, signature verification, anchor verification, release asset publishing,
-or compliance certification. It is not production-ready and not compliance-ready.
+access or compliance certification. Signature and anchor verification are
+opt-in fail-closed extensions behind `--verify-signature` and `--verify-anchor`.
+It is not production-ready and not compliance-ready.
 
-The DSSE/in-toto checks are shape checks only. They do not verify cryptographic
-signatures, transparency-log entries, or release provenance.
+The default DSSE/in-toto checks are shape checks only. The optional signature
+and anchor flags perform fail-closed verification of the declared material, but
+they still do not verify transparency-log entries or release provenance.
 
 ## Report Fields
 
 The JSON report includes:
 
 - `verification_scope: "proofbundle_alpha_local"`
+- `status`
 - `ok`
 - `exit_code`
 - `checks`
@@ -59,6 +63,13 @@ The JSON report includes:
 - `production_ready: false`
 - `certified_provenance: false`
 - `slsa_level_claimed: null`
+
+The top-level `status` field is the canonical machine-readable gate state:
+
+- `ok` maps to exit code `0`.
+- `invalid_signature_or_anchor` maps to exit code `2`.
+- `output_contract_error` maps to exit code `3`.
+- `quarantined` maps to exit code `4`.
 
 ---
 
@@ -83,10 +94,12 @@ Status semantics for `signature_verification_status` /
 
 | Status            | Meaning                                                            | Exit |
 |-------------------|--------------------------------------------------------------------|------|
-| `skipped`         | flag not set; extension not exercised                              | 0/1  |
+| `skipped`         | flag not set; extension not exercised                              | same as enclosing report |
 | `invalid_input`   | flag set but verification material missing or shape invalid       | 2    |
 | `unsupported`    | flag set but declared algorithm / anchor type outside allowlist   | 2    |
 | `not_implemented`| flag set, material present, alpha verifier does not perform crypto | 2    |
+| `failed`          | signature verification failed after the cryptographic path ran     | 2    |
+| `quarantined`     | anchor material was present but unverifiable for gating            | 4    |
 | `passed`          | reserved for follow-up branch with positive cryptographic path     | 0    |
 
 Alpha allowlists (subject to change in follow-up branches):
