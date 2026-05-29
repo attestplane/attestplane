@@ -34,11 +34,12 @@ jobs:
         id: review_check
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           PR="${{ github.event.pull_request.number }}"
           # Check for at least one APPROVED review (not dismissed)
-          APPROVED=$(gh pr view "$PR" --json reviews \
+          APPROVED=$(gh pr view "$PR" -R "${REPO}" --json reviews \
             --jq '[.reviews[] | select(.state == "APPROVED")] | length')
           echo "approved_count=${APPROVED}" >> "$GITHUB_OUTPUT"
           echo "Approved review count: ${APPROVED}"
@@ -47,17 +48,18 @@ jobs:
         if: steps.review_check.outputs.approved_count != '0'
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           PR="${{ github.event.pull_request.number }}"
-          PR_TITLE=$(gh pr view "$PR" --json title -q .title)
+          PR_TITLE=$(gh pr view "$PR" -R "${REPO}" --json title -q .title)
 
           # --auto: wait for all required status checks before merging
           printf '%s\n\n%s\n' \
             "Squash-merged by autodev-train after AI review approval and CI passage." \
             "Pipeline: implement-planned-task -> review-autodev-pr -> automerge-autodev-pr" \
             > /tmp/merge_body.txt
-          gh pr merge "$PR" \
+          gh pr merge "$PR" -R "${REPO}" \
             --squash \
             --auto \
             --subject "${PR_TITLE} [autodev]" \
