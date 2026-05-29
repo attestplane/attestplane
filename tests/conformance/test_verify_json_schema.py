@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "schemas" / "cli" / "verify-result-v1.json"
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchor" / "quarantine_tsa_unreachable.attest"
 
 
 def _schema() -> dict[str, object]:
@@ -25,7 +26,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> dict[str, object]:
     rc = main(argv)
-    assert rc in {0, 1, 2}
+    assert rc in {0, 1, 2, 3}
     return json.loads(capsys.readouterr().out)
 
 
@@ -54,6 +55,8 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     }
     if "explanation" in payload:
         expected_keys.add("explanation")
+    if "anchor_status" in payload:
+        expected_keys.add("anchor_status")
 
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
@@ -66,6 +69,8 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         str(payload["reason_code"]),
     )
     assert isinstance(payload["reasons"], list)
+    if "anchor_status" in payload:
+        assert payload["anchor_status"] in {"verified", "failed", "quarantined"}
     if "explanation" in payload:
         explanation = payload["explanation"]
         assert isinstance(explanation, list)
@@ -113,6 +118,13 @@ def test_verify_json_fail_payload_matches_schema(capsys) -> None:
     _assert_matches_verify_result_v1(payload)
 
 
+def test_verify_json_quarantine_payload_matches_schema(capsys) -> None:
+    payload = _payload(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+    _assert_matches_verify_result_v1(payload)
+    assert payload["anchor_status"] == "quarantined"
+    assert payload["exit_code"] == 3
+
+
 def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     capsys,
 ) -> None:
@@ -134,4 +146,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )

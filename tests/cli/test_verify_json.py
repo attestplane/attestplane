@@ -18,9 +18,13 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchor" / "quarantine_tsa_unreachable.attest"
+TAMPERED_FIXTURE = ROOT / "fixtures" / "anchor" / "tampered_tsr.attest"
 
 
-def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object]]:
+def _run_verify(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> tuple[int, dict[str, object]]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out)
@@ -68,7 +72,9 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, payload = _run_verify(
+        ["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys
+    )
 
     assert rc == 1
     assert payload["result"] == "fail"
@@ -90,7 +96,9 @@ def test_verify_json_and_explain_keep_json_parseable(
 def test_verify_json_explain_success_emits_compact_summary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
+    rc, payload = _run_verify(
+        ["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys
+    )
 
     assert rc == 0
     assert payload["result"] == "pass"
@@ -105,3 +113,36 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "schema_version=1" in summary["message"]
     assert "taxonomy_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
+
+
+def test_verify_json_quarantine_fixture_reports_anchor_status(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+
+    assert rc == 3
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 3
+    assert payload["reason_code"] == "att.verify.anchor_invalid"
+    assert payload["anchor_status"] == "quarantined"
+    assert payload["taxonomy_version"] == 1
+    assert payload["reasons"]
+    reason = payload["reasons"][0]
+    assert reason["code"] == "att.verify.anchor_invalid"
+    assert reason["path"] == "/verification_report/anchor_status"
+    assert reason["message"] == "anchor verification quarantined"
+
+
+def test_verify_json_tampered_tsr_fixture_hard_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload = _run_verify(["verify", "--json", str(TAMPERED_FIXTURE)], capsys)
+
+    assert rc == 1
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 1
+    assert payload["anchor_status"] == "failed"
+    assert payload["taxonomy_version"] == 1
+    assert payload["reasons"]

@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
-SIGNED_BUNDLE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+SIGNED_BUNDLE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+)
 
 
 @pytest.mark.parametrize(
@@ -83,6 +85,7 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "2 proof-bundle contract schema/non-empty violation" in out
+    assert "3 quarantined anchor verdict" in out
     assert "1 cryptographic" in out
 
 

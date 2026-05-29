@@ -107,6 +107,7 @@ def test_bundle_verifier_accepts_additive_unknown_fields() -> None:
     bundle["future_bundle_field"] = {"preserved": True}
     bundle["chain_metadata"]["future_metadata_field"] = "kept"
     bundle["verification_report"]["future_report_field"] = "ignored"
+    bundle["verification_report"]["anchor_status"] = "verified"
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 

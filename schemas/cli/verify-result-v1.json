@@ -125,6 +125,15 @@
           "pattern": "^[0-9a-f]{64}$"
         }
       }
+    },
+    "anchor_status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "failed",
+        "quarantined"
+      ],
+      "description": "Optional anchor verdict surfaced from a bundle's verification_report. 'quarantined' means live TSA verification failed closed and must not be treated as a valid anchor."
     }
   }
 }

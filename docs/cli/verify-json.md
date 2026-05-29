@@ -19,7 +19,8 @@ The payload is fixed at schema version 1:
   "bundle": {
     "schema_version": 1,
     "digest": "..."
-  }
+  },
+  "anchor_status": "verified"
 }
 ```
 
@@ -27,7 +28,9 @@ The payload is fixed at schema version 1:
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
   `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  means a usage, I/O, or schema/shape problem prevented verification. `3`
+  means the bundle was quarantined because live anchor verification failed
+  closed.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -45,12 +48,19 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+- `anchor_status` is optional. When present, it carries the embedded anchor
+  verdict from the bundle's verification report: `verified`, `failed`, or
+  `quarantined`. A quarantined verdict is distinct from a hard fail and must
+  not be treated as a valid anchor.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
+
+Exit code `3` means the anchor path quarantined the bundle. Treat it as a
+distinct operational state, not as a pass and not as a hard reject.
 
 ## `verify --explain`
 
@@ -91,11 +101,12 @@ the structured payload.
   "result": "pass",
   "exit_code": 0,
   "reasons": [],
+  "anchor_status": "verified",
   "explanation": [
     {
       "primary_reason": null,
       "pointer": "/",
-      "message": "signer_subject=key_id:... schema_version=1 anchor=absent"
+      "message": "signer_subject=key_id:... schema_version=1 anchor=verified"
     }
   ],
   "bundle": {
@@ -111,21 +122,22 @@ the structured payload.
 {
   "schema_version": 1,
   "result": "fail",
-  "exit_code": 1,
-  "reason_code": "att.verify.schema_version_unsupported",
+  "exit_code": 3,
+  "reason_code": "att.verify.anchor_invalid",
   "taxonomy_version": 1,
+  "anchor_status": "quarantined",
   "explanation": [
     {
-      "primary_reason": "att.verify.schema_version_unsupported",
-      "pointer": "/chain_metadata/schema_version",
-      "message": "chain_metadata.schema_version=2; this verifier handles 1"
+      "primary_reason": "att.verify.anchor_invalid",
+      "pointer": "/verification_report/anchor_status",
+      "message": "anchor_status=quarantined"
     }
   ],
   "reasons": [
     {
-      "code": "att.verify.schema_version_unsupported",
-      "path": "/chain_metadata/schema_version",
-      "message": "chain_metadata.schema_version=2; this verifier handles 1"
+      "code": "att.verify.anchor_invalid",
+      "path": "/verification_report/anchor_status",
+      "message": "anchor verification quarantined"
     }
   ],
   "bundle": {

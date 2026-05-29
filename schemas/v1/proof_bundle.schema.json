@@ -175,6 +175,10 @@
         "verification_method": {
           "enum": ["canonical-bytes-walk", "canonical-bytes-walk+anchor"],
           "description": "v1 supports two values; 'canonical-bytes-walk+anchor' is reserved for the M5 RFC-3161 anchor verifier."
+        },
+        "anchor_status": {
+          "enum": ["verified", "failed", "quarantined"],
+          "description": "Optional anchor verdict from the live RFC-3161 path. 'quarantined' means TSA/network failure was fail-closed instead of being reported as a valid anchor."
         }
       }
     },

@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -34,6 +33,8 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchor" / "quarantine_tsa_unreachable.attest"
+TAMPERED_FIXTURE = ROOT / "fixtures" / "anchor" / "tampered_tsr.attest"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
@@ -46,6 +47,7 @@ VERIFY_JSON_CONTRACT_V1 = {
         "accept": 0,
         "verification_failure": 1,
         "usage_or_io_error": 2,
+        "quarantine": 3,
     },
     "cases": {
         "accept": {
@@ -77,6 +79,28 @@ VERIFY_JSON_CONTRACT_V1 = {
                         "code": VERIFY_REASON_CANONICAL_MISMATCH,
                         "message": "canonicalization failed",
                         "path": "/events/0/event/payload/artifact_ref",
+                    },
+                ],
+                "result": "fail",
+                "schema_version": 1,
+                "taxonomy_version": 1,
+            },
+        },
+        "quarantine": {
+            "fixture": str(QUARANTINE_FIXTURE.relative_to(ROOT)),
+            "payload": {
+                "anchor_status": "quarantined",
+                "bundle": {
+                    "digest": "ff6174012d1e18ffdc70c96ce8f9d584f3370dce2be1b2256676486314f60270",
+                    "schema_version": 1,
+                },
+                "exit_code": 3,
+                "reason_code": "att.verify.anchor_invalid",
+                "reasons": [
+                    {
+                        "code": "att.verify.anchor_invalid",
+                        "message": "anchor verification quarantined",
+                        "path": "/verification_report/anchor_status",
                     },
                 ],
                 "result": "fail",
@@ -126,6 +150,8 @@ def _assert_matches_verify_result_v1(
     }
     if expect_explanation:
         expected_keys.add("explanation")
+    if "anchor_status" in payload:
+        expected_keys.add("anchor_status")
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
@@ -137,6 +163,8 @@ def _assert_matches_verify_result_v1(
         str(payload["reason_code"]),
     )
     assert isinstance(payload["reasons"], list)
+    if "anchor_status" in payload:
+        assert payload["anchor_status"] in {"verified", "failed", "quarantined"}
 
     bundle = payload["bundle"]
     assert isinstance(bundle, dict)
@@ -196,7 +224,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent",
         }
     ]
 
@@ -209,6 +237,29 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["verification_failure"]
     assert stderr == ""
     assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["verification_failure"]["payload"]
+
+
+def test_verify_json_quarantine_fixture_reports_quarantine_state(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["quarantine"]
+    assert stderr == ""
+    assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["quarantine"]["payload"]
+
+
+def test_verify_json_tampered_tsr_fixture_hard_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(["verify", "--json", str(TAMPERED_FIXTURE)], capsys)
+
+    assert rc == 1
+    assert stderr == ""
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 1
+    assert payload["anchor_status"] == "failed"
 
 
 def test_verify_json_and_explain_keep_json_parseable(

@@ -26,6 +26,9 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `anchor_status` is optional. When present, it carries the embedded anchor
+  verdict from the bundle's verification report. A `quarantined` verdict is a
+  dedicated operational state and maps to exit code `3`, not to a false pass.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the
@@ -34,6 +37,8 @@ accompanies the structured JSON contract.
   reused within a stable taxonomy version.
 - Consumers should keep branching on exit code first, then inspect `result`
   and `reasons[]` for diagnostics.
+- Exit code `3` means the anchor path quarantined the bundle because live TSA
+  verification failed closed. It is distinct from the hard-fail `1` path.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
