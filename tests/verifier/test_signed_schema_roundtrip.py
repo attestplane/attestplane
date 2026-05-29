@@ -31,19 +31,28 @@ from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained
 from attestplane.types import ChainedEvent
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_errors import VERIFY_OK
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION
 
 ROOT = Path(__file__).resolve().parents[2]
-SIGNED_FIXTURES = (ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",)
-CANONICALIZATION_VECTOR_HELPER = ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+SIGNED_FIXTURES = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",
+)
+CANONICALIZATION_VECTOR_HELPER = (
+    ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+)
 
 
 def _load_vector_manifest() -> Any:
     module_name = "attestplane_canonicalization_vectors"
     if module_name in sys.modules:
         return sys.modules[module_name]
-    spec = importlib.util.spec_from_file_location(module_name, CANONICALIZATION_VECTOR_HELPER)
+    spec = importlib.util.spec_from_file_location(
+        module_name, CANONICALIZATION_VECTOR_HELPER
+    )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}")
+        raise RuntimeError(
+            f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -76,7 +85,9 @@ def _json_pointer(path: tuple[str, ...]) -> str:
     return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
 
 
-def first_json_diff(expected: Any, actual: Any, path: tuple[str, ...] = ()) -> str | None:
+def first_json_diff(
+    expected: Any, actual: Any, path: tuple[str, ...] = ()
+) -> str | None:
     """Return a JSON-pointer diagnostic for the first divergent field."""
     if type(expected) is not type(actual):
         return (
@@ -89,7 +100,9 @@ def first_json_diff(expected: Any, actual: Any, path: tuple[str, ...] = ()) -> s
         if expected_keys != actual_keys:
             missing = sorted(expected_keys - actual_keys)
             extra = sorted(actual_keys - expected_keys)
-            return f"{_json_pointer(path)} key mismatch: missing={missing}, extra={extra}"
+            return (
+                f"{_json_pointer(path)} key mismatch: missing={missing}, extra={extra}"
+            )
         for key in sorted(expected):
             diff = first_json_diff(expected[key], actual[key], (*path, str(key)))
             if diff is not None:
@@ -101,7 +114,9 @@ def first_json_diff(expected: Any, actual: Any, path: tuple[str, ...] = ()) -> s
                 f"{_json_pointer(path)} length mismatch: "
                 f"expected {len(expected)}, actual {len(actual)}"
             )
-        for index, (expected_item, actual_item) in enumerate(zip(expected, actual, strict=True)):
+        for index, (expected_item, actual_item) in enumerate(
+            zip(expected, actual, strict=True)
+        ):
             diff = first_json_diff(expected_item, actual_item, (*path, str(index)))
             if diff is not None:
                 return diff
@@ -155,7 +170,9 @@ def _framework_mappings(bundle: dict[str, Any]) -> list[FrameworkMapping]:
         FrameworkMapping(
             obligation_id=raw["obligation_id"],
             evidence_event_indexes=tuple(raw["evidence_event_indexes"]),
-            implementation_status_at_bundle_time=raw["implementation_status_at_bundle_time"],
+            implementation_status_at_bundle_time=raw[
+                "implementation_status_at_bundle_time"
+            ],
         )
         for raw in bundle.get("framework_mappings", [])
     ]
@@ -186,7 +203,9 @@ def rebuild_signed_schema_fixture(bundle: dict[str, Any]) -> dict[str, Any]:
     original_version = attestplane.__version__
     try:
         attestplane.__version__ = expected_version
-        return builder.build(now=_parse_utc(bundle["verification_report"]["verified_at"]))
+        return builder.build(
+            now=_parse_utc(bundle["verification_report"]["verified_at"])
+        )
     finally:
         attestplane.__version__ = original_version
 
@@ -196,7 +215,9 @@ def rebuild_signed_schema_fixture(bundle: dict[str, Any]) -> dict[str, Any]:
     tuple(_signed_schema_round_trip_cases()),
     ids=lambda case: case.case_id,
 )
-def test_signed_schema_fixture_round_trips_byte_identically(case: _RoundTripCase) -> None:
+def test_signed_schema_fixture_round_trips_byte_identically(
+    case: _RoundTripCase,
+) -> None:
     expected = case.load_expected()
     actual = rebuild_signed_schema_fixture(expected)
 
@@ -212,7 +233,9 @@ def test_signed_schema_fixture_round_trips_byte_identically(case: _RoundTripCase
     tuple(_signed_schema_round_trip_cases()),
     ids=lambda case: case.case_id,
 )
-def test_signed_schema_roundtrip_keeps_strict_verifier_contract(case: _RoundTripCase) -> None:
+def test_signed_schema_roundtrip_keeps_strict_verifier_contract(
+    case: _RoundTripCase,
+) -> None:
     expected = case.load_expected()
     actual = rebuild_signed_schema_fixture(expected)
 
@@ -232,6 +255,20 @@ def test_signed_schema_roundtrip_keeps_strict_verifier_contract(case: _RoundTrip
     )
 
 
+def test_signed_schema_roundtrip_surfaces_taxonomy_version_from_result_object() -> None:
+    bundle = json.loads(SIGNED_FIXTURES[0].read_text(encoding="utf-8"))
+    rebuilt = rebuild_signed_schema_fixture(bundle)
+
+    result = verify_proof_bundle(
+        rebuilt,
+        require_non_empty=True,
+        require_signed_attestation=True,
+    )
+
+    assert result.ok is True
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
+
+
 @pytest.mark.parametrize(
     "vector",
     vector_manifest.load_negative_vectors(),
@@ -247,7 +284,9 @@ def test_signed_schema_roundtrip_rejects_negative_edge_case_vectors(
             (vector_manifest.DuplicateKeyError, json.JSONDecodeError),
             match=".+",
         ):
-            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+            json.loads(
+                candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys
+            )
         return
 
     with pytest.raises(CanonicalizationError, match=".+"):

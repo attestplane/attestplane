@@ -18,6 +18,7 @@ from attestplane.sdk import (
 from attestplane.signing import InMemoryKeyProvider, Signer
 from attestplane.types import EventDraft
 from attestplane.verifier import verify_proof_bundle
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION
 
 SUBJECT_DIGEST = "3f551d9" + "0" * 57
 
@@ -41,6 +42,7 @@ def test_minimal_bundle_passes_non_empty_and_signed_schema() -> None:
     assert result.ok is True
     assert result.event_count == 1
     assert result.error_code == "VERIFY_OK"
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
     assert bundle["events"][0]["event"]["matched_input_ref"] == SUBJECT_DIGEST
     assert bundle["events"][0]["event"]["payload"]["subject_digest"] == SUBJECT_DIGEST
     assert bundle["signatures"][0]["signed_event_hash_hex"] == bundle["events"][0]["event_hash_hex"]
