@@ -83,6 +83,23 @@ async def implement_activity(
         return {"branch": run["branch"], "has_changes": True, "skipped": True}
 
     branch = f"autodev/issue-{issue_number}"
+
+    # On retry: if the branch already exists on remote, skip Codex re-run.
+    # This prevents a retry from overwriting an in-progress CI/review with a new SHA.
+    attempt = activity.info().attempt
+    if attempt > 1:
+        try:
+            existing = _run(["git", "ls-remote", "--heads", "origin", branch],
+                            cwd=str(MAIN_REPO))
+            if existing.strip():
+                activity.logger.info(
+                    "Retry attempt %d for issue #%d — branch exists, skipping Codex",
+                    attempt, issue_number,
+                )
+                return {"branch": branch, "has_changes": True, "skipped": True}
+        except RuntimeError:
+            pass  # ls-remote failed → proceed with normal Codex run
+
     worktree = str(MAIN_REPO.parent / f"attestplane-wt-{issue_number}")
     main = str(MAIN_REPO)
 
