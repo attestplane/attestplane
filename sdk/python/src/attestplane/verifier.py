@@ -20,7 +20,7 @@ from base64 import b64decode
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from attestplane.event_types import POLICY_CHECK_EVENT
 from attestplane.hashchain import (
@@ -58,6 +58,8 @@ from attestplane.verify_reason_codes import (
     VerifyReasonCodeV1,
 )
 
+AnchoringStatus = Literal["anchored", "quarantined", "unanchored"]
+
 
 class BundleVerificationError(Exception):
     """Base class for verifier failures that are NOT chain integrity failures.
@@ -71,6 +73,14 @@ class BundleVerificationError(Exception):
 
 class BundleSchemaError(BundleVerificationError):
     """The bundle JSON does not conform to proof_bundle.schema.json."""
+
+
+@dataclass(frozen=True, slots=True)
+class BundleAnchoringState:
+    """Stable anchoring projection exposed by the public verifier result."""
+
+    quarantined: bool
+    status: AnchoringStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +116,7 @@ class BundleVerificationResult:
     retention_proofs_reason: str | None
     signed_attestation_schema_ok: bool
     signed_attestation_schema_reason: str | None
+    anchoring: BundleAnchoringState
     error_code: VerifyErrorCode
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
@@ -156,6 +167,14 @@ _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
 }
 _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS = {"proof_type"}
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
+_QUARANTINE_PRIMARY_REASONS = {
+    VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+    VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SIGNATURE_MISSING,
+}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -402,6 +421,21 @@ def _dedupe_reasons(
     return ordered[0], tuple(ordered[1:])
 
 
+def _bundle_anchoring_state(
+    bundle: dict[str, Any],
+    *,
+    quarantined: bool,
+) -> BundleAnchoringState:
+    if quarantined:
+        return BundleAnchoringState(quarantined=True, status="quarantined")
+    chain_metadata = bundle.get("chain_metadata")
+    anchor_ref = None
+    if isinstance(chain_metadata, dict):
+        anchor_ref = chain_metadata.get("anchor_ref")
+    status: AnchoringStatus = "anchored" if isinstance(anchor_ref, str) and anchor_ref else "unanchored"
+    return BundleAnchoringState(quarantined=False, status=status)
+
+
 def _schema_version_reason_code(metadata_reason: str | None) -> VerifyReasonCodeV1 | None:
     if metadata_reason is None:
         return None
@@ -594,6 +628,18 @@ def verify_proof_bundle(
         policy_ok=policy_ok,
         retention_ok=retention_result.ok,
     )
+    quarantined = (
+        error_code
+        in {
+            VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+            VERIFY_REQUIRED_FIELDS_MISSING,
+        }
+        or primary_reason in _QUARANTINE_PRIMARY_REASONS
+    )
+    anchoring = _bundle_anchoring_state(
+        bundle,
+        quarantined=quarantined,
+    )
     return BundleVerificationResult(
         ok=(chain_result.ok and agreement and metadata_ok and policy_ok and retention_result.ok and signed_schema_ok),
         chain_result=chain_result,
@@ -611,6 +657,7 @@ def verify_proof_bundle(
         retention_proofs_reason=retention_result.reason,
         signed_attestation_schema_ok=signed_schema_ok,
         signed_attestation_schema_reason=signed_schema_reason,
+        anchoring=anchoring,
         error_code=error_code,
         primary_reason=primary_reason,
         secondary_reasons=secondary_reasons,
@@ -672,6 +719,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 __all__ = [
+    "AnchoringStatus",
+    "BundleAnchoringState",
     "BundleSchemaError",
     "BundleVerificationError",
     "BundleVerificationResult",

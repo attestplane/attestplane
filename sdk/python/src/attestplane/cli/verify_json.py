@@ -184,6 +184,29 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
 
+def _bundle_anchoring_payload(
+    bundle: dict[str, Any] | None,
+    *,
+    quarantined: bool,
+) -> dict[str, Any]:
+    if quarantined:
+        return {
+            "quarantined": True,
+            "status": "quarantined",
+        }
+    anchor_state = "unanchored"
+    if bundle is not None:
+        chain_metadata = bundle.get("chain_metadata")
+        if isinstance(chain_metadata, dict):
+            anchor_ref = chain_metadata.get("anchor_ref")
+            if isinstance(anchor_ref, str) and anchor_ref:
+                anchor_state = "anchored"
+    return {
+        "quarantined": False,
+        "status": anchor_state,
+    }
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
@@ -259,6 +282,7 @@ def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[VerifyReasonCod
 def _json_failure(
     *,
     bundle_digest: str,
+    bundle: dict[str, Any] | None,
     reason: dict[str, Any],
     exit_code: int,
     stderr_code: str | None = None,
@@ -275,6 +299,7 @@ def _json_failure(
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
             "digest": bundle_digest,
         },
+        "anchoring": _bundle_anchoring_payload(bundle, quarantined=exit_code == 2),
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -288,6 +313,7 @@ def _json_failure(
 def _json_pass(
     *,
     bundle_digest: str,
+    bundle: dict[str, Any] | None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
@@ -301,6 +327,7 @@ def _json_pass(
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
             "digest": bundle_digest,
         },
+        "anchoring": _bundle_anchoring_payload(bundle, quarantined=False),
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -481,6 +508,7 @@ def build_verify_json_outcome(
         digest = _bundle_digest(str(bundle_path).encode("utf-8"))
         return _json_failure(
             bundle_digest=digest,
+            bundle=None,
             reason=_reason_entry(
                 VERIFY_REASON_SCHEMA_INVALID,
                 "/",
@@ -507,6 +535,7 @@ def build_verify_json_outcome(
     except UnicodeDecodeError as exc:
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=None,
             reason=_reason_entry(
                 VERIFY_REASON_SCHEMA_INVALID,
                 "/",
@@ -530,6 +559,7 @@ def build_verify_json_outcome(
             path = f"/{match.group(1)}"
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=None,
             reason=_reason_entry(
                 VERIFY_REASON_STRUCTURE_INVALID,
                 path,
@@ -544,6 +574,7 @@ def build_verify_json_outcome(
     except json.JSONDecodeError as exc:
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=None,
             reason=_reason_entry(
                 VERIFY_REASON_SCHEMA_INVALID,
                 "/",
@@ -563,6 +594,7 @@ def build_verify_json_outcome(
     if not isinstance(bundle, dict):
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=None,
             reason=_reason_entry(
                 VERIFY_REASON_SCHEMA_INVALID,
                 "/",
@@ -590,6 +622,7 @@ def build_verify_json_outcome(
         path = _canonicalization_path(canonical_exc, event_index=canonical_index)
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=bundle,
             reason=_reason_entry(
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 path,
@@ -613,6 +646,7 @@ def build_verify_json_outcome(
         code, path = _schema_reason_for_bundle_error(exc)
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=bundle,
             reason=_reason_entry(
                 code,
                 path,
@@ -628,6 +662,7 @@ def build_verify_json_outcome(
         path = "/events"
         return _json_failure(
             bundle_digest=bundle_digest,
+            bundle=bundle,
             reason=_reason_entry(
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 path,
@@ -642,6 +677,7 @@ def build_verify_json_outcome(
     if result.ok:
         return _json_pass(
             bundle_digest=bundle_digest,
+            bundle=bundle,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
 
@@ -667,6 +703,7 @@ def build_verify_json_outcome(
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
+            "anchoring": _bundle_anchoring_payload(bundle, quarantined=exit_code == 2),
             **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,

@@ -8,5 +8,9 @@
   "reasons": [],
   "result": "pass",
   "schema_version": 1,
-  "taxonomy_version": 1
+  "taxonomy_version": 1,
+  "anchoring": {
+    "quarantined": false,
+    "status": "unanchored"
+  }
 }

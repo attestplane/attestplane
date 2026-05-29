@@ -55,6 +55,16 @@ function signedBundle(): ProofBundle {
   return bundle as unknown as ProofBundle;
 }
 
+function anchoredBundle(): ProofBundle {
+  const builder = new ProofBundleBuilder({
+    chain_id: 'anchored-ts',
+    producer_runtime: 'test',
+    anchor_ref: 'anchor://test/anchored',
+  });
+  builder.extend(buildChain());
+  return builder.build({ now: new Date('2026-05-19T00:00:00.000Z') });
+}
+
 describe('verifyProofBundle strict schema options', () => {
   it('preserves default unsigned bundle behavior', () => {
     const result = verifyProofBundle(bundleWithOneEvent());
@@ -64,6 +74,7 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.secondary_reasons).toEqual([]);
     expect(result.signed_attestation_schema_ok).toBe(true);
     expect(result.signed_attestation_schema_reason).toBeNull();
+    expect(result.anchoring).toEqual({ quarantined: false, status: 'unanchored' });
   });
 
   it('requires at least one signed attestation when strict schema is enabled', () => {
@@ -85,6 +96,13 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.signed_attestation_schema_ok).toBe(true);
   });
 
+  it('reports anchored when the bundle carries anchor_ref', () => {
+    const result = verifyProofBundle(anchoredBundle());
+
+    expect(result.ok).toBe(true);
+    expect(result.anchoring).toEqual({ quarantined: false, status: 'anchored' });
+  });
+
   it('keeps requireNonEmpty fail-closed on empty bundles', () => {
     const builder = new ProofBundleBuilder({ chain_id: 'empty-ts', producer_runtime: 'test' });
     const result = verifyProofBundle(builder.build(), { requireNonEmpty: true });
@@ -93,6 +111,7 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.error_code).toBe('VERIFY_REQUIRED_FIELDS_MISSING');
     expect(result.primary_reason).toBe(VERIFY_REASON_REQUIRED_FIELD_MISSING);
     expect(result.signed_attestation_schema_ok).toBe(true);
+    expect(result.anchoring).toEqual({ quarantined: true, status: 'quarantined' });
   });
 
   it('does not require signed attestations when only requireNonEmpty is enabled', () => {

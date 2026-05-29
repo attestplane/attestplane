@@ -14,7 +14,10 @@ const ROOT = resolve(__dirname, '..', '..', '..', '..');
 const FIXTURE = resolve(ROOT, 'tests', 'fixtures', 'bundles', 'valid_signed_attestation.json');
 const PYTHON_SRC = resolve(ROOT, 'sdk', 'python', 'src');
 
-function cliVerifyJson(bundlePath: string): { readonly taxonomy_version: number } {
+function cliVerifyJson(bundlePath: string): {
+  readonly taxonomy_version: number;
+  readonly anchoring: { readonly quarantined: boolean; readonly status: string };
+} {
   const env = {
     ...process.env,
     PYTHONPATH: process.env.PYTHONPATH
@@ -34,7 +37,10 @@ function cliVerifyJson(bundlePath: string): { readonly taxonomy_version: number 
       encoding: 'utf-8',
     },
   );
-  return JSON.parse(stdout) as { readonly taxonomy_version: number };
+  return JSON.parse(stdout) as {
+    readonly taxonomy_version: number;
+    readonly anchoring: { readonly quarantined: boolean; readonly status: string };
+  };
 }
 
 describe('verifyProofBundle taxonomy version', () => {
@@ -47,5 +53,7 @@ describe('verifyProofBundle taxonomy version', () => {
     expect(sdkResult.ok).toBe(true);
     expect(sdkResult.taxonomy_version).toBe(cliResult.taxonomy_version);
     expect(sdkResult.taxonomy_version).toBe(1);
+    expect(sdkResult.anchoring).toEqual(cliResult.anchoring);
+    expect(sdkResult.anchoring).toEqual({ quarantined: false, status: 'unanchored' });
   });
 });

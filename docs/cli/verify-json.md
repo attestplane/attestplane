@@ -19,6 +19,10 @@ The payload is fixed at schema version 1:
   "bundle": {
     "schema_version": 1,
     "digest": "..."
+  },
+  "anchoring": {
+    "quarantined": false,
+    "status": "unanchored"
   }
 }
 ```
@@ -47,6 +51,10 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+- `anchoring.quarantined` is `true` when the verifier quarantines the bundle
+  instead of surfacing a hard verification failure.
+- `anchoring.status` is `anchored`, `quarantined`, or `unanchored`. The field
+  is additive and stable.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
@@ -103,6 +111,10 @@ the structured payload.
   "bundle": {
     "schema_version": 1,
     "digest": "..."
+  },
+  "anchoring": {
+    "quarantined": false,
+    "status": "unanchored"
   }
 }
 ```
@@ -116,6 +128,10 @@ the structured payload.
   "exit_code": 2,
   "reason_code": "att.verify.schema_version_unsupported",
   "taxonomy_version": 1,
+  "anchoring": {
+    "quarantined": true,
+    "status": "quarantined"
+  },
   "explanation": [
     {
       "primary_reason": "att.verify.schema_version_unsupported",

@@ -180,6 +180,8 @@ from attestplane.types import (
     SubjectRef,
 )
 from attestplane.verifier import (
+    AnchoringStatus,
+    BundleAnchoringState,
     BundleSchemaError,
     BundleVerificationError,
     BundleVerificationResult,
@@ -259,8 +261,10 @@ __all__ = [
     "AnchorVerificationError",
     "AnchorVerificationResult",
     "BundleSchemaError",
+    "BundleAnchoringState",
     "BundleVerificationError",
     "BundleVerificationResult",
+    "AnchoringStatus",
     "DEFAULT_FORBIDDEN_FIELDS",
     "EmptyProofBundleError",
     "FORBIDDEN_PAYLOAD_FIELDS",

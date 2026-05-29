@@ -73,6 +73,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     ]
 
     expected_keys = {
@@ -83,6 +84,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     }
     if expect_explanation:
         expected_keys.add("explanation")
@@ -103,6 +105,12 @@ def _assert_matches_verify_result_v1(
     assert set(bundle) == {"schema_version", "digest"}
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+
+    anchoring = payload["anchoring"]
+    assert isinstance(anchoring, dict)
+    assert set(anchoring) == {"quarantined", "status"}
+    assert isinstance(anchoring["quarantined"], bool)
+    assert anchoring["status"] in {"anchored", "quarantined", "unanchored"}
 
     if expect_explanation:
         explanation = payload["explanation"]
@@ -152,6 +160,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
     assert payload["reasons"] == []
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     assert payload["explanation"] == [
         {
             "primary_reason": None,
@@ -178,6 +187,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["taxonomy_version"] == 1
     assert payload["bundle"]["schema_version"] == 1
     assert payload["bundle"]["digest"] == "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd"
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     assert payload["reasons"] == [
         {
             "code": VERIFY_REASON_CANONICAL_MISMATCH,
@@ -199,6 +209,7 @@ def test_verify_json_unknown_required_field_fixture_is_quarantined(
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["taxonomy_version"] == 1
+    assert payload["anchoring"] == {"quarantined": True, "status": "quarantined"}
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
 
@@ -216,6 +227,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert explanation["primary_reason"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert explanation["pointer"].startswith("/events/")
     assert "Unicode-NFC" in explanation["message"]
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
@@ -235,6 +247,7 @@ def test_verify_json_reports_invalid_json(
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_SCHEMA_INVALID
     assert explanation["pointer"] == "/"
@@ -260,6 +273,7 @@ def test_verify_json_reports_invalid_utf8(
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert payload["taxonomy_version"] == 1
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -280,6 +294,7 @@ def test_verify_json_rejects_duplicate_keys(
     assert payload["reason_code"] == VERIFY_REASON_STRUCTURE_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert payload["taxonomy_version"] == 1
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_STRUCTURE_INVALID
     assert reason["path"] == "/chain_metadata"
@@ -300,6 +315,7 @@ def test_verify_json_rejects_non_object_root(
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert payload["taxonomy_version"] == 1
+    assert payload["anchoring"] == {"quarantined": True, "status": "quarantined"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -319,6 +335,7 @@ def test_verify_json_reports_missing_bundle_path(
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert payload["taxonomy_version"] == 1
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -339,6 +356,7 @@ def test_verify_json_schema_error_maps_missing_version_path(
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == ""
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["anchoring"] == {"quarantined": True, "status": "quarantined"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["path"] == "/chain_metadata/schema_version"
 
@@ -357,6 +375,7 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == ""
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["anchoring"] == {"quarantined": True, "status": "quarantined"}
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert reason["path"] == "/chain_metadata/critical_future_field"

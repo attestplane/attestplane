@@ -59,6 +59,13 @@ import {
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
 
+export type AnchoringStatus = 'anchored' | 'quarantined' | 'unanchored';
+
+export interface BundleAnchoringState {
+  readonly quarantined: boolean;
+  readonly status: AnchoringStatus;
+}
+
 export class BundleVerificationError extends Error {
   constructor(message: string) {
     super(message);
@@ -91,6 +98,7 @@ export interface BundleVerificationResult {
   readonly retention_proofs_reason: string | null;
   readonly signed_attestation_schema_ok: boolean;
   readonly signed_attestation_schema_reason: string | null;
+  readonly anchoring: BundleAnchoringState;
   readonly error_code: VerifyErrorCode;
   readonly primary_reason: VerifyReasonCodeV1 | null;
   readonly secondary_reasons: readonly VerifyReasonCodeV1[];
@@ -155,6 +163,13 @@ const ALLOWED_TOP_LEVEL = new Set([
 const ALLOWED_VERIFICATION_METHODS = new Set([
   'canonical-bytes-walk',
   'canonical-bytes-walk+anchor',
+]);
+const QUARANTINE_PRIMARY_REASONS = new Set<VerifyReasonCodeV1>([
+  VERIFY_REASON_SCHEMA_INVALID,
+  VERIFY_REASON_SCHEMA_UNKNOWN,
+  VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+  VERIFY_REASON_REQUIRED_FIELD_MISSING,
+  VERIFY_REASON_SIGNATURE_MISSING,
 ]);
 const HEX64 = /^[0-9a-f]{64}$/;
 
@@ -522,6 +537,17 @@ function verificationReasons(input: {
   return dedupeReasons(reasons);
 }
 
+function bundleAnchoringState(bundle: ProofBundle, quarantined: boolean): BundleAnchoringState {
+  if (quarantined) {
+    return { quarantined: true, status: 'quarantined' };
+  }
+  const anchorRef = bundle.chain_metadata.anchor_ref;
+  return {
+    quarantined: false,
+    status: typeof anchorRef === 'string' && anchorRef.length > 0 ? 'anchored' : 'unanchored',
+  };
+}
+
 function verifyMetadataClosure(
   bundle: ProofBundle,
   events: readonly ChainedEvent[],
@@ -714,6 +740,10 @@ export function verifyProofBundle(
     policyOk: policyTraceRefs.ok,
     retentionOk: retentionProofs.ok,
   });
+  const quarantined =
+    errorCode === VERIFY_BUNDLE_SCHEMA_INCOMPLETE ||
+    errorCode === VERIFY_REQUIRED_FIELDS_MISSING ||
+    (reasons.primary !== null && QUARANTINE_PRIMARY_REASONS.has(reasons.primary));
 
   return {
     ok:
@@ -739,6 +769,7 @@ export function verifyProofBundle(
     retention_proofs_reason: retentionProofs.reason,
     signed_attestation_schema_ok: signedAttestationSchema.ok,
     signed_attestation_schema_reason: signedAttestationSchema.reason,
+    anchoring: bundleAnchoringState(bundle, quarantined),
     error_code: errorCode,
     primary_reason: reasons.primary,
     secondary_reasons: reasons.secondary,

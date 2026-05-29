@@ -136,6 +136,7 @@ def test_export_then_verify_json_output(tmp_path: Path, capsys: pytest.CaptureFi
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
     assert payload["bundle"]["digest"]
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
 
 
 def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

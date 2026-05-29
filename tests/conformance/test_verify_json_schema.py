@@ -45,6 +45,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     ]
 
     expected_keys = {
@@ -55,6 +56,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     }
     if "explanation" in payload:
         expected_keys.add("explanation")
@@ -84,6 +86,12 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert set(bundle) == {"schema_version", "digest"}
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+
+    anchoring = payload["anchoring"]
+    assert isinstance(anchoring, dict)
+    assert set(anchoring) == {"quarantined", "status"}
+    assert isinstance(anchoring["quarantined"], bool)
+    assert anchoring["status"] in {"anchored", "quarantined", "unanchored"}
 
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
@@ -120,12 +128,14 @@ def test_verify_json_fail_payload_matches_schema(capsys) -> None:
     rc, payload = _payload(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
     assert rc == 1
     _assert_matches_verify_result_v1(payload)
+    assert payload["anchoring"] == {"quarantined": False, "status": "unanchored"}
 
 
 def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
     rc, payload = _payload(["verify", "--json", str(UNKNOWN_REQUIRED_FIXTURE)], capsys)
     assert rc == 2
     _assert_matches_verify_result_v1(payload)
+    assert payload["anchoring"] == {"quarantined": True, "status": "quarantined"}
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN

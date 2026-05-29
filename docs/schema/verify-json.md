@@ -27,6 +27,10 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `anchoring.quarantined` is `true` only when the verifier quarantines the
+  bundle on a fail-closed contract rejection.
+- `anchoring.status` is a stable additive enum: `anchored`, `quarantined`, or
+  `unanchored`.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the

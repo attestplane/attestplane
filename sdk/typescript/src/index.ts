@@ -231,6 +231,8 @@ export {
   shortSummary,
   verifyProofBundle,
   verifyProofBundleFile,
+  type AnchoringStatus,
+  type BundleAnchoringState,
   type BundleVerificationResult,
 } from './verifier.js';
 

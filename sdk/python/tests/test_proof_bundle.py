@@ -180,6 +180,22 @@ def test_verify_proof_bundle_accepts_good_bundle() -> None:
     assert result.chain_result.ok is True
     assert result.metadata_ok is True
     assert result.policy_trace_refs_ok is True
+    assert result.anchoring.quarantined is False
+    assert result.anchoring.status == "unanchored"
+
+
+def test_verify_proof_bundle_reports_anchored_state_when_anchor_ref_present() -> None:
+    builder = ProofBundleBuilder(
+        chain_id="anchored",
+        producer_runtime="test",
+        anchor_ref="anchor://test/anchored",
+    )
+    builder.extend(_build_good_chain(1))
+    result = verify_proof_bundle(builder.build())
+
+    assert result.ok is True
+    assert result.anchoring.quarantined is False
+    assert result.anchoring.status == "anchored"
 
 
 def test_verify_proof_bundle_accepts_minimum_signed_attestation_schema() -> None:
@@ -201,6 +217,8 @@ def test_verify_proof_bundle_require_non_empty_enforces_signature_schema() -> No
     assert result.ok is False
     assert result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE
     assert "signatures" in (result.signed_attestation_schema_reason or "")
+    assert result.anchoring.quarantined is True
+    assert result.anchoring.status == "quarantined"
 
 
 @pytest.mark.parametrize(
