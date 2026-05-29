@@ -26,8 +26,10 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
-  `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  `0` means accept, `1` means the verifier rejected the bundle, `2`
+  means the bundle was quarantined by a fail-closed schema or contract
+  rejection, and `3` means a usage, I/O, or malformed-input problem
+  prevented verification.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -73,7 +75,7 @@ bundle forward-compatibility rules documented in #217. It also does not alter
 Within that taxonomy, additive unknown fields remain accepted, while
 unsupported major versions and fail-closed critical/required fields surface
 `att.verify.schema_version_unsupported` or `att.verify.schema_unknown`
-respectively.
+respectively, and they map to the quarantine exit code.
 
 When the two flags are combined, stdout remains valid JSON and the rationale
 text is carried in `explanation[]` and `reasons[].explanation`.
@@ -111,7 +113,7 @@ the structured payload.
 {
   "schema_version": 1,
   "result": "fail",
-  "exit_code": 1,
+  "exit_code": 2,
   "reason_code": "att.verify.schema_version_unsupported",
   "taxonomy_version": 1,
   "explanation": [

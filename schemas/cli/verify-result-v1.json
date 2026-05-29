@@ -28,7 +28,8 @@
     },
     "exit_code": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 3
     },
     "reason_code": {
       "anyOf": [
