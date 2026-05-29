@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -18,10 +19,10 @@ def versions(count: int) -> list[object]:
     return [architecture_audit_trigger.StableVersion(1, index // 10, index % 10) for index in range(count)]
 
 
-def commit(subject: str) -> object:
+def commit(subject: str, *, sha: str = "a" * 40, time: str = "2026-05-21T00:00:00+00:00") -> object:
     return architecture_audit_trigger.CommitInfo(
-        sha="a" * 40,
-        time="2026-05-21T00:00:00+00:00",
+        sha=sha,
+        time=time,
         author="Test",
         subject=subject,
     )
@@ -429,6 +430,143 @@ def test_build_plan_payload_produces_structured_plan_block() -> None:
     assert plan_with_id["open_issues"] == manifest["open_issues"]
     assert "ATT_PLAN_SCHEMA_V1_START" in block
     assert "plan_id" in block
+
+
+def test_architecture_audit_dry_run_writes_contract_artifacts_for_medium_plan(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    stable_tags = versions(51)
+    commits = [
+        commit("feat: add architecture-audit planning contract", sha="1" * 40),
+        commit("chore(release): prepare v1.4.9", sha="2" * 40),
+        commit("fix: preserve architecture audit report naming", sha="3" * 40),
+        commit("chore(release): prepare v1.5.0", sha="4" * 40),
+        commit("docs: validate medium plan issue creation", sha="5" * 40),
+    ]
+    consulted: list[dict[str, object]] = []
+
+    def fake_consult_opus_for_plan(
+        manifest: dict[str, object],
+        issue_body: str,
+        *,
+        command: str | None = None,
+        timeout_seconds: int = 0,
+    ) -> object:
+        del command, timeout_seconds
+        consulted.append(
+            {
+                "manifest": manifest,
+                "issue_body": issue_body,
+            }
+        )
+        assert manifest["plan_level"] == "medium"
+        assert manifest["anchor_tag"] == "v1.0.0"
+        assert manifest["head_sha"] == "f" * 40
+        assert manifest["stable_release_count"] == 50
+        assert manifest["real_commit_count"] == 3
+        assert manifest["release_prep_commit_count"] == 2
+        assert [item["subject"] for item in manifest["recent_real_commits"]] == [
+            "feat: add architecture-audit planning contract",
+            "fix: preserve architecture audit report naming",
+            "docs: validate medium plan issue creation",
+        ]
+        return architecture_audit_trigger.AcceptedPlan(
+            body=(
+                "> Plan source: opus-live\n\n"
+                "**ISSUE 1 · [P0][architecture][product-contract] Define the v1.5.0 planning issue contract**\n"
+                "- Priority: P0\n"
+                "- Affected modules: SDK public APIs, verifier behavior\n"
+                "- Acceptance criteria:\n"
+                "  1. Keep the architecture audit workflow on the planning-issue path.\n"
+                "- Validation commands:\n"
+                "  - `git diff --check`\n"
+                "- Rollout / migration notes: keep issue #61 open until owner acceptance.\n"
+            ),
+            source="opus-live",
+            fallback_reason="",
+        )
+
+    monkeypatch.setattr(architecture_audit_trigger, "read_stable_tags", lambda: stable_tags)
+    monkeypatch.setattr(
+        architecture_audit_trigger,
+        "read_commit_range",
+        lambda anchor, milestone: commits,
+    )
+    monkeypatch.setattr(
+        architecture_audit_trigger,
+        "run_git",
+        lambda args: "f" * 40 if args == ["rev-list", "-n", "1", "v1.5.0"] else "",
+    )
+    monkeypatch.setattr(architecture_audit_trigger, "consult_opus_for_plan", fake_consult_opus_for_plan)
+
+    output_dir = tmp_path / "architecture-audits"
+    exit_code = architecture_audit_trigger.main(
+        [
+            "--milestone-tag",
+            "v1.5.0",
+            "--anchor-tag",
+            "v1.0.0",
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+
+    assert exit_code == 0
+    assert len(consulted) == 1
+
+    manifest_path = output_dir / "architecture-gap-audit-v1.5.0.json"
+    report_path = output_dir / "architecture-gap-audit-v1.5.0.md"
+    plan_path = output_dir / "architecture-task-plan-v1.5.0.md"
+
+    assert manifest_path.is_file()
+    assert report_path.is_file()
+    assert plan_path.is_file()
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest == {
+        "schema": "attestplane_architecture_gap_audit.v1",
+        "generated_at": manifest["generated_at"],
+        "milestone_tag": "v1.5.0",
+        "anchor_tag": "v1.0.0",
+        "head_sha": "f" * 40,
+        "previous_audit_issue": None,
+        "action": "medium-plan",
+        "reason": "half_version_medium_upgrade",
+        "plan_level": "medium",
+        "stable_release_count": 50,
+        "real_commit_count": 3,
+        "release_prep_commit_count": 2,
+        "recent_real_commits": [
+            {
+                "sha": "1" * 40,
+                "time": "2026-05-21T00:00:00+00:00",
+                "author": "Test",
+                "subject": "feat: add architecture-audit planning contract",
+                "kind": "real",
+            },
+            {
+                "sha": "3" * 40,
+                "time": "2026-05-21T00:00:00+00:00",
+                "author": "Test",
+                "subject": "fix: preserve architecture audit report naming",
+                "kind": "real",
+            },
+            {
+                "sha": "5" * 40,
+                "time": "2026-05-21T00:00:00+00:00",
+                "author": "Test",
+                "subject": "docs: validate medium plan issue creation",
+                "kind": "real",
+            },
+        ],
+        "open_issue_count": 0,
+        "open_issues": [],
+    }
+    assert "Development Plan Request" in report_path.read_text(encoding="utf-8")
+    assert "**ISSUE 1 · [P0][architecture][product-contract]" in plan_path.read_text(encoding="utf-8")
+    assert consulted[0]["manifest"]["plan_level"] == "medium"
+    assert "Issue-First Completion Contract" in consulted[0]["issue_body"]
 
 
 def test_load_open_issues_normalizes_github_issue_json(tmp_path: Path) -> None:
