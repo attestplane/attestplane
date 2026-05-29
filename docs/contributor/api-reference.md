@@ -1,7 +1,7 @@
 # API reference (auto-generated)
 
 This page explains how Attestplane generates API reference material for both SDKs from the
-source code itself, and how to consume it.
+source code itself, and how to consume the artifact-only and published surfaces.
 
 Until 2026-05-21 all SDK reference material lived inside ADRs and prose docs and was
 hand-maintained. Audit agent 16 noted: "no auto API reference for either Python or TypeScript
@@ -21,7 +21,8 @@ Two static HTML bundles, produced on every triggering run:
 
 The workflow that drives both renders is
 [`.github/workflows/api-ref.yml`](../../.github/workflows/api-ref.yml). It is read-only:
-it does not push to any branch, move any tag, or publish anywhere.
+it does not push to any branch, move any tag, or publish anywhere. A separate
+post-release staging step publishes stable release-line docs after release CD succeeds.
 
 ## How to download the artifact
 
@@ -31,7 +32,8 @@ it does not push to any branch, move any tag, or publish anywhere.
 4. Download `api-ref-python-<sha>.zip` or `api-ref-typescript-<sha>.zip`.
 5. Unzip locally and open `index.html` in a browser.
 
-Artifacts are retained for 60 days.
+Artifacts are retained for 60 days and remain the debugging path when you need the raw
+render output for a specific commit or pull request.
 
 ## Per-PR rendering vs `main` rendering
 
@@ -41,10 +43,25 @@ Artifacts are retained for 60 days.
   reference for `main` is always one click away from the most recent commit.
 - **Manual** &mdash; the workflow also accepts `workflow_dispatch` for ad-hoc renders.
 
+## Published stable docs
+
+Stable release API reference is published to GitHub Pages after the release CD gate passes.
+The stable surface is versioned by release line and exact stable release:
+
+- `https://attestplane.github.io/attestplane/api/latest/` redirects to the latest
+  suffix-free stable release.
+- `https://attestplane.github.io/attestplane/api/releases/vX.Y.Z/` is the exact release
+  snapshot for a stable tag such as `v1.5.0`.
+- `https://attestplane.github.io/attestplane/api/lines/vX.Y/` is the stable line alias for
+  a release line such as `v1.5`.
+
+Prerelease tags may still render artifacts through the read-only workflow, but they do not
+move the public `latest` pointer or publish to the stable Pages surface.
+
 ## Limitations
 
-- **Artifact-only, not yet published.** The HTML lives only as a workflow artifact for now.
-  There is no GitHub Pages site, no custom domain, no `gh-pages` branch.
+- **Artifact-only remains available.** The HTML artifact output still exists for debugging
+  and review even though stable releases are published to GitHub Pages.
 - **Quality follows docstrings.** The API reference is auto-generated from docstrings
   (Python) and TSDoc comments (TypeScript). Gaps in the rendered output are not bugs in this
   workflow &mdash; they are missing or thin docstrings in the SDK source. If you spot a gap,
@@ -70,7 +87,6 @@ minimum signed-attestation schema.
 
 ## Future work
 
-A follow-up PR will publish the rendered HTML to GitHub Pages so the latest `main` reference
-is always reachable at a stable URL without downloading an artifact. That work is
-intentionally scoped out of this change to keep the surface auditable: this PR introduces
-generation only, not distribution.
+The published surface currently targets stable release tags only. If a future release train
+needs a preview or branch-specific API reference, that should land as a separate surface so
+the stable `latest` pointer stays pinned to suffix-free stable releases.
