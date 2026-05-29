@@ -28,7 +28,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, cast
 
 from attestplane.hashchain import SCHEMA_VERSION as _CHAIN_SCHEMA_VERSION
 from attestplane.hashchain import chain_extend, genesis_head, head_of, verify_chain
@@ -442,7 +442,7 @@ def _bundle_anchoring_status(bundle: dict[str, Any]) -> _ANCHORING_STATUS | None
         return None
     if not isinstance(quarantined, bool):
         return None
-    return status
+    return cast(_ANCHORING_STATUS, status)
 
 
 def build_auditor_export(
