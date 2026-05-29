@@ -21,6 +21,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   AUTODEV_BOT_NAME: "autodev-bot"
   AUTODEV_BOT_EMAIL: "258170091+merchloubna70-dot@users.noreply.github.com"
+  https_proxy: "http://127.0.0.1:7897"
+  http_proxy: "http://127.0.0.1:7897"
 
 jobs:
   implement:
