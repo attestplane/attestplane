@@ -12,6 +12,7 @@ with workflow.unsafe.imports_passed_through():
     from .activities import (
         implement_activity,
         create_pr_activity,
+        fix_ci_activity,
         review_pr_activity,
         post_review_activity,
         merge_pr_activity,
@@ -66,6 +67,16 @@ class AutodevPipeline:
             task_queue=_TASK_QUEUE,
             start_to_close_timeout=timedelta(minutes=10),
             retry_policy=_retry_5,
+        )
+
+        # Wait for CI; if it fails, run Codex once to auto-fix errors.
+        # merge_pr_activity does its own final CI check before merging.
+        await workflow.execute_activity(
+            fix_ci_activity,
+            args=[n, pr["pr_number"]],
+            task_queue=_TASK_QUEUE,
+            start_to_close_timeout=timedelta(minutes=60),
+            retry_policy=_retry_3,
         )
 
         review = await workflow.execute_activity(

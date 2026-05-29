@@ -330,6 +330,157 @@ async def post_review_activity(
     return {"posted": True}
 
 
+# ── activity: fix_ci ──────────────────────────────────────────────────────────
+
+@activity.defn(name="fix_ci")
+async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
+    """Wait for CI on a freshly-created PR; if it fails, run Codex to fix the errors.
+
+    Returns {"ci_passed": bool, "fixed": bool}.
+    Called once between create_pr and review_pr. merge_pr_activity re-checks CI
+    independently before the final squash-merge, so a False/"not fixed" here only
+    means we skip the fast-path — the PR stays open for review.
+    """
+    import time as _time
+
+    branch = _gh(
+        ["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]
+    ).strip()
+
+    # ── wait for CI to complete (up to 5 minutes) ──────────────────────────────
+    ci_wait_deadline = _time.monotonic() + 300
+    while True:
+        pr_info = json.loads(_gh(
+            ["pr", "view", str(pr_number), "--repo", REPO_SLUG,
+             "--json", "mergeStateStatus,statusCheckRollup"]
+        ))
+        merge_state = pr_info.get("mergeStateStatus", "UNKNOWN")
+        checks = pr_info.get("statusCheckRollup", [])
+        pending = [c for c in checks if c.get("status") not in ("COMPLETED",)]
+
+        if merge_state == "CLEAN":
+            activity.logger.info("CI passed for PR #%d (CLEAN) — no fix needed", pr_number)
+            return {"ci_passed": True, "fixed": False}
+
+        if not pending:
+            # All checks completed but not CLEAN → CI failed
+            activity.logger.info("CI failed for PR #%d (state=%s) — will attempt Codex fix", pr_number, merge_state)
+            break
+
+        if _time.monotonic() > ci_wait_deadline:
+            activity.logger.warning("Timed out waiting for CI on PR #%d — attempting fix anyway", pr_number)
+            break
+
+        await asyncio.sleep(30)
+
+    # ── extract CI error logs ──────────────────────────────────────────────────
+    failed_checks = [c for c in checks if c.get("conclusion") == "FAILURE"]
+    error_summary = ""
+    for check in failed_checks[:5]:
+        check_name = check.get("name", "unknown")
+        run_id = str(check.get("databaseId", ""))
+        if run_id:
+            try:
+                log = _gh(["run", "view", run_id, "--log-failed", "--repo", REPO_SLUG], timeout=90)
+                # Keep only diagnostic lines to stay within Codex context
+                kept = [
+                    ln for ln in log.splitlines()
+                    if any(kw in ln for kw in
+                           ["error", "FAILED", "Error:", "E402", "assert", "Found", "✗",
+                            "ruff", "mypy", "biome", "markdownlint", "lychee", "TypeError"])
+                ]
+                error_summary += f"\n### {check_name}\n" + "\n".join(kept[:40]) + "\n"
+            except RuntimeError:
+                error_summary += f"\n### {check_name}\n(log unavailable)\n"
+
+    if not error_summary.strip():
+        activity.logger.warning("No extractable CI errors for PR #%d — skipping Codex fix", pr_number)
+        return {"ci_passed": False, "fixed": False}
+
+    # ── run Codex on a fresh worktree of the branch ───────────────────────────
+    main = str(MAIN_REPO)
+    worktree = str(MAIN_REPO.parent / f"attestplane-cifix-{issue_number}")
+    try:
+        _run(["git", "fetch", "origin", branch], cwd=main)
+        if Path(worktree).exists():
+            try:
+                _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
+            except RuntimeError:
+                pass
+        _run(["git", "worktree", "add", "-B", branch, worktree, f"origin/{branch}"], cwd=main)
+
+        fix_prompt = (
+            f"CI checks failed on PR branch '{branch}'. Fix ONLY the failing CI errors listed below.\n"
+            "Rules:\n"
+            "1. Do NOT change any business logic.\n"
+            "2. Fix linting (ruff E402: move module docstring BEFORE `from __future__ import annotations`), "
+            "import ordering (biome: sort named imports alphabetically), "
+            "test assertions that need updating to match the new implementation, "
+            "and markdown lint (MD012 extra blank lines, MD052 bracket labels → escape with backslash).\n"
+            "3. Do NOT touch .github/workflows/, CHANGELOG.md, or REUSE/SPDX headers.\n"
+            f"\n## CI Error Log\n{error_summary[:4000]}\n"
+        )
+
+        await asyncio.to_thread(
+            _run,
+            ["codex", "exec", "--sandbox", "workspace-write", fix_prompt],
+            cwd=worktree,
+            env={
+                "CODEX_HOME": CODEX_HOME,
+                "HOME": str(Path.home()),
+                "PATH": os.environ["PATH"],
+                "https_proxy": GFW_PROXY,
+                "http_proxy": GFW_PROXY,
+            },
+            timeout=1800,
+        )
+
+        # Post-Codex ruff cleanup
+        sdk_py = str(Path(worktree) / "sdk" / "python")
+        for ruff_cmd in [
+            ["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", "."],
+            ["python3.11", "-m", "ruff", "format", "."],
+        ]:
+            try:
+                _run(ruff_cmd, cwd=sdk_py)
+            except RuntimeError as e:
+                activity.logger.warning("ruff post-fix: %s", str(e)[:200])
+
+        porcelain = _run(["git", "status", "--porcelain"], cwd=worktree)
+        if porcelain.strip():
+            _run(["git", "add", "-A"], cwd=worktree)
+            _run(
+                ["git", "commit", "--signoff", "-m",
+                 f"fix(ci): auto-fix CI errors for issue #{issue_number}"],
+                cwd=worktree,
+                env={
+                    **os.environ,
+                    "GIT_AUTHOR_NAME": BOT_NAME,
+                    "GIT_AUTHOR_EMAIL": BOT_EMAIL,
+                    "GIT_COMMITTER_NAME": BOT_NAME,
+                    "GIT_COMMITTER_EMAIL": BOT_EMAIL,
+                },
+            )
+            _run(["git", "push", "origin", branch, "--force-with-lease"], cwd=worktree)
+            activity.logger.info("CI fix committed and pushed for PR #%d", pr_number)
+            db.log_event(issue_number, "fix_ci", "completed", f"pr={pr_number} fixed=True")
+            return {"ci_passed": False, "fixed": True}
+        else:
+            activity.logger.warning("Codex produced no changes for CI fix on PR #%d", pr_number)
+            db.log_event(issue_number, "fix_ci", "completed", f"pr={pr_number} fixed=False")
+            return {"ci_passed": False, "fixed": False}
+
+    except Exception as exc:
+        activity.logger.error("fix_ci failed for PR #%d: %s", pr_number, exc)
+        db.log_event(issue_number, "fix_ci", "failed", str(exc)[:300])
+        return {"ci_passed": False, "fixed": False}
+    finally:
+        try:
+            _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
+        except Exception:
+            pass
+
+
 # ── activity: merge_pr ─────────────────────────────────────────────────────────
 
 @activity.defn(name="merge_pr")
@@ -340,17 +491,20 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
     branch = _gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]).strip()
 
     # Poll mergeStateStatus — avoids the broken `gh pr checks --json required` field.
-    # CLEAN   → all checks passed, safe to merge.
-    # UNSTABLE → one or more checks failed → close PR and exit (no retry).
-    # BLOCKED  → branch protection pending → keep waiting.
+    # CLEAN      → all checks passed, safe to merge.
+    # UNSTABLE   → non-required checks failed → close PR and exit (no retry).
+    # BLOCKED    → required check failed OR pending → wait; if all done and any FAILURE, close.
     # CONFLICTING → merge conflict → proceed to rebase below.
     activity.logger.info("Waiting for CI on PR #%d ...", pr_number)
     ci_deadline = _time.monotonic() + 600
     while True:
-        info = json.loads(_gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG,
-                               "--json", "mergeable,mergeStateStatus"]))
-        merge_state = info.get("mergeStateStatus", "UNKNOWN")
-        mergeable = info.get("mergeable", "UNKNOWN")
+        pr_info = json.loads(_gh(
+            ["pr", "view", str(pr_number), "--repo", REPO_SLUG,
+             "--json", "mergeable,mergeStateStatus,statusCheckRollup"]
+        ))
+        merge_state = pr_info.get("mergeStateStatus", "UNKNOWN")
+        mergeable = pr_info.get("mergeable", "UNKNOWN")
+        checks = pr_info.get("statusCheckRollup", [])
 
         if merge_state == "CLEAN":
             activity.logger.info("CI passed for PR #%d (CLEAN)", pr_number)
@@ -363,13 +517,40 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             except RuntimeError:
                 pass
             db.upsert_run(issue_number, stage="failed")
-            db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number}")
+            db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=UNSTABLE")
             return {"merged": False, "reason": "ci_unstable"}
+        if merge_state == "BLOCKED":
+            # If all checks completed and at least one failed → CI is done and broken
+            pending = [c for c in checks if c.get("status") not in ("COMPLETED",)]
+            failed = [c for c in checks if c.get("conclusion") == "FAILURE"]
+            if not pending and failed:
+                activity.logger.error(
+                    "CI FAILED for PR #%d (BLOCKED, all checks done) — closing PR", pr_number
+                )
+                try:
+                    _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
+                         "--comment", "Closed by autodev-train: required CI checks failed (BLOCKED). Fix linting/tests and reopen."])
+                except RuntimeError:
+                    pass
+                db.upsert_run(issue_number, stage="failed")
+                db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=BLOCKED")
+                return {"merged": False, "reason": "ci_blocked"}
         if mergeable == "CONFLICTING":
             activity.logger.info("PR #%d has merge conflict — will attempt rebase", pr_number)
             break
         if _time.monotonic() > ci_deadline:
-            activity.logger.warning("CI timeout for PR #%d (state=%s) — merging anyway", pr_number, merge_state)
+            # Timeout: if BLOCKED (not just slow), close instead of blindly merging
+            if merge_state == "BLOCKED":
+                activity.logger.error("CI timeout for PR #%d (BLOCKED) — closing PR", pr_number)
+                try:
+                    _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
+                         "--comment", "Closed by autodev-train: CI timed out in BLOCKED state."])
+                except RuntimeError:
+                    pass
+                db.upsert_run(issue_number, stage="failed")
+                db.log_event(issue_number, "merge", "ci_timeout_blocked", f"pr={pr_number}")
+                return {"merged": False, "reason": "ci_timeout_blocked"}
+            activity.logger.warning("CI timeout for PR #%d (state=%s) — proceeding to merge", pr_number, merge_state)
             break
         await asyncio.sleep(30)
     worktree = str(MAIN_REPO.parent / f"attestplane-merge-{issue_number}")
