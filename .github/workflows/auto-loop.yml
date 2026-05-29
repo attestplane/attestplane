@@ -1,21 +1,28 @@
 name: auto-loop
 
 # Closes the autonomous coding loop:
-#   autodev merge → bump patch tag → architecture-audit → Opus plan
+#   autodev merge → semver bump → architecture-audit → Opus plan
 #   → planned-task issues → autodev-train → merge → (repeat)
 #
-# Fires on every push to main whose HEAD commit message contains "[autodev]".
-# Guards against runaway spirals: skips if any autodev-pr PR is still open
-# (the loop re-fires when THAT last PR merges).
+# Version bump logic (Conventional Commits, Opus recommendation):
+#   fix:/docs:/chore:  → patch  (0.0.x)
+#   feat:/refactor:    → minor  (0.x.0)
+#   feat!:/BREAKING    → major  → HUMAN GATE (opens RFC Discussion, no auto-tag)
+#
+# Batch gate: only fires when ALL open autodev-pr PRs have merged.
+# Tag gate:   only creates a new tag every MIN_PRS_PER_TAG merged PRs
+#             or after MAX_DAYS_BETWEEN_TAGS days, whichever comes first.
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: write   # push git tag
-  actions:  write   # gh workflow run (workflow_dispatch)
-  issues:   read
+  contents:    write   # push git tag
+  actions:     write   # gh workflow run (workflow_dispatch)
+  issues:      write   # open major RFC issue
+  discussions: write   # open major RFC Discussion (best-effort)
+  pull-requests: read
 
 concurrency:
   group: auto-loop
@@ -23,11 +30,12 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  MIN_PRS_PER_TAG: "3"        # batch at least N autodev PRs before tagging
+  MAX_DAYS_BETWEEN_TAGS: "7"  # …or tag anyway after 7 days
 
 jobs:
   loop:
-    name: Bump version + trigger architecture audit
-    # Only on autodev-originated merges
+    name: Semver bump + trigger architecture audit
     if: contains(github.event.head_commit.message, '[autodev]')
     runs-on: ubuntu-latest
     steps:
@@ -36,7 +44,8 @@ jobs:
           fetch-depth: 0
           token: ${{ github.token }}
 
-      - name: Guard — skip if previous autodev batch still in flight
+      # ── Guard: skip until current batch is fully merged ──────────────────
+      - name: Guard — skip if autodev batch still in flight
         id: guard
         env:
           GH_TOKEN: ${{ github.token }}
@@ -48,47 +57,197 @@ jobs:
             --state open \
             --json number \
             --jq 'length')
-          echo "open_autodev_prs=${open_prs}" >> "$GITHUB_OUTPUT"
+          {
+            echo "open_autodev_prs=${open_prs}"
+          } >> "$GITHUB_OUTPUT"
           if [ "$open_prs" -gt 0 ]; then
-            echo "⏭ Skipping: ${open_prs} autodev PR(s) still open." \
-                 "Loop will retrigger when the last one merges."
+            echo "⏭ ${open_prs} autodev PR(s) still open — will retrigger on last merge."
           else
-            echo "✅ No open autodev PRs — proceeding with loop."
+            echo "✅ All autodev PRs merged — evaluating version bump."
           fi
 
-      - name: Compute next patch version
-        id: version
-        if: steps.guard.outputs.open_autodev_prs == '0'
-        run: |
-          set -euo pipefail
-          latest=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-                   | head -1 || echo "v0.0.0")
-          next=$(python3 -c "
-          parts = '$latest'.lstrip('v').split('.')
-          parts[2] = str(int(parts[2]) + 1)
-          print('v' + '.'.join(parts))
-          ")
-          echo "tag=${next}" >> "$GITHUB_OUTPUT"
-          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
-          echo "Loop cycle: ${latest} → ${next}"
-
-      - name: Create and push patch tag
+      # ── Batch gate: count PRs merged since last tag ───────────────────────
+      - name: Count autodev PRs merged since last tag
+        id: batch
         if: steps.guard.outputs.open_autodev_prs == '0'
         env:
-          TAG: ${{ steps.version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          latest_tag=$(git tag --sort=-v:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "")
+          if [ -z "$latest_tag" ]; then
+            tag_date="1970-01-01T00:00:00Z"
+          else
+            tag_date=$(git log -1 --format=%cI "$latest_tag" 2>/dev/null || echo "1970-01-01T00:00:00Z")
+          fi
+
+          # Count autodev PRs merged after last tag
+          prs_since=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --label autodev-pr \
+            --state merged \
+            --json mergedAt \
+            --jq "[.[] | select(.mergedAt > \"${tag_date}\")] | length")
+
+          # Days since last tag
+          days_since=$(python3 -c "
+          from datetime import datetime, timezone
+          import sys
+          tag_dt = datetime.fromisoformat('${tag_date}'.replace('Z','+00:00'))
+          now = datetime.now(timezone.utc)
+          print(int((now - tag_dt).days))
+          ")
+
+          {
+            echo "prs_since_tag=${prs_since}"
+            echo "days_since_tag=${days_since}"
+            echo "latest_tag=${latest_tag}"
+          } >> "$GITHUB_OUTPUT"
+          echo "PRs since last tag: ${prs_since}, days: ${days_since}"
+
+          # Decide whether to proceed
+          if [ "$prs_since" -ge "$MIN_PRS_PER_TAG" ] || [ "$days_since" -ge "$MAX_DAYS_BETWEEN_TAGS" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Batch ready (${prs_since} PRs / ${days_since} days)"
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "⏳ Batch not ready yet (${prs_since}/${MIN_PRS_PER_TAG} PRs, ${days_since}/${MAX_DAYS_BETWEEN_TAGS} days)"
+          fi
+
+      # ── Determine bump level from merged commit messages ──────────────────
+      - name: Classify bump level (Conventional Commits)
+        id: bump
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST_TAG: ${{ steps.batch.outputs.latest_tag }}
+          COMMIT_MESSAGES: ${{ toJson(github.event.commits.*.message) }}
+        run: |
+          set -euo pipefail
+          level=$(python3 - <<'PY'
+          import os, re
+
+          msgs = os.environ.get("COMMIT_MESSAGES", "")
+          lines = msgs.splitlines()
+
+          has_breaking = any(
+              re.search(r'BREAKING[\s_-]CHANGE|feat!:|fix!:|refactor!:|chore!:', ln)
+              for ln in lines
+          )
+          has_minor = any(
+              re.match(r'^(feat|refactor)\b', ln)
+              for ln in lines
+          )
+
+          if has_breaking:
+              print("major")
+          elif has_minor:
+              print("minor")
+          else:
+              print("patch")
+          PY
+          )
+
+          echo "level=${level}" >> "$GITHUB_OUTPUT"
+          echo "Bump level: ${level}"
+
+      # ── Major: human RFC gate, no auto-tag ───────────────────────────────
+      - name: Open RFC issue for major bump (human gate)
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true' &&
+          steps.bump.outputs.level == 'major'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST_TAG: ${{ steps.batch.outputs.latest_tag }}
+        run: |
+          set -euo pipefail
+          current_major=$(echo "${LATEST_TAG}" | grep -oE '^v[0-9]+' | tr -d 'v' || echo "0")
+          next_major=$((current_major + 1))
+          proposed="v${next_major}.0.0"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "RFC: major version bump ${LATEST_TAG} → ${proposed}" \
+            --label "architecture-audit" \
+            --body "$(cat <<EOF
+          ## Major Version Bump RFC
+
+          autodev-train detected breaking changes in commits since \`${LATEST_TAG}\`.
+          Proposed next version: \`${proposed}\`
+
+          **This requires human approval** per Opus architectural guidance:
+          major bump = downstream API contract break → public credibility risk.
+
+          ### Checklist before approving
+          - [ ] Review BREAKING CHANGE commits listed below
+          - [ ] Confirm downstream consumers notified / migration guide written
+          - [ ] Maintainer signs off
+
+          ### To approve
+          Comment \`/approve-major ${proposed}\` on this issue.
+          The auto-loop will tag and trigger architecture-audit after approval.
+
+          _Opened automatically by auto-loop.yml_
+          EOF
+          )"
+          echo "🛑 Major bump RFC opened — waiting for human approval."
+
+      # ── Patch / minor: compute next version ──────────────────────────────
+      - name: Compute next version (patch or minor)
+        id: version
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true' &&
+          steps.bump.outputs.level != 'major'
+        env:
+          LATEST_TAG: ${{ steps.batch.outputs.latest_tag }}
+          LEVEL: ${{ steps.bump.outputs.level }}
+        run: |
+          set -euo pipefail
+          base="${LATEST_TAG:-v0.0.0}"
+          next=$(python3 -c "
+          import os
+          parts = os.environ['base'].lstrip('v').split('.')
+          major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+          if os.environ['LEVEL'] == 'minor':
+              minor += 1
+              patch = 0
+          else:
+              patch += 1
+          print(f'v{major}.{minor}.{patch}')
+          " )
+          echo "tag=${next}" >> "$GITHUB_OUTPUT"
+          echo "Loop: ${base} → ${next} (${LEVEL})"
+
+      # ── Create and push tag ───────────────────────────────────────────────
+      - name: Create and push semver tag
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true' &&
+          steps.bump.outputs.level != 'major'
+        env:
+          TAG:   ${{ steps.version.outputs.tag }}
+          LEVEL: ${{ steps.bump.outputs.level }}
         run: |
           set -euo pipefail
           git config user.name  "autodev-bot"
           git config user.email "258170091+merchloubna70-dot@users.noreply.github.com"
-          git tag "$TAG" -m "auto-loop patch bump from autodev merge"
+          git tag "$TAG" -m "auto-loop ${LEVEL} bump"
           git push origin "$TAG"
-          echo "✅ Tagged ${TAG}"
+          echo "✅ Tagged ${TAG} (${LEVEL})"
 
+      # ── Trigger architecture-audit ────────────────────────────────────────
       - name: Trigger architecture-audit
-        if: steps.guard.outputs.open_autodev_prs == '0'
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true' &&
+          steps.bump.outputs.level != 'major'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG:      ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
           gh workflow run architecture-audit \
@@ -96,4 +255,3 @@ jobs:
             --ref main \
             --field milestone_tag="${TAG}"
           echo "✅ architecture-audit triggered for ${TAG}"
-          echo "Next: Opus will plan → plan-to-issues → autodev-train implements → loop repeats"
