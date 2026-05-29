@@ -500,6 +500,14 @@
       "classification": "language_specific",
       "python": false,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "formatVerifyTaxonomyVersion",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.5-alpha",
       "symbol": "buildDeletionProof",
       "typescript": true
@@ -540,6 +548,14 @@
       "classification": "language_specific",
       "python": true,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "format_verify_taxonomy_version",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.5-alpha",
       "symbol": "build_deletion_proof",
       "typescript": false
@@ -554,10 +570,26 @@
     },
     {
       "classification": "language_specific",
+      "python": false,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "resolveVerifyTaxonomyVersion",
+      "typescript": true
+    },
+    {
+      "classification": "language_specific",
       "python": true,
       "reason": "Python keeps a convenience helper that combines proof bundle statement construction and DSSE envelope construction; TypeScript ships the shape helpers separately in P2.4.",
       "review_by": "v0.0.3-alpha",
       "symbol": "bundle_to_dsse_envelope",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "resolve_verify_taxonomy_version",
       "typescript": false
     },
     {

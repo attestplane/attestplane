@@ -87,7 +87,7 @@ export function verifyReasonCodeExplanation(value: VerifyReasonCodeV1): string {
   return VERIFY_REASON_TAXONOMY[value];
 }
 
-export function resolveVerifyTaxonomyVersion(): number {
+export function resolveVerifyTaxonomyVersion(): typeof VERIFY_REASON_TAXONOMY_VERSION {
   return VERIFY_REASON_TAXONOMY_VERSION;
 }
 

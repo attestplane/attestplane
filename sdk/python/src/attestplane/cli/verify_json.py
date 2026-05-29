@@ -52,16 +52,6 @@ class VerifyJsonOutcome:
     stderr_code: str | None
 
 
-_QUARANTINE_PRIMARY_REASONS = {
-    VERIFY_REASON_SCHEMA_INVALID,
-    VERIFY_REASON_SCHEMA_UNKNOWN,
-    VERIFY_REASON_SCHEMA_VERSION_MISSING,
-    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
-    VERIFY_REASON_REQUIRED_FIELD_MISSING,
-    VERIFY_REASON_SIGNATURE_MISSING,
-}
-
-
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -185,6 +175,31 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
 
+def _bundle_anchor_ref_present(bundle: dict[str, Any] | None) -> bool:
+    if not isinstance(bundle, dict):
+        return False
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return False
+    anchor_ref = chain_metadata.get("anchor_ref")
+    return isinstance(anchor_ref, str) and bool(anchor_ref)
+
+
+def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict[str, Any]:
+    if exit_code == 2:
+        status = "quarantined"
+        quarantined = True
+    else:
+        status = "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
+        quarantined = False
+    return {
+        "anchoring": {
+            "status": status,
+            "quarantined": quarantined,
+        }
+    }
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
@@ -262,6 +277,7 @@ def _json_failure(
     bundle_digest: str,
     reason: dict[str, Any],
     exit_code: int,
+    bundle: dict[str, Any] | None = None,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
@@ -276,6 +292,7 @@ def _json_failure(
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
             "digest": bundle_digest,
         },
+        **_anchoring_payload(bundle, exit_code=exit_code),
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -289,6 +306,7 @@ def _json_failure(
 def _json_pass(
     *,
     bundle_digest: str,
+    bundle: dict[str, Any] | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
@@ -302,6 +320,7 @@ def _json_pass(
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
             "digest": bundle_digest,
         },
+        **_anchoring_payload(bundle, exit_code=0),
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -324,9 +343,7 @@ def verify_result_exit_code(result: Any | None) -> int:
         return 1
     if getattr(result, "ok", False):
         return 0
-    if result.error_code in {VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING}:
-        return 2
-    if result.primary_reason in _QUARANTINE_PRIMARY_REASONS:
+    if getattr(result, "anchoring_quarantined", False):
         return 2
     return 1
 
@@ -490,6 +507,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=3,
+            bundle=None,
             stderr_code=VERIFY_IO_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"cannot read {bundle_path}: {exc}")]
@@ -516,6 +534,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=3,
+            bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"bundle is not valid UTF-8: {exc}")]
@@ -539,6 +558,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=3,
+            bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
         )
@@ -553,6 +573,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=3,
+            bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"{bundle_path}: not valid JSON: {exc.msg}")]
@@ -572,6 +593,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=2,
+            bundle=bundle if isinstance(bundle, dict) else None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
                 [
@@ -599,6 +621,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
+            bundle=bundle,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
             ),
@@ -622,6 +645,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=2,
+            bundle=bundle,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
         )
@@ -637,12 +661,14 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
+            bundle=bundle,
             explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
 
     if result.ok:
         return _json_pass(
             bundle_digest=bundle_digest,
+            bundle=bundle,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
 
@@ -668,6 +694,7 @@ def build_verify_json_outcome(
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
+            **_anchoring_payload(bundle, exit_code=exit_code),
             **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,

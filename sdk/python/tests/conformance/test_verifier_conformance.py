@@ -100,3 +100,22 @@ def test_minimum_schema_negative_conformance_vectors(case: dict) -> None:
     assert result.error_code == case["expected_error_code"]
     assert result.primary_reason == case["expected_primary_reason"]
     assert list(result.secondary_reasons) == case["expected_secondary_reasons"]
+
+
+def test_verifier_result_exposes_stable_anchoring_fields() -> None:
+    bundle = _base_bundle()
+    result = verify_proof_bundle(bundle)
+    assert result.anchoring_status == "unanchored"
+    assert result.anchoring_quarantined is False
+
+    anchored_bundle = _base_bundle()
+    anchored_bundle["chain_metadata"]["anchor_ref"] = "anchor://test/anchored"
+    anchored_result = verify_proof_bundle(anchored_bundle)
+    assert anchored_result.anchoring_status == "anchored"
+    assert anchored_result.anchoring_quarantined is False
+
+    quarantined_bundle = _base_bundle()
+    quarantined_bundle["chain_metadata"]["critical_future_field"] = True
+    quarantined_result = verify_proof_bundle(quarantined_bundle)
+    assert quarantined_result.anchoring_status == "quarantined"
+    assert quarantined_result.anchoring_quarantined is True

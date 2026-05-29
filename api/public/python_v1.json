@@ -934,22 +934,6 @@
     },
     {
       "documented": false,
-      "kind": "constant",
-      "module": "attestplane",
-      "name": "VERIFY_REASON_TAXONOMY",
-      "notes": "",
-      "stability": "alpha_public"
-    },
-    {
-      "documented": false,
-      "kind": "constant",
-      "module": "attestplane",
-      "name": "VERIFY_REASON_TAXONOMY_VERSION",
-      "notes": "",
-      "stability": "alpha_public"
-    },
-    {
-      "documented": false,
       "kind": "class",
       "module": "attestplane",
       "name": "VerificationResult",
@@ -976,6 +960,22 @@
       "documented": false,
       "kind": "constant",
       "module": "attestplane",
+      "name": "VERIFY_REASON_TAXONOMY",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "VERIFY_REASON_TAXONOMY_VERSION",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
       "name": "WORKER_ASSIGNMENT_EVENT",
       "notes": "",
       "stability": "alpha_public"
@@ -987,6 +987,14 @@
       "name": "__version__",
       "notes": "",
       "stability": "internal_exported"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "format_verify_taxonomy_version",
+      "notes": "",
+      "stability": "alpha_public"
     },
     {
       "documented": false,
@@ -1009,6 +1017,14 @@
       "kind": "function",
       "module": "attestplane",
       "name": "build_retention_marker",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
+      "name": "resolve_verify_taxonomy_version",
       "notes": "",
       "stability": "alpha_public"
     },
