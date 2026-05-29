@@ -315,7 +315,41 @@ async def post_review_activity(
 
 @activity.defn(name="merge_pr")
 async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
-    """Squash-merge the PR."""
+    """Squash-merge the PR. Rebases on main first if there is a merge conflict."""
+    branch = _gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]).strip()
+    worktree = str(MAIN_REPO.parent / f"attestplane-merge-{issue_number}")
+    main = str(MAIN_REPO)
+
+    # Rebase branch on current main to resolve any conflicts before merging.
+    try:
+        _run(["git", "fetch", "origin", "main", branch], cwd=main)
+        if Path(worktree).exists():
+            try:
+                _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
+            except RuntimeError:
+                pass
+        _run(["git", "worktree", "add", "-B", branch, worktree, f"origin/{branch}"], cwd=main)
+        _run(["git", "rebase", "origin/main"], cwd=worktree, env={
+            **os.environ,
+            "GIT_AUTHOR_NAME": BOT_NAME,
+            "GIT_AUTHOR_EMAIL": BOT_EMAIL,
+            "GIT_COMMITTER_NAME": BOT_NAME,
+            "GIT_COMMITTER_EMAIL": BOT_EMAIL,
+        })
+        _run(["git", "push", "origin", branch, "--force-with-lease"], cwd=worktree)
+    except RuntimeError as rebase_err:
+        activity.logger.warning("rebase failed for PR #%d: %s", pr_number, rebase_err)
+        # Abort rebase so worktree is clean; merge attempt below may still work or fail
+        try:
+            _run(["git", "rebase", "--abort"], cwd=worktree)
+        except RuntimeError:
+            pass
+    finally:
+        try:
+            _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
+        except Exception:
+            pass
+
     _gh([
         "pr", "merge", str(pr_number),
         "-R", REPO_SLUG,
