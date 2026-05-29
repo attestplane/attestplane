@@ -86,3 +86,15 @@ accepted.
 - [ ] No AI tool was used.
 - [ ] AI tool was used. Tool / model: `<fill in, e.g. "Claude Sonnet 4.6" or "GitHub Copilot">`
 - [ ] I have read every line I am submitting and stand behind it as my own.
+
+## Release Impact
+<!-- Check exactly one. Required — CI will block merge if none is selected. -->
+- [ ] `release:major` — breaking change to public API or existing behaviour
+- [ ] `release:minor` — new backwards-compatible public API, field, exit-code, or schema field
+- [ ] `release:patch` — bug fix, internal refactor, test, or docs with no public API change
+- [ ] `release:none` — no release needed (CI/tooling/infra only)
+
+- Follow ADR-VERSIONING-001 when deciding whether a user-visible contract changed.
+- Prefer the smallest release impact that still matches the actual behavior change.
+- If the change alters any public API, schema, or exit code, do not select `release:none`.
+- If you are unsure, review ADR-VERSIONING-001 before submitting the PR.
