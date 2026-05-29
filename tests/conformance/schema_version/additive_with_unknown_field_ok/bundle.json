@@ -48,9 +48,6 @@
     "private_keys",
     "raw_audit_payloads"
   ],
-  "future_bundle_field": {
-    "preserved": true
-  },
   "signatures": [
     {
       "key_id": "4bf5122f344554c53bde2ebb8cd2b7e3",
@@ -67,7 +64,6 @@
   ],
   "verification_report": {
     "first_bad_index": null,
-    "future_report_field": "ignored",
     "ok": true,
     "reason": null,
     "verification_method": "canonical-bytes-walk",

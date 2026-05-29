@@ -10,6 +10,7 @@ import pytest
 
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_reason_codes import (
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
 )
 
@@ -44,6 +45,22 @@ def test_schema_version_vectors_pin_expected_outcome(vector: dict[str, object]) 
         assert field in bundle
     for field in vector.get("chain_metadata_fields", ()):
         assert field in bundle["chain_metadata"]
+
+
+def test_schema_version_additive_optional_and_required_fields_are_paired() -> None:
+    additive_bundle = _bundle("additive_with_unknown_field_ok")
+    required_bundle = _bundle("unknown_required_field")
+
+    additive_result = verify_proof_bundle(additive_bundle, require_signed_attestation=True)
+    required_result = verify_proof_bundle(required_bundle, require_signed_attestation=True)
+
+    assert additive_result.ok is True
+    assert additive_result.primary_reason is None
+    assert additive_result.secondary_reasons == ()
+    assert additive_bundle["chain_metadata"]["future_metadata_field"] == "kept"
+    assert required_result.ok is False
+    assert required_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert "critical_future_field" in (required_result.metadata_reason or "")
 
 
 def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_version_failure() -> None:
