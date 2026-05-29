@@ -89,14 +89,16 @@ def test_extractors_are_deterministic(tmp_path: Path) -> None:
 def test_checker_fails_unrecorded_python_symbol(tmp_path: Path) -> None:
     copy_gate_inputs(tmp_path)
     current = load_json(tmp_path / "python_current.json")
-    current["symbols"].append({  # type: ignore[index, union-attr]
-        "documented": False,
-        "kind": "function",
-        "module": "attestplane",
-        "name": "new_unrecorded_symbol",
-        "notes": "",
-        "stability": "alpha_public",
-    })
+    current["symbols"].append(
+        {  # type: ignore[index, union-attr]
+            "documented": False,
+            "kind": "function",
+            "module": "attestplane",
+            "name": "new_unrecorded_symbol",
+            "notes": "",
+            "stability": "alpha_public",
+        }
+    )
     write_json(tmp_path / "python_current.json", current)
     result = run_command(checker_args(tmp_path))
     assert result.returncode != 0

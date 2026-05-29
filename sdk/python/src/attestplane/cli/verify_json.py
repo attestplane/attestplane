@@ -51,6 +51,16 @@ class VerifyJsonOutcome:
     stderr_code: str | None
 
 
+_QUARANTINE_PRIMARY_REASONS = {
+    VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+    VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SIGNATURE_MISSING,
+}
+
+
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -255,16 +265,16 @@ def _json_failure(
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [reason],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "fail",
+        "exit_code": exit_code,
+        "reason_code": reason["code"],
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [reason],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -281,16 +291,16 @@ def _json_pass(
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "pass",
-            "exit_code": 0,
-            "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "pass",
+        "exit_code": 0,
+        "reason_code": None,
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -299,6 +309,25 @@ def _json_pass(
         exit_code=0,
         stderr_code=None,
     )
+
+
+def verify_result_exit_code(result: Any | None) -> int:
+    """Map a verifier result to the stable CLI exit-code contract.
+
+    - 0: success
+    - 1: verification failure
+    - 2: quarantine / fail-closed bundle contract rejection
+    - 3: usage, I/O, or malformed-input failure
+    """
+    if result is None:
+        return 1
+    if getattr(result, "ok", False):
+        return 0
+    if result.error_code in {VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING}:
+        return 2
+    if result.primary_reason in _QUARANTINE_PRIMARY_REASONS:
+        return 2
+    return 1
 
 
 def _bundle_digest(raw_bytes: bytes) -> str:
@@ -459,7 +488,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=3,
             stderr_code=VERIFY_IO_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"cannot read {bundle_path}: {exc}")]
@@ -485,7 +514,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=3,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"bundle is not valid UTF-8: {exc}")]
@@ -508,13 +537,9 @@ def build_verify_json_outcome(
                 detail=message,
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=3,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
@@ -526,7 +551,7 @@ def build_verify_json_outcome(
                 detail=f"{bundle_path}: not valid JSON: {exc.msg}",
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=3,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"{bundle_path}: not valid JSON: {exc.msg}")]
@@ -574,9 +599,7 @@ def build_verify_json_outcome(
             ),
             exit_code=1,
             explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
-                if explain
-                else None
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
             ),
         )
 
@@ -599,11 +622,7 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(code, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
         )
     except CanonicalizationError as exc:
         path = "/events"
@@ -617,11 +636,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
 
     if result.ok:
@@ -631,14 +646,13 @@ def build_verify_json_outcome(
         )
 
     reasons = _bundle_failure_reason(result, explain=explain)
+    exit_code = verify_result_exit_code(result)
     if result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
         VERIFY_REQUIRED_FIELDS_MISSING,
     }:
-        exit_code = 2
         stderr_code = result.error_code
     else:
-        exit_code = 1
         stderr_code = None
 
     return VerifyJsonOutcome(
@@ -653,11 +667,7 @@ def build_verify_json_outcome(
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-            **(
-                {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
-                if explain
-                else {}
-            ),
+            **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,
         stderr_code=stderr_code,
@@ -669,4 +679,5 @@ __all__ = [
     "VERIFY_RESULT_SCHEMA_VERSION",
     "VerifyJsonOutcome",
     "build_verify_json_outcome",
+    "verify_result_exit_code",
 ]

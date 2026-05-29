@@ -28,11 +28,14 @@ def test_schemas_dir_exists() -> None:
     assert _SCHEMAS_DIR.is_dir()
 
 
-@pytest.mark.parametrize("schema_file", [
-    "proof_bundle.schema.json",
-    "auditor_export.schema.json",
-    "governance_ingestion.schema.json",
-])
+@pytest.mark.parametrize(
+    "schema_file",
+    [
+        "proof_bundle.schema.json",
+        "auditor_export.schema.json",
+        "governance_ingestion.schema.json",
+    ],
+)
 def test_schema_is_valid_draft_2020_12(schema_file: str) -> None:
     schema = _load(schema_file)
     # jsonschema's check_schema raises on malformed schemas.
@@ -230,8 +233,7 @@ def test_default_forbidden_fields_includes_critical_terms() -> None:
     redaction floor; critical terms MUST be present."""
     schema = _load("proof_bundle.schema.json")
     defaults = schema["properties"]["forbidden_fields"]["default"]
-    must_include = {"secrets", "tokens", "jwts", "private_keys",
-                    "pii", "raw_audit_payloads"}
+    must_include = {"secrets", "tokens", "jwts", "private_keys", "pii", "raw_audit_payloads"}
     assert must_include.issubset(set(defaults))
 
 
@@ -240,11 +242,9 @@ def test_obligation_id_pattern_matches_registry_entries() -> None:
     from attestplane.obligations import load_all_registries
 
     schema = _load("proof_bundle.schema.json")
-    pattern = (
-        schema["properties"]["framework_mappings"]["items"]["properties"]
-        ["obligation_id"]["pattern"]
-    )
+    pattern = schema["properties"]["framework_mappings"]["items"]["properties"]["obligation_id"]["pattern"]
     import re
+
     compiled = re.compile(pattern)
     for registry in load_all_registries():
         for entry in registry.entries:
@@ -256,12 +256,15 @@ def test_implementation_status_enum_matches_registry() -> None:
     match the locked four-value set used by the obligation registry."""
     schema = _load("proof_bundle.schema.json")
     enum_values = set(
-        schema["properties"]["framework_mappings"]["items"]["properties"]
-        ["implementation_status_at_bundle_time"]["enum"]
+        schema["properties"]["framework_mappings"]["items"]["properties"]["implementation_status_at_bundle_time"][
+            "enum"
+        ]
     )
     assert enum_values == {
-        "mapping_target", "designed_toward",
-        "field_supported", "verified_in_test",
+        "mapping_target",
+        "designed_toward",
+        "field_supported",
+        "verified_in_test",
     }
 
 
@@ -325,13 +328,15 @@ def test_governance_ingestion_rejects_wrong_version() -> None:
 def test_governance_ingestion_implementation_status_enum_locked() -> None:
     schema = _load("governance_ingestion.schema.json")
     enum_values = set(
-        schema["properties"]["framework_coverage"]["items"]["properties"]
-        ["obligation_ids_with_evidence"]["items"]["properties"]
-        ["implementation_status"]["enum"]
+        schema["properties"]["framework_coverage"]["items"]["properties"]["obligation_ids_with_evidence"]["items"][
+            "properties"
+        ]["implementation_status"]["enum"]
     )
     assert enum_values == {
-        "mapping_target", "designed_toward",
-        "field_supported", "verified_in_test",
+        "mapping_target",
+        "designed_toward",
+        "field_supported",
+        "verified_in_test",
     }
 
 

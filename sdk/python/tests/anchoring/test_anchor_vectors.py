@@ -111,10 +111,13 @@ def test_anchor_vector_replays_through_verify_chain_with_anchors(vector_index: i
         draft = EventDraft(event_type="eval_event", actor="x", payload={})
         ts = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
         ev = chain_extend(
-            head, draft, now=ts,
+            head,
+            draft,
+            now=ts,
             event_id="00000000-0000-7000-8000-000000000000",
         )
         from dataclasses import replace
+
         ev = replace(ev, event_hash=expected_digest)
         chain = [ev]
     else:
@@ -124,11 +127,14 @@ def test_anchor_vector_replays_through_verify_chain_with_anchors(vector_index: i
         # verification will fail because the prev_hash linkage breaks,
         # but the anchor path is what we care about here.
         from dataclasses import replace
+
         ts = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
         for i in range(anchored_seq + 1):
             draft = EventDraft(event_type="eval_event", actor=f"x{i}", payload={"i": i})
             ev = chain_extend(
-                head, draft, now=ts,
+                head,
+                draft,
+                now=ts,
                 event_id=f"00000000-0000-7000-8000-{i:012d}",
             )
             chain.append(ev)
@@ -144,15 +150,16 @@ def test_anchor_vector_replays_through_verify_chain_with_anchors(vector_index: i
         tsa_cert_chain=tuple(b64decode(c) for c in entry["tsa_cert_chain_b64"]),
         ocsp_responses=tuple(b64decode(o) for o in entry["ocsp_responses_b64"]),
         issued_at_claimed=datetime.fromisoformat(entry["issued_at_claimed"]).replace(tzinfo=UTC)
-            if datetime.fromisoformat(entry["issued_at_claimed"]).tzinfo is None
-            else datetime.fromisoformat(entry["issued_at_claimed"]),
+        if datetime.fromisoformat(entry["issued_at_claimed"]).tzinfo is None
+        else datetime.fromisoformat(entry["issued_at_claimed"]),
     )
     verification_time = datetime.fromisoformat(vectors["verification_time"])
     if verification_time.tzinfo is None:
         verification_time = verification_time.replace(tzinfo=UTC)
 
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[root_der],
         verification_time=verification_time,
     )

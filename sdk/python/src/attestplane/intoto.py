@@ -75,9 +75,7 @@ def proof_bundle_to_in_toto_statement(bundle: dict[str, Any]) -> dict[str, Any]:
     chain_id = cm.get("chain_id")
     head_hash_hex = cm.get("head_hash_hex")
     if not chain_id or not head_hash_hex:
-        raise IntotoError(
-            "bundle.chain_metadata must include chain_id and head_hash_hex"
-        )
+        raise IntotoError("bundle.chain_metadata must include chain_id and head_hash_hex")
 
     return {
         "_type": STATEMENT_TYPE,
@@ -178,10 +176,7 @@ def dsse_envelope_to_statement(envelope: dict[str, Any]) -> dict[str, Any]:
         raise IntotoError("envelope must be a dict")
     payload_type = envelope.get("payloadType")
     if payload_type != DSSE_PAYLOAD_TYPE:
-        raise IntotoError(
-            f"unexpected payloadType: {payload_type!r}; "
-            f"expected {DSSE_PAYLOAD_TYPE!r}"
-        )
+        raise IntotoError(f"unexpected payloadType: {payload_type!r}; expected {DSSE_PAYLOAD_TYPE!r}")
     payload_b64 = envelope.get("payload")
     if not isinstance(payload_b64, str):
         raise IntotoError("envelope.payload must be a base64 string")

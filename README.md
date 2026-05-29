@@ -257,7 +257,7 @@ Not yet implemented:
 |---|---|---|
 | `attestplane` (latest v1.0.x) | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing; cosign + SLSA Build L3 since v1.0.9 |
 | `@attestplane/attestplane` (latest v1.0.x) | [npm](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC; cosign + SLSA Build L3 since v1.0.9 |
-| API reference | [GitHub Pages stable docs](https://attestplane.github.io/attestplane/api/latest/) | versioned release-line docs; prerelease refs stay artifact-only |
+| API reference | [GitHub Pages stable docs](docs/contributor/api-reference.md) | versioned release-line docs; prerelease refs stay artifact-only |
 | GitHub Releases | [`v1.0.x` tags](https://github.com/attestplane/attestplane/releases) | wheel + sdist + npm tarball + checksums + artifact manifest + cosign bundles + `.intoto.jsonl` SLSA provenance |
 | v1.6.2 release note | [docs/releases/v1.6.2.md](docs/releases/v1.6.2.md) | user-visible planned-task refetch race fix; CI-only items separated as infrastructure |
 

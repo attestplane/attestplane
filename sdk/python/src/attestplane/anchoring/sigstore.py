@@ -45,8 +45,7 @@ try:
     )
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.anchoring.sigstore requires the 'anchor' extras. "
-        "Install with: pip install attestplane[anchor]"
+        "attestplane.anchoring.sigstore requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
     ) from exc
 
 from attestplane.anchoring.base import (
@@ -171,7 +170,9 @@ class SigstoreRekorAnchor(TSAProvider):
 
         try:
             response_bytes = self._transport.submit(
-                self._url, body_bytes, timeout_seconds=30.0,
+                self._url,
+                body_bytes,
+                timeout_seconds=30.0,
             )
         except TSAUnavailableError:
             raise
@@ -179,18 +180,12 @@ class SigstoreRekorAnchor(TSAProvider):
         try:
             log_entry = json.loads(response_bytes)
         except json.JSONDecodeError as exc:
-            raise AnchorVerificationError(
-                f"Rekor at {self._url} returned non-JSON: {exc.msg}"
-            ) from exc
+            raise AnchorVerificationError(f"Rekor at {self._url} returned non-JSON: {exc.msg}") from exc
 
         if not isinstance(log_entry, dict):
-            raise AnchorVerificationError(
-                f"Rekor response is not a JSON object: got {type(log_entry).__name__}"
-            )
+            raise AnchorVerificationError(f"Rekor response is not a JSON object: got {type(log_entry).__name__}")
         if "logIndex" not in log_entry or "integratedTime" not in log_entry:
-            raise AnchorVerificationError(
-                "Rekor response missing required fields (logIndex / integratedTime)"
-            )
+            raise AnchorVerificationError("Rekor response missing required fields (logIndex / integratedTime)")
 
         integrated_time_secs = int(log_entry["integratedTime"])
         issued_at = datetime.fromtimestamp(integrated_time_secs, tz=UTC)
@@ -222,38 +217,28 @@ def parse_rekor_log_entry(tsa_token: bytes) -> ParsedRekorEntry:
     try:
         log_entry = json.loads(tsa_token)
     except json.JSONDecodeError as exc:
-        raise AnchorVerificationError(
-            f"Rekor LogEntry is not valid JSON: {exc.msg}"
-        ) from exc
+        raise AnchorVerificationError(f"Rekor LogEntry is not valid JSON: {exc.msg}") from exc
     if not isinstance(log_entry, dict):
         raise AnchorVerificationError("Rekor LogEntry is not a JSON object")
 
     required = ("logIndex", "logID", "integratedTime", "body", "verification")
     missing = [k for k in required if k not in log_entry]
     if missing:
-        raise AnchorVerificationError(
-            f"Rekor LogEntry missing fields: {sorted(missing)}"
-        )
+        raise AnchorVerificationError(f"Rekor LogEntry missing fields: {sorted(missing)}")
 
     verification = log_entry["verification"]
     if not isinstance(verification, dict) or "signedEntryTimestamp" not in verification:
-        raise AnchorVerificationError(
-            "Rekor LogEntry.verification.signedEntryTimestamp missing"
-        )
+        raise AnchorVerificationError("Rekor LogEntry.verification.signedEntryTimestamp missing")
 
     try:
         set_bytes = base64.standard_b64decode(verification["signedEntryTimestamp"])
     except Exception as exc:
-        raise AnchorVerificationError(
-            f"signedEntryTimestamp is not valid base64: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"signedEntryTimestamp is not valid base64: {exc}") from exc
 
     try:
         body_bytes = base64.standard_b64decode(log_entry["body"])
     except Exception as exc:
-        raise AnchorVerificationError(
-            f"Rekor LogEntry.body is not valid base64: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"Rekor LogEntry.body is not valid base64: {exc}") from exc
 
     integrated_time = datetime.fromtimestamp(int(log_entry["integratedTime"]), tz=UTC)
 
@@ -306,16 +291,12 @@ def verify_rekor_signed_entry_timestamp(
     Raises :class:`AnchorVerificationError` on any failure.
     """
     if len(expected_digest) != 32:
-        raise AnchorVerificationError(
-            f"expected_digest must be 32 bytes, got {len(expected_digest)}"
-        )
+        raise AnchorVerificationError(f"expected_digest must be 32 bytes, got {len(expected_digest)}")
 
     try:
         body = json.loads(parsed.body_bytes)
     except json.JSONDecodeError as exc:
-        raise AnchorVerificationError(
-            f"Rekor entry body is not valid JSON: {exc.msg}"
-        ) from exc
+        raise AnchorVerificationError(f"Rekor entry body is not valid JSON: {exc.msg}") from exc
     if not isinstance(body, dict):
         raise AnchorVerificationError("Rekor entry body is not a JSON object")
 
@@ -332,34 +313,24 @@ def verify_rekor_signed_entry_timestamp(
         raise AnchorVerificationError("Rekor entry body.spec.content.hash missing")
     algo = hash_field.get("algorithm")
     if algo != "sha256":
-        raise AnchorVerificationError(
-            f"Rekor entry hash algorithm is {algo!r}; expected 'sha256'"
-        )
+        raise AnchorVerificationError(f"Rekor entry hash algorithm is {algo!r}; expected 'sha256'")
     hex_value = hash_field.get("value")
     if not isinstance(hex_value, str):
         raise AnchorVerificationError("Rekor entry hash value missing")
     try:
         body_digest = bytes.fromhex(hex_value)
     except ValueError as exc:
-        raise AnchorVerificationError(
-            f"Rekor entry hash value is not valid hex: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"Rekor entry hash value is not valid hex: {exc}") from exc
     if body_digest != expected_digest:
-        raise AnchorVerificationError(
-            "Rekor entry body digest does not match expected_digest"
-        )
+        raise AnchorVerificationError("Rekor entry body digest does not match expected_digest")
 
     # Verify the SET signature.
     try:
         rekor_pubkey = serialization.load_der_public_key(rekor_public_key_der)
     except Exception as exc:
-        raise AnchorVerificationError(
-            f"Rekor public key is not valid DER SPKI: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"Rekor public key is not valid DER SPKI: {exc}") from exc
     if not isinstance(rekor_pubkey, Ed25519PublicKey):
-        raise AnchorVerificationError(
-            f"v1 supports Ed25519 Rekor keys only; got {type(rekor_pubkey).__name__}"
-        )
+        raise AnchorVerificationError(f"v1 supports Ed25519 Rekor keys only; got {type(rekor_pubkey).__name__}")
 
     payload = _set_payload(parsed)
     try:

@@ -12,12 +12,13 @@ accompanies the structured JSON contract.
 
 - A supported bundle schema version should verify normally.
 - A missing bundle schema version should surface
-  `att.verify.schema_version_missing`.
+  `att.verify.schema_version_missing` and use the quarantine exit code.
 - An unsupported bundle or payload schema version should remain a rejected
-  verifier result and surface `att.verify.schema_version_unsupported` in the
-  reason list.
+  verifier result, surface `att.verify.schema_version_unsupported` in the
+  reason list, and use the quarantine exit code.
 - A fail-closed critical/required field should remain a rejected verifier
-  result and surface `att.verify.schema_unknown` in the reason list.
+  result, surface `att.verify.schema_unknown` in the reason list, and use
+  the quarantine exit code.
 - Additive unknown fields are preserved verbatim by the caller and ignored by
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code
@@ -39,6 +40,8 @@ accompanies the structured JSON contract.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.
+- Malformed input that cannot be parsed as JSON or read from disk uses the
+  usage-error exit code, distinct from quarantine.
 
 ## Negative Vectors
 

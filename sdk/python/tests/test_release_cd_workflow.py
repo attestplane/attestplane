@@ -13,8 +13,8 @@ def test_release_cd_delegates_real_pypi_publish_to_direct_workflow() -> None:
 
     assert "run-name: release-cd ${{ inputs.release_tag }}" in release_cd
     assert "gh workflow run publish-python.yml" in release_cd
-    assert "-f caller_run_id=\"${CALLER_RUN_ID}\"" in release_cd
-    assert "gh run watch \"$run_id\" --exit-status" in release_cd
+    assert '-f caller_run_id="${CALLER_RUN_ID}"' in release_cd
+    assert 'gh run watch "$run_id" --exit-status' in release_cd
     assert "caller_run_id:" in publish_python
     assert "run-name: publish-python" in publish_python
 
