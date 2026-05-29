@@ -26,6 +26,7 @@ from temporalio.worker import Worker
 
 from .activities import (
     create_pr_activity,
+    fix_ci_activity,
     implement_activity,
     merge_pr_activity,
     post_review_activity,
@@ -65,6 +66,7 @@ async def _main() -> None:
         activities=[
             implement_activity,
             create_pr_activity,
+            fix_ci_activity,
             review_pr_activity,
             post_review_activity,
             merge_pr_activity,
