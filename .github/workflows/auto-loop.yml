@@ -249,3 +249,23 @@ jobs:
             --ref main \
             --field milestone_tag="${TAG}"
           echo "✅ architecture-audit triggered for ${TAG}"
+
+      # ── Publish alpha release for patch/minor bumps ───────────────────────
+      - name: Publish alpha release via release-cd
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true' &&
+          steps.bump.outputs.level != 'major'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh workflow run release-cd \
+            --repo "${{ github.repository }}" \
+            --ref main \
+            --field release_tag="${TAG}" \
+            --field channel="alpha" \
+            --field dry_run="false" \
+            --field audit_verified="false"
+          echo "✅ release-cd triggered for ${TAG} (channel=alpha)"
