@@ -54,6 +54,8 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     }
     if "explanation" in payload:
         expected_keys.add("explanation")
+    if "anchoring" in payload:
+        expected_keys.add("anchoring")
 
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
@@ -81,6 +83,20 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
 
+    if "anchoring" in payload:
+        anchoring = payload["anchoring"]
+        assert isinstance(anchoring, dict)
+        assert set(anchoring) <= {"status", "cause"}
+        assert anchoring["status"] in {
+            "unanchored",
+            "pending",
+            "anchored",
+            "quarantine",
+        }
+        if "cause" in anchoring:
+            assert isinstance(anchoring["cause"], str)
+            assert anchoring["cause"]
+
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
         expected_keys = {"code", "path", "message"}
@@ -101,6 +117,7 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
+    assert schema["properties"]["anchoring"]["required"] == ["status"]
 
 
 def test_verify_json_pass_payload_matches_schema(capsys) -> None:
@@ -134,4 +151,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )

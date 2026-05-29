@@ -1240,6 +1240,14 @@
       "documented": false,
       "kind": "function",
       "module": "attestplane",
+      "name": "verify",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "module": "attestplane",
       "name": "verify_chain_with_anchors",
       "notes": "",
       "stability": "alpha_public"

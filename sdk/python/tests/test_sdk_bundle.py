@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
+from attestplane import verify
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.sdk import (
@@ -20,6 +22,7 @@ from attestplane.types import EventDraft
 from attestplane.verifier import verify_proof_bundle
 
 SUBJECT_DIGEST = "3f551d9" + "0" * 57
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def _signer() -> Signer:
@@ -83,3 +86,10 @@ def test_verify_minimum_bundle_raises_incomplete_error_for_unsigned_bundle() -> 
         verify_minimum_bundle(builder.build())
 
     assert exc_info.value.error_code == "bundle.schema.incomplete"
+
+
+def test_top_level_verify_exposes_anchoring_quarantine_status() -> None:
+    result = verify(ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att")
+
+    assert result.anchoring.status == "quarantine"
+    assert result.anchoring.cause == "tsa request timeout"

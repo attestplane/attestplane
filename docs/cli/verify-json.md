@@ -16,6 +16,9 @@ The payload is fixed at schema version 1:
   "reason_code": null,
   "taxonomy_version": 1,
   "reasons": [],
+  "anchoring": {
+    "status": "unanchored"
+  },
   "bundle": {
     "schema_version": 1,
     "digest": "..."
@@ -35,6 +38,10 @@ The payload is fixed at schema version 1:
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
+- `anchoring.status` is a stable additive summary of the bundle's reported
+  anchoring state. The current contract accepts `unanchored`, `pending`,
+  `anchored`, and `quarantine`. When the state is `quarantine`, the optional
+  `anchoring.cause` string carries the quarantine cause.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
   On success, the array contains a compact summary; on rejection, it mirrors
@@ -76,7 +83,9 @@ unsupported major versions and fail-closed critical/required fields surface
 respectively.
 
 When the two flags are combined, stdout remains valid JSON and the rationale
-text is carried in `explanation[]` and `reasons[].explanation`.
+text is carried in `explanation[]` and `reasons[].explanation`. If the bundle
+has an anchoring quarantine state, `--explain` human output also prints the
+quarantine cause.
 
 When `--explain` is used without `--json`, stdout prints a compact
 `OK|FAIL signer_subject=... schema_version=... anchor=...` summary and

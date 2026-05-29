@@ -75,6 +75,28 @@
         }
       }
     },
+    "anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "unanchored",
+            "pending",
+            "anchored",
+            "quarantine"
+          ]
+        },
+        "cause": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "explanation": {
       "type": "array",
       "items": {

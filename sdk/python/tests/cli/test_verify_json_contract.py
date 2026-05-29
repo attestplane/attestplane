@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -55,6 +54,9 @@ VERIFY_JSON_CONTRACT_V1 = {
                     "digest": "d4d37025f7452ad2525d6b37c898bf08cd335db3e7983ce04e242e898b77b2cb",
                     "schema_version": 1,
                 },
+                "anchoring": {
+                    "status": "unanchored",
+                },
                 "exit_code": 0,
                 "reason_code": None,
                 "reasons": [],
@@ -69,6 +71,9 @@ VERIFY_JSON_CONTRACT_V1 = {
                 "bundle": {
                     "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",
                     "schema_version": 1,
+                },
+                "anchoring": {
+                    "status": "unanchored",
                 },
                 "exit_code": 1,
                 "reason_code": VERIFY_REASON_CANONICAL_MISMATCH,
@@ -114,6 +119,7 @@ def _assert_matches_verify_result_v1(
         "reasons",
         "bundle",
     ]
+    assert schema["properties"]["anchoring"]["required"] == ["status"]
 
     expected_keys = {
         "schema_version",
@@ -126,6 +132,8 @@ def _assert_matches_verify_result_v1(
     }
     if expect_explanation:
         expected_keys.add("explanation")
+    if "anchoring" in payload:
+        expected_keys.add("anchoring")
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
@@ -143,6 +151,15 @@ def _assert_matches_verify_result_v1(
     assert set(bundle) == {"schema_version", "digest"}
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+
+    if "anchoring" in payload:
+        anchoring = payload["anchoring"]
+        assert isinstance(anchoring, dict)
+        assert set(anchoring) <= {"status", "cause"}
+        assert anchoring["status"] in {"unanchored", "pending", "anchored", "quarantine"}
+        if "cause" in anchoring:
+            assert isinstance(anchoring["cause"], str)
+            assert anchoring["cause"]
 
     if expect_explanation:
         explanation = payload["explanation"]
@@ -192,11 +209,15 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
     assert payload["reasons"] == []
+    assert payload["anchoring"] == {"status": "unanchored"}
     assert payload["explanation"] == [
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": (
+                "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
+                "schema_version=1 taxonomy_version=1 anchor=absent"
+            ),
         }
     ]
 
@@ -220,6 +241,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert stderr == ""
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["anchoring"] == {"status": "unanchored"}
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert explanation["pointer"].startswith("/events/")
@@ -227,6 +249,21 @@ def test_verify_json_and_explain_keep_json_parseable(
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+
+
+def test_verify_json_quarantine_fixture_surfaces_anchoring_status(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    quarantine_fixture = ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att"
+    rc, payload, stderr = _run_verify(["verify", "--json", str(quarantine_fixture)], capsys)
+
+    assert rc == 0
+    assert stderr == ""
+    _assert_matches_verify_result_v1(payload)
+    assert payload["anchoring"] == {
+        "status": "quarantine",
+        "cause": "tsa request timeout",
+    }
 
 
 def test_verify_json_reports_invalid_json(

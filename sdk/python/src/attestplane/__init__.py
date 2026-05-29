@@ -164,6 +164,7 @@ from attestplane.hashchain import (
     hash_event,
     verify_chain,
 )
+from attestplane.sdk.bundle import verify
 from attestplane.storage import (
     AbstractStorageBackend,
     JsonlStorageBackend,
@@ -360,6 +361,7 @@ __all__ = [
     "replay_fixture",
     "verify_chain",
     "verify_chain_with_anchors",
+    "verify",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
     "verify_reason_code_explanation",
@@ -367,20 +369,22 @@ __all__ = [
 ]
 
 if _SIGNING_AVAILABLE:
-    __all__.extend([
-        "SIGNATURE_SCHEMA_VERSION",
-        "EnvKeyProvider",
-        "FileKeyProvider",
-        "InMemoryKeyProvider",
-        "KeyBoundaryError",
-        "KeyProvider",
-        "KeyProviderError",
-        "MultiSignerProvider",
-        "SignatureMode",
-        "SignatureRecord",
-        "SignatureVerificationError",
-        "SignaturePolicy",
-        "SigningError",
-        "SigningMaterial",
-        "derive_key_id",
-    ])
+    __all__.extend(
+        [
+            "SIGNATURE_SCHEMA_VERSION",
+            "EnvKeyProvider",
+            "FileKeyProvider",
+            "InMemoryKeyProvider",
+            "KeyBoundaryError",
+            "KeyProvider",
+            "KeyProviderError",
+            "MultiSignerProvider",
+            "SignatureMode",
+            "SignatureRecord",
+            "SignatureVerificationError",
+            "SignaturePolicy",
+            "SigningError",
+            "SigningMaterial",
+            "derive_key_id",
+        ]
+    )

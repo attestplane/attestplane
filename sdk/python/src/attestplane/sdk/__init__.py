@@ -9,6 +9,7 @@ from attestplane.sdk.bundle import (
     ProofBundleBuilder,
     ProofBundleError,
     raise_for_minimum_bundle_result,
+    verify,
     verify_minimum_bundle,
     verify_minimum_bundle_file,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "ProofBundleError",
     "SUPPORTED_SCHEMA_VERSIONS",
     "raise_for_minimum_bundle_result",
+    "verify",
     "verify_minimum_bundle",
     "verify_minimum_bundle_file",
 ]
