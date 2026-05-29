@@ -10,6 +10,7 @@ from pathlib import Path
 from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_TAXONOMY_VERSION,
 )
 
@@ -17,6 +18,14 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "schemas" / "cli" / "verify-result-v1.json"
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+SCHEMA_VERSION_FAIL_FIXTURE = (
+    ROOT
+    / "tests"
+    / "conformance"
+    / "schema_version"
+    / "unknown_required_field"
+    / "bundle.json"
+)
 
 
 def _schema() -> dict[str, object]:
@@ -134,4 +143,27 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )
+
+
+def test_verify_json_unknown_required_schema_version_field_rejects_with_stable_exit_code(
+    capsys,
+) -> None:
+    rc = main(["verify", "--json", str(SCHEMA_VERSION_FAIL_FIXTURE)])
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == 1
+    assert captured.err == ""
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 1
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert payload["reasons"] == [
+        {
+            "code": VERIFY_REASON_SCHEMA_UNKNOWN,
+            "path": "/chain_metadata/critical_future_field",
+            "message": "bundle metadata closure failed",
+        }
+    ]
