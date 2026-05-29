@@ -177,6 +177,7 @@ def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
+        f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} "
         f"anchor={_bundle_anchor_state(bundle)}"
     )
 
@@ -244,13 +245,14 @@ def _json_failure(
     exit_code: int,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    taxonomy_version: int = VERIFY_REASON_TAXONOMY_VERSION,
 ) -> VerifyJsonOutcome:
     payload = {
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+            "taxonomy_version": taxonomy_version,
             "reasons": [reason],
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -270,13 +272,14 @@ def _json_pass(
     *,
     bundle_digest: str,
     explanation: list[dict[str, Any]] | None = None,
+    taxonomy_version: int = VERIFY_REASON_TAXONOMY_VERSION,
 ) -> VerifyJsonOutcome:
     payload = {
             "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
             "result": "pass",
             "exit_code": 0,
             "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+            "taxonomy_version": taxonomy_version,
             "reasons": [],
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -618,6 +621,7 @@ def build_verify_json_outcome(
         return _json_pass(
             bundle_digest=bundle_digest,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
+            taxonomy_version=result.taxonomy_version,
         )
 
     reasons = _bundle_failure_reason(result, explain=explain)
@@ -637,7 +641,7 @@ def build_verify_json_outcome(
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+            "taxonomy_version": result.taxonomy_version,
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,

@@ -55,6 +55,7 @@ import {
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
+  VERIFY_REASON_TAXONOMY_VERSION,
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
 
@@ -92,6 +93,7 @@ export interface BundleVerificationResult {
   readonly error_code: VerifyErrorCode;
   readonly primary_reason: VerifyReasonCodeV1 | null;
   readonly secondary_reasons: readonly VerifyReasonCodeV1[];
+  readonly taxonomy_version: typeof VERIFY_REASON_TAXONOMY_VERSION;
 }
 
 export interface VerifyProofBundleOptions {
@@ -739,6 +741,7 @@ export function verifyProofBundle(
     error_code: errorCode,
     primary_reason: reasons.primary,
     secondary_reasons: reasons.secondary,
+    taxonomy_version: VERIFY_REASON_TAXONOMY_VERSION,
   };
 }
 

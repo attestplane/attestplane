@@ -46,6 +46,7 @@ from attestplane.verify_errors import (
     VerifyErrorCode,
 )
 from attestplane.verify_reason_codes import (
+    VERIFY_REASON_TAXONOMY_VERSION,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -109,6 +110,7 @@ class BundleVerificationResult:
     error_code: VerifyErrorCode
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
+    taxonomy_version: int = VERIFY_REASON_TAXONOMY_VERSION
 
     def short_summary(self) -> str:
         if self.ok:
@@ -640,6 +642,7 @@ def verify_proof_bundle(
         error_code=error_code,
         primary_reason=primary_reason,
         secondary_reasons=secondary_reasons,
+        taxonomy_version=VERIFY_REASON_TAXONOMY_VERSION,
     )
 
 

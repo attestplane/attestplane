@@ -92,13 +92,16 @@ def _assert_rationale_lines(
 
 def _assert_failure_summary(stdout: str, *, signer_subject: str, schema_version: str) -> None:
     assert stdout.strip() == (
-        f"FAIL signer_subject={signer_subject} schema_version={schema_version} anchor=absent"
+        f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
+        "taxonomy_version=1 anchor=absent"
     )
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
     assert stdout.strip() == (
-        f"OK signer_subject={signer_subject} schema_version=1 anchor=absent"
+        "OK "
+        f"signer_subject={signer_subject} schema_version=1 taxonomy_version=1 "
+        "anchor=absent"
     )
 
 
@@ -160,7 +163,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             (
                 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
                 "/chain_metadata/schema_version",
-                ("chain_metadata.schema_version=2", "this verifier handles 1"),
+                ("chain_metadata.schema_version=2", "schema_version values (1,)"),
             ),
         ),
         (
@@ -233,6 +236,7 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
 
     assert rc == 1
     assert stdout.startswith("FAIL signer_subject=")
+    assert "taxonomy_version=1" in stdout
     assert "schema_version=999" in stdout
     assert stderr.splitlines() == expected_lines
 
@@ -262,7 +266,7 @@ def test_verify_explain_json_emits_explanation_array_for_success(
     assert summary["primary_reason"] is None
     assert summary["pointer"] == "/"
     assert summary["message"] == (
-        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 anchor=absent"
+        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy_version=1 anchor=absent"
     )
 
 

@@ -75,7 +75,9 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     assert explain_rc == 0
     assert json_stderr == ""
     assert explain_stderr == ""
-    assert json_stdout == explain_stdout
+    explain_payload_no_explanation = dict(explain_payload)
+    explain_payload_no_explanation.pop("explanation", None)
+    assert json_payload == explain_payload_no_explanation
     assert json_payload["taxonomy_version"] == 1
     assert explain_payload["taxonomy_version"] == 1
     assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]

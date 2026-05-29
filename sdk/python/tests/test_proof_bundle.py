@@ -174,6 +174,7 @@ def test_verify_proof_bundle_accepts_good_bundle() -> None:
     assert result.chain_result.ok is True
     assert result.metadata_ok is True
     assert result.policy_trace_refs_ok is True
+    assert result.taxonomy_version == 1
 
 
 def test_verify_proof_bundle_accepts_minimum_signed_attestation_schema() -> None:
@@ -185,6 +186,7 @@ def test_verify_proof_bundle_accepts_minimum_signed_attestation_schema() -> None
     assert result.ok is True
     assert result.signed_attestation_schema_ok is True
     assert result.signed_attestation_schema_reason is None
+    assert result.taxonomy_version == 1
 
 
 def test_verify_proof_bundle_require_non_empty_enforces_signature_schema() -> None:

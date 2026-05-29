@@ -64,6 +64,7 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.secondary_reasons).toEqual([]);
     expect(result.signed_attestation_schema_ok).toBe(true);
     expect(result.signed_attestation_schema_reason).toBeNull();
+    expect(result.taxonomy_version).toBe(1);
   });
 
   it('requires at least one signed attestation when strict schema is enabled', () => {
@@ -74,6 +75,7 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.primary_reason).toBe(VERIFY_REASON_SIGNATURE_MISSING);
     expect(result.signed_attestation_schema_ok).toBe(false);
     expect(result.signed_attestation_schema_reason).toContain('signatures');
+    expect(result.taxonomy_version).toBe(1);
   });
 
   it('accepts the minimum signed-attestation schema when strict schema is enabled', () => {
@@ -83,6 +85,7 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.error_code).toBe('VERIFY_OK');
     expect(result.primary_reason).toBeNull();
     expect(result.signed_attestation_schema_ok).toBe(true);
+    expect(result.taxonomy_version).toBe(1);
   });
 
   it('keeps requireNonEmpty fail-closed on empty bundles', () => {
@@ -93,6 +96,7 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.error_code).toBe('VERIFY_REQUIRED_FIELDS_MISSING');
     expect(result.primary_reason).toBe(VERIFY_REASON_REQUIRED_FIELD_MISSING);
     expect(result.signed_attestation_schema_ok).toBe(true);
+    expect(result.taxonomy_version).toBe(1);
   });
 
   it('does not require signed attestations when only requireNonEmpty is enabled', () => {
@@ -102,5 +106,6 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.error_code).toBe('VERIFY_OK');
     expect(result.signed_attestation_schema_ok).toBe(true);
     expect(result.signed_attestation_schema_reason).toBeNull();
+    expect(result.taxonomy_version).toBe(1);
   });
 });
