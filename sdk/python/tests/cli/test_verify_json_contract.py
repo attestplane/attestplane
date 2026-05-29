@@ -1,6 +1,10 @@
 # SPDX-FileCopyrightText: 2026 The Attestplane Authors
 # SPDX-License-Identifier: Apache-2.0
-"""Structured ``attestplane verify --json`` contract tests."""
+"""Structured ``attestplane verify --json`` contract tests.
+
+This locks the issue #183 / #155 JSON surface and the versioned contract
+fixture introduced by issue #276.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ from attestplane.cli.verify_json import (
 )
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -29,6 +34,55 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+
+# Versioned snapshot for the consumer-facing verify --json contract.
+# Keep this fixture in sync with the intentional contract surface only.
+VERIFY_JSON_CONTRACT_V1 = {
+    "schema_version": 1,
+    "exit_codes": {
+        "accept": 0,
+        "verification_failure": 1,
+        "usage_or_io_error": 2,
+    },
+    "cases": {
+        "accept": {
+            "fixture": str(PASS_FIXTURE.relative_to(ROOT)),
+            "payload": {
+                "bundle": {
+                    "digest": "d4d37025f7452ad2525d6b37c898bf08cd335db3e7983ce04e242e898b77b2cb",
+                    "schema_version": 1,
+                },
+                "exit_code": 0,
+                "reason_code": None,
+                "reasons": [],
+                "result": "pass",
+                "schema_version": 1,
+                "taxonomy_version": 1,
+            },
+        },
+        "verification_failure": {
+            "fixture": str(FAIL_FIXTURE.relative_to(ROOT)),
+            "payload": {
+                "bundle": {
+                    "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",
+                    "schema_version": 1,
+                },
+                "exit_code": 1,
+                "reason_code": VERIFY_REASON_CANONICAL_MISMATCH,
+                "reasons": [
+                    {
+                        "code": VERIFY_REASON_CANONICAL_MISMATCH,
+                        "message": "canonicalization failed",
+                        "path": "/events/0/event/payload/artifact_ref",
+                    },
+                ],
+                "result": "fail",
+                "schema_version": 1,
+                "taxonomy_version": 1,
+            },
+        },
+    },
+}
 
 
 def _run_verify(
@@ -115,9 +169,9 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
-    assert rc == 0
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["accept"]
     assert stderr == ""
-    _assert_matches_verify_result_v1(payload)
+    assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["accept"]["payload"]
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
@@ -125,14 +179,9 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
 
-    assert rc == 1
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["verification_failure"]
     assert stderr == ""
-    _assert_matches_verify_result_v1(payload)
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    reason = payload["reasons"][0]  # type: ignore[index]
-    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert reason["path"].startswith("/events/")
-    assert "canonicalization" in reason["message"]
+    assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["verification_failure"]["payload"]
 
 
 def test_verify_json_and_explain_keep_json_parseable(
@@ -186,7 +235,7 @@ def test_verify_json_reports_invalid_utf8(
 
     rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == 2
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_or_io_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1
@@ -242,8 +291,8 @@ def test_verify_json_reports_missing_bundle_path(
 
     rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == 1
-    assert stderr == ""
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_or_io_error"]
+    assert stderr == f"{VERIFY_IO_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
