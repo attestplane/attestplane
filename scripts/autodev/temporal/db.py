@@ -10,7 +10,7 @@ from typing import Optional
 
 DB_PATH = Path(os.environ.get(
     "AUTODEV_DB_PATH",
-    Path(__file__).resolve().parents[4] / "data" / "autodev_state.db"
+    Path(__file__).resolve().parents[3] / "data" / "autodev_state.db"
 ))
 
 _DDL = """

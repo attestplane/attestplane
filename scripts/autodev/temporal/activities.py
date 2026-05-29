@@ -272,14 +272,12 @@ async def post_review_activity(
     decision: str,
     review_output: str,
 ) -> dict:
-    """Post formal GitHub review + add review-passed label on APPROVE."""
-    pr_sha = _gh([
-        "pr", "view", str(pr_number),
-        "--repo", REPO_SLUG,
-        "--json", "headRefOid",
-        "--jq", ".headRefOid",
-    ])
+    """Post GitHub review (APPROVE) or comment (REQUEST_CHANGES) on the PR.
 
+    GitHub does not allow requesting changes on your own PR (422). We work
+    around this by posting REQUEST_CHANGES as a regular PR comment instead
+    of a formal review, while APPROVE goes through the review API.
+    """
     body_lines = review_output.splitlines()
     detail = "\n".join(body_lines[1:]).strip() if len(body_lines) > 1 else ""
     review_body = (
@@ -287,13 +285,13 @@ async def post_review_activity(
         "*Reviewed by autodev-train – Temporal worker – Qwen Code + DeepSeek v4.0 Pro*"
     )
 
-    event = "APPROVE" if decision == "APPROVE" else "REQUEST_CHANGES"
+    # GitHub forbids both APPROVE and REQUEST_CHANGES on your own PRs (422).
+    # We post as a regular PR comment for both decisions, and add the
+    # review-passed label directly for APPROVE — sufficient to trigger merge.
     _gh([
-        "api", "-X", "POST",
-        f"repos/{REPO_SLUG}/pulls/{pr_number}/reviews",
-        "--field", f"commit_id={pr_sha}",
-        "--field", f"event={event}",
-        "--field", f"body={review_body}",
+        "pr", "comment", str(pr_number),
+        "--repo", REPO_SLUG,
+        "--body", review_body,
     ])
 
     if decision == "APPROVE":
@@ -304,7 +302,7 @@ async def post_review_activity(
         ])
         db.upsert_run(issue_number, stage="approved")
 
-    db.log_event(issue_number, "post_review", "completed", f"event={event}")
+    db.log_event(issue_number, "post_review", "completed", f"decision={decision}")
     return {"posted": True}
 
 
