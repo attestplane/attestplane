@@ -22,6 +22,7 @@ from attestplane.verify_errors import (
     VERIFY_SCHEMA_ERROR,
 )
 from attestplane.verify_reason_codes import (
+    VERIFY_REASON_ANCHOR_INVALID,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -38,6 +39,7 @@ from attestplane.verify_reason_codes import (
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
 VERIFY_BUNDLE_SCHEMA_VERSION: int = 1
+VERIFY_ANCHOR_STATUS_VALUES: frozenset[str] = frozenset({"unanchored", "verified", "quarantined"})
 
 
 class _DuplicateKeyError(ValueError):
@@ -174,6 +176,18 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
 
+def _bundle_anchor_status(bundle: dict[str, Any]) -> str:
+    """Return the caller-visible anchor status from additive bundle metadata."""
+    for section_name in ("verification_report", "chain_metadata"):
+        section = bundle.get(section_name)
+        if not isinstance(section, dict):
+            continue
+        status = section.get("anchor_status")
+        if isinstance(status, str) and status in VERIFY_ANCHOR_STATUS_VALUES:
+            return status
+    return "unanchored"
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
@@ -253,18 +267,20 @@ def _json_failure(
     exit_code: int,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    anchor_status: str = "unanchored",
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [reason],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "fail",
+        "exit_code": exit_code,
+        "reason_code": reason["code"],
+        "anchor_status": anchor_status,
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [reason],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -279,18 +295,20 @@ def _json_pass(
     *,
     bundle_digest: str,
     explanation: list[dict[str, Any]] | None = None,
+    anchor_status: str = "unanchored",
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "pass",
-            "exit_code": 0,
-            "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "pass",
+        "exit_code": 0,
+        "reason_code": None,
+        "anchor_status": anchor_status,
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -510,11 +528,7 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
@@ -574,10 +588,9 @@ def build_verify_json_outcome(
             ),
             exit_code=1,
             explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
-                if explain
-                else None
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
             ),
+            anchor_status="unanchored",
         )
 
     try:
@@ -599,11 +612,8 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(code, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
+            anchor_status="unanchored",
         )
     except CanonicalizationError as exc:
         path = "/events"
@@ -617,17 +627,45 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
+            anchor_status="unanchored",
         )
 
+    anchor_status = _bundle_anchor_status(bundle)
     if result.ok:
+        if anchor_status == "quarantined":
+            return _json_failure(
+                bundle_digest=bundle_digest,
+                reason=_reason_entry(
+                    VERIFY_REASON_ANCHOR_INVALID,
+                    "/verification_report/anchor_status",
+                    summary="anchor verification quarantined",
+                    detail=(
+                        "verification_report.anchor_status=quarantined; this bundle must not be reported as verified"
+                    ),
+                    explain=explain,
+                ),
+                exit_code=1,
+                explanation=(
+                    [
+                        _explanation_entry(
+                            VERIFY_REASON_ANCHOR_INVALID,
+                            "/verification_report/anchor_status",
+                            (
+                                "verification_report.anchor_status=quarantined; "
+                                "this bundle must not be reported as verified"
+                            ),
+                        )
+                    ]
+                    if explain
+                    else None
+                ),
+                anchor_status=anchor_status,
+            )
         return _json_pass(
             bundle_digest=bundle_digest,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
+            anchor_status=anchor_status,
         )
 
     reasons = _bundle_failure_reason(result, explain=explain)
@@ -647,17 +685,14 @@ def build_verify_json_outcome(
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
+            "anchor_status": anchor_status,
             "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-            **(
-                {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
-                if explain
-                else {}
-            ),
+            **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,
         stderr_code=stderr_code,

@@ -41,6 +41,14 @@
         }
       ]
     },
+    "anchor_status": {
+      "type": "string",
+      "enum": [
+        "unanchored",
+        "verified",
+        "quarantined"
+      ]
+    },
     "taxonomy_version": {
       "type": "integer",
       "const": 1

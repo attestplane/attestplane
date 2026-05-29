@@ -14,6 +14,7 @@ The payload is fixed at schema version 1:
   "result": "pass",
   "exit_code": 0,
   "reason_code": null,
+  "anchor_status": "unanchored",
   "taxonomy_version": 1,
   "reasons": [],
   "bundle": {
@@ -30,6 +31,10 @@ The payload is fixed at schema version 1:
   means a usage, I/O, or schema/shape problem prevented verification.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
+- `anchor_status` is the additive caller-visible anchor state. Current
+  values are `unanchored`, `verified`, and `quarantined`.
+- `quarantined` is fail-closed: `verify --json` never reports a quarantined
+  anchor as `pass` / `VERIFIED`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
@@ -90,6 +95,7 @@ the structured payload.
   "schema_version": 1,
   "result": "pass",
   "exit_code": 0,
+  "anchor_status": "unanchored",
   "reasons": [],
   "explanation": [
     {
@@ -113,6 +119,7 @@ the structured payload.
   "result": "fail",
   "exit_code": 1,
   "reason_code": "att.verify.schema_version_unsupported",
+  "anchor_status": "unanchored",
   "taxonomy_version": 1,
   "explanation": [
     {
