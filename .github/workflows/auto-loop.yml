@@ -204,10 +204,9 @@ jobs:
           set -euo pipefail
           base="${LATEST_TAG:-v0.0.0}"
           next=$(python3 -c "
-          import os
-          parts = os.environ['base'].lstrip('v').split('.')
+          parts = '${base}'.lstrip('v').split('.')
           major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
-          if os.environ['LEVEL'] == 'minor':
+          if '${LEVEL}' == 'minor':
               minor += 1
               patch = 0
           else:
