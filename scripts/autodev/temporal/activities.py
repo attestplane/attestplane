@@ -666,6 +666,13 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                          "--comment", "Closed by autodev-train: required CI checks failed (BLOCKED). Fix linting/tests and reopen."])
                 except RuntimeError:
                     pass
+                try:
+                    _gh(["issue", "close", str(issue_number), "--repo", REPO_SLUG,
+                         "--comment", f"Closed: PR #{pr_number} failed required CI checks. Re-open to retry."])
+                    _gh(["issue", "edit", str(issue_number), "--repo", REPO_SLUG,
+                         "--add-label", "autodev-failed"])
+                except RuntimeError:
+                    pass
                 db.upsert_run(issue_number, stage="failed")
                 db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=BLOCKED")
                 return {"merged": False, "reason": "ci_blocked"}
