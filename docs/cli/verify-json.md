@@ -30,8 +30,9 @@ The payload is fixed at schema version 1:
   means a usage, I/O, or schema/shape problem prevented verification.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
-- `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use.
+- `taxonomy_version` is read from the proof bundle's
+  `chain_metadata.evidence_taxonomy_version` field and pins the shared
+  verifier rejection taxonomy that both `--json` and `--explain` use.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
@@ -90,6 +91,7 @@ the structured payload.
   "schema_version": 1,
   "result": "pass",
   "exit_code": 0,
+  "taxonomy_version": 1,
   "reasons": [],
   "explanation": [
     {

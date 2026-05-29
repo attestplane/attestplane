@@ -135,6 +135,7 @@ const REQUIRED_CHAIN_METADATA = [
   'head_hash_hex',
   'head_seq',
   'producer_runtime',
+  'evidence_taxonomy_version',
 ] as const;
 const REQUIRED_VERIFICATION_REPORT = [
   'ok',
@@ -728,7 +729,7 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
-    taxonomy_version: VERIFY_REASON_TAXONOMY_VERSION,
+    taxonomy_version: bundle.chain_metadata.evidence_taxonomy_version,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,
