@@ -8,10 +8,12 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
 
-DB_PATH = Path(os.environ.get(
-    "AUTODEV_DB_PATH",
-    Path(__file__).resolve().parents[3] / "data" / "autodev_state.db"
-))
+DB_PATH = Path(
+    os.environ.get(
+        "AUTODEV_DB_PATH",
+        Path(__file__).resolve().parents[3] / "data" / "autodev_state.db",
+    )
+)
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS pipeline_runs (

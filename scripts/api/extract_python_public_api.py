@@ -68,7 +68,11 @@ def module_for_symbol(name: str) -> str:
 def stability_for_symbol(name: str) -> str:
     if name.startswith("_"):
         return "internal_exported"
-    if name in {"bundle_to_dsse_envelope", "bundle_to_in_toto_statement", "proof_bundle_to_in_toto_statement"}:
+    if name in {
+        "bundle_to_dsse_envelope",
+        "bundle_to_in_toto_statement",
+        "proof_bundle_to_in_toto_statement",
+    }:
         return "experimental"
     return "alpha_public"
 

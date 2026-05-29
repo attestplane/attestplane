@@ -1,7 +1,11 @@
 import subprocess
 from pathlib import Path
 
-from scripts.local_codex_runner.run_once import cleanup_stale_state, product_delta_idle_summary, run_once
+from scripts.local_codex_runner.run_once import (
+    cleanup_stale_state,
+    product_delta_idle_summary,
+    run_once,
+)
 
 
 def test_cleanup_stale_state_prunes_closed_active_issues(tmp_path: Path) -> None:
@@ -35,7 +39,9 @@ def test_cleanup_stale_state_prunes_closed_active_issues(tmp_path: Path) -> None
     assert "codex/118" not in state_path.read_text(encoding="utf-8")
 
 
-def test_cleanup_stale_state_reports_github_errors_without_crashing(tmp_path: Path) -> None:
+def test_cleanup_stale_state_reports_github_errors_without_crashing(
+    tmp_path: Path,
+) -> None:
     state_path = tmp_path / "state.json"
     state_path.write_text(
         "{\n"
@@ -114,7 +120,13 @@ def test_run_once_prioritizes_open_issues_by_title(monkeypatch, tmp_path: Path) 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert processed == [2]
     assert result["lane"] == {
@@ -126,7 +138,9 @@ def test_run_once_prioritizes_open_issues_by_title(monkeypatch, tmp_path: Path) 
     assert result["needs_human_recovery"] == {"enabled": False, "results": []}
 
 
-def test_run_once_reports_needs_human_recovery_is_disabled(monkeypatch, tmp_path: Path) -> None:
+def test_run_once_reports_needs_human_recovery_is_disabled(
+    monkeypatch, tmp_path: Path
+) -> None:
     config_path = tmp_path / "runner.yml"
     config_path.write_text(
         'repo: "o/r"\n'
@@ -146,17 +160,29 @@ def test_run_once_reports_needs_human_recovery_is_disabled(monkeypatch, tmp_path
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["needs_human_recovery"] == {"enabled": False, "results": []}
 
 
-def test_run_once_cleans_transient_evidence_without_needs_human_recovery(monkeypatch, tmp_path: Path) -> None:
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+def test_run_once_cleans_transient_evidence_without_needs_human_recovery(
+    monkeypatch, tmp_path: Path
+) -> None:
+    subprocess.run(
+        ["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True
+    )
     evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-14"
     evidence_dir.mkdir(parents=True)
     failure_file = evidence_dir / "failure.txt"
-    failure_file.write_text("Codex usage limit reached; try again later\n", encoding="utf-8")
+    failure_file.write_text(
+        "Codex usage limit reached; try again later\n", encoding="utf-8"
+    )
     config_path = tmp_path / "runner.yml"
     config_path.write_text(
         'repo: "o/r"\n'
@@ -179,15 +205,27 @@ def test_run_once_cleans_transient_evidence_without_needs_human_recovery(monkeyp
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["needs_human_recovery"] == {"enabled": False, "results": []}
-    assert result["transient_cleanup"] == ["docs/validation/local_codex_runner/issue-14/failure.txt"]
+    assert result["transient_cleanup"] == [
+        "docs/validation/local_codex_runner/issue-14/failure.txt"
+    ]
     assert not failure_file.exists()
 
 
-def test_run_once_cleans_transient_result_files_before_live_cycle(monkeypatch, tmp_path: Path) -> None:
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+def test_run_once_cleans_transient_result_files_before_live_cycle(
+    monkeypatch, tmp_path: Path
+) -> None:
+    subprocess.run(
+        ["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True
+    )
     evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-9"
     evidence_dir.mkdir(parents=True)
     result_file = evidence_dir / "runner_result.json"
@@ -213,13 +251,23 @@ def test_run_once_cleans_transient_result_files_before_live_cycle(monkeypatch, t
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
-    assert result["transient_cleanup"] == ["docs/validation/local_codex_runner/issue-9/runner_result.json"]
+    assert result["transient_cleanup"] == [
+        "docs/validation/local_codex_runner/issue-9/runner_result.json"
+    ]
     assert not result_file.exists()
 
 
-def test_run_once_reports_issue_list_external_error(monkeypatch, tmp_path: Path) -> None:
+def test_run_once_reports_issue_list_external_error(
+    monkeypatch, tmp_path: Path
+) -> None:
     config_path = tmp_path / "runner.yml"
     config_path.write_text(
         'repo: "o/r"\n'
@@ -247,7 +295,13 @@ def test_run_once_reports_issue_list_external_error(monkeypatch, tmp_path: Path)
 
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FailingGH)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["processed"] == 0
     assert result["results"] == []
@@ -313,8 +367,20 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
         def list_issues(self, repo: str, label: str | None, limit: int):
             if label is None:
                 return [
-                    IssueTask(31, "[P1][runner] Support-only runner task", "", "", ["priority:P1"]),
-                    IssueTask(32, "[P1][sdk][verifier] Product implementation task", "Implement SDK verifier behavior.", "", ["priority:P1"]),
+                    IssueTask(
+                        31,
+                        "[P1][runner] Support-only runner task",
+                        "",
+                        "",
+                        ["priority:P1"],
+                    ),
+                    IssueTask(
+                        32,
+                        "[P1][sdk][verifier] Product implementation task",
+                        "Implement SDK verifier behavior.",
+                        "",
+                        ["priority:P1"],
+                    ),
                 ]
             return []
 
@@ -334,7 +400,13 @@ def test_run_once_product_delta_idle_processes_product_issue_not_support_issue(
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert processed == [31, 32]
     assert result["product_delta_idle"] == {"active": False, "reason": "disabled"}
@@ -382,7 +454,7 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
                     "Support-only local runner task.",
                     "",
                     ["priority:P1"],
-                )
+                ),
             ]
 
         def list_issues(self, repo: str, label: str | None, limit: int):
@@ -406,7 +478,13 @@ def test_run_once_product_delta_idle_creates_recovery_product_task_when_none_exi
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [31]
@@ -471,7 +549,13 @@ def test_run_once_product_delta_idle_keeps_lane_product_task_when_it_is_open(
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [32]
@@ -525,7 +609,9 @@ def test_run_once_product_delta_idle_keeps_approved_lane_product_task_without_du
         def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
             raise AssertionError("product delta recovery is disabled")
 
-        def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
+        def create_issue(
+            self, repo: str, title: str, body: str, labels: list[str]
+        ) -> str:
             raise AssertionError("product delta recovery is disabled")
 
     def fake_run_issue(config, issue_number):
@@ -542,7 +628,13 @@ def test_run_once_product_delta_idle_keeps_approved_lane_product_task_without_du
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [32]
@@ -605,7 +697,13 @@ def test_run_once_product_delta_idle_consumes_approved_product_task_outside_cand
     monkeypatch.setattr("scripts.local_codex_runner.run_once.GitHubCLI", FakeGH)
     monkeypatch.setattr("scripts.local_codex_runner.run_once.run_issue", fake_run_issue)
 
-    result = run_once(type("Args", (), {"config": config_path, "include_label": [], "exclude_label": []})())
+    result = run_once(
+        type(
+            "Args",
+            (),
+            {"config": config_path, "include_label": [], "exclude_label": []},
+        )()
+    )
 
     assert result["product_delta_recovery"] == {"enabled": False, "reason": "disabled"}
     assert processed == [67]

@@ -30,7 +30,12 @@ from scripts.security.scorecard_diff import (  # noqa: E402
 )
 
 DEFAULT_ISSUE_TITLE = "[P2][security] OpenSSF Scorecard regression monitoring"
-DEFAULT_ISSUE_LABELS = ("type:security", "scorecard-regression", "monitor-only", "priority:P2")
+DEFAULT_ISSUE_LABELS = (
+    "type:security",
+    "scorecard-regression",
+    "monitor-only",
+    "priority:P2",
+)
 REGRESSION_LABEL = "scorecard-regression"
 
 
@@ -101,8 +106,12 @@ def _label_names(raw_labels: object) -> list[str]:
     return labels
 
 
-def find_open_regression_issue(repo: str, title: str, labels: tuple[str, ...]) -> dict[str, object] | None:
-    regression_label = next((label for label in labels if label == REGRESSION_LABEL), REGRESSION_LABEL)
+def find_open_regression_issue(
+    repo: str, title: str, labels: tuple[str, ...]
+) -> dict[str, object] | None:
+    regression_label = next(
+        (label for label in labels if label == REGRESSION_LABEL), REGRESSION_LABEL
+    )
     candidates = list_open_issues(repo, regression_label)
     for issue in candidates:
         issue_title = str(issue.get("title") or "")
@@ -135,15 +144,19 @@ def issue_body(report: ScorecardDiff, summary_path: Path, baseline_path: Path) -
         "## Regressions",
     ]
     lines.extend(regression_lines or ["- none"])
-    lines.extend([
-        "",
-        "## Missing checks",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Missing checks",
+        ]
+    )
     lines.extend(missing_lines or ["- none"])
-    lines.extend([
-        "",
-        "## New checks",
-    ])
+    lines.extend(
+        [
+            "",
+            "## New checks",
+        ]
+    )
     lines.extend(new_lines or ["- none"])
     lines.extend(
         [
@@ -157,7 +170,9 @@ def issue_body(report: ScorecardDiff, summary_path: Path, baseline_path: Path) -
     return "\n".join(lines).strip() + "\n"
 
 
-def create_or_update_issue(repo: str, title: str, body: str, labels: tuple[str, ...]) -> dict[str, object]:
+def create_or_update_issue(
+    repo: str, title: str, body: str, labels: tuple[str, ...]
+) -> dict[str, object]:
     ensure_labels(repo, labels)
     existing = find_open_regression_issue(repo, title, labels)
     if existing is None:
@@ -168,7 +183,17 @@ def create_or_update_issue(repo: str, title: str, body: str, labels: tuple[str, 
         return {"url": url, "action": "created"}
 
     issue_number = int(existing["number"])
-    args = ["issue", "edit", str(issue_number), "--repo", repo, "--title", title, "--body", body]
+    args = [
+        "issue",
+        "edit",
+        str(issue_number),
+        "--repo",
+        repo,
+        "--title",
+        title,
+        "--body",
+        body,
+    ]
     for label in labels:
         args.extend(["--add-label", label])
     run_gh(args)
@@ -177,7 +202,9 @@ def create_or_update_issue(repo: str, title: str, body: str, labels: tuple[str, 
 
 def _write_summary(path: Path, summary: ScorecardSummary) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(summary.as_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(summary.as_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def run_monitor(
@@ -204,7 +231,9 @@ def run_monitor(
         }
 
     baseline_summary = load_summary(baseline_path)
-    report = compare_summaries(baseline_summary, current_summary, meaningful_drop=meaningful_drop)
+    report = compare_summaries(
+        baseline_summary, current_summary, meaningful_drop=meaningful_drop
+    )
     payload: dict[str, object] = {
         "schema": "attestplane.scorecard.monitor.v1",
         "status": "ok" if not report.meaningful_regression else "regression",

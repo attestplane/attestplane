@@ -16,14 +16,17 @@ from attestplane.verify_reason_codes import (
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION_DIR = ROOT / "tests" / "conformance" / "schema_version"
-SCHEMA_VERSION_VECTORS = json.loads(
+SCHEMA_VERSION_CORPUS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
-)["cases"]
+)
+SCHEMA_VERSION_VECTORS = SCHEMA_VERSION_CORPUS["cases"]
 SCHEMA_VERSION_CASE_IDS = {str(vector["case_id"]) for vector in SCHEMA_VERSION_VECTORS}
 
 
 def _bundle(case: str) -> dict:
-    return json.loads((SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8")
+    )
 
 
 @pytest.mark.parametrize("case", sorted(SCHEMA_VERSION_CASE_IDS))
@@ -31,7 +34,17 @@ def test_schema_version_vector_set_is_complete(case: str) -> None:
     assert (SCHEMA_VERSION_DIR / case / "bundle.json").exists()
 
 
-@pytest.mark.parametrize("vector", SCHEMA_VERSION_VECTORS, ids=lambda vector: vector["case_id"])
+def test_schema_version_corpus_documents_forward_compatibility_rule() -> None:
+    description = SCHEMA_VERSION_CORPUS["description"]
+
+    assert "additive-optional" in description
+    assert "accepted as valid" in description
+    assert "required or structural changes remain rejected" in description
+
+
+@pytest.mark.parametrize(
+    "vector", SCHEMA_VERSION_VECTORS, ids=lambda vector: vector["case_id"]
+)
 def test_schema_version_vectors_pin_expected_outcome(vector: dict[str, object]) -> None:
     case = str(vector["case_id"])
     bundle = _bundle(case)
@@ -50,20 +63,38 @@ def test_schema_version_vectors_pin_expected_outcome(vector: dict[str, object]) 
 def test_schema_version_additive_optional_and_required_fields_are_paired() -> None:
     additive_bundle = _bundle("additive_with_unknown_field_ok")
     required_bundle = _bundle("unknown_required_field")
+    additive_vector = next(
+        item
+        for item in SCHEMA_VERSION_VECTORS
+        if item["case_id"] == "additive_with_unknown_field_ok"
+    )
+    required_vector = next(
+        item
+        for item in SCHEMA_VERSION_VECTORS
+        if item["case_id"] == "unknown_required_field"
+    )
 
-    additive_result = verify_proof_bundle(additive_bundle, require_signed_attestation=True)
-    required_result = verify_proof_bundle(required_bundle, require_signed_attestation=True)
+    additive_result = verify_proof_bundle(
+        additive_bundle, require_signed_attestation=True
+    )
+    required_result = verify_proof_bundle(
+        required_bundle, require_signed_attestation=True
+    )
 
     assert additive_result.ok is True
     assert additive_result.primary_reason is None
     assert additive_result.secondary_reasons == ()
     assert additive_bundle["chain_metadata"]["future_metadata_field"] == "kept"
+    assert "forward-compatible acceptance vector" in additive_vector["description"]
     assert required_result.ok is False
     assert required_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
     assert "critical_future_field" in (required_result.metadata_reason or "")
+    assert "remains rejected" in required_vector["description"]
 
 
-def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_version_failure() -> None:
+def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_version_failure() -> (
+    None
+):
     bundle = _bundle("major_version_ahead")
     bundle["events"][0]["event_hash_hex"] = "f" * 64
 

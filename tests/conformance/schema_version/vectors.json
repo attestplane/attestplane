@@ -1,13 +1,16 @@
 {
+  "description": "schema_version forward-compatibility corpus: unknown additive-optional fields under chain_metadata.schema_version are accepted as valid, while unknown required or structural changes remain rejected. This closes the #173 / #210 gap and pins the #185 additive rule end-to-end.",
   "cases": [
     {
       "case_id": "additive_minor_ok",
+      "description": "Baseline additive-minor bundle with no unknown fields; accepted to keep the replay matrix anchored on the known-good schema_version=1 shape.",
       "expected_reason_code": null,
       "expected_secondary_reasons": [],
       "ok": true
     },
     {
       "case_id": "additive_with_unknown_field_ok",
+      "description": "Unknown additive-optional chain_metadata field under schema_version is accepted as valid; this is the forward-compatible acceptance vector.",
       "chain_metadata_fields": [
         "future_metadata_field"
       ],
@@ -17,18 +20,21 @@
     },
     {
       "case_id": "missing",
+      "description": "Missing chain_metadata.schema_version remains a hard rejection.",
       "expected_reason_code": "att.verify.schema_version_missing",
       "expected_secondary_reasons": [],
       "ok": false
     },
     {
       "case_id": "major_version_ahead",
+      "description": "Unknown major schema_version remains a hard rejection.",
       "expected_reason_code": "att.verify.schema_version_unsupported",
       "expected_secondary_reasons": [],
       "ok": false
     },
     {
       "case_id": "unknown_required_field",
+      "description": "Unknown required/structural chain_metadata field remains rejected even when schema_version itself is otherwise valid.",
       "chain_metadata_fields": [
         "critical_future_field"
       ],

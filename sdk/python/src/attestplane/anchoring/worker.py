@@ -221,7 +221,8 @@ class Anchorer:
             # state outside the TSA's view. The kwarg is forwarded so the
             # mock can echo the correct seq into AnchorRecord for tests.
             record = self._provider.request_timestamp(
-                request, anchored_seq=pending.seq,  # type: ignore[call-arg]
+                request,
+                anchored_seq=pending.seq,  # type: ignore[call-arg]
             )
         except TSAUnavailableError as exc:
             pending.attempts += 1
@@ -267,6 +268,7 @@ class Anchorer:
 
     def _now_plus(self, seconds: float) -> datetime:
         from datetime import timedelta
+
         return self._now() + timedelta(seconds=seconds)
 
     @staticmethod

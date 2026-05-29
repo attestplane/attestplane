@@ -17,9 +17,7 @@ from attestplane.verifier import verify_proof_bundle
 ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = ROOT.parents[1]
 VECTORS = ROOT / "tests" / "conformance" / "verifier_conformance_vectors.json"
-MINIMUM_SCHEMA_NEGATIVE_VECTORS = (
-    ROOT / "tests" / "conformance" / "proof_bundle_minimum_schema_negative_vectors.json"
-)
+MINIMUM_SCHEMA_NEGATIVE_VECTORS = ROOT / "tests" / "conformance" / "proof_bundle_minimum_schema_negative_vectors.json"
 
 
 def _base_bundle() -> dict:

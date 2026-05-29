@@ -66,10 +66,17 @@ from attestplane.adapters.base import AdapterTranslationError, GenericRuntimeAda
 from attestplane.event_types import TOOL_CALL_EVENT
 from attestplane.types import EventDraft, SubjectRef
 
-_KNOWN_RUN_TYPES: frozenset[str] = frozenset({
-    "tool", "llm", "chain", "retriever",
-    "prompt", "parser", "embedding",
-})
+_KNOWN_RUN_TYPES: frozenset[str] = frozenset(
+    {
+        "tool",
+        "llm",
+        "chain",
+        "retriever",
+        "prompt",
+        "parser",
+        "embedding",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,15 +112,14 @@ def _hash_json(value: Any) -> str:
     Uses sorted keys + compact separators so equivalent dicts hash
     identically regardless of key insertion order.
     """
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"),
-                         default=str, ensure_ascii=False).encode("utf-8")
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str, ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
 def _truncate(text: str, n: int = 200) -> str:
     if len(text) <= n:
         return text
-    return text[:n - 3] + "..."
+    return text[: n - 3] + "..."
 
 
 class LangSmithAdapter(GenericRuntimeAdapter[LangSmithRun]):
@@ -124,9 +130,7 @@ class LangSmithAdapter(GenericRuntimeAdapter[LangSmithRun]):
 
     def translate(self, runtime_event: LangSmithRun) -> EventDraft:
         if not isinstance(runtime_event, LangSmithRun):
-            raise AdapterTranslationError(
-                f"expected LangSmithRun, got {type(runtime_event).__name__}"
-            )
+            raise AdapterTranslationError(f"expected LangSmithRun, got {type(runtime_event).__name__}")
         run = runtime_event
 
         # Determine result_status from status / error.
@@ -152,9 +156,7 @@ class LangSmithAdapter(GenericRuntimeAdapter[LangSmithRun]):
         if run.outputs is not None:
             payload["result_hash"] = _hash_json(run.outputs)
         if run.end_time is not None:
-            duration_ms = int(
-                (run.end_time - run.start_time).total_seconds() * 1000
-            )
+            duration_ms = int((run.end_time - run.start_time).total_seconds() * 1000)
             payload["latency_ms"] = duration_ms
         if run.error:
             payload["error_code"] = _truncate(run.error)
@@ -194,9 +196,7 @@ class LangSmithAdapter(GenericRuntimeAdapter[LangSmithRun]):
         required = ("id", "name", "run_type", "start_time")
         missing = [k for k in required if k not in raw]
         if missing:
-            raise AdapterTranslationError(
-                f"LangSmith run dict missing required fields: {sorted(missing)}"
-            )
+            raise AdapterTranslationError(f"LangSmith run dict missing required fields: {sorted(missing)}")
 
         def parse_dt(value: Any) -> datetime:
             if isinstance(value, datetime):
@@ -207,12 +207,9 @@ class LangSmithAdapter(GenericRuntimeAdapter[LangSmithRun]):
                 try:
                     return datetime.fromisoformat(normalized)
                 except ValueError as exc:
-                    raise AdapterTranslationError(
-                        f"unparsable datetime {value!r}: {exc}"
-                    ) from exc
+                    raise AdapterTranslationError(f"unparsable datetime {value!r}: {exc}") from exc
             raise AdapterTranslationError(
-                f"datetime field has type {type(value).__name__}, "
-                f"expected datetime or ISO string"
+                f"datetime field has type {type(value).__name__}, expected datetime or ISO string"
             )
 
         metadata = raw.get("metadata") or {}

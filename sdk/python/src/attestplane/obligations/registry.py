@@ -46,27 +46,31 @@ ImplementationStatus = Literal[
     "verified_in_test",
 ]
 
-_ALLOWED_IMPLEMENTATION_STATUSES: Final[frozenset[str]] = frozenset({
-    "mapping_target",
-    "designed_toward",
-    "field_supported",
-    "verified_in_test",
-})
+_ALLOWED_IMPLEMENTATION_STATUSES: Final[frozenset[str]] = frozenset(
+    {
+        "mapping_target",
+        "designed_toward",
+        "field_supported",
+        "verified_in_test",
+    }
+)
 
 # Top-level EventDraft fields plus the three substrate-assigned identity fields
 # that may legitimately appear in required/optional evidence-field lists.
-_KNOWN_EVIDENCE_FIELDS: Final[frozenset[str]] = frozenset({
-    "event_id",
-    "timestamp",
-    "event_type",
-    "actor",
-    "payload",
-    "subject_ref",
-    "session_id",
-    "reference_db_ref",
-    "matched_input_ref",
-    "human_verifier",
-})
+_KNOWN_EVIDENCE_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "event_id",
+        "timestamp",
+        "event_type",
+        "actor",
+        "payload",
+        "subject_ref",
+        "session_id",
+        "reference_db_ref",
+        "matched_input_ref",
+        "human_verifier",
+    }
+)
 
 
 class ObligationRegistryError(Exception):
@@ -127,17 +131,10 @@ class Registry:
 
     def by_event_type(self, event_type: str) -> tuple[ObligationEntry, ...]:
         """Return all entries that map to a given v1 event type, in file order."""
-        return tuple(
-            entry for entry in self.entries
-            if event_type in entry.event_type_mapping
-        )
+        return tuple(entry for entry in self.entries if event_type in entry.event_type_mapping)
 
-    def by_implementation_status(
-        self, status: ImplementationStatus
-    ) -> tuple[ObligationEntry, ...]:
-        return tuple(
-            entry for entry in self.entries if entry.implementation_status == status
-        )
+    def by_implementation_status(self, status: ImplementationStatus) -> tuple[ObligationEntry, ...]:
+        return tuple(entry for entry in self.entries if entry.implementation_status == status)
 
 
 def _validate_entry(entry_dict: dict[str, object]) -> ObligationEntry:
@@ -204,9 +201,7 @@ def _load_from_resource(filename: str) -> Registry:
         assert isinstance(entry_dict, dict)
         entry = _validate_entry(entry_dict)
         if entry.obligation_id in seen_ids:
-            raise DuplicateObligationIdError(
-                f"duplicate obligation_id {entry.obligation_id!r} in {filename}"
-            )
+            raise DuplicateObligationIdError(f"duplicate obligation_id {entry.obligation_id!r} in {filename}")
         seen_ids.add(entry.obligation_id)
         entries.append(entry)
 

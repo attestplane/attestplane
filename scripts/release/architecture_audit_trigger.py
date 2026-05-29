@@ -41,7 +41,9 @@ OPUS_PLAN_COMMAND_ENV = "ATTESTPLANE_OPUS_PLAN_COMMAND"
 OPUS_PLAN_FAKE_RESPONSE_ENV = "ATTESTPLANE_OPUS_PLAN_FAKE_RESPONSE"
 OPUS_PLAN_TIMEOUT_ENV = "ATTESTPLANE_OPUS_PLAN_TIMEOUT_SECONDS"
 DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS = 180
-ISSUE_READY_PLAN_RE = re.compile(r"(?im)^\s*(?:#+\s*)?(?:\*\*)?\s*ISSUE\s+\d+\s*[.:·-]\s*\[P[0-2]\]")
+ISSUE_READY_PLAN_RE = re.compile(
+    r"(?im)^\s*(?:#+\s*)?(?:\*\*)?\s*ISSUE\s+\d+\s*[.:·-]\s*\[P[0-2]\]"
+)
 PRODUCT_DELTA_KEYWORDS = (
     "sdk",
     "python sdk",
@@ -147,7 +149,12 @@ class AuditDecision:
 
     @property
     def should_upload_artifact(self) -> bool:
-        return self.action in {"daily-plan", "medium-plan", "architecture-plan", "manifest-only"}
+        return self.action in {
+            "daily-plan",
+            "medium-plan",
+            "architecture-plan",
+            "manifest-only",
+        }
 
     @property
     def upgrade_label(self) -> str:
@@ -188,7 +195,9 @@ def stable_tag_versions(tags: list[str]) -> list[StableVersion]:
 
 def read_stable_tags() -> list[StableVersion]:
     stdout = run_git(["tag", "--list", "v*.*.*"])
-    return stable_tag_versions([line.strip() for line in stdout.splitlines() if line.strip()])
+    return stable_tag_versions(
+        [line.strip() for line in stdout.splitlines() if line.strip()]
+    )
 
 
 def is_milestone_release(version: StableVersion) -> bool:
@@ -202,7 +211,12 @@ def is_audit_anchor_release(version: StableVersion) -> bool:
 def classify_upgrade_level(version: StableVersion) -> str:
     if version.major >= 1 and version.minor == 0 and version.patch == 0:
         return "architecture"
-    if version.major >= 1 and version.minor > 0 and version.minor % 5 == 0 and version.patch == 0:
+    if (
+        version.major >= 1
+        and version.minor > 0
+        and version.minor % 5 == 0
+        and version.patch == 0
+    ):
         return "medium"
     return "daily"
 
@@ -218,11 +232,15 @@ def tag_index(tags: list[StableVersion], tag: str) -> int | None:
         return None
 
 
-def fallback_anchor_tag(tags: list[StableVersion], milestone: StableVersion) -> str | None:
+def fallback_anchor_tag(
+    tags: list[StableVersion], milestone: StableVersion
+) -> str | None:
     older = [version for version in tags if version < milestone]
     if not older:
         return None
-    anchor_boundaries = [version for version in older if is_audit_anchor_release(version)]
+    anchor_boundaries = [
+        version for version in older if is_audit_anchor_release(version)
+    ]
     if anchor_boundaries:
         return anchor_boundaries[-1].tag
     if len(older) >= MILESTONE_STABLE_RELEASES:
@@ -230,7 +248,9 @@ def fallback_anchor_tag(tags: list[StableVersion], milestone: StableVersion) -> 
     return older[0].tag
 
 
-def count_stable_releases(tags: list[StableVersion], anchor_tag: str | None, milestone: StableVersion) -> int:
+def count_stable_releases(
+    tags: list[StableVersion], anchor_tag: str | None, milestone: StableVersion
+) -> int:
     relevant = [version for version in tags if version <= milestone]
     if anchor_tag is None:
         return len(relevant)
@@ -241,7 +261,9 @@ def count_stable_releases(tags: list[StableVersion], anchor_tag: str | None, mil
 
 
 def read_commit_range(anchor_tag: str | None, milestone_tag: str) -> list[CommitInfo]:
-    git_range = milestone_tag if anchor_tag is None else f"{anchor_tag}..{milestone_tag}"
+    git_range = (
+        milestone_tag if anchor_tag is None else f"{anchor_tag}..{milestone_tag}"
+    )
     stdout = run_git(
         [
             "log",
@@ -334,7 +356,9 @@ def decide_audit(
     )
 
 
-def recent_real_commits(commits: list[CommitInfo], limit: int = 20) -> list[dict[str, str]]:
+def recent_real_commits(
+    commits: list[CommitInfo], limit: int = 20
+) -> list[dict[str, str]]:
     return [commit.as_dict() for commit in substantive_commits(commits)[:limit]]
 
 
@@ -393,7 +417,9 @@ def render_open_issues_block(open_issues: object, *, limit: int = 30) -> str:
             return (2, index)
         return (1, index)
 
-    ranked_issues = [item for _, item in sorted(enumerate(open_issues), key=issue_context_sort_key)]
+    ranked_issues = [
+        item for _, item in sorted(enumerate(open_issues), key=issue_context_sort_key)
+    ]
     for item in ranked_issues[:limit]:
         if not isinstance(item, dict):
             continue
@@ -492,7 +518,10 @@ def consult_opus_for_plan(
         if issue_ready_plan(plan):
             if not plan_has_product_delta(plan):
                 return fallback_plan(manifest, "fake_response_without_product_delta")
-            return AcceptedPlan(body=f"> Plan source: opus-fake-response\n\n{plan}", source="opus-fake-response")
+            return AcceptedPlan(
+                body=f"> Plan source: opus-fake-response\n\n{plan}",
+                source="opus-fake-response",
+            )
         return fallback_plan(manifest, "fake_response_not_issue_ready")
 
     resolved_command = command or os.environ.get(OPUS_PLAN_COMMAND_ENV, "").strip()
@@ -583,7 +612,11 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=1,
                 title=f"[P1][sdk][verifier] Add a verifier-facing product increment for {milestone_tag}",
                 priority="P1",
-                modules=("Python SDK verifier", "TypeScript SDK verifier", "proof bundle fixtures"),
+                modules=(
+                    "Python SDK verifier",
+                    "TypeScript SDK verifier",
+                    "proof bundle fixtures",
+                ),
                 acceptance_criteria=(
                     "Implement one small verifier or proof-bundle behavior that is visible to SDK users.",
                     "Keep the change backward compatible with the current stable proof bundle contract.",
@@ -600,7 +633,11 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=2,
                 title="[P1][test][conformance] Pin cross-SDK coverage for the daily product change",
                 priority="P1",
-                modules=("Python SDK tests", "TypeScript SDK tests", "conformance fixtures"),
+                modules=(
+                    "Python SDK tests",
+                    "TypeScript SDK tests",
+                    "conformance fixtures",
+                ),
                 acceptance_criteria=(
                     "Add or update conformance coverage for the product behavior from issue 1.",
                     "Confirm Python and TypeScript validation expectations stay aligned.",
@@ -633,7 +670,12 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=1,
                 title=f"[P0][sdk][api] Define the {milestone_tag} feature-level product contract",
                 priority="P0",
-                modules=("SDK public APIs", "verifier behavior", "proof bundle schema", "CLI behavior"),
+                modules=(
+                    "SDK public APIs",
+                    "verifier behavior",
+                    "proof bundle schema",
+                    "CLI behavior",
+                ),
                 acceptance_criteria=(
                     f"Document the intended Attestplane product capability for {milestone_tag}.",
                     "Define compatibility expectations for SDK, verifier, proof bundle, and CLI users.",
@@ -646,7 +688,12 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=2,
                 title="[P1][verifier][proof-bundle] Implement the feature-sized verifier/proof-bundle increment",
                 priority="P1",
-                modules=("Python SDK verifier", "TypeScript SDK verifier", "proof bundle schema", "fixtures"),
+                modules=(
+                    "Python SDK verifier",
+                    "TypeScript SDK verifier",
+                    "proof bundle schema",
+                    "fixtures",
+                ),
                 acceptance_criteria=(
                     "Implement the product contract from issue 1 in a compatibility-safe way.",
                     "Add or update proof bundle fixtures that exercise the new behavior.",
@@ -663,7 +710,11 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=3,
                 title="[P1][test][conformance] Pin Python and TypeScript conformance vectors",
                 priority="P1",
-                modules=("Python SDK tests", "TypeScript SDK tests", "conformance vectors"),
+                modules=(
+                    "Python SDK tests",
+                    "TypeScript SDK tests",
+                    "conformance vectors",
+                ),
                 acceptance_criteria=(
                     "Add cross-SDK vectors for the feature behavior implemented in issue 2.",
                     "Verify canonical serialization and verification results match across SDKs.",
@@ -686,7 +737,10 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                     "Link the documentation to the accepted plan and generated task issues.",
                     "Keep claim wording within documented evidence boundaries.",
                 ),
-                validation_commands=("git diff --check", "markdown-link-check docs/**/*.md"),
+                validation_commands=(
+                    "git diff --check",
+                    "markdown-link-check docs/**/*.md",
+                ),
                 rollout_notes="Documentation supports the product increment; it is not the primary medium task.",
             ),
         ]
@@ -696,23 +750,32 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=1,
                 title=f"[P0][architecture][product-contract] Define the {milestone_tag} Attestplane product contract",
                 priority="P0",
-                modules=("SDK public APIs", "verifier behavior", "proof bundle schema", "canonicalization", "CLI behavior"),
+                modules=(
+                    "SDK public APIs",
+                    "verifier behavior",
+                    "proof bundle schema",
+                    "canonicalization",
+                    "CLI behavior",
+                ),
                 acceptance_criteria=(
                     f"Define the architecture-level product capability from {anchor_tag} to {milestone_tag}.",
                     "Document compatibility guarantees for SDK APIs, proof bundles, canonicalization, and verifier behavior.",
                     "List intentional breaking changes, migration steps, and unsupported historical behavior.",
                     "Link the contract to generated P0/P1/P2 planned-task issues before implementation starts.",
                 ),
-                validation_commands=(
-                    "git diff --check",
-                ),
+                validation_commands=("git diff --check",),
                 rollout_notes="Architecture plans must start from Attestplane product behavior, not train/release maintenance.",
             ),
             PlanIssue(
                 ordinal=2,
                 title="[P0][sdk][schema] Implement compatibility-safe proof-bundle and SDK schema migration",
                 priority="P0",
-                modules=("Python SDK", "TypeScript SDK", "proof bundle schema", "canonical serialization"),
+                modules=(
+                    "Python SDK",
+                    "TypeScript SDK",
+                    "proof bundle schema",
+                    "canonical serialization",
+                ),
                 acceptance_criteria=(
                     "Implement the schema or canonicalization migration described by issue 1.",
                     "Preserve verification of existing stable proof bundles unless issue 1 documents a migration path.",
@@ -730,7 +793,13 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=3,
                 title="[P0][security][verifier] Review product trust boundaries for verifier, signing, and anchoring",
                 priority="P0",
-                modules=("verifier trust roots", "signing", "anchoring", "attestation evidence", "SECURITY.md"),
+                modules=(
+                    "verifier trust roots",
+                    "signing",
+                    "anchoring",
+                    "attestation evidence",
+                    "SECURITY.md",
+                ),
                 acceptance_criteria=(
                     "Identify all product trust boundaries affected by the architecture milestone.",
                     "Update threat model claims, arguments, and evidence for new or changed boundaries.",
@@ -747,7 +816,12 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=4,
                 title=f"[P1][test][conformance] Expand cross-SDK and verifier conformance for {milestone_tag}",
                 priority="P1",
-                modules=("Python SDK", "TypeScript SDK", "verifier conformance fixtures", "cross-SDK roundtrip tests"),
+                modules=(
+                    "Python SDK",
+                    "TypeScript SDK",
+                    "verifier conformance fixtures",
+                    "cross-SDK roundtrip tests",
+                ),
                 acceptance_criteria=(
                     "Add conformance vectors that exercise new or changed architecture behavior.",
                     "Verify Python and TypeScript SDKs agree on canonical serialization and verification results.",
@@ -765,14 +839,22 @@ def build_plan_payload(manifest: dict[str, object]) -> dict[str, object]:
                 ordinal=5,
                 title=f"[P2][docs][adr] Publish the {milestone_tag} product architecture ADR and migration docs",
                 priority="P2",
-                modules=("docs/adr", "docs/architecture", "docs/runbooks", "SDK API docs"),
+                modules=(
+                    "docs/adr",
+                    "docs/architecture",
+                    "docs/runbooks",
+                    "SDK API docs",
+                ),
                 acceptance_criteria=(
                     "Add an architecture milestone overview that explains the product contract and migration path.",
                     "Link ADRs to generated P0/P1/P2 planned-task issues.",
                     "Mark unresolved architectural risks explicitly, with owner issue links.",
                     "Keep claim wording within alpha/stable evidence boundaries.",
                 ),
-                validation_commands=("markdown-link-check docs/**/*.md", "git diff --check"),
+                validation_commands=(
+                    "markdown-link-check docs/**/*.md",
+                    "git diff --check",
+                ),
                 rollout_notes="Documentation supports product architecture decisions and cannot replace product implementation tasks.",
             ),
         ]
@@ -814,8 +896,8 @@ def render_issue_body(manifest: dict[str, object]) -> str:
         "Run locally from the repository root after downloading the workflow artifact:",
         "",
         "```bash",
-        "ask_opus.sh architect \"$(cat reports/architecture-audits/"
-        f"architecture-gap-audit-{milestone_tag}.md)\"",
+        'ask_opus.sh architect "$(cat reports/architecture-audits/'
+        f'architecture-gap-audit-{milestone_tag}.md)"',
         "```",
         "",
         "The review should first produce a concise plan, then decompose the",
@@ -909,11 +991,15 @@ def render_auto_plan(manifest: dict[str, object]) -> str:
     if isinstance(recent, list):
         for item in recent[:10]:
             if isinstance(item, dict):
-                recent_lines.append(f"- `{str(item.get('sha', ''))[:12]}` {item.get('subject', '')}")
+                recent_lines.append(
+                    f"- `{str(item.get('sha', ''))[:12]}` {item.get('subject', '')}"
+                )
     recent_block = "\n".join(recent_lines) if recent_lines else "- none"
-    title_level = {"daily": "Daily", "medium": "Medium", "architecture": "Architecture"}.get(
-        plan_level, "Daily"
-    )
+    title_level = {
+        "daily": "Daily",
+        "medium": "Medium",
+        "architecture": "Architecture",
+    }.get(plan_level, "Daily")
     payload = build_plan_payload(manifest)
     lines = [
         f"## Auto-Generated {title_level} Plan",
@@ -948,11 +1034,15 @@ def render_auto_plan(manifest: dict[str, object]) -> str:
         lines.append(f"- Priority: {issue.get('priority', 'P2')}")
         modules = issue.get("modules", [])
         if isinstance(modules, list):
-            lines.append(f"- Affected modules: {', '.join(str(module) for module in modules)}")
+            lines.append(
+                f"- Affected modules: {', '.join(str(module) for module in modules)}"
+            )
         else:
             lines.append("- Affected modules:")
         lines.append("- Acceptance criteria:")
-        for index, criterion in enumerate(issue.get("acceptance_criteria", []), start=1):
+        for index, criterion in enumerate(
+            issue.get("acceptance_criteria", []), start=1
+        ):
             lines.append(f"  {index}. {criterion}")
         lines.append("- Validation commands:")
         for command in issue.get("validation_commands", []):
@@ -1006,9 +1096,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--opus-timeout-seconds",
         type=int,
-        default=int(os.environ.get(OPUS_PLAN_TIMEOUT_ENV, str(DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS))),
+        default=int(
+            os.environ.get(
+                OPUS_PLAN_TIMEOUT_ENV, str(DEFAULT_OPUS_PLAN_TIMEOUT_SECONDS)
+            )
+        ),
     )
-    parser.add_argument("--output-dir", type=Path, default=Path("reports/architecture-audits"))
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/architecture-audits")
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1066,7 +1162,9 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 auto_issue_plan = accepted_plan.body
             auto_plan_path.write_text(auto_issue_plan, encoding="utf-8")
-        manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=False) + "\n", encoding="utf-8"
+        )
         report_path.write_text(issue_body, encoding="utf-8")
 
     write_outputs(

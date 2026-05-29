@@ -44,7 +44,9 @@ def _extract_heading_levels(path: Path) -> list[int]:
 def main(argv: list[str]) -> int:
     paths = [Path(arg) for arg in argv[1:]] or list(DEFAULT_FILES)
     if len(paths) != 2:
-        print("usage: python scripts/docs/security_parity.py SECURITY.md SECURITY_zh.md")
+        print(
+            "usage: python scripts/docs/security_parity.py SECURITY.md SECURITY_zh.md"
+        )
         return 2
 
     resolved = []

@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -69,7 +68,9 @@ def collect_status(
     npm_version: str,
     expected_latest: str,
 ) -> tuple[dict[str, Any], list[str]]:
-    dist_tags = json.loads(run(["npm", "view", "@attestplane/attestplane", "dist-tags", "--json"]))
+    dist_tags = json.loads(
+        run(["npm", "view", "@attestplane/attestplane", "dist-tags", "--json"])
+    )
     npm_rc = run(["npm", "view", f"@attestplane/attestplane@{npm_version}", "version"])
     status_lines = run(["git", "status", "--short"]).splitlines()
     head = run(["git", "rev-parse", "--short", "HEAD"])
@@ -96,7 +97,9 @@ def collect_status(
     if npm_rc != npm_version:
         problems.append(f"npm package mismatch: expected {npm_version}, got {npm_rc}")
     if dist_tags.get("rc") != npm_version:
-        problems.append(f"npm rc dist-tag mismatch: expected {npm_version}, got {dist_tags.get('rc')}")
+        problems.append(
+            f"npm rc dist-tag mismatch: expected {npm_version}, got {dist_tags.get('rc')}"
+        )
     if dist_tags.get("latest") != expected_latest:
         problems.append(
             f"npm latest dist-tag mismatch: expected {expected_latest}, got {dist_tags.get('latest')}",
@@ -137,7 +140,12 @@ def main(argv: list[str] | None = None) -> int:
             status = {"error": f"{type(exc).__name__}: {exc}"}
             problems = ["status collection failed"]
 
-        print(json.dumps({"checked_at": now, "status": status, "problems": problems}, indent=2), flush=True)
+        print(
+            json.dumps(
+                {"checked_at": now, "status": status, "problems": problems}, indent=2
+            ),
+            flush=True,
+        )
         if problems:
             return 2
         if args.once:

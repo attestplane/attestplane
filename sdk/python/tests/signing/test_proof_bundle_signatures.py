@@ -136,10 +136,12 @@ def test_multi_signer_records_in_bundle_are_distinct() -> None:
     from attestplane.signing import MultiSignerProvider
 
     chain = _build_chain(2)
-    multi = MultiSignerProvider([
-        InMemoryKeyProvider(seed=b"\x00" * 32, provider_id="alpha"),
-        InMemoryKeyProvider(seed=b"\x02" * 32, provider_id="beta"),
-    ])
+    multi = MultiSignerProvider(
+        [
+            InMemoryKeyProvider(seed=b"\x00" * 32, provider_id="alpha"),
+            InMemoryKeyProvider(seed=b"\x02" * 32, provider_id="beta"),
+        ]
+    )
     signer = Signer(chain_id="m", key_provider=multi, now=lambda: _NOW)
     records = signer.sign_segment_head(
         ChainHead(seq=1, event_hash=chain[1].event_hash),
@@ -165,16 +167,12 @@ def test_deserialize_signature_record_missing_field() -> None:
 def test_schema_locks_signature_mode_enum() -> None:
     """Schema-level lock: signature_mode is segment_head or per_event only."""
     schema = _load_schema()
-    enum = schema["properties"]["signatures"]["items"]["properties"][
-        "signature_mode"
-    ]["enum"]
+    enum = schema["properties"]["signatures"]["items"]["properties"]["signature_mode"]["enum"]
     assert set(enum) == {"segment_head", "per_event"}
 
 
 def test_schema_locks_key_id_format() -> None:
     """Schema-level lock: key_id MUST be 32 lowercase hex chars."""
     schema = _load_schema()
-    pattern = schema["properties"]["signatures"]["items"]["properties"][
-        "key_id"
-    ]["pattern"]
+    pattern = schema["properties"]["signatures"]["items"]["properties"]["key_id"]["pattern"]
     assert pattern == "^[0-9a-f]{32}$"

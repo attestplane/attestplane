@@ -51,7 +51,9 @@ class RunnerConfig:
     auto_merge_ready_label: str = "auto-merge-ready"
     planned_task_label: str = "planned-task"
     waiting_deps_label: str = "status:waiting-deps"
-    blocking_pr_labels: list[str] = field(default_factory=lambda: ["do-not-merge", "hold", "wip"])
+    blocking_pr_labels: list[str] = field(
+        default_factory=lambda: ["do-not-merge", "hold", "wip"]
+    )
     allowed_pr_authors: list[str] = field(default_factory=list)
     max_pr_merges_per_run: int = 1
     max_dependency_unlocks_per_run: int = 5
@@ -62,7 +64,12 @@ class RunnerConfig:
     max_needs_human_attempts: int = 2
     needs_human_recovered_label: str = "codex-recovered"
     needs_human_policy_block_labels: list[str] = field(
-        default_factory=lambda: ["codex-policy-blocked", "codex-external-blocked", "do-not-merge", "hold"]
+        default_factory=lambda: [
+            "codex-policy-blocked",
+            "codex-external-blocked",
+            "do-not-merge",
+            "hold",
+        ]
     )
     needs_human_recoverable_reasons: list[str] = field(
         default_factory=lambda: ["rate_limit", "network_timeout", "ci_failed"]
@@ -76,27 +83,40 @@ class RunnerConfig:
     product_delta_idle_threshold: int = 2
     product_delta_idle_tail_lines: int = 200
     product_delta_idle_create_task: bool = False
-    product_delta_idle_task_title: str = "[P1][sdk][verifier] Add product implementation delta for stalled stable train"
+    product_delta_idle_task_title: str = (
+        "[P1][sdk][verifier] Add product implementation delta for stalled stable train"
+    )
     product_delta_idle_task_labels: list[str] = field(default_factory=list)
 
     def validate(self) -> None:
         missing = [name for name in ("repo", "workdir") if not getattr(self, name)]
         if missing:
-            raise ConfigError(f"Missing required local Codex runner config field(s): {', '.join(missing)}")
-        if self.codex_sandbox == "danger-full-access" and not self.allow_danger_full_access:
-            raise ConfigError("danger-full-access requires allow_danger_full_access=true")
+            raise ConfigError(
+                f"Missing required local Codex runner config field(s): {', '.join(missing)}"
+            )
+        if (
+            self.codex_sandbox == "danger-full-access"
+            and not self.allow_danger_full_access
+        ):
+            raise ConfigError(
+                "danger-full-access requires allow_danger_full_access=true"
+            )
         if self.codex_timeout_seconds < 1:
             raise ConfigError("codex_timeout_seconds must be a positive integer")
         if self.needs_human_scan_limit < 1:
             raise ConfigError("needs_human_scan_limit must be a positive integer")
         if self.allow_auto_merge and not self.allowed_pr_authors:
-            raise ConfigError("allow_auto_merge requires at least one allowed_pr_authors entry")
+            raise ConfigError(
+                "allow_auto_merge requires at least one allowed_pr_authors entry"
+            )
         if self.lane_slot is not None and self.lane_slot < 1:
             raise ConfigError("lane_slot must be a positive integer")
         if self.product_delta_idle_threshold < 1:
             raise ConfigError("product_delta_idle_threshold must be a positive integer")
         if self.product_delta_idle_tail_lines < 1:
-            raise ConfigError("product_delta_idle_tail_lines must be a positive integer")
+            raise ConfigError(
+                "product_delta_idle_tail_lines must be a positive integer"
+            )
 
     def workdir_path(self) -> Path:
         if self.workdir is None:
@@ -120,13 +140,23 @@ class ConfigError(ValueError):
     """Raised when runner configuration is invalid."""
 
 
-def load_config(path: Path | None, overrides: dict[str, Any] | None = None) -> RunnerConfig:
+def load_config(
+    path: Path | None, overrides: dict[str, Any] | None = None
+) -> RunnerConfig:
     data: dict[str, Any] = {}
     if path is not None and path.exists():
         data.update(load_yaml_mapping(path))
     if overrides:
-        data.update({key: value for key, value in overrides.items() if value is not None})
-    config = RunnerConfig(**{key: value for key, value in data.items() if key in RunnerConfig.__dataclass_fields__})
+        data.update(
+            {key: value for key, value in overrides.items() if value is not None}
+        )
+    config = RunnerConfig(
+        **{
+            key: value
+            for key, value in data.items()
+            if key in RunnerConfig.__dataclass_fields__
+        }
+    )
     config.validate()
     return config
 
@@ -154,7 +184,9 @@ def parse_simple_yaml(text: str, path: Path) -> dict[str, Any]:
         if line.startswith("  - ") and current_key:
             values = data.setdefault(current_key, [])
             if not isinstance(values, list):
-                raise ConfigError(f"{path}: YAML list item follows scalar key: {current_key}")
+                raise ConfigError(
+                    f"{path}: YAML list item follows scalar key: {current_key}"
+                )
             values.append(parse_scalar(line[4:].strip()))
             continue
         split = split_simple_yaml_mapping(line)
