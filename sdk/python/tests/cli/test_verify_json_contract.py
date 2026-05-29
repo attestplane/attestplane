@@ -34,9 +34,7 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
-SCHEMA_VERSION_ADDITIVE_FIXTURE = (
-    ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
-)
+FORWARD_COMPAT_ADDITIVE_FIXTURE = ROOT / "tests" / "fixtures" / "forward_compat_additive.json"
 
 # Versioned snapshot for the consumer-facing verify --json contract.
 # Keep this fixture in sync with the intentional contract surface only.
@@ -177,11 +175,11 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["accept"]["payload"]
 
 
-def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
+def test_verify_json_forward_compat_additive_bundle_passes_cleanly(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc, payload, stderr = _run_verify(
-        ["verify", "--json", "--explain", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)],
+        ["verify", "--json", "--explain", str(FORWARD_COMPAT_ADDITIVE_FIXTURE)],
         capsys,
     )
 
@@ -196,7 +194,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent",
         }
     ]
 
