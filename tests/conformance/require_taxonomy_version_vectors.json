@@ -1,0 +1,23 @@
+{
+  "cases": [
+    {
+      "case_id": "require_taxonomy_version_match",
+      "bundle_path": "tests/fixtures/bundles/taxonomy_v1.json",
+      "expected_exit_code": 0,
+      "expected_error_code": "VERIFY_OK",
+      "expected_ok": true,
+      "expected_primary_reason": null,
+      "require_taxonomy_version": 1
+    },
+    {
+      "case_id": "require_taxonomy_version_mismatch",
+      "bundle_path": "tests/fixtures/bundles/taxonomy_v1.json",
+      "expected_exit_code": 1,
+      "expected_error_code": "VERIFY_METADATA_CLOSURE_FAILED",
+      "expected_ok": false,
+      "expected_primary_reason": "att.verify.schema_version_unsupported",
+      "require_taxonomy_version": 2
+    }
+  ],
+  "schema_version": "attestplane.verify.require_taxonomy_version.v1"
+}

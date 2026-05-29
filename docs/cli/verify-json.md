@@ -34,6 +34,10 @@ The payload is fixed at schema version 1:
   `--json` and `--explain` use.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- `--require-taxonomy-version <v>` is an additive consumer pin for the
+  bundle's `chain_metadata.evidence_taxonomy_version`. A matching bundle
+  verifies exactly as before; a mismatch is a verification failure with exit
+  code `1`, while the flag's absence preserves the current behavior.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
