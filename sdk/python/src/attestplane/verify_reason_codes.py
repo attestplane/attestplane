@@ -96,6 +96,18 @@ def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     return VERIFY_REASON_TAXONOMY[value]
 
 
+def resolve_verify_taxonomy_version() -> int:
+    """Return the canonical public verifier taxonomy version."""
+    return VERIFY_REASON_TAXONOMY_VERSION
+
+
+def format_verify_taxonomy_version(value: int | None = None) -> str:
+    """Render a verifier taxonomy version for human-facing output."""
+    if value is None:
+        return "unknown"
+    return str(value)
+
+
 __all__ = [
     "ALL_VERIFY_REASON_CODES_V1",
     "VERIFY_REASON_ANCHOR_INVALID",
@@ -113,7 +125,9 @@ __all__ = [
     "VERIFY_REASON_SIGNATURE_MISSING",
     "VERIFY_REASON_STRUCTURE_INVALID",
     "VerifyReasonCodeV1",
+    "format_verify_taxonomy_version",
     "is_known_verify_reason_code",
+    "resolve_verify_taxonomy_version",
     "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
 ]

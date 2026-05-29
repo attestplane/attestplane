@@ -33,7 +33,8 @@ The payload is fixed at schema version 1:
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use.
+  `--json` and `--explain` use. The Python SDK verifier result object and the
+  CLI surfaces all resolve this value through the same public helper.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
@@ -84,6 +85,8 @@ When `--explain` is used without `--json`, stdout prints a compact
 `OK|FAIL signer_subject=... schema_version=... anchor=...` summary and
 stderr prints one rationale line per rejection reason in the same order as
 the structured payload.
+If the summary is rendered without bundle context, the taxonomy slot is
+reported as `unknown` rather than omitted.
 
 ### Pass Example
 

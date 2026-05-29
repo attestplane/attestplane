@@ -18,7 +18,9 @@ import {
   VERIFY_REASON_STRUCTURE_INVALID,
   VERIFY_REASON_TAXONOMY,
   VERIFY_REASON_TAXONOMY_VERSION,
+  formatVerifyTaxonomyVersion,
   isKnownVerifyReasonCode,
+  resolveVerifyTaxonomyVersion,
   verifyReasonCodeExplanation,
   verifyReasonCodeMatchesFormat,
 } from '../src/verify_reason_codes.js';
@@ -26,6 +28,9 @@ import {
 describe('verify reason codes', () => {
   it('pins the v1 namespaced verifier rejection taxonomy', () => {
     expect(VERIFY_REASON_TAXONOMY_VERSION).toBe(1);
+    expect(resolveVerifyTaxonomyVersion()).toBe(1);
+    expect(formatVerifyTaxonomyVersion(1)).toBe('1');
+    expect(formatVerifyTaxonomyVersion(undefined)).toBe('unknown');
     expect(VERIFY_REASON_CODE_DESCRIPTIONS).toBe(VERIFY_REASON_TAXONOMY);
     expect(ALL_VERIFY_REASON_CODES_V1).toEqual([
       VERIFY_REASON_ANCHOR_INVALID,

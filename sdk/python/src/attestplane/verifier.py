@@ -56,6 +56,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
+    resolve_verify_taxonomy_version,
 )
 
 
@@ -96,6 +97,7 @@ class BundleVerificationResult:
     """``True`` iff the bundle's embedded report agrees with the independent re-verification."""
     event_count: int
     bundle_version: int
+    taxonomy_version: int
     chain_id: str
     head_hash_hex: str
     metadata_ok: bool
@@ -601,6 +603,7 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
+        taxonomy_version=resolve_verify_taxonomy_version(),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,
