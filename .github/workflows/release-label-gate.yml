@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 Attestplane contributors
+
+name: release-label-gate
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  release-label-gate:
+    name: release-label-gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify release label policy
+        env:
+          PR_AUTHOR_LOGIN: ${{ github.event.pull_request.user.login }}
+          PR_LABELS_JSON: ${{ toJson(github.event.pull_request.labels) }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          release_labels = {
+              "release:major",
+              "release:minor",
+              "release:patch",
+              "release:none",
+          }
+          exempt_authors = {
+              "github-actions[bot]",
+              "attestplane-autodev[bot]",
+          }
+
+          author = os.environ["PR_AUTHOR_LOGIN"]
+          labels = json.loads(os.environ["PR_LABELS_JSON"])
+          current_labels = [label["name"] for label in labels]
+          matched_release_labels = [label for label in current_labels if label in release_labels]
+
+          if author in exempt_authors:
+              print(
+                  f"release-label-gate: auto-pass for exempt author {author}.",
+                  flush=True,
+              )
+              sys.exit(0)
+
+          if len(matched_release_labels) == 1:
+              print(
+                  f"release-label-gate: pass with {matched_release_labels[0]}.",
+                  flush=True,
+              )
+              sys.exit(0)
+
+          if matched_release_labels:
+              release_state = ", ".join(sorted(matched_release_labels))
+              reason = (
+                  "multiple release labels" if len(matched_release_labels) > 1 else "invalid release label state"
+              )
+          else:
+              release_state = "none"
+              reason = "no release label"
+
+          all_labels = ", ".join(sorted(current_labels)) if current_labels else "none"
+          expected = ", ".join(sorted(release_labels))
+          message = (
+              f"release-label-gate failed: {reason}. "
+              f"Expected exactly one of [{expected}]. "
+              f"Found release labels: {release_state}. "
+              f"All PR labels: {all_labels}. "
+              f"Add exactly one release label or remove extras."
+          )
+          print(f"::error::{message}", flush=True)
+          sys.exit(1)
+          PY
