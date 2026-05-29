@@ -17,6 +17,7 @@ from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained
 from attestplane.verifier import BundleSchemaError, classify_bundle_schema_error, verify_proof_bundle
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    VERIFY_IO_ERROR,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
 )
@@ -450,7 +451,8 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=1,
+            exit_code=2,
+            stderr_code=VERIFY_IO_ERROR,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_SCHEMA_INVALID, "/", f"cannot read {bundle_path}: {exc}")]
                 if explain
