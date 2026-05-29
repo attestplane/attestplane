@@ -57,6 +57,23 @@ def _gh(args: list[str], **kwargs: Any) -> str:
     return _run(["gh", *args], env={"GH_TOKEN": token, **os.environ}, **kwargs)
 
 
+def _purge_whitespace_only_changes(worktree: str) -> None:
+    """Reset files whose only changes are whitespace/formatting (no semantic diff)."""
+    changed = _run(["git", "diff", "--name-only"], cwd=worktree).splitlines()
+    reset: list[str] = []
+    for fname in changed:
+        if not fname.strip():
+            continue
+        # --ignore-all-space: if the diff is empty, the change is whitespace-only
+        semantic_diff = _run(
+            ["git", "diff", "--ignore-all-space", "--", fname], cwd=worktree
+        )
+        if not semantic_diff.strip():
+            reset.append(fname)
+    if reset:
+        _run(["git", "checkout", "--"] + reset, cwd=worktree)
+
+
 # ── activity: implement ────────────────────────────────────────────────────────
 
 @activity.defn(name="implement")
@@ -103,7 +120,10 @@ async def implement_activity(
             "3. 不得修改 .github/workflows/ 目录下的任何文件\n"
             "4. 不得执行 git push、git tag、git merge、npm publish、twine upload\n"
             "5. 不得修改 CHANGELOG.md\n"
-            "6. 只修改实现任务所需的最小文件集"
+            "6. 只修改实现任务所需的最小文件集\n"
+            "7. 严禁对整个仓库运行 ruff format .、black .、isort . 等批量格式化命令\n"
+            "   只在新建或修改的具体文件上运行格式化\n"
+            "8. 最小化 diff：不要重构与任务无关的代码，不要重命名无关变量或调整无关缩进"
         )
 
         # Codex blocks for up to 45 min; run in thread so the asyncio event
@@ -122,17 +142,23 @@ async def implement_activity(
             timeout=2700,
         )
 
-        # Auto-fix style issues so ruff/format CI checks pass.
-        # Errors that can't be auto-fixed are logged but don't block the commit.
-        try:
-            _run(["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", "."], cwd=worktree)
-        except RuntimeError as _ruff_err:
-            activity.logger.warning("ruff auto-fix had remaining errors (will commit anyway): %s",
-                                    str(_ruff_err)[:300])
-        try:
-            _run(["python3.11", "-m", "ruff", "format", "."], cwd=worktree)
-        except RuntimeError as _fmt_err:
-            activity.logger.warning("ruff format failed: %s", str(_fmt_err)[:300])
+        # Purge files whose only changes are whitespace/formatting so the PR diff
+        # stays focused on real implementation changes. Codex sometimes runs
+        # ruff format on the whole repo, creating a noisy 30+ file diff.
+        _purge_whitespace_only_changes(worktree)
+
+        # Auto-fix style issues on only the remaining changed files.
+        changed_py = [
+            f for f in _run(["git", "diff", "--name-only"], cwd=worktree).splitlines()
+            if f.endswith(".py")
+        ]
+        for _py_file in changed_py:
+            try:
+                _run(["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", _py_file],
+                     cwd=worktree)
+                _run(["python3.11", "-m", "ruff", "format", _py_file], cwd=worktree)
+            except RuntimeError as _ruff_err:
+                activity.logger.warning("ruff on %s had errors: %s", _py_file, str(_ruff_err)[:200])
 
         # Detect changes
         porcelain = _run(["git", "status", "--porcelain"], cwd=worktree)
