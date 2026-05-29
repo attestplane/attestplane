@@ -23,5 +23,7 @@ test-gap:
   - "pytest tests -q"
 docs:
   - "python -m compileall scripts"
+  - "python scripts/docs/run_quickstart.py docs/quickstart.md"
 release-blocker:
   - "pytest tests/sentinel tests/release -q"
+  - "python scripts/docs/run_quickstart.py docs/quickstart.md"

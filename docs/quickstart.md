@@ -18,6 +18,7 @@ No certification claimed; no compliance opinion issued.
 
 ## Install
 
+<!-- quickstart-smoke:install -->
 ```bash
 pip install attestplane==1.4.6         # pinned to current pre-GA (recommended)
 ```
@@ -34,6 +35,7 @@ three events of three different `event_type`s to an in-memory substrate,
 persists them to a JSONL file, and prints the head + the in-process verify
 result.
 
+<!-- quickstart-smoke:python -->
 ```python
 from attestplane import (
     AttestSubstrate,
@@ -90,8 +92,12 @@ every `append`, so the file is durable once the loop exits.
 
 Run the chain-only walker over the file you just wrote:
 
+<!-- quickstart-smoke:inspect -->
 ```bash
 $ attestplane inspect chain.jsonl
+```
+
+```
 path: chain.jsonl
 event_count: 3
 head_seq: 2
@@ -108,6 +114,10 @@ ProofBundle structure. For those, see
 (downstream artifact verification) and the `attestplane verify` /
 ProofBundle paths documented under
 [docs/architecture/verifier_independence.md](architecture/verifier_independence.md).
+
+The executable blocks above are replayed by `scripts/docs/run_quickstart.py`
+in local-only CI/release-prep validation. Nightly stays on the lighter advisory
+cadence for now.
 
 ## Next steps
 
