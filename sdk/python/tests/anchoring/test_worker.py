@@ -161,7 +161,7 @@ def test_verification_error_quarantines_immediately() -> None:
 
     assert result is not None
     assert result.record is None
-    assert result.pending.status == "failed_permanent"
+    assert result.pending.status == "quarantine"
     assert "malformed token" in (result.pending.last_error or "")
     assert anchorer.stats().failed_permanent == 1
     # No retry: queue is now empty.

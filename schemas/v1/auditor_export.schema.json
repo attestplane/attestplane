@@ -48,8 +48,8 @@
           "description": "Map from event_type string to occurrence count. Keys SHOULD be members of ALL_EVENT_TYPES_V1; unknown keys are tolerated (future-taxonomy compat)."
         },
         "anchor_status": {
-          "enum": ["unanchored", "anchored_partial", "anchored_full"],
-          "description": "v1 only emits 'unanchored'; M5 expands once RFC-3161 anchoring ships per ADR-0003."
+          "enum": ["unanchored", "anchored_partial", "anchored_full", "quarantine"],
+          "description": "v1 only emits 'unanchored'; 'quarantine' is the explicit claim-safe terminal state for TSA timeout / malformed / chain-mismatch failures."
         }
       }
     },

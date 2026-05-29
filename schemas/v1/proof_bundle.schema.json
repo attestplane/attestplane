@@ -64,6 +64,10 @@
           "type": "string",
           "description": "Optional reference to an AnchorRecord (M5, ADR-0003). Free-form when ADR-0003 ships; reserved field today."
         },
+        "anchor_status": {
+          "enum": ["unanchored", "pending", "anchored", "failed_permanent", "quarantine"],
+          "description": "Optional anchoring state for the bundle head. 'quarantine' is the explicit claim-safe terminal state for TSA timeout, malformed response, or cert-chain mismatch."
+        },
         "evidence_taxonomy_version": {
           "type": "integer",
           "const": 1,

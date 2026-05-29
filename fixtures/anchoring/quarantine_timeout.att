@@ -1,0 +1,38 @@
+{
+  "bundle_version": 1,
+  "chain_metadata": {
+    "chain_id": "quarantine-timeout",
+    "schema_version": 1,
+    "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+    "head_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+    "head_seq": -1,
+    "producer_runtime": "attestplane-test-fixture",
+    "evidence_taxonomy_version": 1,
+    "anchor_ref": "freetsa://timeout",
+    "anchor_status": "quarantine"
+  },
+  "events": [],
+  "verification_report": {
+    "ok": true,
+    "first_bad_index": null,
+    "reason": null,
+    "verified_at": "2026-05-18T12:00:00.000000Z",
+    "verifier_version": "test-fixture",
+    "verification_method": "canonical-bytes-walk"
+  },
+  "forbidden_fields": [
+    "customer_names",
+    "person_names",
+    "pii",
+    "raw_documents",
+    "contracts",
+    "scripts",
+    "tickets",
+    "emails",
+    "secrets",
+    "tokens",
+    "jwts",
+    "private_keys",
+    "raw_audit_payloads"
+  ]
+}

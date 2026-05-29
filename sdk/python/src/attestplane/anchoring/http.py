@@ -26,6 +26,7 @@ response.
 
 from __future__ import annotations
 
+import os
 import urllib.request
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -35,8 +36,7 @@ try:
     from asn1crypto import algos, tsp
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.anchoring.http requires the 'anchor' extras. "
-        "Install with: pip install attestplane[anchor]"
+        "attestplane.anchoring.http requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
     ) from exc
 
 from attestplane.anchoring.base import (
@@ -54,6 +54,12 @@ from attestplane.anchoring.rfc3161 import (
 
 RFC3161_CONTENT_TYPE_REQUEST: Final[str] = "application/timestamp-query"
 RFC3161_CONTENT_TYPE_RESPONSE: Final[str] = "application/timestamp-reply"
+ALLOW_LIVE_TSA_ENV: Final[str] = "ATTESTPLANE_ALLOW_LIVE_TSA"
+
+
+def _live_tsa_enabled() -> bool:
+    value = os.environ.get(ALLOW_LIVE_TSA_ENV, "")
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 class HttpTransport(ABC):
@@ -84,6 +90,10 @@ class UrllibHttpTransport(HttpTransport):
         self._user_agent = user_agent
 
     def submit(self, url: str, request_der: bytes, *, timeout_seconds: float = 30.0) -> bytes:
+        if not _live_tsa_enabled():
+            raise TSAUnavailableError(
+                f"live TSA transport disabled; set {ALLOW_LIVE_TSA_ENV}=1 to allow network access"
+            )
         req = urllib.request.Request(  # noqa: S310  (URL schemes validated upstream in caller)
             url,
             data=request_der,
@@ -98,14 +108,10 @@ class UrllibHttpTransport(HttpTransport):
             with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:  # noqa: S310  (URL schemes validated upstream in caller)
                 content_type = resp.headers.get("Content-Type", "")
                 if RFC3161_CONTENT_TYPE_RESPONSE not in content_type:
-                    raise TSAUnavailableError(
-                        f"TSA at {url} returned unexpected Content-Type: {content_type!r}"
-                    )
+                    raise TSAUnavailableError(f"TSA at {url} returned unexpected Content-Type: {content_type!r}")
                 body = resp.read()
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise TSAUnavailableError(
-                f"TSA at {url} unreachable: {exc}"
-            ) from exc
+            raise TSAUnavailableError(f"TSA at {url} unreachable: {exc}") from exc
         if not body:
             raise TSAUnavailableError(f"TSA at {url} returned empty body")
         body_bytes: bytes = body
@@ -137,10 +143,12 @@ def _build_request_der(digest: bytes, *, nonce: bytes | None = None) -> bytes:
     """Build a DER-encoded :class:`asn1crypto.tsp.TimeStampReq` payload."""
     body: dict[str, object] = {
         "version": "v1",
-        "message_imprint": tsp.MessageImprint({
-            "hash_algorithm": algos.DigestAlgorithm({"algorithm": "sha256"}),
-            "hashed_message": digest,
-        }),
+        "message_imprint": tsp.MessageImprint(
+            {
+                "hash_algorithm": algos.DigestAlgorithm({"algorithm": "sha256"}),
+                "hashed_message": digest,
+            }
+        ),
         "cert_req": True,
     }
     if nonce is not None:
@@ -203,27 +211,23 @@ class Rfc3161HttpProvider(TSAProvider):
     ) -> AnchorRecord:
         request_der = _build_request_der(request.digest, nonce=request.nonce)
         response_der = self._transport.submit(
-            self._url, request_der, timeout_seconds=self._timeout,
+            self._url,
+            request_der,
+            timeout_seconds=self._timeout,
         )
         try:
             parsed = parse_timestamp_response(response_der)
         except AnchorVerificationError:
             raise
         except Exception as exc:
-            raise AnchorVerificationError(
-                f"failed to parse TSA response from {self._url}: {exc}"
-            ) from exc
+            raise AnchorVerificationError(f"failed to parse TSA response from {self._url}: {exc}") from exc
 
         if parsed.message_imprint != request.digest:
-            raise AnchorVerificationError(
-                f"TSA at {self._url} returned wrong messageImprint"
-            )
+            raise AnchorVerificationError(f"TSA at {self._url} returned wrong messageImprint")
         if request.nonce is not None:
             expected_nonce = int.from_bytes(request.nonce, "big")
             if parsed.nonce != expected_nonce:
-                raise AnchorVerificationError(
-                    "TSA response nonce does not match request nonce"
-                )
+                raise AnchorVerificationError("TSA response nonce does not match request nonce")
 
         # If trust roots were configured, verify the signature before
         # producing an AnchorRecord — fail fast at request time.

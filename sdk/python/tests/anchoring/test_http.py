@@ -23,6 +23,7 @@ from attestplane.anchoring import (
     TSAUnavailableError,
 )
 from attestplane.anchoring.http import (
+    ALLOW_LIVE_TSA_ENV,
     DigiCertProvider,
     FreeTSAProvider,
     HttpTransport,
@@ -40,7 +41,9 @@ _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 def _make_response(digest: bytes, *, nonce: bytes | None = None) -> tuple[bytes, bytes, bytes]:
     authority = TestTSAAuthority(now=_NOW)
     der = authority.sign_timestamp_response(
-        digest, gen_time=_NOW, nonce=nonce,
+        digest,
+        gen_time=_NOW,
+        nonce=nonce,
     )
     materials = authority.materials()
     return der, materials.root_cert_der, b"ATTESTPLANE-TEST-OCSP-V1|status=good"
@@ -73,7 +76,9 @@ def test_rfc3161_http_provider_round_trips() -> None:
         ocsp_responses_der=[ocsp],
     )
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=0, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=0,
+        now=_NOW,
     )
     assert anchor.anchored_event_hash == digest
     assert anchor.tsa_provider_id == "test-provider"
@@ -150,7 +155,9 @@ def test_rfc3161_http_provider_no_trust_roots_does_not_verify() -> None:
         ocsp_responses_der=[ocsp],
     )
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=7, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=7,
+        now=_NOW,
     )
     assert anchor.anchored_seq == 7
 
@@ -237,6 +244,17 @@ def test_urllib_transport_rejects_unreachable() -> None:
     with pytest.raises(TSAUnavailableError, match="unreachable"):
         transport.submit(
             "http://this-host-does-not-exist.invalid./tsr",
+            b"any-bytes",
+            timeout_seconds=2.0,
+        )
+
+
+def test_freetsa_live_transport_requires_explicit_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(ALLOW_LIVE_TSA_ENV, raising=False)
+    transport = UrllibHttpTransport()
+    with pytest.raises(TSAUnavailableError, match="live TSA disabled"):
+        transport.submit(
+            "https://freetsa.org/tsr",
             b"any-bytes",
             timeout_seconds=2.0,
         )

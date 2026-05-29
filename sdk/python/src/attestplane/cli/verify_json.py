@@ -170,6 +170,9 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     chain_metadata = bundle.get("chain_metadata")
     if not isinstance(chain_metadata, dict):
         return "unknown"
+    anchor_status = chain_metadata.get("anchor_status")
+    if isinstance(anchor_status, str) and anchor_status:
+        return anchor_status
     anchor_ref = chain_metadata.get("anchor_ref")
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
@@ -253,19 +256,22 @@ def _json_failure(
     exit_code: int,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    anchor_status: str | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [reason],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "fail",
+        "exit_code": exit_code,
+        "reason_code": reason["code"],
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [reason],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
+    if anchor_status is not None:
+        payload["anchor_status"] = anchor_status
     if explanation is not None:
         payload["explanation"] = explanation
     return VerifyJsonOutcome(
@@ -279,19 +285,22 @@ def _json_pass(
     *,
     bundle_digest: str,
     explanation: list[dict[str, Any]] | None = None,
+    anchor_status: str | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "pass",
-            "exit_code": 0,
-            "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "pass",
+        "exit_code": 0,
+        "reason_code": None,
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
+    if anchor_status is not None:
+        payload["anchor_status"] = anchor_status
     if explanation is not None:
         payload["explanation"] = explanation
     return VerifyJsonOutcome(
@@ -391,7 +400,10 @@ def _bundle_failure_reason(
                 elif detail.startswith("verification_report."):
                     path = "/verification_report"
             elif detail.startswith("chain_metadata."):
-                path = "/chain_metadata"
+                if "anchor_status" in detail:
+                    path = "/chain_metadata/anchor_status"
+                else:
+                    path = "/chain_metadata"
             else:
                 path = "/verification_report"
         reasons.append(
@@ -510,11 +522,7 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
@@ -574,9 +582,7 @@ def build_verify_json_outcome(
             ),
             exit_code=1,
             explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
-                if explain
-                else None
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
             ),
         )
 
@@ -599,11 +605,7 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(code, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
         )
     except CanonicalizationError as exc:
         path = "/events"
@@ -617,16 +619,13 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
 
     if result.ok:
         return _json_pass(
             bundle_digest=bundle_digest,
+            anchor_status=_bundle_anchor_state(bundle),
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
 
@@ -649,15 +648,17 @@ def build_verify_json_outcome(
             "reason_code": result.primary_reason,
             "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
             "reasons": reasons,
+            "anchor_status": _bundle_anchor_state(bundle),
+            "anchor_ref": (
+                bundle.get("chain_metadata", {}).get("anchor_ref")
+                if isinstance(bundle.get("chain_metadata"), dict)
+                else None
+            ),
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-            **(
-                {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
-                if explain
-                else {}
-            ),
+            **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,
         stderr_code=stderr_code,

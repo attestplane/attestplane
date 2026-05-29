@@ -30,17 +30,23 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Final, Literal
 
+from attestplane.anchoring.base import AnchorStatus
 from attestplane.hashchain import SCHEMA_VERSION as _CHAIN_SCHEMA_VERSION
 from attestplane.hashchain import chain_extend, genesis_head, head_of, verify_chain
 from attestplane.retention import validate_retention_proof
 from attestplane.storage.jsonl import _serialize_event as _serialize_chained_event
 from attestplane.types import ChainedEvent, EventDraft
-from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING, VerifyErrorCode
+from attestplane.verify_errors import (
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    VERIFY_REQUIRED_FIELDS_MISSING,
+    VerifyErrorCode,
+)
 
 
 def _sdk_version() -> str:
     """Resolve the SDK version lazily to avoid a circular import on package init."""
     from attestplane import __version__ as v
+
     return v
 
 
@@ -56,6 +62,7 @@ def _serialize_signature_record(record: Any) -> dict[str, Any]:
     - Enums + strings + ints pass through as-is.
     """
     from base64 import standard_b64encode
+
     return {
         "signature_schema_version": record.signature_schema_version,
         "signed_seq": record.signed_seq,
@@ -63,9 +70,7 @@ def _serialize_signature_record(record: Any) -> dict[str, Any]:
         "signature_hex": record.signature.hex(),
         "key_id": record.key_id,
         "public_key_der_b64": standard_b64encode(record.public_key_der).decode("ascii"),
-        "signing_cert_chain_b64": [
-            standard_b64encode(c).decode("ascii") for c in record.signing_cert_chain
-        ],
+        "signing_cert_chain_b64": [standard_b64encode(c).decode("ascii") for c in record.signing_cert_chain],
         "signed_at": record.signed_at.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z",
         "signature_mode": record.signature_mode,
         "signed_payload_b64": standard_b64encode(record.signed_payload).decode("ascii"),
@@ -85,21 +90,23 @@ def deserialize_signature_record(raw: dict[str, Any]) -> Any:
     try:
         from attestplane.signing import SignatureRecord
     except ImportError as exc:  # pragma: no cover
-        raise ImportError(
-            "deserialize_signature_record requires attestplane[signing]"
-        ) from exc
+        raise ImportError("deserialize_signature_record requires attestplane[signing]") from exc
 
     required = {
-        "signature_schema_version", "signed_seq", "signed_event_hash_hex",
-        "signature_hex", "key_id", "public_key_der_b64",
-        "signing_cert_chain_b64", "signed_at", "signature_mode",
+        "signature_schema_version",
+        "signed_seq",
+        "signed_event_hash_hex",
+        "signature_hex",
+        "key_id",
+        "public_key_der_b64",
+        "signing_cert_chain_b64",
+        "signed_at",
+        "signature_mode",
         "signed_payload_b64",
     }
     missing = required - set(raw.keys())
     if missing:
-        raise ValueError(
-            f"deserialize_signature_record: missing fields {sorted(missing)}"
-        )
+        raise ValueError(f"deserialize_signature_record: missing fields {sorted(missing)}")
 
     ts_text = raw["signed_at"]
     if ts_text.endswith("Z"):
@@ -114,13 +121,12 @@ def deserialize_signature_record(raw: dict[str, Any]) -> Any:
         signature=bytes.fromhex(raw["signature_hex"]),
         key_id=str(raw["key_id"]),
         public_key_der=standard_b64decode(raw["public_key_der_b64"]),
-        signing_cert_chain=tuple(
-            standard_b64decode(c) for c in raw["signing_cert_chain_b64"]
-        ),
+        signing_cert_chain=tuple(standard_b64decode(c) for c in raw["signing_cert_chain_b64"]),
         signed_at=signed_at,
         signature_mode=raw["signature_mode"],
         signed_payload=standard_b64decode(raw["signed_payload_b64"]),
     )
+
 
 DEFAULT_FORBIDDEN_FIELDS: Final[tuple[str, ...]] = (
     "customer_names",
@@ -211,6 +217,7 @@ class ProofBundleBuilder:
     framework_mappings: list[FrameworkMapping] = field(default_factory=list)
     forbidden_fields: tuple[str, ...] = DEFAULT_FORBIDDEN_FIELDS
     anchor_ref: str | None = None
+    anchor_status: AnchorStatus = "unanchored"
     signatures: list[Any] = field(default_factory=list)
     """Optional list of :class:`~attestplane.signing.SignatureRecord`
     instances accumulated via :meth:`extend_signatures`. Defaults to
@@ -320,15 +327,22 @@ class ProofBundleBuilder:
         # Late validation: every entry must look like a SignatureRecord
         # (duck-typed; full type would require the [signing] extras).
         for r in records:
-            if not all(hasattr(r, attr) for attr in (
-                "signature_schema_version", "signed_seq", "signed_event_hash",
-                "signature", "key_id", "public_key_der", "signing_cert_chain",
-                "signed_at", "signature_mode", "signed_payload",
-            )):
-                raise ValueError(
-                    f"extend_signatures: object missing SignatureRecord fields: "
-                    f"{type(r).__name__}"
+            if not all(
+                hasattr(r, attr)
+                for attr in (
+                    "signature_schema_version",
+                    "signed_seq",
+                    "signed_event_hash",
+                    "signature",
+                    "key_id",
+                    "public_key_der",
+                    "signing_cert_chain",
+                    "signed_at",
+                    "signature_mode",
+                    "signed_payload",
                 )
+            ):
+                raise ValueError(f"extend_signatures: object missing SignatureRecord fields: {type(r).__name__}")
         self.signatures.extend(records)
 
     def extend_retention_proofs(self, records: list[dict[str, Any]]) -> None:
@@ -362,11 +376,8 @@ class ProofBundleBuilder:
         # ADR-0012 P1.2: auto-derive policy_trace_refs (chain-seq-ordered hex hashes
         # for every policy_check_event). Absent when empty per ADR-0012 § 1.
         from attestplane.event_types import POLICY_CHECK_EVENT
-        policy_trace_refs = [
-            ev.event_hash.hex()
-            for ev in self.events
-            if ev.event.event_type == POLICY_CHECK_EVENT
-        ]
+
+        policy_trace_refs = [ev.event_hash.hex() for ev in self.events if ev.event.event_type == POLICY_CHECK_EVENT]
 
         return {
             "bundle_version": 1,
@@ -379,6 +390,7 @@ class ProofBundleBuilder:
                 "producer_runtime": self.producer_runtime,
                 "evidence_taxonomy_version": 1,
                 **({"anchor_ref": self.anchor_ref} if self.anchor_ref else {}),
+                **({"anchor_status": self.anchor_status} if self.anchor_status != "unanchored" else {}),
             },
             "events": [_serialize_chained_event(ev) for ev in self.events],
             "verification_report": {
@@ -393,31 +405,18 @@ class ProofBundleBuilder:
                 {
                     "obligation_id": m.obligation_id,
                     "evidence_event_indexes": list(m.evidence_event_indexes),
-                    "implementation_status_at_bundle_time":
-                        m.implementation_status_at_bundle_time,
+                    "implementation_status_at_bundle_time": m.implementation_status_at_bundle_time,
                 }
                 for m in self.framework_mappings
             ],
             "forbidden_fields": list(self.forbidden_fields),
             # ADR-0012 P1.2: additive policy_trace_refs (absent when empty).
-            **(
-                {"policy_trace_refs": policy_trace_refs}
-                if policy_trace_refs
-                else {}
-            ),
+            **({"policy_trace_refs": policy_trace_refs} if policy_trace_refs else {}),
             # T5 of ADR-0005 plan: additive `signatures` field. Only
             # emitted when ≥ 1 SignatureRecord has been added; absent
             # otherwise to keep existing tests + consumers untouched.
-            **(
-                {"signatures": [_serialize_signature_record(r) for r in self.signatures]}
-                if self.signatures
-                else {}
-            ),
-            **(
-                {"retention_proofs": list(self.retention_proofs)}
-                if self.retention_proofs
-                else {}
-            ),
+            **({"signatures": [_serialize_signature_record(r) for r in self.signatures]} if self.signatures else {}),
+            **({"retention_proofs": list(self.retention_proofs)} if self.retention_proofs else {}),
         }
 
 
@@ -425,12 +424,8 @@ def build_auditor_export(
     bundle: dict[str, Any],
     *,
     framework_coverage_registries: list[Any] | None = None,
-    redaction_status: Literal[
-        "enforced_by_adapter", "enforced_by_producer", "unenforced"
-    ] = "enforced_by_producer",
-    consent_status: Literal[
-        "consent_present", "consent_absent", "consent_not_applicable"
-    ] = "consent_not_applicable",
+    redaction_status: Literal["enforced_by_adapter", "enforced_by_producer", "unenforced"] = "enforced_by_producer",
+    consent_status: Literal["consent_present", "consent_absent", "consent_not_applicable"] = "consent_not_applicable",
     legal_disclaimer: str | None = None,
 ) -> dict[str, Any]:
     """Build the auditor-friendly export from a proof bundle.
@@ -462,6 +457,13 @@ def build_auditor_export(
         sentinel = bundle["verification_report"]["verified_at"]
         time_range = {"earliest": sentinel, "latest": sentinel}
 
+    anchor_status = "unanchored"
+    chain_metadata = bundle.get("chain_metadata")
+    if isinstance(chain_metadata, dict):
+        raw_anchor_status = chain_metadata.get("anchor_status")
+        if isinstance(raw_anchor_status, str) and raw_anchor_status:
+            anchor_status = raw_anchor_status
+
     covered_obligation_ids = {m["obligation_id"] for m in mappings}
 
     # Group coverage by (framework, article) — pulled from the registries
@@ -474,20 +476,18 @@ def build_auditor_export(
             for entry in registry.entries:
                 by_article.setdefault(entry.article, []).append(entry)
             for article, entries in sorted(by_article.items()):
-                with_evidence = sorted(
-                    e.obligation_id for e in entries
-                    if e.obligation_id in covered_obligation_ids
-                )
+                with_evidence = sorted(e.obligation_id for e in entries if e.obligation_id in covered_obligation_ids)
                 without_evidence = sorted(
-                    e.obligation_id for e in entries
-                    if e.obligation_id not in covered_obligation_ids
+                    e.obligation_id for e in entries if e.obligation_id not in covered_obligation_ids
                 )
-                coverage_rows.append({
-                    "framework": registry.framework,
-                    "article": article,
-                    "obligation_ids_with_evidence": with_evidence,
-                    "obligation_ids_without_evidence": without_evidence,
-                })
+                coverage_rows.append(
+                    {
+                        "framework": registry.framework,
+                        "article": article,
+                        "obligation_ids_with_evidence": with_evidence,
+                        "obligation_ids_without_evidence": without_evidence,
+                    }
+                )
 
     default_disclaimer = (
         "This export is a technical chain-integrity and framework-coverage summary. "
@@ -504,7 +504,7 @@ def build_auditor_export(
             "time_range": time_range,
             "producer_runtime": bundle["chain_metadata"]["producer_runtime"],
             "event_type_histogram": dict(histogram),
-            "anchor_status": "unanchored",
+            "anchor_status": anchor_status,
         },
         "verification_status": {
             "ok": bundle["verification_report"]["ok"],
@@ -533,6 +533,7 @@ def bundle_to_in_toto_statement(bundle: dict[str, Any]) -> dict[str, Any]:
     don't need a second import for the common case.
     """
     from attestplane.intoto import proof_bundle_to_in_toto_statement
+
     return proof_bundle_to_in_toto_statement(bundle)
 
 
@@ -550,6 +551,7 @@ def bundle_to_dsse_envelope(
         proof_bundle_to_in_toto_statement,
         statement_to_dsse_envelope,
     )
+
     statement = proof_bundle_to_in_toto_statement(bundle)
     return statement_to_dsse_envelope(statement, signatures=signatures)
 
