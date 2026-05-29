@@ -39,9 +39,7 @@ class _MockAdapter(GenericRuntimeAdapter[_MockRuntimeEvent]):
 
     def translate(self, runtime_event: _MockRuntimeEvent) -> EventDraft:
         if not isinstance(runtime_event, _MockRuntimeEvent):
-            raise AdapterTranslationError(
-                f"expected _MockRuntimeEvent, got {type(runtime_event).__name__}"
-            )
+            raise AdapterTranslationError(f"expected _MockRuntimeEvent, got {type(runtime_event).__name__}")
         return EventDraft(
             event_type=f"mock.{runtime_event.kind}",
             actor=runtime_event.actor_id,
@@ -91,11 +89,20 @@ def test_translation_error_is_adapter_error() -> None:
 @pytest.mark.parametrize(
     "forbidden_method",
     [
-        "execute", "run", "dispatch",
-        "grant", "revoke", "issue",
-        "decide", "approve", "reject",
-        "settle", "charge", "credit",
-        "schedule", "allocate",
+        "execute",
+        "run",
+        "dispatch",
+        "grant",
+        "revoke",
+        "issue",
+        "decide",
+        "approve",
+        "reject",
+        "settle",
+        "charge",
+        "credit",
+        "schedule",
+        "allocate",
     ],
 )
 def test_forbidden_method_rejected_at_subclass_creation(forbidden_method: str) -> None:
@@ -138,7 +145,5 @@ def test_aios_spec_module_is_docstring_only() -> None:
     import attestplane.adapters.aios_spec as spec
 
     public_names = [name for name in dir(spec) if not name.startswith("_")]
-    assert public_names == [], (
-        f"aios_spec.py must remain docstring-only; found public names: {public_names}"
-    )
+    assert public_names == [], f"aios_spec.py must remain docstring-only; found public names: {public_names}"
     assert spec.__doc__ is not None and len(spec.__doc__) > 500

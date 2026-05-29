@@ -133,6 +133,7 @@ def test_file_missing_path_raises(tmp_path: Path) -> None:
 def test_file_rejects_non_ed25519(tmp_path: Path) -> None:
     """An RSA key in the file should be rejected (v1 supports Ed25519 only)."""
     from cryptography.hazmat.primitives.asymmetric import rsa
+
     rsa_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = rsa_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -233,11 +234,13 @@ def test_multi_signer_not_a_key_provider() -> None:
     """Type-level distinction: MultiSignerProvider returns N materials, not 1.
     It deliberately does NOT subclass KeyProvider (architect plan § 1 H)."""
     from attestplane.signing import KeyProvider
+
     assert not issubclass(MultiSignerProvider, KeyProvider)
 
 
 def test_multi_signer_schema_version_check() -> None:
     """If a future v2 provider is mixed with v1, the composite refuses."""
+
     class V2Provider(InMemoryKeyProvider):
         schema_version = 2
 

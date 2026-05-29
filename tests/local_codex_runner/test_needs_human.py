@@ -115,7 +115,10 @@ def test_green_pr_needs_human_is_cleared_without_codex_repair(tmp_path: Path) ->
     assert summary["results"][0]["reason"] == "ci_passed"
     assert gh.ensured == [["codex-recovered", "codex-ci-green"]]
     assert gh.removed == [(22, ["codex-needs-human"])]
-    assert gh.added == [(22, ["codex-recovered", "codex-ci-green"]), (9, ["codex-ci-green"])]
+    assert gh.added == [
+        (22, ["codex-recovered", "codex-ci-green"]),
+        (9, ["codex-ci-green"]),
+    ]
     assert gh.comments
 
 
@@ -127,7 +130,9 @@ def test_kept_issue_does_not_consume_recovery_quota(tmp_path: Path) -> None:
     (evidence_dir / "failure.txt").write_text("429 rate limit\n", encoding="utf-8")
     gh = FakeGH(
         issues=[
-            issue(17, ["auto-codex-approved", "codex-needs-human", "codex-policy-blocked"]),
+            issue(
+                17, ["auto-codex-approved", "codex-needs-human", "codex-policy-blocked"]
+            ),
             issue(18, ["auto-codex-approved", "codex-needs-human"]),
         ]
     )
@@ -152,7 +157,9 @@ def test_rate_limit_evidence_requeues_issue(tmp_path: Path) -> None:
     config = base_config(tmp_path, dry_run=False)
     evidence_dir = tmp_path / "docs/validation/local_codex_runner/issue-14"
     evidence_dir.mkdir(parents=True)
-    (evidence_dir / "failure.txt").write_text("Codex usage limit reached; try again later\n", encoding="utf-8")
+    (evidence_dir / "failure.txt").write_text(
+        "Codex usage limit reached; try again later\n", encoding="utf-8"
+    )
     gh = FakeGH(issues=[issue(14, ["auto-codex-approved", "codex-needs-human"])])
 
     summary = recover_needs_human(config, gh)
@@ -169,7 +176,13 @@ def test_rate_limit_evidence_requeues_issue(tmp_path: Path) -> None:
 
 def test_policy_blocking_label_is_never_recovered(tmp_path: Path) -> None:
     config = base_config(tmp_path, dry_run=False)
-    gh = FakeGH(issues=[issue(15, ["auto-codex-approved", "codex-needs-human", "codex-policy-blocked"])])
+    gh = FakeGH(
+        issues=[
+            issue(
+                15, ["auto-codex-approved", "codex-needs-human", "codex-policy-blocked"]
+            )
+        ]
+    )
 
     summary = recover_needs_human(config, gh)
 
@@ -232,7 +245,9 @@ def test_recovery_respects_lane_filters(tmp_path: Path) -> None:
     assert summary["results"][0]["action"] == "would_requeue"
 
 
-def test_needs_human_issue_list_outage_is_reported_without_crashing(tmp_path: Path) -> None:
+def test_needs_human_issue_list_outage_is_reported_without_crashing(
+    tmp_path: Path,
+) -> None:
     config = base_config(tmp_path)
 
     class FailingGH:
@@ -251,7 +266,9 @@ def test_needs_human_issue_list_outage_is_reported_without_crashing(tmp_path: Pa
     assert "proxyconnect tcp" in summary["external_errors"][0]["error"]
 
 
-def test_needs_human_pr_list_outage_is_reported_without_crashing(tmp_path: Path) -> None:
+def test_needs_human_pr_list_outage_is_reported_without_crashing(
+    tmp_path: Path,
+) -> None:
     config = base_config(tmp_path)
 
     class FailingGH:
@@ -283,7 +300,9 @@ def test_recovery_scans_past_newer_out_of_lane_issues(tmp_path: Path) -> None:
     gh = FakeGH(
         issues=[
             *[
-                issue(number, ["auto-codex-approved", "codex-needs-human", "priority-P1"])
+                issue(
+                    number, ["auto-codex-approved", "codex-needs-human", "priority-P1"]
+                )
                 for number in range(100, 110)
             ],
             issue(30, ["auto-codex-approved", "codex-needs-human", "priority-P0"]),
@@ -296,7 +315,9 @@ def test_recovery_scans_past_newer_out_of_lane_issues(tmp_path: Path) -> None:
     assert summary["results"][0]["action"] == "would_requeue"
 
 
-def test_branch_checked_out_elsewhere_detects_other_worktree(monkeypatch, tmp_path: Path) -> None:
+def test_branch_checked_out_elsewhere_detects_other_worktree(
+    monkeypatch, tmp_path: Path
+) -> None:
     config = base_config(tmp_path, dry_run=False)
 
     class FakeGit:
@@ -322,7 +343,9 @@ def test_branch_checked_out_elsewhere_detects_other_worktree(monkeypatch, tmp_pa
     )
 
 
-def test_ci_recovery_codex_failure_is_reported_without_crashing(monkeypatch, tmp_path: Path) -> None:
+def test_ci_recovery_codex_failure_is_reported_without_crashing(
+    monkeypatch, tmp_path: Path
+) -> None:
     config = base_config(tmp_path, dry_run=False)
     config.allowed_pr_authors = ["runner-bot"]
 
@@ -356,7 +379,9 @@ def test_ci_recovery_codex_failure_is_reported_without_crashing(monkeypatch, tmp
             raise RunnerCommandError(["codex", "exec"], 1, "HTTP error: 403 Forbidden")
 
     monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", FailingCodex)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.CodexDriver", FailingCodex
+    )
 
     gh = FakeGH(
         issues=[issue(31, ["auto-codex-approved", "codex-needs-human"])],
@@ -375,7 +400,9 @@ def test_ci_recovery_codex_failure_is_reported_without_crashing(monkeypatch, tmp
     assert not (tmp_path / "state.json").exists()
 
 
-def test_external_codex_backend_failure_does_not_poison_attempt_cap(monkeypatch, tmp_path: Path) -> None:
+def test_external_codex_backend_failure_does_not_poison_attempt_cap(
+    monkeypatch, tmp_path: Path
+) -> None:
     config = base_config(tmp_path, dry_run=False)
     config.allowed_pr_authors = ["runner-bot"]
 
@@ -413,7 +440,9 @@ def test_external_codex_backend_failure_does_not_poison_attempt_cap(monkeypatch,
             )
 
     monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", FailingCodex)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.CodexDriver", FailingCodex
+    )
 
     gh = FakeGH(
         issues=[issue(32, ["auto-codex-approved", "codex-needs-human"])],
@@ -431,7 +460,9 @@ def test_external_codex_backend_failure_does_not_poison_attempt_cap(monkeypatch,
     assert not (tmp_path / "state.json").exists()
 
 
-def test_ci_recovery_pushes_existing_clean_local_commit(monkeypatch, tmp_path: Path) -> None:
+def test_ci_recovery_pushes_existing_clean_local_commit(
+    monkeypatch, tmp_path: Path
+) -> None:
     config = base_config(tmp_path, dry_run=False)
     config.allowed_pr_authors = ["runner-bot"]
     pushed: list[str] = []
@@ -468,22 +499,34 @@ def test_ci_recovery_pushes_existing_clean_local_commit(monkeypatch, tmp_path: P
 
         def run(self, labels, evidence_dir, *, preferred_gate=None):
             selected_gates.append(preferred_gate)
-            return GateReport(status="PASS", selected_gate=preferred_gate or "default", commands=[])
+            return GateReport(
+                status="PASS", selected_gate=preferred_gate or "default", commands=[]
+            )
 
     class UnexpectedCodex:
         def __init__(self, **kwargs):
             pass
 
         def run_codex(self, prompt_file, workdir, log_path, timeout=None):
-            raise AssertionError("existing clean commits should be pushed without another Codex repair")
+            raise AssertionError(
+                "existing clean commits should be pushed without another Codex repair"
+            )
 
     def passing_ci(*args, **kwargs):
-        return CIWatchResult(status="PASS", summary="ok", checks=[CheckStatus("ci", "SUCCESS", "pass")])
+        return CIWatchResult(
+            status="PASS", summary="ok", checks=[CheckStatus("ci", "SUCCESS", "pass")]
+        )
 
     monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GateRunner", PassingGate)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", UnexpectedCodex)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.wait_for_ci", passing_ci)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.GateRunner", PassingGate
+    )
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.CodexDriver", UnexpectedCodex
+    )
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.wait_for_ci", passing_ci
+    )
 
     gh = FakeGH(
         issues=[issue(33, ["auto-codex-approved", "codex-needs-human"])],
@@ -500,7 +543,9 @@ def test_ci_recovery_pushes_existing_clean_local_commit(monkeypatch, tmp_path: P
     assert gh.removed == [(33, ["codex-needs-human"])]
 
 
-def test_ci_recovery_transient_only_diff_marks_fresh_green_pr(monkeypatch, tmp_path: Path) -> None:
+def test_ci_recovery_transient_only_diff_marks_fresh_green_pr(
+    monkeypatch, tmp_path: Path
+) -> None:
     config = base_config(tmp_path, dry_run=False)
     config.allowed_pr_authors = ["runner-bot"]
 
@@ -549,7 +594,9 @@ def test_ci_recovery_transient_only_diff_marks_fresh_green_pr(monkeypatch, tmp_p
             pass
 
         def run(self, labels, evidence_dir, *, preferred_gate=None):
-            return GateReport(status="PASS", selected_gate=preferred_gate or "default", commands=[])
+            return GateReport(
+                status="PASS", selected_gate=preferred_gate or "default", commands=[]
+            )
 
     class NoopCodex:
         def __init__(self, **kwargs):
@@ -559,7 +606,9 @@ def test_ci_recovery_transient_only_diff_marks_fresh_green_pr(monkeypatch, tmp_p
             return None
 
     monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GateRunner", PassingGate)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.GateRunner", PassingGate
+    )
     monkeypatch.setattr("scripts.local_codex_runner.needs_human.CodexDriver", NoopCodex)
 
     gh = FlippingGH()
@@ -569,10 +618,15 @@ def test_ci_recovery_transient_only_diff_marks_fresh_green_pr(monkeypatch, tmp_p
     assert summary["results"][0]["action"] == "marked_ci_green"
     assert summary["results"][0]["reason"] == "ci_passed"
     assert gh.removed == [(35, ["codex-needs-human"])]
-    assert gh.added == [(35, ["codex-recovered", "codex-ci-green"]), (15, ["codex-ci-green"])]
+    assert gh.added == [
+        (35, ["codex-recovered", "codex-ci-green"]),
+        (15, ["codex-ci-green"]),
+    ]
 
 
-def test_ci_recovery_attempt_cap_allows_existing_clean_local_commit(monkeypatch, tmp_path: Path) -> None:
+def test_ci_recovery_attempt_cap_allows_existing_clean_local_commit(
+    monkeypatch, tmp_path: Path
+) -> None:
     config = base_config(tmp_path, dry_run=False)
     config.allowed_pr_authors = ["runner-bot"]
     state_path = tmp_path / "state.json"
@@ -618,14 +672,22 @@ def test_ci_recovery_attempt_cap_allows_existing_clean_local_commit(monkeypatch,
             pass
 
         def run(self, labels, evidence_dir, *, preferred_gate=None):
-            return GateReport(status="PASS", selected_gate=preferred_gate or "default", commands=[])
+            return GateReport(
+                status="PASS", selected_gate=preferred_gate or "default", commands=[]
+            )
 
     def passing_ci(*args, **kwargs):
-        return CIWatchResult(status="PASS", summary="ok", checks=[CheckStatus("ci", "SUCCESS", "pass")])
+        return CIWatchResult(
+            status="PASS", summary="ok", checks=[CheckStatus("ci", "SUCCESS", "pass")]
+        )
 
     monkeypatch.setattr("scripts.local_codex_runner.needs_human.GitOps", FakeGit)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.GateRunner", PassingGate)
-    monkeypatch.setattr("scripts.local_codex_runner.needs_human.wait_for_ci", passing_ci)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.GateRunner", PassingGate
+    )
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.needs_human.wait_for_ci", passing_ci
+    )
 
     gh = FakeGH(
         issues=[issue(34, ["auto-codex-approved", "codex-needs-human"])],

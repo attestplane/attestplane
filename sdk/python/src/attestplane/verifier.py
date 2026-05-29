@@ -55,6 +55,8 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION,
+    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
     VerifyReasonCodeV1,
 )
 
@@ -106,16 +108,15 @@ class BundleVerificationResult:
     retention_proofs_reason: str | None
     signed_attestation_schema_ok: bool
     signed_attestation_schema_reason: str | None
+    taxonomy_version_ok: bool
+    taxonomy_version_reason: str | None
     error_code: VerifyErrorCode
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
 
     def short_summary(self) -> str:
         if self.ok:
-            return (
-                f"OK chain_id={self.chain_id!r} events={self.event_count} "
-                f"head={self.head_hash_hex[:16]}…"
-            )
+            return f"OK chain_id={self.chain_id!r} events={self.event_count} head={self.head_hash_hex[:16]}…"
         bad = self.chain_result.first_bad_index
         return (
             f"FAIL chain_id={self.chain_id!r} events={self.event_count} "
@@ -124,6 +125,7 @@ class BundleVerificationResult:
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
             f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
+            f"taxonomy_version_reason={self.taxonomy_version_reason!r} "
             f"error_code={self.error_code} primary_reason={self.primary_reason}"
         )
 
@@ -136,12 +138,19 @@ _REQUIRED_TOP_LEVEL = {
     "forbidden_fields",
 }
 _REQUIRED_CHAIN_METADATA = {
-    "chain_id", "genesis_hash_hex",
-    "head_hash_hex", "head_seq", "producer_runtime",
+    "chain_id",
+    "genesis_hash_hex",
+    "head_hash_hex",
+    "head_seq",
+    "producer_runtime",
 }
 _REQUIRED_VERIFICATION_REPORT = {
-    "ok", "first_bad_index", "reason", "verified_at",
-    "verifier_version", "verification_method",
+    "ok",
+    "first_bad_index",
+    "reason",
+    "verified_at",
+    "verifier_version",
+    "verification_method",
 }
 _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
     "framework_mappings",
@@ -174,30 +183,23 @@ def _validate_shape(bundle: Any) -> None:
         if key in _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS or key.startswith("critical_")
     )
     if fail_closed_unknown_fields:
-        raise BundleSchemaError(
-            f"unknown top-level fields: {fail_closed_unknown_fields}"
-        )
+        raise BundleSchemaError(f"unknown top-level fields: {fail_closed_unknown_fields}")
     if bundle["bundle_version"] != 1:
         raise BundleSchemaError(
-            f"unsupported bundle_version={bundle['bundle_version']!r}; "
-            f"this verifier handles version 1 only"
+            f"unsupported bundle_version={bundle['bundle_version']!r}; this verifier handles version 1 only"
         )
     if not isinstance(bundle["chain_metadata"], dict):
         raise BundleSchemaError("chain_metadata must be a JSON object")
     missing_cm = _REQUIRED_CHAIN_METADATA - set(bundle["chain_metadata"])
     if missing_cm:
-        raise BundleSchemaError(
-            f"chain_metadata missing required fields: {sorted(missing_cm)}"
-        )
+        raise BundleSchemaError(f"chain_metadata missing required fields: {sorted(missing_cm)}")
     if not isinstance(bundle["events"], list):
         raise BundleSchemaError("events must be an array")
     if not isinstance(bundle["verification_report"], dict):
         raise BundleSchemaError("verification_report must be a JSON object")
     missing_report = _REQUIRED_VERIFICATION_REPORT - set(bundle["verification_report"])
     if missing_report:
-        raise BundleSchemaError(
-            f"verification_report missing required fields: {sorted(missing_report)}"
-        )
+        raise BundleSchemaError(f"verification_report missing required fields: {sorted(missing_report)}")
     method = bundle["verification_report"]["verification_method"]
     if method not in _ALLOWED_VERIFICATION_METHODS:
         raise BundleSchemaError(f"unsupported verification_method={method!r}")
@@ -208,9 +210,7 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("forbidden_fields must contain non-empty strings")
     missing_forbidden = set(DEFAULT_FORBIDDEN_FIELDS) - set(forbidden)
     if missing_forbidden:
-        raise BundleSchemaError(
-            f"forbidden_fields missing required redaction terms: {sorted(missing_forbidden)}"
-        )
+        raise BundleSchemaError(f"forbidden_fields missing required redaction terms: {sorted(missing_forbidden)}")
     if "framework_mappings" in bundle and not isinstance(bundle["framework_mappings"], list):
         raise BundleSchemaError("framework_mappings must be an array when present")
     if "policy_trace_refs" in bundle and not isinstance(bundle["policy_trace_refs"], list):
@@ -248,9 +248,7 @@ def _rehydrate_events(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
         try:
             chain.append(_deserialize_chained_event(ev_raw))
         except (KeyError, ValueError, TypeError) as exc:
-            raise BundleSchemaError(
-                f"events[{idx}]: malformed event row: {exc}"
-            ) from exc
+            raise BundleSchemaError(f"events[{idx}]: malformed event row: {exc}") from exc
     return chain
 
 
@@ -282,9 +280,7 @@ def _validate_minimum_signed_attestation_schema(
             continue
         digest = raw.get("signed_event_hash_hex")
         if not isinstance(digest, str) or not _HEX64.match(digest):
-            malformed_reasons.append(
-                f"signatures[{index}].signed_event_hash_hex must be lowercase 64-hex"
-            )
+            malformed_reasons.append(f"signatures[{index}].signed_event_hash_hex must be lowercase 64-hex")
             continue
         if digest not in canonical_event_hashes:
             malformed_reasons.append(
@@ -425,6 +421,22 @@ def _schema_version_reason_code(metadata_reason: str | None) -> VerifyReasonCode
     return None
 
 
+def _taxonomy_version_reason(
+    required_taxonomy_version: int | None,
+) -> tuple[bool, str | None]:
+    if required_taxonomy_version is None:
+        return True, None
+    if required_taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION:
+        return True, None
+    return (
+        False,
+        (
+            f"requested taxonomy_version={required_taxonomy_version!r} "
+            f"does not match supported taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION}"
+        ),
+    )
+
+
 def _verification_reasons(
     *,
     chain_result: VerificationResult,
@@ -435,6 +447,7 @@ def _verification_reasons(
     signed_schema_reason: str | None,
     metadata_ok: bool,
     metadata_reason: str | None,
+    taxonomy_version_ok: bool,
     policy_ok: bool,
     retention_ok: bool,
 ) -> tuple[VerifyReasonCodeV1 | None, tuple[VerifyReasonCodeV1, ...]]:
@@ -451,6 +464,8 @@ def _verification_reasons(
             reasons.append(schema_version_reason)
         else:
             reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+    if not taxonomy_version_ok:
+        reasons.append(VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED)
     if not policy_ok:
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if not retention_ok:
@@ -495,10 +510,7 @@ def _verify_metadata_closure(
 
     head = head_of(events)
     if metadata["head_seq"] != head.seq:
-        return False, (
-            f"chain_metadata.head_seq={metadata['head_seq']!r} does not match "
-            f"computed head seq {head.seq}"
-        )
+        return False, (f"chain_metadata.head_seq={metadata['head_seq']!r} does not match computed head seq {head.seq}")
     if metadata["head_hash_hex"] != head.event_hash.hex():
         return False, "chain_metadata.head_hash_hex does not match computed chain head"
 
@@ -514,11 +526,7 @@ def _verify_metadata_closure(
 
 
 def _verify_policy_trace_refs(bundle: dict[str, Any], events: list[ChainedEvent]) -> tuple[bool, str | None]:
-    expected = [
-        event.event_hash.hex()
-        for event in events
-        if event.event.event_type == POLICY_CHECK_EVENT
-    ]
+    expected = [event.event_hash.hex() for event in events if event.event.event_type == POLICY_CHECK_EVENT]
     present = "policy_trace_refs" in bundle
     if not expected:
         if not present:
@@ -539,10 +547,7 @@ def _verify_policy_trace_refs(bundle: dict[str, Any], events: list[ChainedEvent]
     dangling = [ref for ref in refs if ref not in actual_event_hashes]
     if dangling:
         return False, f"policy_trace_refs contains dangling refs: {dangling}"
-    wrong_type = [
-        ref for ref in refs
-        if ref in actual_event_hashes and ref not in expected
-    ]
+    wrong_type = [ref for ref in refs if ref in actual_event_hashes and ref not in expected]
     if wrong_type:
         return False, f"policy_trace_refs points at non-policy events: {wrong_type}"
     if refs != expected:
@@ -555,6 +560,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -574,6 +580,7 @@ def verify_proof_bundle(
         )
     else:
         signed_schema_ok, signed_schema_reason = True, None
+    taxonomy_version_ok, taxonomy_version_reason = _taxonomy_version_reason(require_taxonomy_version)
     chain_result = verify_chain(events)
     bundle_reported_ok = bool(bundle["verification_report"]["ok"])
     agreement = bundle_reported_ok == chain_result.ok
@@ -595,7 +602,7 @@ def verify_proof_bundle(
         error_code = VERIFY_REQUIRED_FIELDS_MISSING
     elif not signed_schema_ok:
         error_code = VERIFY_BUNDLE_SCHEMA_INCOMPLETE
-    elif not metadata_ok:
+    elif not metadata_ok or not taxonomy_version_ok:
         error_code = VERIFY_METADATA_CLOSURE_FAILED
     elif not policy_ok:
         error_code = VERIFY_POLICY_TRACE_REFS_FAILED
@@ -610,6 +617,7 @@ def verify_proof_bundle(
         signed_schema_reason=signed_schema_reason,
         metadata_ok=metadata_ok,
         metadata_reason=metadata_reason,
+        taxonomy_version_ok=taxonomy_version_ok,
         policy_ok=policy_ok,
         retention_ok=retention_result.ok,
     )
@@ -618,6 +626,7 @@ def verify_proof_bundle(
             chain_result.ok
             and agreement
             and metadata_ok
+            and taxonomy_version_ok
             and policy_ok
             and retention_result.ok
             and signed_schema_ok
@@ -637,6 +646,8 @@ def verify_proof_bundle(
         retention_proofs_reason=retention_result.reason,
         signed_attestation_schema_ok=signed_schema_ok,
         signed_attestation_schema_reason=signed_schema_reason,
+        taxonomy_version_ok=taxonomy_version_ok,
+        taxonomy_version_reason=taxonomy_version_reason,
         error_code=error_code,
         primary_reason=primary_reason,
         secondary_reasons=secondary_reasons,
@@ -648,6 +659,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -661,6 +673,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 

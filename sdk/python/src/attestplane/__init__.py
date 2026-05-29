@@ -209,6 +209,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_STRUCTURE_INVALID,
     VERIFY_REASON_TAXONOMY,
     VERIFY_REASON_TAXONOMY_VERSION,
+    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
     VerifyReasonCodeV1,
     is_known_verify_reason_code,
     verify_reason_code_explanation,
@@ -305,6 +306,7 @@ __all__ = [
     "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
     "VERIFY_REASON_SIGNATURE_INVALID",
     "VERIFY_REASON_SIGNATURE_MISSING",
+    "VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED",
     "VERIFY_REASON_STRUCTURE_INVALID",
     "VerifyErrorCode",
     "VerifyReasonCodeV1",
@@ -367,20 +369,22 @@ __all__ = [
 ]
 
 if _SIGNING_AVAILABLE:
-    __all__.extend([
-        "SIGNATURE_SCHEMA_VERSION",
-        "EnvKeyProvider",
-        "FileKeyProvider",
-        "InMemoryKeyProvider",
-        "KeyBoundaryError",
-        "KeyProvider",
-        "KeyProviderError",
-        "MultiSignerProvider",
-        "SignatureMode",
-        "SignatureRecord",
-        "SignatureVerificationError",
-        "SignaturePolicy",
-        "SigningError",
-        "SigningMaterial",
-        "derive_key_id",
-    ])
+    __all__.extend(
+        [
+            "SIGNATURE_SCHEMA_VERSION",
+            "EnvKeyProvider",
+            "FileKeyProvider",
+            "InMemoryKeyProvider",
+            "KeyBoundaryError",
+            "KeyProvider",
+            "KeyProviderError",
+            "MultiSignerProvider",
+            "SignatureMode",
+            "SignatureRecord",
+            "SignatureVerificationError",
+            "SignaturePolicy",
+            "SigningError",
+            "SigningMaterial",
+            "derive_key_id",
+        ]
+    )

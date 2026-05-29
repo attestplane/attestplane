@@ -22,8 +22,7 @@ _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 
 def _hash(obj: object) -> str:
-    encoded = json.dumps(obj, sort_keys=True, separators=(",", ":"),
-                         default=str, ensure_ascii=False).encode("utf-8")
+    encoded = json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str, ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -57,8 +56,11 @@ def test_redacts_inputs_and_outputs() -> None:
     adapter = LangSmithAdapter()
     redacted_value = "REDACTED_FOR_TEST"
     run = LangSmithRun(
-        id="run-2", name="tool", run_type="tool",
-        start_time=_NOW, end_time=_NOW,
+        id="run-2",
+        name="tool",
+        run_type="tool",
+        start_time=_NOW,
+        end_time=_NOW,
         inputs={"sensitive": redacted_value},
         outputs={"sensitive_result": redacted_value},
     )
@@ -74,8 +76,11 @@ def test_redacts_inputs_and_outputs() -> None:
 def test_error_run_marks_status_error() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="run-3", name="tool", run_type="tool",
-        start_time=_NOW, end_time=_NOW,
+        id="run-3",
+        name="tool",
+        run_type="tool",
+        start_time=_NOW,
+        end_time=_NOW,
         inputs={},
         error="ToolExecutionError: timeout after 30s",
     )
@@ -87,8 +92,11 @@ def test_error_run_marks_status_error() -> None:
 def test_long_error_truncated() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="run-4", name="tool", run_type="tool",
-        start_time=_NOW, end_time=_NOW,
+        id="run-4",
+        name="tool",
+        run_type="tool",
+        start_time=_NOW,
+        end_time=_NOW,
         inputs={},
         error="X" * 5000,
     )
@@ -99,8 +107,11 @@ def test_long_error_truncated() -> None:
 def test_user_id_pseudonymized_via_subject_ref() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="run-5", name="tool", run_type="tool",
-        start_time=_NOW, end_time=_NOW,
+        id="run-5",
+        name="tool",
+        run_type="tool",
+        start_time=_NOW,
+        end_time=_NOW,
         inputs={},
         end_user_id="user_42",
     )
@@ -111,8 +122,12 @@ def test_user_id_pseudonymized_via_subject_ref() -> None:
 def test_unknown_run_type_marked_unknown() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="run-6", name="x", run_type="weirdcustomtype",
-        start_time=_NOW, end_time=_NOW, inputs={},
+        id="run-6",
+        name="x",
+        run_type="weirdcustomtype",
+        start_time=_NOW,
+        end_time=_NOW,
+        inputs={},
     )
     draft = adapter.translate(run)
     assert draft.payload["kind"] == "unknown"
@@ -122,8 +137,12 @@ def test_latency_ms_populated_when_end_time_present() -> None:
     adapter = LangSmithAdapter()
     end = datetime(2026, 5, 17, 12, 0, 1, 500000, tzinfo=UTC)  # 1.5s later
     run = LangSmithRun(
-        id="r", name="t", run_type="tool",
-        start_time=_NOW, end_time=end, inputs={},
+        id="r",
+        name="t",
+        run_type="tool",
+        start_time=_NOW,
+        end_time=end,
+        inputs={},
     )
     draft = adapter.translate(run)
     assert draft.payload["latency_ms"] == 1500
@@ -132,8 +151,11 @@ def test_latency_ms_populated_when_end_time_present() -> None:
 def test_session_id_falls_back_to_run_id_if_no_trace_id() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="solo-run", name="t", run_type="tool",
-        start_time=_NOW, inputs={},
+        id="solo-run",
+        name="t",
+        run_type="tool",
+        start_time=_NOW,
+        inputs={},
     )
     draft = adapter.translate(run)
     assert draft.session_id == "solo-run"
@@ -142,8 +164,11 @@ def test_session_id_falls_back_to_run_id_if_no_trace_id() -> None:
 def test_parent_run_id_becomes_reference_db_ref() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="child", name="t", run_type="tool",
-        start_time=_NOW, inputs={},
+        id="child",
+        name="t",
+        run_type="tool",
+        start_time=_NOW,
+        inputs={},
         parent_run_id="parent-1",
     )
     draft = adapter.translate(run)
@@ -159,8 +184,12 @@ def test_rejects_non_langsmith_run() -> None:
 def test_pure_function_idempotent() -> None:
     adapter = LangSmithAdapter()
     run = LangSmithRun(
-        id="x", name="t", run_type="tool",
-        start_time=_NOW, end_time=_NOW, inputs={"a": 1},
+        id="x",
+        name="t",
+        run_type="tool",
+        start_time=_NOW,
+        end_time=_NOW,
+        inputs={"a": 1},
     )
     a = adapter.translate(run)
     b = adapter.translate(run)
@@ -171,21 +200,27 @@ def test_pure_function_idempotent() -> None:
 
 
 def test_from_dict_minimal() -> None:
-    run = LangSmithAdapter.from_dict({
-        "id": "r1",
-        "name": "tool_x",
-        "run_type": "tool",
-        "start_time": "2026-05-17T12:00:00Z",
-    })
+    run = LangSmithAdapter.from_dict(
+        {
+            "id": "r1",
+            "name": "tool_x",
+            "run_type": "tool",
+            "start_time": "2026-05-17T12:00:00Z",
+        }
+    )
     assert run.id == "r1"
     assert run.start_time == _NOW
 
 
 def test_from_dict_z_suffix_normalized() -> None:
-    run = LangSmithAdapter.from_dict({
-        "id": "r", "name": "t", "run_type": "tool",
-        "start_time": "2026-05-17T12:00:00Z",
-    })
+    run = LangSmithAdapter.from_dict(
+        {
+            "id": "r",
+            "name": "t",
+            "run_type": "tool",
+            "start_time": "2026-05-17T12:00:00Z",
+        }
+    )
     assert run.start_time.tzinfo is not None
 
 
@@ -196,18 +231,26 @@ def test_from_dict_missing_required_field() -> None:
 
 def test_from_dict_bad_datetime() -> None:
     with pytest.raises(AdapterTranslationError, match="unparsable"):
-        LangSmithAdapter.from_dict({
-            "id": "x", "name": "y", "run_type": "tool",
-            "start_time": "not-a-date",
-        })
+        LangSmithAdapter.from_dict(
+            {
+                "id": "x",
+                "name": "y",
+                "run_type": "tool",
+                "start_time": "not-a-date",
+            }
+        )
 
 
 def test_from_dict_extracts_user_id_from_metadata() -> None:
-    run = LangSmithAdapter.from_dict({
-        "id": "x", "name": "y", "run_type": "tool",
-        "start_time": "2026-05-17T12:00:00Z",
-        "metadata": {"user_id": "u-42"},
-    })
+    run = LangSmithAdapter.from_dict(
+        {
+            "id": "x",
+            "name": "y",
+            "run_type": "tool",
+            "start_time": "2026-05-17T12:00:00Z",
+            "metadata": {"user_id": "u-42"},
+        }
+    )
     assert run.end_user_id == "u-42"
 
 

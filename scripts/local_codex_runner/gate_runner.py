@@ -16,7 +16,13 @@ from pathlib import Path
 from scripts.local_codex_runner.config import load_yaml_mapping
 from scripts.local_codex_runner.github_cli import redact, truncate
 
-FORBIDDEN_COMMAND_WORDS = ("publish", "twine upload", "npm publish", "git tag", "gh release upload")
+FORBIDDEN_COMMAND_WORDS = (
+    "publish",
+    "twine upload",
+    "npm publish",
+    "git tag",
+    "gh release upload",
+)
 LIVE_COMMAND_WORDS = ("--live", "live-test", "external-live")
 DOCS_ONLY_GATE = "type:docs"
 CI_FAILED_GATE = "ci:failed"
@@ -38,7 +44,14 @@ class GateReport:
     commands: list[GateCommandResult]
 
     def summary(self) -> str:
-        lines = [f"# Gate Report: {self.status}", "", f"Gate: `{self.selected_gate}`", "", "## Commands", ""]
+        lines = [
+            f"# Gate Report: {self.status}",
+            "",
+            f"Gate: `{self.selected_gate}`",
+            "",
+            "## Commands",
+            "",
+        ]
         for result in self.commands:
             lines.append(f"- `{result.command}`: exit={result.exit_code}")
         return "\n".join(lines)
@@ -52,7 +65,9 @@ class GateReport:
 
 
 class GateRunner:
-    def __init__(self, workdir: Path, matrix_path: Path, *, timeout_seconds: int = 900) -> None:
+    def __init__(
+        self, workdir: Path, matrix_path: Path, *, timeout_seconds: int = 900
+    ) -> None:
         self.workdir = workdir
         self.matrix_path = matrix_path
         self.timeout_seconds = timeout_seconds
@@ -61,7 +76,11 @@ class GateRunner:
         if not self.matrix_path.exists():
             return {"default": ["python -m compileall scripts", "pytest -q"]}
         loaded = load_yaml_mapping(self.matrix_path)
-        return {str(key): [str(item) for item in value] for key, value in loaded.items() if isinstance(value, list)}
+        return {
+            str(key): [str(item) for item in value]
+            for key, value in loaded.items()
+            if isinstance(value, list)
+        }
 
     def select_gate(
         self,
@@ -75,19 +94,36 @@ class GateRunner:
             return preferred_gate, matrix[preferred_gate]
         for label in labels:
             if label in matrix:
-                if label == DOCS_ONLY_GATE and changed_files and not all(is_docs_only_path(path) for path in changed_files):
+                if (
+                    label == DOCS_ONLY_GATE
+                    and changed_files
+                    and not all(is_docs_only_path(path) for path in changed_files)
+                ):
                     break
                 return label, matrix[label]
-        return "default", matrix.get("default", ["python -m compileall scripts", "pytest -q"])
+        return "default", matrix.get(
+            "default", ["python -m compileall scripts", "pytest -q"]
+        )
 
-    def run(self, labels: list[str], evidence_dir: Path, *, preferred_gate: str | None = None) -> GateReport:
+    def run(
+        self,
+        labels: list[str],
+        evidence_dir: Path,
+        *,
+        preferred_gate: str | None = None,
+    ) -> GateReport:
         gate_name, commands = self.select_gate(
             labels,
             changed_files=self.changed_files(),
             preferred_gate=preferred_gate,
         )
         live_allowed = "live-test-approved" in labels
-        results = [self.run_command(self.rewrite_for_project_python(command), live_allowed=live_allowed) for command in commands]
+        results = [
+            self.run_command(
+                self.rewrite_for_project_python(command), live_allowed=live_allowed
+            )
+            for command in commands
+        ]
         status = "PASS" if all(result.exit_code == 0 for result in results) else "FAIL"
         report = GateReport(status=status, selected_gate=gate_name, commands=results)
         evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -95,13 +131,20 @@ class GateRunner:
             json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-        (evidence_dir / "gate_report.md").write_text(report.summary() + "\n", encoding="utf-8")
+        (evidence_dir / "gate_report.md").write_text(
+            report.summary() + "\n", encoding="utf-8"
+        )
         return report
 
     def run_command(self, command: str, *, live_allowed: bool) -> GateCommandResult:
         lowered = command.lower()
         if any(word in lowered for word in FORBIDDEN_COMMAND_WORDS):
-            return GateCommandResult(command, 2, "", "Forbidden publish/tag/release command blocked by gate runner")
+            return GateCommandResult(
+                command,
+                2,
+                "",
+                "Forbidden publish/tag/release command blocked by gate runner",
+            )
         if not live_allowed and any(word in lowered for word in LIVE_COMMAND_WORDS):
             return GateCommandResult(
                 command,

@@ -29,8 +29,14 @@ def test_support_only_files_are_allowed_without_a_bypass() -> None:
 
     assert result.allowed is True
     assert result.reason == "product_support_delta"
-    assert "sdk/python/tests/test_issue209_schema_version_ci_coverage.py" in result.product_support_files
-    assert "docs/validation/local_codex_runner/issue-280/runner_result.md" in result.support_only_files
+    assert (
+        "sdk/python/tests/test_issue209_schema_version_ci_coverage.py"
+        in result.product_support_files
+    )
+    assert (
+        "docs/validation/local_codex_runner/issue-280/runner_result.md"
+        in result.support_only_files
+    )
 
 
 def test_support_only_files_are_allowed_without_product_changes() -> None:

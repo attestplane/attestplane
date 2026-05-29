@@ -26,6 +26,7 @@ VerifyReasonCodeV1 = Literal[
     "att.verify.schema_version_unsupported",
     "att.verify.signature_invalid",
     "att.verify.signature_missing",
+    "att.verify.taxonomy_version_unsupported",
     "att.verify.structure_invalid",
 ]
 
@@ -34,15 +35,10 @@ VERIFY_REASON_SIGNATURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.signatu
 VERIFY_REASON_SIGNATURE_MISSING: Final[VerifyReasonCodeV1] = "att.verify.signature_missing"
 VERIFY_REASON_SCHEMA_UNKNOWN: Final[VerifyReasonCodeV1] = "att.verify.schema_unknown"
 VERIFY_REASON_SCHEMA_INVALID: Final[VerifyReasonCodeV1] = "att.verify.schema_invalid"
-VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_missing"
-)
-VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_unsupported"
-)
-VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.required_field_missing"
-)
+VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = "att.verify.schema_version_missing"
+VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verify.schema_version_unsupported"
+VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = "att.verify.required_field_missing"
+VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verify.taxonomy_version_unsupported"
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
 
@@ -56,6 +52,7 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
+    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
     VERIFY_REASON_STRUCTURE_INVALID,
 )
 
@@ -80,13 +77,14 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
     ),
     VERIFY_REASON_SIGNATURE_INVALID: "Signature material is present but malformed or fails verifier checks.",
     VERIFY_REASON_SIGNATURE_MISSING: "Strict verification requires signature material but none is present.",
+    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED: (
+        "The requested verifier rejection taxonomy version is unsupported by this verifier."
+    ),
     VERIFY_REASON_STRUCTURE_INVALID: "Known bundle relationships are malformed, duplicated, dangling, or out of order.",
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
-_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"^att\.verify\.[a-z][a-z0-9_]*$"
-)
+_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^att\.verify\.[a-z][a-z0-9_]*$")
 
 
 def is_known_verify_reason_code(value: str) -> bool:
@@ -119,6 +117,7 @@ __all__ = [
     "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
     "VERIFY_REASON_SIGNATURE_INVALID",
     "VERIFY_REASON_SIGNATURE_MISSING",
+    "VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED",
     "VERIFY_REASON_STRUCTURE_INVALID",
     "VerifyReasonCodeV1",
     "is_known_verify_reason_code",

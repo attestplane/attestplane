@@ -21,7 +21,10 @@ class CIWatchResult:
 def summarize_checks(checks: list[CheckStatus]) -> str:
     if not checks:
         return "No checks returned by gh pr checks."
-    return "\n".join(f"- {check.name}: {check.bucket or check.state} {check.link or ''}".rstrip() for check in checks)
+    return "\n".join(
+        f"- {check.name}: {check.bucket or check.state} {check.link or ''}".rstrip()
+        for check in checks
+    )
 
 
 def classify_checks(checks: list[CheckStatus]) -> str:
@@ -51,11 +54,17 @@ def wait_for_ci(
         if status == "PASS":
             return CIWatchResult(status=status, summary=summary, checks=checks)
         if status == "FAIL":
-            if last_failure_summary == summary or poll_seconds <= 0 or time.monotonic() + poll_seconds > deadline:
+            if (
+                last_failure_summary == summary
+                or poll_seconds <= 0
+                or time.monotonic() + poll_seconds > deadline
+            ):
                 return CIWatchResult(status=status, summary=summary, checks=checks)
             last_failure_summary = summary
             time.sleep(poll_seconds)
             continue
         last_failure_summary = None
         time.sleep(poll_seconds)
-    return CIWatchResult(status="TIMEOUT", summary=summarize_checks(checks), checks=checks)
+    return CIWatchResult(
+        status="TIMEOUT", summary=summarize_checks(checks), checks=checks
+    )

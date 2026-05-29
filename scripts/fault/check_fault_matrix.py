@@ -89,7 +89,9 @@ def validate_matrix(path: Path, repo_root: Path) -> tuple[int, int, int]:
             fault_covered = True
             for test_ref in tests:
                 if not isinstance(test_ref, str) or not test_ref:
-                    violations.append(f"{fault_id}: test reference must be a non-empty string")
+                    violations.append(
+                        f"{fault_id}: test reference must be a non-empty string"
+                    )
                     fault_covered = False
                     continue
                 error = _validate_test_ref(repo_root, test_ref)

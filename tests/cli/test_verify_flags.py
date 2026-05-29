@@ -14,12 +14,15 @@ from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_REQUIRED_FIELDS_MISSING,
 )
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
-SIGNED_BUNDLE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+SIGNED_BUNDLE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+)
 
 
 @pytest.mark.parametrize(
@@ -79,11 +82,42 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "2 proof-bundle contract schema/non-empty violation" in out
     assert "1 cryptographic" in out
+
+
+def test_verify_taxonomy_version_pin_flag_passes_and_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(
+        ["verify", "--json", "--require-taxonomy-version", "v1", str(VALID_SIGNED)]
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == 0
+    assert captured.err == ""
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+
+    rc = main(
+        ["verify", "--json", "--require-taxonomy-version", "v0", str(VALID_SIGNED)]
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 1
+    assert payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED
+    assert "/taxonomy_version" == payload["reasons"][0]["path"]
+    assert captured.err == ""
 
 
 def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
