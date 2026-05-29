@@ -12,7 +12,9 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-NEGATIVE_ROOT = ROOT / "tests" / "conformance" / "vectors" / "canonicalization" / "negative"
+NEGATIVE_ROOT = (
+    ROOT / "tests" / "conformance" / "vectors" / "canonicalization" / "negative"
+)
 MATRIX_PATH = ROOT / "tests" / "conformance" / "canonicalization_negative_matrix.md"
 VERIFY_REASON_CODES_V1: tuple[str, ...] = (
     "att.verify.anchor_invalid",
@@ -197,7 +199,9 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _canonical_sha256(value: Any) -> str:
-    canonical = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(canonical.encode("utf-8", "surrogatepass")).hexdigest()
 
 
@@ -211,8 +215,7 @@ def _field(value: dict[str, Any], path: tuple[str, ...]) -> Any:
 
 def load_vector_inventory() -> list[dict[str, Any]]:
     actual_paths = {
-        path.relative_to(ROOT).as_posix()
-        for path in NEGATIVE_ROOT.rglob("*.json")
+        path.relative_to(ROOT).as_posix() for path in NEGATIVE_ROOT.rglob("*.json")
     }
     expected_paths = {spec.path.relative_to(ROOT).as_posix() for spec in VECTOR_SPECS}
     assert actual_paths == expected_paths, {
@@ -269,14 +272,12 @@ def render_negative_coverage_matrix() -> str:
         covered = set(row.covered_labels)
         assert covered <= label_set, row.edge_id
         cells = ["Y" if label in covered else "-" for label in labels]
-        lines.append(
-            "| "
-            + " | ".join([row.edge_id, row.description, *cells])
-            + " |"
-        )
+        lines.append("| " + " | ".join([row.edge_id, row.description, *cells]) + " |")
 
     uncovered_labels = [
-        label for label in labels if not any(label in row.covered_labels for row in EDGE_ROWS)
+        label
+        for label in labels
+        if not any(label in row.covered_labels for row in EDGE_ROWS)
     ]
     assert not uncovered_labels, uncovered_labels
 

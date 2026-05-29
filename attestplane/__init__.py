@@ -6,7 +6,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_SDK_PACKAGE = Path(__file__).resolve().parents[1] / "sdk" / "python" / "src" / "attestplane"
+_SDK_PACKAGE = (
+    Path(__file__).resolve().parents[1] / "sdk" / "python" / "src" / "attestplane"
+)
 __path__.insert(0, str(_SDK_PACKAGE))  # type: ignore[name-defined]
 
 _SDK_INIT = _SDK_PACKAGE / "__init__.py"

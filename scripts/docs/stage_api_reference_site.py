@@ -57,15 +57,15 @@ def _redirect_html(title: str, target: str) -> str:
     escaped_title = html.escape(title)
     return (
         "<!doctype html>\n"
-        "<html lang=\"en\">\n"
+        '<html lang="en">\n'
         "<head>\n"
-        "  <meta charset=\"utf-8\">\n"
-        f"  <meta http-equiv=\"refresh\" content=\"0; url={escaped_target}\">\n"
-        f"  <link rel=\"canonical\" href=\"{escaped_target}\">\n"
+        '  <meta charset="utf-8">\n'
+        f'  <meta http-equiv="refresh" content="0; url={escaped_target}">\n'
+        f'  <link rel="canonical" href="{escaped_target}">\n'
         f"  <title>{escaped_title}</title>\n"
         "</head>\n"
         "<body>\n"
-        f"  <p>Redirecting to <a href=\"{escaped_target}\">{escaped_target}</a></p>\n"
+        f'  <p>Redirecting to <a href="{escaped_target}">{escaped_target}</a></p>\n'
         "</body>\n"
         "</html>\n"
     )
@@ -77,18 +77,18 @@ def _api_landing_html(ref: ReleaseRef) -> str:
     latest_root = "./latest/"
     return (
         "<!doctype html>\n"
-        "<html lang=\"en\">\n"
+        '<html lang="en">\n'
         "<head>\n"
-        "  <meta charset=\"utf-8\">\n"
+        '  <meta charset="utf-8">\n'
         "  <title>Attestplane API reference</title>\n"
         "</head>\n"
         "<body>\n"
         "  <main>\n"
         "    <h1>Attestplane API reference</h1>\n"
-        f"    <p>Latest stable release: <a href=\"{html.escape(latest_root, quote=True)}\">{html.escape(ref.tag)}</a></p>\n"
-        f"    <ul><li><a href=\"{html.escape(release_root, quote=True)}\">Exact release snapshot</a></li>"
-        f"<li><a href=\"{html.escape(line_root, quote=True)}\">Stable release line</a></li>"
-        f"<li><a href=\"{html.escape(latest_root, quote=True)}\">Latest stable</a></li></ul>\n"
+        f'    <p>Latest stable release: <a href="{html.escape(latest_root, quote=True)}">{html.escape(ref.tag)}</a></p>\n'
+        f'    <ul><li><a href="{html.escape(release_root, quote=True)}">Exact release snapshot</a></li>'
+        f'<li><a href="{html.escape(line_root, quote=True)}">Stable release line</a></li>'
+        f'<li><a href="{html.escape(latest_root, quote=True)}">Latest stable</a></li></ul>\n'
         "  </main>\n"
         "</body>\n"
         "</html>\n"
@@ -100,18 +100,18 @@ def _release_landing_html(ref: ReleaseRef) -> str:
     latest_root = "../../latest/"
     return (
         "<!doctype html>\n"
-        "<html lang=\"en\">\n"
+        '<html lang="en">\n'
         "<head>\n"
-        "  <meta charset=\"utf-8\">\n"
+        '  <meta charset="utf-8">\n'
         f"  <title>Attestplane API reference {html.escape(ref.tag)}</title>\n"
         "</head>\n"
         "<body>\n"
         "  <main>\n"
         f"    <h1>Attestplane API reference {html.escape(ref.tag)}</h1>\n"
-        f"    <ul><li><a href=\"./python/\">Python SDK</a></li>"
-        f"<li><a href=\"./typescript/\">TypeScript SDK</a></li>"
-        f"<li><a href=\"{html.escape(line_root, quote=True)}\">Stable release line</a></li>"
-        f"<li><a href=\"{html.escape(latest_root, quote=True)}\">Latest stable</a></li></ul>\n"
+        f'    <ul><li><a href="./python/">Python SDK</a></li>'
+        f'<li><a href="./typescript/">TypeScript SDK</a></li>'
+        f'<li><a href="{html.escape(line_root, quote=True)}">Stable release line</a></li>'
+        f'<li><a href="{html.escape(latest_root, quote=True)}">Latest stable</a></li></ul>\n'
         "  </main>\n"
         "</body>\n"
         "</html>\n"
@@ -149,7 +149,9 @@ def stage_api_reference_site(
         encoding="utf-8",
     )
     (api_root / "index.html").write_text(_api_landing_html(ref), encoding="utf-8")
-    (release_root / "index.html").write_text(_release_landing_html(ref), encoding="utf-8")
+    (release_root / "index.html").write_text(
+        _release_landing_html(ref), encoding="utf-8"
+    )
 
     line_root.mkdir(parents=True, exist_ok=True)
     (line_root / "index.html").write_text(
@@ -176,12 +178,18 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Stage a versioned static site for the generated API reference."
     )
-    parser.add_argument("--release-tag", required=True, help="Stable release tag, e.g. v1.5.0")
-    parser.add_argument("--python-dir", required=True, type=Path, help="Rendered pdoc output")
+    parser.add_argument(
+        "--release-tag", required=True, help="Stable release tag, e.g. v1.5.0"
+    )
+    parser.add_argument(
+        "--python-dir", required=True, type=Path, help="Rendered pdoc output"
+    )
     parser.add_argument(
         "--typescript-dir", required=True, type=Path, help="Rendered typedoc output"
     )
-    parser.add_argument("--site-root", required=True, type=Path, help="Output site root")
+    parser.add_argument(
+        "--site-root", required=True, type=Path, help="Output site root"
+    )
     return parser
 
 

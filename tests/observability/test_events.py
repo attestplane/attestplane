@@ -182,7 +182,9 @@ def test_release_train_parser_accepts_registered_fields(event_type: str) -> None
 
 
 @pytest.mark.parametrize(("event_type", "field"), RELEASE_TRAIN_MISSING_CASES)
-def test_release_train_parser_requires_each_registered_field(event_type: str, field: str) -> None:
+def test_release_train_parser_requires_each_registered_field(
+    event_type: str, field: str
+) -> None:
     payload = dict(RELEASE_TRAIN_PAYLOADS[event_type])
     del payload[field]
 
@@ -198,7 +200,9 @@ def test_post_create_fetch_emit_writes_json_line() -> None:
     assert json.loads(stream.getvalue()) == post_create_fetch_payload()
 
 
-def test_post_create_fetch_emitted_after_create_refetch(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_post_create_fetch_emitted_after_create_refetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     task = plan_to_issues.PlannedTask(
         title="[P1][observability] test",
         body="Source planning issue: #113\nPlan ID: `plan-1`\n",
@@ -206,11 +210,17 @@ def test_post_create_fetch_emitted_after_create_refetch(monkeypatch: pytest.Monk
         labels=("planned-task",),
         plan_id="plan-1",
     )
-    monkeypatch.setattr(plan_to_issues, "create_issue", lambda task, source_issue: "https://example.test/1")
+    monkeypatch.setattr(
+        plan_to_issues,
+        "create_issue",
+        lambda task, source_issue: "https://example.test/1",
+    )
     monkeypatch.setattr(
         plan_to_issues,
         "fetch_uploaded_issues",
-        lambda source_issue, plan_ids, titles: [{"number": 1, "title": task.title, "url": "https://example.test/1"}],
+        lambda source_issue, plan_ids, titles: [
+            {"number": 1, "title": task.title, "url": "https://example.test/1"}
+        ],
     )
     stream = io.StringIO()
 
@@ -223,7 +233,9 @@ def test_post_create_fetch_emitted_after_create_refetch(monkeypatch: pytest.Monk
     )
 
     event = json.loads(stream.getvalue())
-    assert uploaded == [{"number": 1, "title": task.title, "url": "https://example.test/1"}]
+    assert uploaded == [
+        {"number": 1, "title": task.title, "url": "https://example.test/1"}
+    ]
     assert event["event"] == PLANNED_ISSUE_POST_CREATE_FETCH
     assert event["milestone"] == "v1.6.2"
     assert event["created_count"] == 1
@@ -232,7 +244,9 @@ def test_post_create_fetch_emitted_after_create_refetch(monkeypatch: pytest.Monk
     assert event["ok"] is True
 
 
-def test_post_create_fetch_failure_still_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_post_create_fetch_failure_still_blocks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     task = plan_to_issues.PlannedTask(
         title="[P1][observability] test",
         body="Source planning issue: #113\nPlan ID: `plan-1`\n",
@@ -240,8 +254,16 @@ def test_post_create_fetch_failure_still_blocks(monkeypatch: pytest.MonkeyPatch)
         labels=("planned-task",),
         plan_id="plan-1",
     )
-    monkeypatch.setattr(plan_to_issues, "create_issue", lambda task, source_issue: "https://example.test/1")
-    monkeypatch.setattr(plan_to_issues, "fetch_uploaded_issues", lambda source_issue, plan_ids, titles: [])
+    monkeypatch.setattr(
+        plan_to_issues,
+        "create_issue",
+        lambda task, source_issue: "https://example.test/1",
+    )
+    monkeypatch.setattr(
+        plan_to_issues,
+        "fetch_uploaded_issues",
+        lambda source_issue, plan_ids, titles: [],
+    )
     stream = io.StringIO()
 
     with pytest.raises(RuntimeError, match="could not be fetched back"):

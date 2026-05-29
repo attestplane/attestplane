@@ -238,7 +238,9 @@ def classify_drift_entry(name: str, sdk_pkg_dir: Path) -> str:
 
     Pure-Python scan (no subprocess). Stops at first hit.
     """
-    pattern = re.compile(rf"^[ \t]*(?:class|def)[ \t]+{re.escape(name)}\b", re.MULTILINE)
+    pattern = re.compile(
+        rf"^[ \t]*(?:class|def)[ \t]+{re.escape(name)}\b", re.MULTILINE
+    )
     for py in sdk_pkg_dir.rglob("*.py"):
         try:
             text = py.read_text(encoding="utf-8")
@@ -269,8 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     drift_out_entries = [
         {
             "name": name,
-            "class": baseline.get(name)
-            or classify_drift_entry(name, SDK_PKG_DIR),
+            "class": baseline.get(name) or classify_drift_entry(name, SDK_PKG_DIR),
         }
         for name in sorted(drift_out)
     ]

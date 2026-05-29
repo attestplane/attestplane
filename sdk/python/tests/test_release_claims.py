@@ -86,9 +86,7 @@ def test_readme_and_release_notes_declare_verify_scope() -> None:
 
 
 def test_v002_release_notes_keep_alpha_no_go_claims_explicit() -> None:
-    text = (REPO_ROOT / "docs/release-notes/v0.0.2-alpha.draft.md").read_text(
-        encoding="utf-8"
-    )
+    text = (REPO_ROOT / "docs/release-notes/v0.0.2-alpha.draft.md").read_text(encoding="utf-8")
     assert "alpha substrate release" in text
     assert "not production-ready" in text
     assert "not compliance-ready" in text

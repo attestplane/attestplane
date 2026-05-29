@@ -20,7 +20,9 @@ PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 
 
-def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object]]:
+def _run_verify(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> tuple[int, dict[str, object]]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out)
@@ -68,7 +70,9 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, payload = _run_verify(
+        ["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys
+    )
 
     assert rc == 1
     assert payload["result"] == "fail"
@@ -90,7 +94,9 @@ def test_verify_json_and_explain_keep_json_parseable(
 def test_verify_json_explain_success_emits_compact_summary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
+    rc, payload = _run_verify(
+        ["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys
+    )
 
     assert rc == 0
     assert payload["result"] == "pass"

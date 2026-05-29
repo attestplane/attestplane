@@ -169,18 +169,14 @@ class JsonlStorageBackend(AbstractStorageBackend):
         try:
             with self._lock:
                 handle = self._ensure_open_for_append()
-                line = json.dumps(
-                    _serialize_event(event), separators=(",", ":"), sort_keys=True
-                )
+                line = json.dumps(_serialize_event(event), separators=(",", ":"), sort_keys=True)
                 json.loads(line)
                 handle.write(line + "\n")
                 handle.flush()
                 if self._durable:
                     os.fsync(handle.fileno())
         except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise StorageWriteError(
-                f"failed to persist event seq={event.seq} to {self._path}: {exc}"
-            ) from exc
+            raise StorageWriteError(f"failed to persist event seq={event.seq} to {self._path}: {exc}") from exc
 
     def scan(self) -> JsonlStorageScanResult:
         """Return a read-only scan report.
@@ -191,15 +187,11 @@ class JsonlStorageBackend(AbstractStorageBackend):
         """
 
         if not self._path.exists():
-            return JsonlStorageScanResult(
-                path=str(self._path), events=(), issues=(), complete=True
-            )
+            return JsonlStorageScanResult(path=str(self._path), events=(), issues=(), complete=True)
         try:
             data = self._path.read_bytes()
         except OSError as exc:
-            raise StorageReadError(
-                f"failed to read chain from {self._path}: {exc}"
-            ) from exc
+            raise StorageReadError(f"failed to read chain from {self._path}: {exc}") from exc
 
         chain: list[ChainedEvent] = []
         issues: list[JsonlStorageIssue] = []
@@ -209,74 +201,88 @@ class JsonlStorageBackend(AbstractStorageBackend):
             byte_offset += len(raw_bytes)
             has_newline = raw_bytes.endswith(b"\n") or raw_bytes.endswith(b"\r\n")
             if not has_newline:
-                issues.append(JsonlStorageIssue(
-                    kind="partial_trailing_line",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail="final JSONL record is not newline-terminated",
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="partial_trailing_line",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail="final JSONL record is not newline-terminated",
+                    )
+                )
                 break
             try:
                 raw_line = raw_bytes.rstrip(b"\r\n").decode("utf-8", errors="strict")
             except UnicodeDecodeError as exc:
-                issues.append(JsonlStorageIssue(
-                    kind="invalid_utf8",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail=str(exc),
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="invalid_utf8",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail=str(exc),
+                    )
+                )
                 break
             if not raw_line.strip():
                 continue
             try:
                 obj = json.loads(raw_line)
             except json.JSONDecodeError as exc:
-                issues.append(JsonlStorageIssue(
-                    kind="malformed_json",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail=exc.msg,
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="malformed_json",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail=exc.msg,
+                    )
+                )
                 break
             if not isinstance(obj, dict):
-                issues.append(JsonlStorageIssue(
-                    kind="malformed_record",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail="JSONL row must be an object",
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="malformed_record",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail="JSONL row must be an object",
+                    )
+                )
                 break
             version = obj.get(STORAGE_RECORD_VERSION_FIELD)
             if version is not None and version != SUPPORTED_STORAGE_RECORD_VERSION:
-                issues.append(JsonlStorageIssue(
-                    kind="unknown_record_version",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail=(
-                        f"unsupported {STORAGE_RECORD_VERSION_FIELD}={version!r}; "
-                        f"supported={SUPPORTED_STORAGE_RECORD_VERSION}"
-                    ),
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="unknown_record_version",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail=(
+                            f"unsupported {STORAGE_RECORD_VERSION_FIELD}={version!r}; "
+                            f"supported={SUPPORTED_STORAGE_RECORD_VERSION}"
+                        ),
+                    )
+                )
                 break
             required = {"seq", "prev_hash_hex", "event_hash_hex", "event"}
             missing = required - set(obj)
             if missing:
-                issues.append(JsonlStorageIssue(
-                    kind="missing_fields",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail=f"missing required fields {sorted(missing)}",
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="missing_fields",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail=f"missing required fields {sorted(missing)}",
+                    )
+                )
                 break
             try:
                 chain.append(_deserialize_event(obj))
             except (KeyError, ValueError, TypeError) as exc:
-                issues.append(JsonlStorageIssue(
-                    kind="malformed_event",
-                    line_no=line_no,
-                    byte_offset=line_offset,
-                    detail=str(exc),
-                ))
+                issues.append(
+                    JsonlStorageIssue(
+                        kind="malformed_event",
+                        line_no=line_no,
+                        byte_offset=line_offset,
+                        detail=str(exc),
+                    )
+                )
                 break
         return JsonlStorageScanResult(
             path=str(self._path),
@@ -289,10 +295,7 @@ class JsonlStorageBackend(AbstractStorageBackend):
         scan = self.scan()
         if scan.issues:
             issue = scan.issues[0]
-            raise StorageReadError(
-                f"{self._path}:{issue.line_no}@{issue.byte_offset}: "
-                f"{issue.kind}: {issue.detail}"
-            )
+            raise StorageReadError(f"{self._path}:{issue.line_no}@{issue.byte_offset}: {issue.kind}: {issue.detail}")
         return list(scan.events)
 
     def head(self) -> ChainHead:

@@ -15,9 +15,17 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INDEX = REPO_ROOT / "sdk/typescript/src/index.ts"
 BASELINE_RELEASE = "v0.0.2-alpha"
-DOCUMENTED_SYMBOLS = {"AttestSubstrate", "ProofBundleBuilder", "makeEventDraft", "makeSubjectRef", "verifyProofBundle"}
+DOCUMENTED_SYMBOLS = {
+    "AttestSubstrate",
+    "ProofBundleBuilder",
+    "makeEventDraft",
+    "makeSubjectRef",
+    "verifyProofBundle",
+}
 
-EXPORT_BLOCK_RE = re.compile(r"export\s*\{(?P<body>.*?)\}\s*from\s*['\"](?P<source>[^'\"]+)['\"];", re.DOTALL)
+EXPORT_BLOCK_RE = re.compile(
+    r"export\s*\{(?P<body>.*?)\}\s*from\s*['\"](?P<source>[^'\"]+)['\"];", re.DOTALL
+)
 
 
 def _strip_comments(text: str) -> str:

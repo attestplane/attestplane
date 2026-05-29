@@ -64,12 +64,14 @@ def _rehydrate(events_raw: list[dict[str, Any]]) -> list[ChainedEvent]:
             matched_input_ref=e.get("matched_input_ref"),
             human_verifier=_make_subject(e.get("human_verifier")),
         )
-        chained.append(ChainedEvent(
-            seq=ev_raw["seq"],
-            prev_hash=bytes.fromhex(ev_raw["prev_hash_hex"]),
-            event_hash=bytes.fromhex(ev_raw["event_hash_hex"]),
-            event=audit_event,
-        ))
+        chained.append(
+            ChainedEvent(
+                seq=ev_raw["seq"],
+                prev_hash=bytes.fromhex(ev_raw["prev_hash_hex"]),
+                event_hash=bytes.fromhex(ev_raw["event_hash_hex"]),
+                event=audit_event,
+            )
+        )
     return chained
 
 
@@ -88,16 +90,13 @@ def test_verify_chain_rejects_negative_fixture(fixture_name: str) -> None:
 
     expected = fixture["expected_failure"]
     assert result.ok is expected["ok"], (
-        f"{fixture_name}: expected ok={expected['ok']}, got ok={result.ok}, "
-        f"reason={result.reason!r}"
+        f"{fixture_name}: expected ok={expected['ok']}, got ok={result.ok}, reason={result.reason!r}"
     )
     assert result.first_bad_index == expected["first_bad_index"], (
-        f"{fixture_name}: first_bad_index={result.first_bad_index}, "
-        f"expected {expected['first_bad_index']}"
+        f"{fixture_name}: first_bad_index={result.first_bad_index}, expected {expected['first_bad_index']}"
     )
     assert expected["reason_substring"] in (result.reason or ""), (
-        f"{fixture_name}: reason {result.reason!r} does not contain "
-        f"{expected['reason_substring']!r}"
+        f"{fixture_name}: reason {result.reason!r} does not contain {expected['reason_substring']!r}"
     )
 
 

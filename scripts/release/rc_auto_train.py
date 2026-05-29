@@ -31,7 +31,9 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-RC_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)-rc\.(?P<ordinal>\d+)$")
+RC_TAG_RE = re.compile(
+    r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)-rc\.(?P<ordinal>\d+)$"
+)
 STABLE_TAG_RE = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
 MAX_RC_ORDINAL_PER_PATCH = 10
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
@@ -50,7 +52,10 @@ class StableVersion:
     @classmethod
     def parse(cls, value: str) -> "StableVersion":
         normalized = value.removeprefix("v")
-        match = re.fullmatch(r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)", normalized)
+        match = re.fullmatch(
+            r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)",
+            normalized,
+        )
         if match is None:
             raise ValueError(f"invalid stable version: {value}")
         return cls(*(int(match.group(name)) for name in ("major", "minor", "patch")))
@@ -94,7 +99,9 @@ class RcVersion:
         match = RC_TAG_RE.fullmatch(tag)
         if match is None:
             raise ValueError(f"invalid RC tag: {tag}")
-        return cls(*(int(match.group(name)) for name in ("major", "minor", "patch", "ordinal")))
+        return cls(
+            *(int(match.group(name)) for name in ("major", "minor", "patch", "ordinal"))
+        )
 
     @property
     def tag(self) -> str:
@@ -121,7 +128,9 @@ class RcVersion:
 ReleaseBase = RcVersion | StableVersion
 
 
-def run(argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None
+) -> subprocess.CompletedProcess[str]:
     print("+ " + " ".join(argv), flush=True)
     return subprocess.run(
         argv,
@@ -157,13 +166,17 @@ def sha256_file(path: Path) -> str:
 def assert_clean_tree() -> None:
     status = capture(["git", "status", "--short"])
     if status:
-        raise RuntimeError("working tree must be clean before RC autodev train execution")
+        raise RuntimeError(
+            "working tree must be clean before RC autodev train execution"
+        )
 
 
 def assert_on_main() -> None:
     branch = capture(["git", "branch", "--show-current"])
     if branch != "main":
-        raise RuntimeError(f"RC autodev train must run on main, currently on {branch!r}")
+        raise RuntimeError(
+            f"RC autodev train must run on main, currently on {branch!r}"
+        )
 
 
 def git_ref_exists(ref: str) -> bool:
@@ -188,7 +201,10 @@ def remote_tag_exists(tag: str) -> bool:
             timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as exc:
-        print(f"autodev-train rc: warning: remote tag probe timed out for {tag}: {exc}", flush=True)
+        print(
+            f"autodev-train rc: warning: remote tag probe timed out for {tag}: {exc}",
+            flush=True,
+        )
         return False
     return result.returncode == 0
 
@@ -196,11 +212,21 @@ def remote_tag_exists(tag: str) -> bool:
 def best_effort_fetch_tags() -> None:
     try:
         run(
-            ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "fetch", "origin", "--tags"],
+            [
+                "git",
+                "-c",
+                f"http.version={GIT_HTTP_VERSION}",
+                "fetch",
+                "origin",
+                "--tags",
+            ],
             timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        print(f"autodev-train rc: warning: best-effort tag fetch failed or timed out: {exc}", flush=True)
+        print(
+            f"autodev-train rc: warning: best-effort tag fetch failed or timed out: {exc}",
+            flush=True,
+        )
 
 
 def latest_rc() -> RcVersion:
@@ -212,7 +238,9 @@ def latest_rc() -> RcVersion:
         except ValueError:
             continue
     if not versions:
-        raise RuntimeError("no existing RC tag found; seed the RC train with an initial RC first")
+        raise RuntimeError(
+            "no existing RC tag found; seed the RC train with an initial RC first"
+        )
     return max(versions)
 
 
@@ -268,7 +296,9 @@ def load_target_queue(path: Path) -> list[ReleaseTarget]:
             raise RuntimeError("autodev target queue must be strictly increasing")
         previous = version
         promote_to_raw = raw.get("promote_to", ["rc"])
-        if not isinstance(promote_to_raw, list) or not all(isinstance(item, str) for item in promote_to_raw):
+        if not isinstance(promote_to_raw, list) or not all(
+            isinstance(item, str) for item in promote_to_raw
+        ):
             raise RuntimeError(f"target {version.tag} promote_to must be a string list")
         promote_to = tuple(promote_to_raw)
         if "latest" in promote_to or "ca" in promote_to:
@@ -278,21 +308,34 @@ def load_target_queue(path: Path) -> list[ReleaseTarget]:
             )
         min_rc_soak_hours = int(raw.get("min_rc_soak_hours", 24))
         if min_rc_soak_hours < 0:
-            raise RuntimeError(f"target {version.tag} min_rc_soak_hours must be non-negative")
+            raise RuntimeError(
+                f"target {version.tag} min_rc_soak_hours must be non-negative"
+            )
         if status == "queued":
             targets.append(
-                ReleaseTarget(version=version, min_rc_soak_hours=min_rc_soak_hours, promote_to=promote_to)
+                ReleaseTarget(
+                    version=version,
+                    min_rc_soak_hours=min_rc_soak_hours,
+                    promote_to=promote_to,
+                )
             )
     return targets
 
 
 def select_target(path: Path) -> ReleaseTarget:
     for target in load_target_queue(path):
-        if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(target.version.tag):
-            print(f"autodev-train rc: target {target.version.tag} already has stable tag; skipping", flush=True)
+        if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(
+            target.version.tag
+        ):
+            print(
+                f"autodev-train rc: target {target.version.tag} already has stable tag; skipping",
+                flush=True,
+            )
             continue
         return target
-    raise RuntimeError("autodev target queue has no remaining queued targets without stable tags")
+    raise RuntimeError(
+        "autodev target queue has no remaining queued targets without stable tags"
+    )
 
 
 def previous_base_for_target(target: StableVersion) -> ReleaseBase:
@@ -305,7 +348,9 @@ def previous_base_for_target(target: StableVersion) -> ReleaseBase:
 def next_rc_for_target(target: StableVersion, previous: ReleaseBase) -> RcVersion:
     if isinstance(previous, RcVersion):
         if previous.stable != target:
-            raise RuntimeError(f"latest RC {previous.tag} is not for target {target.tag}")
+            raise RuntimeError(
+                f"latest RC {previous.tag} is not for target {target.tag}"
+            )
         if previous.ordinal >= MAX_RC_ORDINAL_PER_PATCH:
             raise RuntimeError(
                 f"{target.tag} has reached rc.{MAX_RC_ORDINAL_PER_PATCH}; "
@@ -313,7 +358,9 @@ def next_rc_for_target(target: StableVersion, previous: ReleaseBase) -> RcVersio
             )
         return RcVersion(target.major, target.minor, target.patch, previous.ordinal + 1)
     if previous >= target:
-        raise RuntimeError(f"target {target.tag} must be greater than base stable {previous.tag}")
+        raise RuntimeError(
+            f"target {target.tag} must be greater than base stable {previous.tag}"
+        )
     return RcVersion(target.major, target.minor, target.patch, 1)
 
 
@@ -329,7 +376,11 @@ def read_python_version() -> str:
 
 
 def read_npm_version() -> str:
-    return str(json.loads((ROOT / "sdk/typescript/package.json").read_text(encoding="utf-8"))["version"])
+    return str(
+        json.loads((ROOT / "sdk/typescript/package.json").read_text(encoding="utf-8"))[
+            "version"
+        ]
+    )
 
 
 def replace_one(path: Path, pattern: str, replacement: str) -> None:
@@ -347,11 +398,17 @@ def update_json_version(path: Path, version: str) -> None:
         packages = payload.get("packages")
         if isinstance(packages, dict) and isinstance(packages.get(""), dict):
             packages[""]["version"] = version
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8"
+    )
 
 
 def update_versions(version: RcVersion) -> None:
-    replace_one(ROOT / "sdk/python/pyproject.toml", r'^version = "[^"]+"$', f'version = "{version.python_version}"')
+    replace_one(
+        ROOT / "sdk/python/pyproject.toml",
+        r'^version = "[^"]+"$',
+        f'version = "{version.python_version}"',
+    )
     replace_one(
         ROOT / "sdk/python/src/attestplane/__init__.py",
         r'^__version__ = "[^"]+"$',
@@ -451,7 +508,9 @@ def artifact_paths(version: RcVersion) -> list[str]:
     ]
 
 
-def artifact_entry(kind: str, name: str, package_version: str, path: str) -> dict[str, Any]:
+def artifact_entry(
+    kind: str, name: str, package_version: str, path: str
+) -> dict[str, Any]:
     artifact = ROOT / path
     return {
         "kind": kind,
@@ -467,9 +526,24 @@ def write_release_metadata(version: RcVersion) -> None:
     release_dir = ROOT / "release" / "artifacts" / version.tag
     release_dir.mkdir(parents=True, exist_ok=True)
     artifacts = [
-        artifact_entry("python-wheel", "attestplane", version.python_version, artifact_paths(version)[0]),
-        artifact_entry("python-sdist", "attestplane", version.python_version, artifact_paths(version)[1]),
-        artifact_entry("npm-tarball", "@attestplane/attestplane", version.npm_version, artifact_paths(version)[2]),
+        artifact_entry(
+            "python-wheel",
+            "attestplane",
+            version.python_version,
+            artifact_paths(version)[0],
+        ),
+        artifact_entry(
+            "python-sdist",
+            "attestplane",
+            version.python_version,
+            artifact_paths(version)[1],
+        ),
+        artifact_entry(
+            "npm-tarball",
+            "@attestplane/attestplane",
+            version.npm_version,
+            artifact_paths(version)[2],
+        ),
     ]
     manifest = {
         "artifacts": artifacts,
@@ -499,10 +573,13 @@ def write_release_metadata(version: RcVersion) -> None:
         "upload_plan_file": f"release/artifacts/{version.tag}/upload-plan.md",
     }
     manifest_path = release_dir / "artifact-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     checksums_path = release_dir / "checksums.sha256"
     checksums_path.write_text(
-        "\n".join(f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts) + "\n",
+        "\n".join(f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts)
+        + "\n",
         encoding="utf-8",
     )
     (release_dir / "upload-plan.md").write_text(
@@ -523,7 +600,7 @@ def write_release_metadata(version: RcVersion) -> None:
                 "## Release Commands",
                 "",
                 "```bash",
-                f"git tag -a {version.tag} -m \"{version.tag}\"",
+                f'git tag -a {version.tag} -m "{version.tag}"',
                 "git push origin main",
                 f"git push origin {version.tag}",
                 f"gh workflow run release-cd.yml -f release_tag={version.tag} -f channel=rc -f dry_run=false --ref main",
@@ -661,7 +738,10 @@ def wait_for_release_cd(version: RcVersion) -> None:
 
 
 def assert_package_versions_match(base: ReleaseBase) -> None:
-    if read_python_version() != base.python_version or read_npm_version() != base.npm_version:
+    if (
+        read_python_version() != base.python_version
+        or read_npm_version() != base.npm_version
+    ):
         raise RuntimeError(
             f"package versions do not match base {base.tag}; "
             f"expected {base.python_version} and {base.npm_version}"
@@ -715,7 +795,10 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     if publish:
         push_and_dispatch(version, wait=wait)
     else:
-        print(f"autodev-train rc: prepared local tag {version.tag}; publish disabled", flush=True)
+        print(
+            f"autodev-train rc: prepared local tag {version.tag}; publish disabled",
+            flush=True,
+        )
     return version.tag
 
 
@@ -744,7 +827,10 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             if not args.continuous:
                 raise
-            print(f"autodev-train rc: cycle failed; will retry after poll interval: {exc}", flush=True)
+            print(
+                f"autodev-train rc: cycle failed; will retry after poll interval: {exc}",
+                flush=True,
+            )
             time.sleep(args.poll_seconds)
             continue
         if not args.continuous:

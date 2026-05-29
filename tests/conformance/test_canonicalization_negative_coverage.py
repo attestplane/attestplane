@@ -16,7 +16,9 @@ def _load_matrix_module():
         return sys.modules[module_name]
     spec = importlib.util.spec_from_file_location(module_name, helper_path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load canonicalization matrix helper from {helper_path}")
+        raise RuntimeError(
+            f"could not load canonicalization matrix helper from {helper_path}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -35,11 +37,7 @@ def test_canonicalization_negative_edge_matrix_covers_every_landed_vector() -> N
     labels = {entry["label"] for entry in inventory}
     for row in matrix.EDGE_ROWS:
         assert set(row.covered_labels) <= labels, row.edge_id
-    assert labels == {
-        label
-        for row in matrix.EDGE_ROWS
-        for label in row.covered_labels
-    }
+    assert labels == {label for row in matrix.EDGE_ROWS for label in row.covered_labels}
 
 
 def test_canonicalization_negative_edge_matrix_reason_codes_are_known() -> None:

@@ -39,7 +39,9 @@ def build_report(paths: list[Path], base: Path | None) -> dict[str, Any]:
     missing = [str(path) for path in paths if not path.is_file()]
     if missing:
         raise FileNotFoundError("checksum inputs must be files: " + ", ".join(missing))
-    entries = [checksum_entry(path, base) for path in sorted(paths, key=lambda item: str(item))]
+    entries = [
+        checksum_entry(path, base) for path in sorted(paths, key=lambda item: str(item))
+    ]
     return {
         "checksums": entries,
         "schema_version": SCHEMA_VERSION,
@@ -64,9 +66,13 @@ def run(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("files", type=Path, nargs="+", help="Artifact files to hash")
-    parser.add_argument("--base", type=Path, help="Base directory for deterministic relative names")
+    parser.add_argument(
+        "--base", type=Path, help="Base directory for deterministic relative names"
+    )
     parser.add_argument("--format", choices=["json", "sha256sum"], default="json")
-    parser.add_argument("--out", type=Path, help="Write output to this path instead of stdout")
+    parser.add_argument(
+        "--out", type=Path, help="Write output to this path instead of stdout"
+    )
     return run(parser.parse_args())
 
 

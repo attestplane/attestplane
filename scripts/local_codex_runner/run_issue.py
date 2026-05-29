@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from scripts.local_codex_runner.codex_driver import CodexDriver
-from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
+from scripts.local_codex_runner.config import (
+    RunnerConfig,
+    add_common_args,
+    load_config,
+    overrides_from_args,
+)
 from scripts.local_codex_runner.gate_runner import GateReport, GateRunner
 from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI
@@ -50,7 +55,9 @@ def run_issue(
             if not config.allow_dirty:
                 git.ensure_clean_worktree()
             git.checkout_base_and_pull(config.checkout_ref())
-            branch = git.create_branch(task.number, task.title, lane_suffix=lane_branch_suffix(config))
+            branch = git.create_branch(
+                task.number, task.title, lane_suffix=lane_branch_suffix(config)
+            )
         else:
             branch = f"codex/issue-{task.number}-{safe_branch_slug(task.title)}"
             suffix = lane_branch_suffix(config)
@@ -85,11 +92,25 @@ def run_issue(
         )
         plan_prompt = builder.build("01_plan.md", task, output_name="01_plan.prompt.md")
         result.plan_path = str(evidence_dir / "plan.md")
-        codex.run_codex(plan_prompt, workdir, evidence_dir / "codex_plan.log", timeout=config.codex_timeout_seconds)
+        codex.run_codex(
+            plan_prompt,
+            workdir,
+            evidence_dir / "codex_plan.log",
+            timeout=config.codex_timeout_seconds,
+        )
         code_prompt = builder.build("02_code.md", task, output_name="02_code.prompt.md")
-        codex.run_codex(code_prompt, workdir, evidence_dir / "codex_code.log", timeout=config.codex_timeout_seconds)
+        codex.run_codex(
+            code_prompt,
+            workdir,
+            evidence_dir / "codex_code.log",
+            timeout=config.codex_timeout_seconds,
+        )
 
-        gate = dry_run_gate() if config.dry_run else run_local_gate(config, task, evidence_dir)
+        gate = (
+            dry_run_gate()
+            if config.dry_run
+            else run_local_gate(config, task, evidence_dir)
+        )
         result.local_test_summary = gate.summary()
         for round_index in range(config.max_local_fix_rounds):
             if config.dry_run or gate.status == "PASS":
@@ -113,13 +134,22 @@ def run_issue(
             if not config.allow_push_on_local_failure:
                 return fail_issue(config, gh, task, result, evidence_dir, state)
 
-        review_prompt = builder.build("04_review.md", task, output_name="04_review.prompt.md")
-        codex.run_codex(review_prompt, workdir, evidence_dir / "codex_review.log", timeout=config.codex_timeout_seconds)
+        review_prompt = builder.build(
+            "04_review.md", task, output_name="04_review.prompt.md"
+        )
+        codex.run_codex(
+            review_prompt,
+            workdir,
+            evidence_dir / "codex_review.log",
+            timeout=config.codex_timeout_seconds,
+        )
         changed_files = [] if config.dry_run else git.changed_files()
         diff = "" if config.dry_run else git.diff()
         review_guard = run_review_guard(
             diff=diff,
-            codex_review_report=(evidence_dir / "codex_review.log").read_text(encoding="utf-8"),
+            codex_review_report=(evidence_dir / "codex_review.log").read_text(
+                encoding="utf-8"
+            ),
             issue_labels=task.labels,
             changed_files=changed_files,
             evidence_dir=evidence_dir,
@@ -140,7 +170,9 @@ def run_issue(
             result.status = RunnerStatus.DRY_RUN
             return write_result(result.finish(), evidence_dir, state, config)
 
-        git.commit_all(task.number, f"Fix #{task.number}: {task.title}", expected_branch=branch)
+        git.commit_all(
+            task.number, f"Fix #{task.number}: {task.title}", expected_branch=branch
+        )
         git.push_branch(branch)
         if config.create_pr:
             pr_url = gh.create_pr(
@@ -153,7 +185,11 @@ def run_issue(
             result.pr_url = pr_url
             gh.add_labels(config.repo or "", task.number, [config.pr_opened_label])
             gh.remove_labels(config.repo or "", task.number, [config.in_progress_label])
-            gh.comment_issue(config.repo or "", task.number, f"Local Codex runner opened PR: {pr_url}")
+            gh.comment_issue(
+                config.repo or "",
+                task.number,
+                f"Local Codex runner opened PR: {pr_url}",
+            )
         if config.watch_ci and config.create_pr and result.pr_url:
             ci = wait_for_ci_round(config, gh, branch)
             for round_index in range(config.max_ci_fix_rounds):
@@ -199,7 +235,14 @@ def run_issue(
         result.status = RunnerStatus.LOCAL_FAILED
         append_residual_risk(result, str(exc))
         (evidence_dir / "failure.txt").write_text(str(exc) + "\n", encoding="utf-8")
-        return fail_issue(config, gh, task if "task" in locals() else None, result, evidence_dir, state)
+        return fail_issue(
+            config,
+            gh,
+            task if "task" in locals() else None,
+            result,
+            evidence_dir,
+            state,
+        )
     finally:
         commands = []
         for candidate in ("gh", "git"):
@@ -209,7 +252,9 @@ def run_issue(
         result.commands_run = commands
 
 
-def fetch_task(gh: GitHubCLI, config: RunnerConfig, issue_number: int | None) -> IssueTask:
+def fetch_task(
+    gh: GitHubCLI, config: RunnerConfig, issue_number: int | None
+) -> IssueTask:
     if issue_number is not None:
         return gh.view_issue(config.repo or "", issue_number)
     issues = gh.list_issues(config.repo or "", None, config.max_issues_per_run)
@@ -218,7 +263,9 @@ def fetch_task(gh: GitHubCLI, config: RunnerConfig, issue_number: int | None) ->
     return issues[0]
 
 
-def run_local_gate(config: RunnerConfig, task: IssueTask, evidence_dir: Path) -> GateReport:
+def run_local_gate(
+    config: RunnerConfig, task: IssueTask, evidence_dir: Path
+) -> GateReport:
     runner = GateRunner(
         config.workdir_path(),
         config.gate_matrix_file(),
@@ -236,7 +283,11 @@ def dry_run_gate() -> GateReport:
     return GateReport(
         status="PASS",
         selected_gate="dry-run",
-        commands=[GateCommandResult("dry-run: local gates are planned but not executed", 0, "", "")],
+        commands=[
+            GateCommandResult(
+                "dry-run: local gates are planned but not executed", 0, "", ""
+            )
+        ],
     )
 
 
@@ -306,13 +357,17 @@ def fail_issue(
     return write_result(result.finish(), evidence_dir, state, config)
 
 
-def write_result(result: RunnerResult, evidence_dir: Path, state, config: RunnerConfig) -> RunnerResult:
+def write_result(
+    result: RunnerResult, evidence_dir: Path, state, config: RunnerConfig
+) -> RunnerResult:
     evidence_dir.mkdir(parents=True, exist_ok=True)
     (evidence_dir / "runner_result.json").write_text(
         json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    (evidence_dir / "runner_result.md").write_text(render_result(result), encoding="utf-8")
+    (evidence_dir / "runner_result.md").write_text(
+        render_result(result), encoding="utf-8"
+    )
     state.mark_finished(result.issue_number, result)
     save_state(config.state_file(), state)
     return result
@@ -334,9 +389,19 @@ def main() -> int:
     add_common_args(parser)
     args = parser.parse_args()
     config = load_config(args.config, overrides_from_args(args))
-    result = run_issue(config, args.issue_number, set(args.include_label or []), set(args.exclude_label or []))
+    result = run_issue(
+        config,
+        args.issue_number,
+        set(args.include_label or []),
+        set(args.exclude_label or []),
+    )
     print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0 if result.status in {RunnerStatus.SUCCESS, RunnerStatus.DRY_RUN, RunnerStatus.SKIPPED} else 1
+    return (
+        0
+        if result.status
+        in {RunnerStatus.SUCCESS, RunnerStatus.DRY_RUN, RunnerStatus.SKIPPED}
+        else 1
+    )
 
 
 if __name__ == "__main__":
