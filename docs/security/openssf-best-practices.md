@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # OpenSSF Best Practices Badge — passing-tier self-assessment
 
 Attestplane is registered as project **12924** in the
-[OpenSSF Best Practices Badge Program](https://www.bestpractices.dev/projects/12924).
+[OpenSSF Best Practices Badge Program](https://www.bestpractices.dev/projects/12924/).
 On 2026-05-21 the project reached the **passing** tier
 (`badge_level: passing`, `badge_percentage_0: 100`) with the silver tier
 at 15% and the gold tier at 13%.
@@ -51,7 +51,7 @@ verified offline against the source tree at any tagged release.
 | Gold     | in progress  | 13%       |
 
 The badge dashboard at
-[bestpractices.dev/projects/12924](https://www.bestpractices.dev/projects/12924)
+[bestpractices.dev/projects/12924](https://www.bestpractices.dev/projects/12924/)
 is the authoritative record. This document is a mirror that travels
 with the source.
 
@@ -159,7 +159,7 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 
 ## Verification
 
-The badge SVG on the [project page](https://www.bestpractices.dev/projects/12924)
+The badge SVG on the [project page](https://www.bestpractices.dev/projects/12924/)
 is updated automatically by the OpenSSF dashboard whenever an
 authorized maintainer edits the project on
 [bestpractices.dev](https://www.bestpractices.dev/). For offline
