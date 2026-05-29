@@ -78,6 +78,7 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     assert explain_stderr == ""
     assert json_payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert explain_payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
+    assert "taxonomy_version=1" in explain_payload["explanation"][0]["message"]
     assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]
     assert json_payload["result"] == explain_payload["result"] == "pass"
     assert json_payload["exit_code"] == explain_payload["exit_code"] == 0

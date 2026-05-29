@@ -178,6 +178,7 @@ def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
+        f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} "
         f"anchor={_bundle_anchor_state(bundle)}"
     )
 
@@ -192,7 +193,14 @@ def _verify_explanations(
         return []
     if result.ok:
         if bundle is None:
-            return [_explanation_entry(None, "/", "signer_subject=unknown schema_version=unknown anchor=unknown")]
+            return [
+                _explanation_entry(
+                    None,
+                    "/",
+                    f"signer_subject=unknown schema_version=unknown "
+                    f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} anchor=unknown",
+                )
+            ]
         return [_explanation_entry(None, "/", _verify_success_summary(bundle))]
 
     explanations: list[dict[str, Any]] = []
