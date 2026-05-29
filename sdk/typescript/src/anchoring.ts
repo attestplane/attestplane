@@ -26,9 +26,10 @@ export type CertStatus =
   | 'VALID'
   | 'VALID_UNVERIFIED'
   | 'MISSING_LTV_ARTIFACTS'
+  | 'QUARANTINED'
   | 'EXPIRED_VALID_AT_ISSUANCE'
   | 'REVOKED';
-export type AnchorVerificationStatus = 'verified' | 'failed' | 'not_performed';
+export type AnchorVerificationStatus = 'verified' | 'quarantined' | 'failed' | 'not_performed';
 
 // ----- Error hierarchy -----
 
@@ -421,9 +422,9 @@ export function verifyChainWithAnchors(
             seq: anchor.anchored_seq,
             provider,
             valid: false,
-            cert_status: 'MISSING_LTV_ARTIFACTS',
+            cert_status: 'QUARANTINED',
             ltv_artifacts_present: true,
-            reason: exc.message,
+            reason: `quarantined: ${exc.message}`,
           });
           continue;
         }
@@ -457,7 +458,13 @@ export function verifyChainWithAnchors(
 
   const allAnchorsValid = anchorResults.every((a) => a.valid);
   const verificationStatus: AnchorVerificationStatus =
-    anchorResults.length === 0 ? 'not_performed' : allAnchorsValid ? 'verified' : 'failed';
+    anchorResults.length === 0
+      ? 'not_performed'
+      : allAnchorsValid
+        ? 'verified'
+        : anchorResults.some((a) => a.cert_status === 'QUARANTINED')
+          ? 'quarantined'
+          : 'failed';
   return {
     chain_ok: chainResult.ok,
     chain_reason: chainResult.reason,

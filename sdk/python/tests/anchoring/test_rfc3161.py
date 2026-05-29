@@ -262,7 +262,9 @@ def test_verify_chain_with_anchors_detects_token_tampering() -> None:
         verification_time=_NOW,
     )
     assert result.ok is False
+    assert result.verification_status == "quarantined"
     assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].cert_status == "QUARANTINED"
 
 
 def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
@@ -282,8 +284,10 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
         verification_time=_NOW,
     )
     assert result.ok is False
+    assert result.verification_status == "quarantined"
     # Both roots have the same CN, so the chain walker finds B's root
     # by DN match then fails the signature step.
+    assert result.anchor_results[0].cert_status == "QUARANTINED"
     reason = result.anchor_results[0].reason or ""
     assert "signature does not verify" in reason or "trust root" in reason
 

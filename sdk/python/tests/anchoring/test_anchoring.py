@@ -441,3 +441,22 @@ def test_verify_chain_with_anchors_is_read_only() -> None:
     assert result.ok is True
     assert chain == before_chain
     assert anchors == before_anchors
+
+
+def test_verify_chain_with_anchors_quarantines_signature_failures() -> None:
+    chain = _build_chain(1)
+    anchor = _good_anchor(chain, 0)
+
+    from dataclasses import replace
+
+    tampered = replace(anchor, tsa_token=anchor.tsa_token[:-1] + bytes([anchor.tsa_token[-1] ^ 0x01]))
+    result = verify_chain_with_anchors(
+        chain,
+        [tampered],
+        trust_roots_der=[anchor.tsa_cert_chain[0]],
+        verification_time=datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC),
+    )
+
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert result.anchor_results[0].cert_status == "QUARANTINED"

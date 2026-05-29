@@ -12,7 +12,8 @@ authoritative ``genTime``. The ASN.1 parsing arrives in a follow-up
 PR alongside ``anchor_vectors.json``; until then,
 :attr:`SingleAnchorResult.cert_status` is reported as
 ``"VALID_UNVERIFIED"`` for anchors with non-empty cert chains and
-``"MISSING_LTV_ARTIFACTS"`` otherwise.
+``"MISSING_LTV_ARTIFACTS"`` otherwise. Live RFC-3161 verification
+failures are fail-closed and reported as ``"QUARANTINED"``.
 
 What this v1 implementation DOES check:
 
@@ -54,10 +55,11 @@ CertStatus = Literal[
     "VALID",
     "VALID_UNVERIFIED",
     "MISSING_LTV_ARTIFACTS",
+    "QUARANTINED",
     "EXPIRED_VALID_AT_ISSUANCE",
     "REVOKED",
 ]
-AnchorVerificationStatus = Literal["verified", "failed", "not_performed"]
+AnchorVerificationStatus = Literal["verified", "quarantined", "failed", "not_performed"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,9 +265,9 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
-                    cert_status="MISSING_LTV_ARTIFACTS",
+                    cert_status="QUARANTINED",
                     ltv_artifacts_present=True,
-                    reason=str(exc),
+                    reason=f"quarantined: {str(exc)}",
                 ))
                 continue
             anchor_results.append(SingleAnchorResult(
@@ -298,9 +300,9 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
-                    cert_status="MISSING_LTV_ARTIFACTS",
+                    cert_status="QUARANTINED",
                     ltv_artifacts_present=True,
-                    reason=str(exc),
+                    reason=f"quarantined: {str(exc)}",
                 ))
                 continue
 
@@ -406,6 +408,8 @@ def verify_chain_with_anchors(
         verification_status: AnchorVerificationStatus = "not_performed"
     elif all(a.valid for a in anchor_results):
         verification_status = "verified"
+    elif any(a.cert_status == "QUARANTINED" for a in anchor_results):
+        verification_status = "quarantined"
     else:
         verification_status = "failed"
 

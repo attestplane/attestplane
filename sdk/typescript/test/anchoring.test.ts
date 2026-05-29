@@ -415,6 +415,22 @@ describe('verifyChainWithAnchors', () => {
     expect(result.anchor_results[0]?.cert_status).toBe('MISSING_LTV_ARTIFACTS');
   });
 
+  it('quarantines live verification failures', () => {
+    const chain = buildChain(1);
+    const anchor = goodAnchor(chain, 0);
+    const tamperedToken = anchor.tsa_token.slice();
+    tamperedToken[tamperedToken.length - 1] ^= 0x01;
+    const result = verifyChainWithAnchors(chain, [
+      { ...anchor, tsa_token: tamperedToken },
+    ], {
+      trustRootsDer: [anchor.tsa_cert_chain[0] ?? new Uint8Array(0)],
+      verificationTime: fixedTime,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.verification_status).toBe('quarantined');
+    expect(result.anchor_results[0]?.cert_status).toBe('QUARANTINED');
+  });
+
   it('v1 cert_status is VALID_UNVERIFIED for good anchors', () => {
     const chain = buildChain(1);
     const result = verifyChainWithAnchors(chain, [goodAnchor(chain, 0)]);

@@ -21,6 +21,11 @@ runs daily at 00:30 UTC and:
 3. Calls `verify_chain_with_anchors(chain, [anchor], trust_roots_der=[root])`
    and asserts `cert_status == "VALID"`.
 
+When the live verification path fails closed, the report surfaces
+`cert_status == "QUARANTINED"` and `ok == false`. That state is
+deliberately non-claim-valid; only `VALID` is treated as a successful
+live anchor.
+
 The workflow has two distinct failure exit codes:
 
 | Exit | Meaning | Workflow status | Issue opened? |
@@ -49,6 +54,7 @@ Common diagnoses:
 | `TSA refused request: PKIStatus=N` (N != 0/1) | FreeTSA rejecting our request shape | Reproduce locally with `attestplane.anchoring.FreeTSAProvider`; check headers, request DER round-trip |
 | `signature does not verify against leaf cert` | FreeTSA rotated their leaf cert; our parser missed the new one | Check `parsed.leafCertDer` matches a cert in FreeTSA's published chain |
 | `leaf cert issuer DN does not match any configured trust root` | FreeTSA rotated their root; our cached `cacert.pem` is stale | Re-download `https://freetsa.org/files/cacert.pem`, verify out-of-band, update the workflow's pin if we add one |
+| `cert_status=QUARANTINED` | The live TSA response was parseable but failed local RFC-3161 / trust-chain verification | Treat as fail-closed. The anchor is not claim-valid; inspect `anchor_results[].reason` for the specific verifier failure. |
 | `verification_time exceeds leaf cert not_after` | FreeTSA leaf cert expired between issuance and our verification | Should be impossible (TSA always returns currently-valid certs); investigate as a substrate bug |
 | `message_imprint does not match expected digest` | The TSA response didn't echo our digest correctly, or there's a substrate-side hash drift | Diff the chain's `event_hash` against what was sent |
 

@@ -204,6 +204,7 @@ Attestplane A1–A5 选取了 AIOS Q-item 中**与 substrate（hash chain + cano
 **期望失败模式**：
 
 - TSA 不可达或返回非法响应 → `AnchoringError`，`error.code == "TSA_UNAVAILABLE"`；nightly 失败但 pre-merge 不阻塞（TSA 是外部依赖）。
+- Live RFC-3161 verification failure → verification report surfaces `cert_status="QUARANTINED"` and `verification_status="quarantined"`; the anchor is never treated as claim-valid.
 - 段基数不匹配 → `ChainVerificationError`，`error.code == "SEGMENT_CARDINALITY_MISMATCH"`，`error.segment_id == 3`，`error.expected == 10`，`error.actual == 9`。
 - TST messageImprint 不匹配 → `ChainVerificationError`，`error.code == "ANCHOR_HASH_MISMATCH"`。
 - TSA 时间倒退 → `ChainVerificationError`，`error.code == "ANCHOR_TIME_REGRESSION"`。
