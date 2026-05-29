@@ -169,24 +169,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           LATEST_TAG: ${{ steps.batch.outputs.latest_tag }}
-          COMMIT_MESSAGES: ${{ toJson(github.event.commits.*.message) }}
         run: |
           set -euo pipefail
-          level=$(python3 - <<'PY'
-          import os, re
-
-          msgs = os.environ.get("COMMIT_MESSAGES", "")
-          lines = msgs.splitlines()
-
+          level=$(git log "${LATEST_TAG}..HEAD" --format='%s' 2>/dev/null \
+            | python3 - <<'PY'
+          import sys, re
+          lines = sys.stdin.read().splitlines()
           has_breaking = any(
               re.search(r'BREAKING[\s_-]CHANGE|feat!:|fix!:|refactor!:|chore!:', ln)
               for ln in lines
           )
-          has_minor = any(
-              re.match(r'^(feat|refactor)\b', ln)
-              for ln in lines
-          )
-
+          has_minor = any(re.match(r'^(feat|refactor)\b', ln) for ln in lines)
           if has_breaking:
               print("major")
           elif has_minor:
@@ -195,7 +188,6 @@ jobs:
               print("patch")
           PY
           )
-
           echo "level=${level}" >> "$GITHUB_OUTPUT"
           echo "Bump level: ${level}"
 
@@ -362,23 +354,6 @@ jobs:
           git tag "$TAG" -m "auto-loop ${LEVEL} bump"
           git push origin "$TAG"
           echo "✅ Tagged ${TAG} (${LEVEL})"
-
-      # ── Trigger architecture-audit ────────────────────────────────────────
-      - name: Trigger architecture-audit
-        if: >-
-          steps.guard.outputs.open_autodev_prs == '0' &&
-          steps.batch.outputs.proceed == 'true' &&
-          steps.bump.outputs.level != 'major'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          set -euo pipefail
-          gh workflow run architecture-audit \
-            --repo "${{ github.repository }}" \
-            --ref main \
-            --field milestone_tag="${TAG}"
-          echo "✅ architecture-audit triggered for ${TAG}"
 
       # ── Publish alpha release for patch/minor bumps ───────────────────────
       - name: Publish alpha release via release-cd

@@ -22,7 +22,7 @@ permissions:
 
 concurrency:
   group: autodev-trigger-${{ github.event.inputs.issue_number || github.event.issue.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
