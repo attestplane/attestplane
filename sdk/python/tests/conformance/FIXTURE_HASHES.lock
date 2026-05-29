@@ -1,7 +1,8 @@
 # Conformance fixture hash lock (Gap G7).
 #
 # Canonical-JSON SHA-256 of every sdk/python/tests/conformance/*.json
-# fixture and public tests/conformance/vectors/**/*.json fixture.
+# fixture and public tests/conformance/vectors/**/*.json and
+# conformance/vectors/**/*.json fixtures.
 # Fixtures are the cross-SDK contract — TS replays them byte-for-byte.
 # Recompute with:
 #   ./scripts/check-fixture-hashes.sh --update
@@ -48,3 +49,6 @@ cf9b2aa9d4cd8617a7f0f9c5489fa775001c0c29b84da634933f39da87bb6de5  tests/conforma
 bb8fdbb706f6290037c225b96dfee04a7ad172fe75c171187c5e70deb6f61e6d  tests/conformance/vectors/negative/attestation-missing-subject-digest.json
 a51389339ada20722776127636e0ffcc6027844791413251b2a34de8f739a8a2  tests/conformance/vectors/negative/attestations-array-empty.json
 28854818d8243a5a6f7860573d385f44d92e9920930962719700fc57a526621f  tests/conformance/vectors/negative/empty-bundle.json
+f0004298719c0a9863c68964d757c85ca4e446443ede80fc284e1e11ca99f6ed  conformance/vectors/additive_optional_pass.json
+1d2ef650f6dc4f12b578f226973558801c0ed60292862f841f73e2877b1fdfa3  conformance/vectors/additive_optional_structural_fail.json
+129dd6a2449310d8e1ccde73b34c09997245ac7c9d5cbc4a32e2b0a9f104c59a  conformance/vectors/manifest.json

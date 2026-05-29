@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "case_id": "forward_compatible_additive_pass",
+      "chain_metadata_fields": [
+        "future_metadata_field"
+      ],
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "ok": true,
+      "path": "conformance/vectors/additive_optional_pass.json"
+    },
+    {
+      "case_id": "forward_compatible_additive_guard",
+      "chain_metadata_fields": [
+        "critical_future_field"
+      ],
+      "expected_reason_code": "att.verify.schema_unknown",
+      "expected_secondary_reasons": [],
+      "ok": false,
+      "path": "conformance/vectors/additive_optional_structural_fail.json"
+    }
+  ]
+}
