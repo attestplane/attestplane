@@ -4,7 +4,7 @@
 
 Subcommands::
 
-    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1/2
+    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1/2/3
     verify-proofbundle <file.json> — alpha local ProofBundle verifier, JSON report, exit 0/1/2
     inspect <chain.jsonl>          — print a chain summary, exit 0/1
     export <chain.jsonl> --out OUT — build a proof bundle from a JSONL chain
@@ -27,6 +27,7 @@ from attestplane.cli.verify_json import (
     _verify_explanations,
     _verify_success_summary,
     build_verify_json_outcome,
+    verify_result_exit_code,
 )
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
@@ -83,8 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="attestplane",
         description=(
-            "Verifiable audit substrate CLI. See "
-            "https://github.com/attestplane/attestplane for documentation."
+            "Verifiable audit substrate CLI. See https://github.com/attestplane/attestplane for documentation."
         ),
     )
     parser.add_argument("--version", action="version", version=f"attestplane {__version__}")
@@ -99,9 +99,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         description=VERIFY_SCOPE_NOTICE,
         epilog=(
-            "Exit codes: 0 success; 2 proof-bundle contract schema/non-empty "
-            "violation; 1 cryptographic, chain-integrity, I/O, or other "
-            "verification failure."
+            "Exit codes: 0 success; 1 verification failure; 2 quarantine / "
+            "fail-closed bundle rejection; 3 usage, I/O, or malformed input."
         ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
@@ -124,10 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--require-non-empty",
         dest="require_non_empty",
         action="store_true",
-        help=(
-            "enforce the proof-bundle contract that strict bundles contain "
-            "at least one event"
-        ),
+        help=("enforce the proof-bundle contract that strict bundles contain at least one event"),
     )
     p_verify.add_argument(
         "--strict-schema",
@@ -179,15 +175,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_export = sub.add_parser("export", help="build a proof bundle from a JSONL chain")
     p_export.add_argument("chain", type=Path, help="path to chain.jsonl")
     p_export.add_argument(
-        "--out", "-o", type=Path, required=True,
+        "--out",
+        "-o",
+        type=Path,
+        required=True,
         help="output path for the proof bundle JSON",
     )
     p_export.add_argument(
-        "--chain-id", default="cli-export",
+        "--chain-id",
+        default="cli-export",
         help="chain_id to embed in the bundle metadata (default: 'cli-export')",
     )
     p_export.add_argument(
-        "--producer-runtime", default="attestplane-cli",
+        "--producer-runtime",
+        default="attestplane-cli",
         help="producer_runtime to embed (default: 'attestplane-cli')",
     )
     _add_format_flag(p_export)
@@ -424,9 +425,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     strict_bundle_mode = getattr(args, "bundle_option", None) is not None
     require_non_empty = (
-        getattr(args, "require_non_empty", False)
-        or getattr(args, "require_events", False)
-        or strict_bundle_mode
+        getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
 
@@ -477,7 +476,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 1
+        return 3
     except json.JSONDecodeError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: schema error in {bundle_path}: {exc}"
@@ -506,7 +505,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 2
+        return 3
     except BundleSchemaError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: schema error in {bundle_path}: {exc}"
@@ -610,14 +609,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _emit(payload, args.json_output, human=human)
     if explain and not args.json_output and not result.ok:
         _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True))
-    if result.ok:
-        return 0
-    if result.error_code in {
-        VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
-        VERIFY_REQUIRED_FIELDS_MISSING,
-    }:
-        return 2
-    return 1
+    return verify_result_exit_code(result)
 
 
 def cmd_verify_proofbundle(args: argparse.Namespace) -> int:
@@ -769,7 +761,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "python_version": platform.python_version(),
         "attestplane_version": __version__,
         "platform": platform.platform(),
-        "storage": JsonlStorageBackend(":memory:").health_report() | {
+        "storage": JsonlStorageBackend(":memory:").health_report()
+        | {
             "path": None,
         },
     }
@@ -784,6 +777,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         import attestplane.proof_bundle
         import attestplane.storage
         import attestplane.verifier
+
         payload["imports"] = "ok"
         payload["package_root"] = attestplane.__file__
     except ImportError as exc:
@@ -794,6 +788,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     # Sanity-check that the EU AI Act registry loads.
     try:
         from attestplane.obligations import load_eu_ai_act_article_12
+
         reg = load_eu_ai_act_article_12()
         payload["eu_ai_act_art12_entries"] = len(reg.entries)
     except Exception as exc:
