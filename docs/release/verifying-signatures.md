@@ -244,7 +244,7 @@ cosign-only evidence and is not retroactively re-signed for SLSA.
 
 If `cosign verify-blob` or `slsa-verifier verify-artifact` fails on a
 published release with this evidence attached, open an issue on
-`https://github.com/attestplane/attestplane/issues` with:
+`https://github.com/attestplane/attestplane/issues/` with:
 
 - The release tag.
 - The exact command invocation and its error output.

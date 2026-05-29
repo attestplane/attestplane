@@ -132,6 +132,14 @@
     {
       "documented": false,
       "kind": "type",
+      "name": "AnchoringStatus",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
       "name": "AppendOptions",
       "notes": "",
       "source": "src/substrate.ts",
@@ -175,6 +183,14 @@
       "name": "BUDGET_EVENT",
       "notes": "",
       "source": "src/event_types.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "type",
+      "name": "BundleAnchoringState",
+      "notes": "",
+      "source": "src/verifier.ts",
       "stability": "alpha_public"
     },
     {

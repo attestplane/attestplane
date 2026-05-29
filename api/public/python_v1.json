@@ -133,6 +133,14 @@
       "stability": "alpha_public"
     },
     {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "AnchoringStatus",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
       "documented": true,
       "kind": "class",
       "module": "attestplane",
@@ -153,6 +161,14 @@
       "kind": "constant",
       "module": "attestplane",
       "name": "BUDGET_EVENT",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
+      "name": "BundleAnchoringState",
       "notes": "",
       "stability": "alpha_public"
     },

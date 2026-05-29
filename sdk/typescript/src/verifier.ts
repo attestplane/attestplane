@@ -87,7 +87,7 @@ export interface BundleVerificationResult {
   readonly agreement: boolean;
   readonly event_count: number;
   readonly bundle_version: number;
-  readonly taxonomy_version: typeof VERIFY_REASON_TAXONOMY_VERSION;
+  readonly taxonomy_version: number;
   readonly chain_id: string;
   readonly head_hash_hex: string;
   readonly metadata_ok: boolean;

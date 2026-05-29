@@ -13,7 +13,7 @@ Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 See the [project README][project-readme] for background, governance, and
 trademark policy.
 
-[project-readme]: https://github.com/attestplane/attestplane
+[project-readme]: ../../README.md
 [adr2]: ../../docs/adr/0002-substrate-data-model-and-hash-chain-v0.md
 
 ## Install
@@ -105,7 +105,7 @@ should carry timestamps as strings when they need to be part of canonical JSON.
 ## Development
 
 ```bash
-git clone https://github.com/attestplane/attestplane
+git clone https://github.com/attestplane/attestplane.git
 cd attestplane/sdk/typescript
 npm install
 
@@ -117,5 +117,5 @@ npm run build       # emit dist/
 
 ## License
 
-Apache License 2.0. See [LICENSE](https://github.com/attestplane/attestplane/blob/main/LICENSE)
-and [NOTICE](https://github.com/attestplane/attestplane/blob/main/NOTICE).
+Apache License 2.0. See [LICENSE](../../LICENSE)
+and [NOTICE](../../NOTICE).
