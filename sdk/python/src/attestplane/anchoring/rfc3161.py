@@ -35,8 +35,7 @@ try:
     from cryptography.x509.oid import ExtendedKeyUsageOID
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.anchoring.rfc3161 requires the 'anchor' extras. "
-        "Install with: pip install attestplane[anchor]"
+        "attestplane.anchoring.rfc3161 requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
     ) from exc
 
 from attestplane.anchoring.base import AnchorVerificationError
@@ -70,33 +69,26 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
     try:
         response = tsp.TimeStampResp.load(response_der)
     except Exception as exc:
-        raise AnchorVerificationError(
-            f"timestamp response is not valid DER: {exc}"
-        ) from exc
+        raise AnchorVerificationError(f"timestamp response is not valid DER: {exc}") from exc
 
     status = response["status"]["status"].native
     if status not in ("granted", "granted_with_mods"):
         fail_info = response["status"].get("fail_info")
         raise AnchorVerificationError(
             f"TSA refused request: status={status}"
-            + (f", fail_info={fail_info.native if fail_info else 'n/a'}"
-               if fail_info is not None else "")
+            + (f", fail_info={fail_info.native if fail_info else 'n/a'}" if fail_info is not None else "")
         )
 
     token: cms.ContentInfo = response["time_stamp_token"]
     if token["content_type"].native != "signed_data":
         raise AnchorVerificationError(
-            f"timestamp token content_type is not signed_data: "
-            f"{token['content_type'].native}"
+            f"timestamp token content_type is not signed_data: {token['content_type'].native}"
         )
 
     signed_data: cms.SignedData = token["content"]
     encap = signed_data["encap_content_info"]
     if encap["content_type"].native != ID_CT_TST_INFO_OID:
-        raise AnchorVerificationError(
-            f"encapsulated content_type is not tst_info: "
-            f"{encap['content_type'].native}"
-        )
+        raise AnchorVerificationError(f"encapsulated content_type is not tst_info: {encap['content_type'].native}")
 
     inner_octets = encap["content"]
     if inner_octets is None:
@@ -137,9 +129,7 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
     # Extract the signer info — there must be exactly one.
     signer_infos = signed_data["signer_infos"]
     if len(signer_infos) != 1:
-        raise AnchorVerificationError(
-            f"expected exactly one SignerInfo, got {len(signer_infos)}"
-        )
+        raise AnchorVerificationError(f"expected exactly one SignerInfo, got {len(signer_infos)}")
     signer_info: cms.SignerInfo = signer_infos[0]
     leaf_asn1 = _select_signer_cert(certs, signer_info)
     leaf_cert_der = leaf_asn1.dump()
@@ -218,17 +208,11 @@ def verify_timestamp_token(
       or equivalent).
     """
     if len(expected_digest) != 32:
-        raise AnchorVerificationError(
-            f"expected_digest must be 32 bytes, got {len(expected_digest)}"
-        )
+        raise AnchorVerificationError(f"expected_digest must be 32 bytes, got {len(expected_digest)}")
     if parsed.hash_algorithm != "sha256":
-        raise AnchorVerificationError(
-            f"unexpected message-imprint hash algorithm: {parsed.hash_algorithm}"
-        )
+        raise AnchorVerificationError(f"unexpected message-imprint hash algorithm: {parsed.hash_algorithm}")
     if parsed.message_imprint != expected_digest:
-        raise AnchorVerificationError(
-            "message_imprint does not match expected digest"
-        )
+        raise AnchorVerificationError("message_imprint does not match expected digest")
 
     # Load the leaf cert and verify the signature using cryptography.
     try:
@@ -249,8 +233,7 @@ def verify_timestamp_token(
             )
         except InvalidSignature as exc:
             raise AnchorVerificationError(
-                f"TSA RSA signature does not verify against leaf cert "
-                f"using {parsed.digest_algorithm_oid}"
+                f"TSA RSA signature does not verify against leaf cert using {parsed.digest_algorithm_oid}"
             ) from exc
     elif isinstance(public_key, EllipticCurvePublicKey):
         # ECDSA leaf path: required to verify tokens from TSAs that issued
@@ -266,13 +249,11 @@ def verify_timestamp_token(
             )
         except InvalidSignature as exc:
             raise AnchorVerificationError(
-                f"TSA ECDSA signature does not verify against leaf cert "
-                f"using {parsed.digest_algorithm_oid}"
+                f"TSA ECDSA signature does not verify against leaf cert using {parsed.digest_algorithm_oid}"
             ) from exc
     else:
         raise AnchorVerificationError(
-            f"unsupported leaf key type: {type(public_key).__name__} "
-            f"(supported: RSA, EllipticCurve)"
+            f"unsupported leaf key type: {type(public_key).__name__} (supported: RSA, EllipticCurve)"
         )
 
     # Check time validity for the leaf.
@@ -280,13 +261,9 @@ def verify_timestamp_token(
     not_before = leaf.not_valid_before_utc
     not_after = leaf.not_valid_after_utc
     if actual_when < not_before:
-        raise AnchorVerificationError(
-            f"verification_time {actual_when} precedes leaf cert not_before {not_before}"
-        )
+        raise AnchorVerificationError(f"verification_time {actual_when} precedes leaf cert not_before {not_before}")
     if actual_when > not_after:
-        raise AnchorVerificationError(
-            f"verification_time {actual_when} exceeds leaf cert not_after {not_after}"
-        )
+        raise AnchorVerificationError(f"verification_time {actual_when} exceeds leaf cert not_after {not_after}")
 
     # Build the candidate pool: intermediates + roots. Roots are kept
     # separate so we can detect when the walk has reached a configured
@@ -343,19 +320,16 @@ def verify_timestamp_token(
 
         _verify_link(current, matched_intermediate, actual_when)
 
-        key = (matched_intermediate.subject.public_bytes(),
-               matched_intermediate.serial_number)
+        key = (matched_intermediate.subject.public_bytes(), matched_intermediate.serial_number)
         if key in visited:
             raise AnchorVerificationError(
-                f"chain cycle detected at hop {hop}: revisiting "
-                f"{matched_intermediate.subject.rfc4514_string()!r}"
+                f"chain cycle detected at hop {hop}: revisiting {matched_intermediate.subject.rfc4514_string()!r}"
             )
         visited.add(key)
         current = matched_intermediate
 
     raise AnchorVerificationError(
-        f"chain depth exceeded max_chain_depth={max_chain_depth} without "
-        "reaching a configured trust root"
+        f"chain depth exceeded max_chain_depth={max_chain_depth} without reaching a configured trust root"
     )
 
 
@@ -377,9 +351,7 @@ def _cms_signature_hash(parsed: ParsedTimestamp) -> hashes.HashAlgorithm:
     elif digest_name == "sha512":
         signature_hash = hashes.SHA512()
     else:
-        raise AnchorVerificationError(
-            f"unsupported CMS SignerInfo digest algorithm: {digest_name}"
-        )
+        raise AnchorVerificationError(f"unsupported CMS SignerInfo digest algorithm: {digest_name}")
     expected_pairs = {
         "sha256": {"rsassa_pkcs1v15", "sha256_rsa", "sha256_ecdsa"},
         "sha384": {"rsassa_pkcs1v15", "sha384_rsa", "sha384_ecdsa"},
@@ -387,8 +359,7 @@ def _cms_signature_hash(parsed: ParsedTimestamp) -> hashes.HashAlgorithm:
     }
     if signature_name not in expected_pairs[digest_name]:
         raise AnchorVerificationError(
-            f"unsupported CMS signature/digest algorithm pair: "
-            f"{signature_name}/{digest_name}"
+            f"unsupported CMS signature/digest algorithm pair: {signature_name}/{digest_name}"
         )
     return signature_hash
 
@@ -400,17 +371,13 @@ def _hash_bytes(data: bytes, algorithm: str) -> bytes:
         return sha384(data).digest()
     if algorithm == "sha512":
         return sha512(data).digest()
-    raise AnchorVerificationError(
-        f"unsupported CMS SignerInfo digest algorithm: {algorithm}"
-    )
+    raise AnchorVerificationError(f"unsupported CMS SignerInfo digest algorithm: {algorithm}")
 
 
 def _select_signer_cert(certs: Any, signer_info: cms.SignerInfo) -> asn1_x509.Certificate:
     sid = signer_info["sid"]
     if sid.name != "issuer_and_serial_number":
-        raise AnchorVerificationError(
-            f"unsupported SignerInfo sid type: {sid.name}"
-        )
+        raise AnchorVerificationError(f"unsupported SignerInfo sid type: {sid.name}")
     issuer_and_serial = sid.chosen
     expected_issuer_der = issuer_and_serial["issuer"].dump()
     expected_serial = int(issuer_and_serial["serial_number"].native)
@@ -418,10 +385,7 @@ def _select_signer_cert(certs: Any, signer_info: cms.SignerInfo) -> asn1_x509.Ce
         candidate = cert_choice.chosen if hasattr(cert_choice, "chosen") else cert_choice
         if not isinstance(candidate, asn1_x509.Certificate):
             continue
-        if (
-            candidate.issuer.dump() == expected_issuer_der
-            and int(candidate.serial_number) == expected_serial
-        ):
+        if candidate.issuer.dump() == expected_issuer_der and int(candidate.serial_number) == expected_serial:
             return candidate
     raise AnchorVerificationError("SignerInfo sid does not match any certificate")
 
@@ -440,41 +404,27 @@ def _validate_signed_attrs(
         values = attr["values"]
         if attr_type == "content_type":
             if len(values) != 1 or values[0].native != ID_CT_TST_INFO_OID:
-                raise AnchorVerificationError(
-                    "SignerInfo signed_attrs content_type is not tst_info"
-                )
+                raise AnchorVerificationError("SignerInfo signed_attrs content_type is not tst_info")
             content_type_seen = True
         elif attr_type == "message_digest":
             if len(values) != 1 or bytes(values[0].native) != expected_digest:
-                raise AnchorVerificationError(
-                    "SignerInfo signed_attrs message_digest does not match TSTInfo"
-                )
+                raise AnchorVerificationError("SignerInfo signed_attrs message_digest does not match TSTInfo")
             message_digest_seen = True
     if not content_type_seen:
-        raise AnchorVerificationError(
-            "SignerInfo signed_attrs missing content_type"
-        )
+        raise AnchorVerificationError("SignerInfo signed_attrs missing content_type")
     if not message_digest_seen:
-        raise AnchorVerificationError(
-            "SignerInfo signed_attrs missing message_digest"
-        )
+        raise AnchorVerificationError("SignerInfo signed_attrs missing message_digest")
 
 
 def _validate_tsa_eku(cert: x509.Certificate) -> None:
     try:
         eku = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
     except x509.ExtensionNotFound as exc:
-        raise AnchorVerificationError(
-            "TSA signer cert missing ExtendedKeyUsage"
-        ) from exc
+        raise AnchorVerificationError("TSA signer cert missing ExtendedKeyUsage") from exc
     if not eku.critical:
-        raise AnchorVerificationError(
-            "TSA signer cert ExtendedKeyUsage must be critical"
-        )
+        raise AnchorVerificationError("TSA signer cert ExtendedKeyUsage must be critical")
     if ExtendedKeyUsageOID.TIME_STAMPING not in eku.value:
-        raise AnchorVerificationError(
-            "TSA signer cert ExtendedKeyUsage missing timeStamping"
-        )
+        raise AnchorVerificationError("TSA signer cert ExtendedKeyUsage missing timeStamping")
 
 
 def _find_issuer(
@@ -514,9 +464,7 @@ def _verify_link(child: x509.Certificate, issuer: x509.Certificate, when: dateti
         )
     issuer_key = issuer.public_key()
     if not isinstance(issuer_key, RSAPublicKey):
-        raise AnchorVerificationError(
-            f"v1 supports RSA issuer keys only; got {type(issuer_key).__name__}"
-        )
+        raise AnchorVerificationError(f"v1 supports RSA issuer keys only; got {type(issuer_key).__name__}")
     try:
         issuer_key.verify(
             child.signature,

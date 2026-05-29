@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,

@@ -23,8 +23,7 @@ def _format_value(value: object) -> str:
 
 def _print_table(rows: list[sqlite3.Row]) -> None:
     data = [
-        {column: _format_value(row[column]) for column in TABLE_COLUMNS}
-        for row in rows
+        {column: _format_value(row[column]) for column in TABLE_COLUMNS} for row in rows
     ]
     widths = {
         column: max(len(column), *(len(row[column]) for row in data))

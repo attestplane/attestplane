@@ -1,6 +1,10 @@
 from pathlib import Path
 
-from scripts.local_codex_runner.review_guard import ReviewGuardReport, render_markdown, run_review_guard
+from scripts.local_codex_runner.review_guard import (
+    ReviewGuardReport,
+    render_markdown,
+    run_review_guard,
+)
 
 
 def test_release_blocking_false_is_blocked(tmp_path: Path) -> None:
@@ -118,7 +122,9 @@ def test_fail_review_status_is_blocked(tmp_path: Path) -> None:
 
 
 def test_review_guard_markdown_has_blank_lines_around_lists() -> None:
-    markdown = render_markdown(ReviewGuardReport(status="PASS", blocking_reasons=[], warnings=[]))
+    markdown = render_markdown(
+        ReviewGuardReport(status="PASS", blocking_reasons=[], warnings=[])
+    )
 
     assert markdown == (
         "# Review Guard: PASS\n"

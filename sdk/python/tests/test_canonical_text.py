@@ -90,9 +90,7 @@ def test_whitespace_fold_collapses_ideographic_space() -> None:
 
 def test_zero_width_chars_stripped() -> None:
     for zw in ["\u200b", "‌", "‍", "﻿"]:
-        assert text_hash(f"agent{zw}alpha") == text_hash("agentalpha"), (
-            f"zero-width {hex(ord(zw))} not stripped"
-        )
+        assert text_hash(f"agent{zw}alpha") == text_hash("agentalpha"), f"zero-width {hex(ord(zw))} not stripped"
 
 
 def test_empty_input_produces_empty_canonical() -> None:

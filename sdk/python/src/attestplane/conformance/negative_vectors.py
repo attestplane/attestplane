@@ -30,10 +30,7 @@ class NegativeVectorResult:
 
 
 def _load_vectors(directory: Path) -> list[dict[str, Any]]:
-    return [
-        json.loads(path.read_text(encoding="utf-8"))
-        for path in sorted(directory.glob("*.json"))
-    ]
+    return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(directory.glob("*.json"))]
 
 
 def load_negative_canonicalization_vectors() -> list[dict[str, Any]]:

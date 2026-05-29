@@ -64,8 +64,7 @@ def test_known_type_returns_true() -> None:
 
 
 def test_unknown_type_returns_false() -> None:
-    for unknown in ["", "unknown_event", "TOOL_CALL_EVENT", "tool_call",
-                    "future_taxonomy_event_v2", "evid"]:
+    for unknown in ["", "unknown_event", "TOOL_CALL_EVENT", "tool_call", "future_taxonomy_event_v2", "evid"]:
         assert not event_types.is_known_v1_event_type(unknown)
 
 

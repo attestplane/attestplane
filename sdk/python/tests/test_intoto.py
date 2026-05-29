@@ -37,8 +37,7 @@ def _build_bundle(n: int = 2) -> dict:
     events = []
     for i in range(n):
         draft = EventDraft(event_type="eval_event", actor=f"a{i}", payload={"i": i})
-        ev = chain_extend(head, draft, now=ts,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=ts, event_id=f"00000000-0000-7000-8000-{i:012d}")
         events.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     builder.extend(events)
@@ -76,14 +75,17 @@ def test_statement_with_framework_mappings() -> None:
     builder = ProofBundleBuilder(chain_id="fm", producer_runtime="test")
     head = genesis_head()
     ts = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
-    ev = chain_extend(head, EventDraft(event_type="eval_event", actor="x"),
-                      now=ts, event_id="00000000-0000-7000-8000-000000000000")
+    ev = chain_extend(
+        head, EventDraft(event_type="eval_event", actor="x"), now=ts, event_id="00000000-0000-7000-8000-000000000000"
+    )
     builder.extend([ev])
-    builder.add_framework_mapping(FrameworkMapping(
-        obligation_id="eu_ai_act.art12.3c.matched_input_data",
-        evidence_event_indexes=(0,),
-        implementation_status_at_bundle_time="field_supported",
-    ))
+    builder.add_framework_mapping(
+        FrameworkMapping(
+            obligation_id="eu_ai_act.art12.3c.matched_input_data",
+            evidence_event_indexes=(0,),
+            implementation_status_at_bundle_time="field_supported",
+        )
+    )
     bundle = builder.build()
 
     statement = proof_bundle_to_in_toto_statement(bundle)
@@ -102,9 +104,11 @@ def test_statement_rejects_missing_chain_metadata() -> None:
 
 def test_statement_rejects_missing_head_hash() -> None:
     with pytest.raises(IntotoError, match="head_hash_hex"):
-        proof_bundle_to_in_toto_statement({
-            "chain_metadata": {"chain_id": "x"}  # missing head_hash_hex
-        })
+        proof_bundle_to_in_toto_statement(
+            {
+                "chain_metadata": {"chain_id": "x"}  # missing head_hash_hex
+            }
+        )
 
 
 def test_dsse_envelope_round_trips() -> None:
@@ -139,30 +143,36 @@ def test_dsse_envelope_to_statement_inverse() -> None:
 
 def test_dsse_envelope_rejects_wrong_payload_type() -> None:
     with pytest.raises(IntotoError, match="payloadType"):
-        dsse_envelope_to_statement({
-            "payloadType": "application/wrong",
-            "payload": "AA==",
-            "signatures": [],
-        })
+        dsse_envelope_to_statement(
+            {
+                "payloadType": "application/wrong",
+                "payload": "AA==",
+                "signatures": [],
+            }
+        )
 
 
 def test_dsse_envelope_rejects_invalid_base64() -> None:
     with pytest.raises(IntotoError, match="base64"):
-        dsse_envelope_to_statement({
-            "payloadType": DSSE_PAYLOAD_TYPE,
-            "payload": "***not base64***",
-            "signatures": [],
-        })
+        dsse_envelope_to_statement(
+            {
+                "payloadType": DSSE_PAYLOAD_TYPE,
+                "payload": "***not base64***",
+                "signatures": [],
+            }
+        )
 
 
 def test_dsse_envelope_rejects_non_object_payload() -> None:
     payload = base64.standard_b64encode(b'"not an object"').decode("ascii")
     with pytest.raises(IntotoError, match="object"):
-        dsse_envelope_to_statement({
-            "payloadType": DSSE_PAYLOAD_TYPE,
-            "payload": payload,
-            "signatures": [],
-        })
+        dsse_envelope_to_statement(
+            {
+                "payloadType": DSSE_PAYLOAD_TYPE,
+                "payload": payload,
+                "signatures": [],
+            }
+        )
 
 
 def test_canonical_json_is_deterministic() -> None:

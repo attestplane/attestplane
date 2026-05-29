@@ -28,9 +28,7 @@ def test_v17x_delta_covers_requested_user_visible_surface() -> None:
 
 def test_verify_json_docs_cover_exit_code_and_reason_list() -> None:
     cli = (ROOT / "docs" / "cli" / "verify-json.md").read_text(encoding="utf-8")
-    schema = (ROOT / "docs" / "schema" / "verify-json.md").read_text(
-        encoding="utf-8"
-    )
+    schema = (ROOT / "docs" / "schema" / "verify-json.md").read_text(encoding="utf-8")
 
     assert "verify --json" in cli
     assert "verify --explain" in cli

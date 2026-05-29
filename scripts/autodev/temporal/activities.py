@@ -6,7 +6,6 @@ import asyncio
 import json
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +16,9 @@ from . import db
 # ── environment ────────────────────────────────────────────────────────────────
 REPO_URL = "https://github.com/attestplane/attestplane.git"
 REPO_SLUG = "attestplane/attestplane"
-MAIN_REPO = Path(os.environ.get("AUTODEV_MAIN_REPO", Path.home() / "projects/attestplane"))
+MAIN_REPO = Path(
+    os.environ.get("AUTODEV_MAIN_REPO", Path.home() / "projects/attestplane")
+)
 CODEX_HOME = os.environ.get("CODEX_HOME", str(Path.home() / "codex-home"))
 BOT_NAME = "autodev-bot"
 BOT_EMAIL = "258170091+merchloubna70-dot@users.noreply.github.com"
@@ -59,6 +60,7 @@ def _gh(args: list[str], **kwargs: Any) -> str:
 
 # ── activity: implement ────────────────────────────────────────────────────────
 
+
 @activity.defn(name="implement")
 async def implement_activity(
     issue_number: int,
@@ -67,7 +69,13 @@ async def implement_activity(
 ) -> dict:
     """Checkout worktree, run codex exec, commit & push. Idempotent."""
     run = db.get_run(issue_number)
-    if run and run["stage"] in ("implemented", "pr_created", "reviewing", "approved", "merged"):
+    if run and run["stage"] in (
+        "implemented",
+        "pr_created",
+        "reviewing",
+        "approved",
+        "merged",
+    ):
         activity.logger.info("issue #%d already implemented, skipping", issue_number)
         return {"branch": run["branch"], "has_changes": True, "skipped": True}
 
@@ -90,7 +98,9 @@ async def implement_activity(
                 _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
             except RuntimeError:
                 pass
-        _run(["git", "worktree", "add", "-B", branch, worktree, "origin/main"], cwd=main)
+        _run(
+            ["git", "worktree", "add", "-B", branch, worktree, "origin/main"], cwd=main
+        )
 
         # Build Codex prompt
         prompt = (
@@ -125,10 +135,15 @@ async def implement_activity(
         # Auto-fix style issues so ruff/format CI checks pass.
         # Errors that can't be auto-fixed are logged but don't block the commit.
         try:
-            _run(["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", "."], cwd=worktree)
+            _run(
+                ["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", "."],
+                cwd=worktree,
+            )
         except RuntimeError as _ruff_err:
-            activity.logger.warning("ruff auto-fix had remaining errors (will commit anyway): %s",
-                                    str(_ruff_err)[:300])
+            activity.logger.warning(
+                "ruff auto-fix had remaining errors (will commit anyway): %s",
+                str(_ruff_err)[:300],
+            )
         try:
             _run(["python3.11", "-m", "ruff", "format", "."], cwd=worktree)
         except RuntimeError as _fmt_err:
@@ -142,7 +157,10 @@ async def implement_activity(
             _run(["git", "add", "-A"], cwd=worktree)
             _run(
                 [
-                    "git", "commit", "--signoff", "-m",
+                    "git",
+                    "commit",
+                    "--signoff",
+                    "-m",
                     f"feat: implement issue #{issue_number}\n\n"
                     "Automated implementation by autodev-train Temporal worker.",
                 ],
@@ -161,7 +179,12 @@ async def implement_activity(
             sha = ""
 
         db.upsert_run(issue_number, stage="implemented", branch=branch)
-        db.log_event(issue_number, "implement", "completed", f"has_changes={has_changes} sha={sha}")
+        db.log_event(
+            issue_number,
+            "implement",
+            "completed",
+            f"has_changes={has_changes} sha={sha}",
+        )
         return {"branch": branch, "has_changes": has_changes, "sha": sha}
 
     except Exception as exc:
@@ -177,11 +200,16 @@ async def implement_activity(
 
 # ── activity: create_pr ────────────────────────────────────────────────────────
 
+
 @activity.defn(name="create_pr")
 async def create_pr_activity(issue_number: int, branch: str) -> dict:
     """Create GitHub PR. Idempotent."""
     run = db.get_run(issue_number)
-    if run and run["pr_number"] and run["stage"] in ("pr_created", "reviewing", "approved", "merged"):
+    if (
+        run
+        and run["pr_number"]
+        and run["stage"] in ("pr_created", "reviewing", "approved", "merged")
+    ):
         activity.logger.info("PR already created for issue #%d", issue_number)
         return {"pr_number": run["pr_number"], "skipped": True}
 
@@ -193,22 +221,38 @@ async def create_pr_activity(issue_number: int, branch: str) -> dict:
         f"*Do not merge manually. autodev-train will merge after review passes.*"
     )
 
-    pr_url = _gh([
-        "pr", "create",
-        "--repo", REPO_SLUG,
-        "--title", f"autodev: implement issue #{issue_number}",
-        "--body", pr_body,
-        "--label", "autodev-pr",
-        "--head", branch,
-        "--base", "main",
-    ])
+    pr_url = _gh(
+        [
+            "pr",
+            "create",
+            "--repo",
+            REPO_SLUG,
+            "--title",
+            f"autodev: implement issue #{issue_number}",
+            "--body",
+            pr_body,
+            "--label",
+            "autodev-pr",
+            "--head",
+            branch,
+            "--base",
+            "main",
+        ]
+    )
 
-    pr_number_str = _gh([
-        "pr", "view", pr_url.strip(),
-        "--repo", REPO_SLUG,
-        "--json", "number",
-        "--jq", ".number",
-    ])
+    pr_number_str = _gh(
+        [
+            "pr",
+            "view",
+            pr_url.strip(),
+            "--repo",
+            REPO_SLUG,
+            "--json",
+            "number",
+            "--jq",
+            ".number",
+        ]
+    )
     pr_number = int(pr_number_str.strip())
 
     db.upsert_run(issue_number, stage="pr_created", pr_number=pr_number)
@@ -217,6 +261,7 @@ async def create_pr_activity(issue_number: int, branch: str) -> dict:
 
 
 # ── activity: review_pr ────────────────────────────────────────────────────────
+
 
 @activity.defn(name="review_pr")
 async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
@@ -228,7 +273,19 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
     db.log_event(issue_number, "review", "started", f"pr={pr_number}")
 
     diff = _gh(["pr", "diff", str(pr_number), "--repo", REPO_SLUG])
-    issue_body = _gh(["issue", "view", str(issue_number), "--repo", REPO_SLUG, "--json", "body", "--jq", ".body"])
+    issue_body = _gh(
+        [
+            "issue",
+            "view",
+            str(issue_number),
+            "--repo",
+            REPO_SLUG,
+            "--json",
+            "body",
+            "--jq",
+            ".body",
+        ]
+    )
 
     prompt = (
         "你是 Attestplane 项目的自动化代码审查员。\n\n"
@@ -252,15 +309,24 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
         output = await asyncio.to_thread(
             _run,
             [
-                "qwen", prompt,
-                "--openai-api-key", deepseek_key,
-                "--openai-base-url", "https://api.deepseek.com/v1",
-                "--auth-type", "openai",
-                "--model", "deepseek-v4-pro",
-                "--approval-mode", "yolo",
-                "--output-format", "text",
-                "--max-session-turns", "1",
-                "--channel", "CI",
+                "qwen",
+                prompt,
+                "--openai-api-key",
+                deepseek_key,
+                "--openai-base-url",
+                "https://api.deepseek.com/v1",
+                "--auth-type",
+                "openai",
+                "--model",
+                "deepseek-v4-pro",
+                "--approval-mode",
+                "yolo",
+                "--output-format",
+                "text",
+                "--max-session-turns",
+                "1",
+                "--channel",
+                "CI",
                 "--bare",
             ],
             env={**os.environ, "https_proxy": GFW_PROXY, "http_proxy": GFW_PROXY},
@@ -281,6 +347,7 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
 
 
 # ── activity: post_review ──────────────────────────────────────────────────────
+
 
 @activity.defn(name="post_review")
 async def post_review_activity(
@@ -305,18 +372,29 @@ async def post_review_activity(
     # GitHub forbids both APPROVE and REQUEST_CHANGES on your own PRs (422).
     # We post as a regular PR comment for both decisions, and add the
     # review-passed label directly for APPROVE — sufficient to trigger merge.
-    _gh([
-        "pr", "comment", str(pr_number),
-        "--repo", REPO_SLUG,
-        "--body", review_body,
-    ])
+    _gh(
+        [
+            "pr",
+            "comment",
+            str(pr_number),
+            "--repo",
+            REPO_SLUG,
+            "--body",
+            review_body,
+        ]
+    )
 
     if decision == "APPROVE":
-        _gh([
-            "api", "-X", "POST",
-            f"repos/{REPO_SLUG}/issues/{pr_number}/labels",
-            "-f", "labels[]=review-passed",
-        ])
+        _gh(
+            [
+                "api",
+                "-X",
+                "POST",
+                f"repos/{REPO_SLUG}/issues/{pr_number}/labels",
+                "-f",
+                "labels[]=review-passed",
+            ]
+        )
         db.upsert_run(issue_number, stage="approved")
     else:
         # Close PR immediately so it doesn't block the auto-loop guard.
@@ -332,12 +410,25 @@ async def post_review_activity(
 
 # ── activity: merge_pr ─────────────────────────────────────────────────────────
 
+
 @activity.defn(name="merge_pr")
 async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
     """Squash-merge the PR. Waits for CI (via mergeStateStatus), then rebases and merges."""
     import time as _time
 
-    branch = _gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]).strip()
+    branch = _gh(
+        [
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            REPO_SLUG,
+            "--json",
+            "headRefName",
+            "--jq",
+            ".headRefName",
+        ]
+    ).strip()
 
     # Poll mergeStateStatus — avoids the broken `gh pr checks --json required` field.
     # CLEAN   → all checks passed, safe to merge.
@@ -347,8 +438,19 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
     activity.logger.info("Waiting for CI on PR #%d ...", pr_number)
     ci_deadline = _time.monotonic() + 600
     while True:
-        info = json.loads(_gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG,
-                               "--json", "mergeable,mergeStateStatus"]))
+        info = json.loads(
+            _gh(
+                [
+                    "pr",
+                    "view",
+                    str(pr_number),
+                    "--repo",
+                    REPO_SLUG,
+                    "--json",
+                    "mergeable,mergeStateStatus",
+                ]
+            )
+        )
         merge_state = info.get("mergeStateStatus", "UNKNOWN")
         mergeable = info.get("mergeable", "UNKNOWN")
 
@@ -356,20 +458,37 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             activity.logger.info("CI passed for PR #%d (CLEAN)", pr_number)
             break
         if merge_state == "UNSTABLE":
-            activity.logger.error("CI FAILED for PR #%d (UNSTABLE) — closing PR", pr_number)
+            activity.logger.error(
+                "CI FAILED for PR #%d (UNSTABLE) — closing PR", pr_number
+            )
             try:
-                _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
-                     "--comment", "Closed by autodev-train: CI checks failed (UNSTABLE). Fix linting/tests and reopen."])
+                _gh(
+                    [
+                        "pr",
+                        "close",
+                        str(pr_number),
+                        "--repo",
+                        REPO_SLUG,
+                        "--comment",
+                        "Closed by autodev-train: CI checks failed (UNSTABLE). Fix linting/tests and reopen.",
+                    ]
+                )
             except RuntimeError:
                 pass
             db.upsert_run(issue_number, stage="failed")
             db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number}")
             return {"merged": False, "reason": "ci_unstable"}
         if mergeable == "CONFLICTING":
-            activity.logger.info("PR #%d has merge conflict — will attempt rebase", pr_number)
+            activity.logger.info(
+                "PR #%d has merge conflict — will attempt rebase", pr_number
+            )
             break
         if _time.monotonic() > ci_deadline:
-            activity.logger.warning("CI timeout for PR #%d (state=%s) — merging anyway", pr_number, merge_state)
+            activity.logger.warning(
+                "CI timeout for PR #%d (state=%s) — merging anyway",
+                pr_number,
+                merge_state,
+            )
             break
         await asyncio.sleep(30)
     worktree = str(MAIN_REPO.parent / f"attestplane-merge-{issue_number}")
@@ -383,14 +502,21 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                 _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
             except RuntimeError:
                 pass
-        _run(["git", "worktree", "add", "-B", branch, worktree, f"origin/{branch}"], cwd=main)
-        _run(["git", "rebase", "origin/main"], cwd=worktree, env={
-            **os.environ,
-            "GIT_AUTHOR_NAME": BOT_NAME,
-            "GIT_AUTHOR_EMAIL": BOT_EMAIL,
-            "GIT_COMMITTER_NAME": BOT_NAME,
-            "GIT_COMMITTER_EMAIL": BOT_EMAIL,
-        })
+        _run(
+            ["git", "worktree", "add", "-B", branch, worktree, f"origin/{branch}"],
+            cwd=main,
+        )
+        _run(
+            ["git", "rebase", "origin/main"],
+            cwd=worktree,
+            env={
+                **os.environ,
+                "GIT_AUTHOR_NAME": BOT_NAME,
+                "GIT_AUTHOR_EMAIL": BOT_EMAIL,
+                "GIT_COMMITTER_NAME": BOT_NAME,
+                "GIT_COMMITTER_EMAIL": BOT_EMAIL,
+            },
+        )
         _run(["git", "push", "origin", branch, "--force-with-lease"], cwd=worktree)
     except RuntimeError as rebase_err:
         activity.logger.warning("rebase failed for PR #%d: %s", pr_number, rebase_err)
@@ -405,14 +531,20 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
         except Exception:
             pass
 
-    _gh([
-        "pr", "merge", str(pr_number),
-        "-R", REPO_SLUG,
-        "--squash",
-        "--subject", f"autodev: implement issue #{issue_number} [autodev]",
-        "--body",
-        "Squash-merged by autodev-train Temporal worker after AI review + CI.",
-    ])
+    _gh(
+        [
+            "pr",
+            "merge",
+            str(pr_number),
+            "-R",
+            REPO_SLUG,
+            "--squash",
+            "--subject",
+            f"autodev: implement issue #{issue_number} [autodev]",
+            "--body",
+            "Squash-merged by autodev-train Temporal worker after AI review + CI.",
+        ]
+    )
     db.upsert_run(issue_number, stage="merged")
     db.log_event(issue_number, "merge", "completed", f"pr={pr_number}")
     return {"merged": True}

@@ -61,7 +61,9 @@ def _fingerprint_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def compute_plan_id(payload: Mapping[str, Any], *, source_issue: int | None = None) -> str:
+def compute_plan_id(
+    payload: Mapping[str, Any], *, source_issue: int | None = None
+) -> str:
     fingerprint_payload = _fingerprint_payload(payload)
     if source_issue is not None:
         fingerprint_payload = dict(fingerprint_payload)
@@ -70,7 +72,9 @@ def compute_plan_id(payload: Mapping[str, Any], *, source_issue: int | None = No
     return hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
 
 
-def with_plan_id(payload: Mapping[str, Any], *, source_issue: int | None = None) -> dict[str, Any]:
+def with_plan_id(
+    payload: Mapping[str, Any], *, source_issue: int | None = None
+) -> dict[str, Any]:
     result = dict(payload)
     result["plan_id"] = compute_plan_id(result, source_issue=source_issue)
     return result
@@ -102,7 +106,9 @@ def extract_plan_payload(comment_body: str) -> dict[str, Any] | None:
     return payload
 
 
-def plan_issue_body(*, source_issue: int, plan_id: str, plan_schema: str, task: Mapping[str, Any]) -> str:
+def plan_issue_body(
+    *, source_issue: int, plan_id: str, plan_schema: str, task: Mapping[str, Any]
+) -> str:
     lines = [
         f"Source planning issue: #{source_issue}",
         f"Plan schema: `{plan_schema}`",

@@ -88,18 +88,24 @@ def _git_show_text(repo_root: Path, ref: str, path: str) -> str:
 
 def read_python_version(repo_root: Path, metadata_ref: str | None = None) -> str:
     if metadata_ref is not None:
-        data = tomllib.loads(_git_show_text(repo_root, metadata_ref, "sdk/python/pyproject.toml"))
+        data = tomllib.loads(
+            _git_show_text(repo_root, metadata_ref, "sdk/python/pyproject.toml")
+        )
         try:
             return str(data["project"]["version"])
         except KeyError as exc:
-            raise ReleaseCdPolicyError("sdk/python/pyproject.toml missing project.version") from exc
+            raise ReleaseCdPolicyError(
+                "sdk/python/pyproject.toml missing project.version"
+            ) from exc
 
     with (repo_root / "sdk/python/pyproject.toml").open("rb") as f:
         data = tomllib.load(f)
     try:
         return str(data["project"]["version"])
     except KeyError as exc:
-        raise ReleaseCdPolicyError("sdk/python/pyproject.toml missing project.version") from exc
+        raise ReleaseCdPolicyError(
+            "sdk/python/pyproject.toml missing project.version"
+        ) from exc
 
 
 def read_npm_version(repo_root: Path, metadata_ref: str | None = None) -> str:
@@ -107,11 +113,15 @@ def read_npm_version(repo_root: Path, metadata_ref: str | None = None) -> str:
         if metadata_ref is not None:
             raw = _git_show_text(repo_root, metadata_ref, "sdk/typescript/package.json")
         else:
-            raw = (repo_root / "sdk/typescript/package.json").read_text(encoding="utf-8")
+            raw = (repo_root / "sdk/typescript/package.json").read_text(
+                encoding="utf-8"
+            )
         data = json.loads(raw)
         return str(data["version"])
     except KeyError as exc:
-        raise ReleaseCdPolicyError("sdk/typescript/package.json missing version") from exc
+        raise ReleaseCdPolicyError(
+            "sdk/typescript/package.json missing version"
+        ) from exc
 
 
 def decide_release(
@@ -122,16 +132,22 @@ def decide_release(
     metadata_ref: str | None = None,
     allow_prerelease_latest: bool = False,
 ) -> ReleaseCdDecision:
-    expected_python, expected_npm, canonical_channel, is_prerelease = expected_versions(release_tag)
+    expected_python, expected_npm, canonical_channel, is_prerelease = expected_versions(
+        release_tag
+    )
     if requested_channel != canonical_channel:
-        if not (allow_prerelease_latest and is_prerelease and requested_channel == "latest"):
+        if not (
+            allow_prerelease_latest and is_prerelease and requested_channel == "latest"
+        ):
             raise ReleaseCdPolicyError(
                 f"channel {requested_channel!r} does not match release tag {release_tag!r}; "
                 f"expected {canonical_channel!r}"
             )
 
     if is_prerelease and requested_channel == "latest" and not allow_prerelease_latest:
-        raise ReleaseCdPolicyError("pre-release packages must not publish with npm latest")
+        raise ReleaseCdPolicyError(
+            "pre-release packages must not publish with npm latest"
+        )
 
     python_version = read_python_version(repo_root, metadata_ref=metadata_ref)
     npm_version = read_npm_version(repo_root, metadata_ref=metadata_ref)
@@ -172,7 +188,9 @@ def write_github_outputs(decision: ReleaseCdDecision) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-tag", required=True)
-    parser.add_argument("--channel", required=True, choices=["alpha", "beta", "rc", "latest"])
+    parser.add_argument(
+        "--channel", required=True, choices=["alpha", "beta", "rc", "latest"]
+    )
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument(
         "--metadata-ref",

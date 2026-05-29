@@ -41,20 +41,22 @@ STATE_TRANSITION_EVENT: Final = "state_transition_event"
 EVAL_EVENT: Final = "eval_event"
 ROUTING_EVENT: Final = "routing_event"
 
-ALL_EVENT_TYPES_V1: Final[frozenset[str]] = frozenset({
-    TOOL_CALL_EVENT,
-    POLICY_CHECK_EVENT,
-    HUMAN_APPROVAL_EVENT,
-    LEASE_LIFECYCLE_EVENT,
-    BUDGET_EVENT,
-    SETTLEMENT_EVENT,
-    WORKER_ASSIGNMENT_EVENT,
-    RUNTIME_LIFECYCLE_EVENT,
-    GATEWAY_DECISION_EVENT,
-    STATE_TRANSITION_EVENT,
-    EVAL_EVENT,
-    ROUTING_EVENT,
-})
+ALL_EVENT_TYPES_V1: Final[frozenset[str]] = frozenset(
+    {
+        TOOL_CALL_EVENT,
+        POLICY_CHECK_EVENT,
+        HUMAN_APPROVAL_EVENT,
+        LEASE_LIFECYCLE_EVENT,
+        BUDGET_EVENT,
+        SETTLEMENT_EVENT,
+        WORKER_ASSIGNMENT_EVENT,
+        RUNTIME_LIFECYCLE_EVENT,
+        GATEWAY_DECISION_EVENT,
+        STATE_TRANSITION_EVENT,
+        EVAL_EVENT,
+        ROUTING_EVENT,
+    }
+)
 
 
 def is_known_v1_event_type(event_type: str) -> bool:

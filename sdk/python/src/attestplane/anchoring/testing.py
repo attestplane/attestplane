@@ -45,8 +45,7 @@ try:
     from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.anchoring.testing requires the 'anchor' extras. "
-        "Install with: pip install attestplane[anchor]"
+        "attestplane.anchoring.testing requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
     ) from exc
 
 from attestplane.anchoring.base import (
@@ -102,9 +101,7 @@ class TestTSAAuthority:
         leaf_key_type: str = "rsa",
     ) -> None:
         if leaf_key_type not in ("rsa", "ec"):
-            raise ValueError(
-                f"leaf_key_type must be 'rsa' or 'ec', got {leaf_key_type!r}"
-            )
+            raise ValueError(f"leaf_key_type must be 'rsa' or 'ec', got {leaf_key_type!r}")
         actual_now = now or datetime.now(UTC)
         self._issued_at_authority = actual_now
         self._cert_validity = timedelta(days=cert_validity_days)
@@ -126,8 +123,11 @@ class TestTSAAuthority:
         for tier in range(intermediate_count):
             inter_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
             inter_cert = self._build_intermediate_cert(
-                inter_key, prev_key, prev_cert,
-                tier=tier, now=actual_now,
+                inter_key,
+                prev_key,
+                prev_cert,
+                tier=tier,
+                now=actual_now,
                 path_length=intermediate_count - tier - 1,
             )
             self._intermediate_keys.append(inter_key)
@@ -144,7 +144,10 @@ class TestTSAAuthority:
         else:
             self._leaf_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         self._leaf_cert = self._build_leaf_cert(
-            self._leaf_key, prev_key, prev_cert, actual_now,
+            self._leaf_key,
+            prev_key,
+            prev_cert,
+            actual_now,
         )
 
     @property
@@ -162,10 +165,7 @@ class TestTSAAuthority:
             ),
             not_valid_before=self._leaf_cert.not_valid_before_utc,
             not_valid_after=self._leaf_cert.not_valid_after_utc,
-            intermediate_certs_der=tuple(
-                c.public_bytes(serialization.Encoding.DER)
-                for c in self._intermediate_certs
-            ),
+            intermediate_certs_der=tuple(c.public_bytes(serialization.Encoding.DER) for c in self._intermediate_certs),
         )
 
     def sign_timestamp_response(
@@ -202,37 +202,49 @@ class TestTSAAuthority:
         if signer_digest_algorithm not in {"sha256", "sha384", "sha512"}:
             raise ValueError("unsupported signer_digest_algorithm")
 
-        tst_info = tsp.TSTInfo({
-            "version": "v1",
-            "policy": "1.2.3.4.5",  # placeholder OID for the test authority
-            "message_imprint": tsp.MessageImprint({
-                "hash_algorithm": algos.DigestAlgorithm({"algorithm": "sha256"}),
-                "hashed_message": request_digest,
-            }),
-            "serial_number": serial_number,
-            "gen_time": gen_time,
-            **({"nonce": int.from_bytes(nonce, "big")} if nonce else {}),
-        })
+        tst_info = tsp.TSTInfo(
+            {
+                "version": "v1",
+                "policy": "1.2.3.4.5",  # placeholder OID for the test authority
+                "message_imprint": tsp.MessageImprint(
+                    {
+                        "hash_algorithm": algos.DigestAlgorithm({"algorithm": "sha256"}),
+                        "hashed_message": request_digest,
+                    }
+                ),
+                "serial_number": serial_number,
+                "gen_time": gen_time,
+                **({"nonce": int.from_bytes(nonce, "big")} if nonce else {}),
+            }
+        )
         tst_info_der = tst_info.dump()
 
         # Build the CMS SignedData wrapping the TSTInfo.
         leaf_der = self._leaf_cert.public_bytes(serialization.Encoding.DER)
         leaf_asn1 = asn1_x509.Certificate.load(leaf_der)
 
-        signed_attrs = cms.CMSAttributes([
-            cms.CMSAttribute({
-                "type": "content_type",
-                "values": [cms.ContentType("tst_info")],
-            }),
-            cms.CMSAttribute({
-                "type": "message_digest",
-                "values": [_digest(tst_info_der, signer_digest_algorithm)],
-            }),
-            cms.CMSAttribute({
-                "type": "signing_time",
-                "values": [cms.Time({"utc_time": gen_time})],
-            }),
-        ])
+        signed_attrs = cms.CMSAttributes(
+            [
+                cms.CMSAttribute(
+                    {
+                        "type": "content_type",
+                        "values": [cms.ContentType("tst_info")],
+                    }
+                ),
+                cms.CMSAttribute(
+                    {
+                        "type": "message_digest",
+                        "values": [_digest(tst_info_der, signer_digest_algorithm)],
+                    }
+                ),
+                cms.CMSAttribute(
+                    {
+                        "type": "signing_time",
+                        "values": [cms.Time({"utc_time": gen_time})],
+                    }
+                ),
+            ]
+        )
 
         # Sign the DER encoding of the SET OF attributes (per CMS rules).
         signed_attrs_der = signed_attrs.dump()
@@ -257,42 +269,58 @@ class TestTSAAuthority:
             )
             sig_alg_name = "rsassa_pkcs1v15"
 
-        signer_info = cms.SignerInfo({
-            "version": "v1",
-            "sid": cms.SignerIdentifier({
-                "issuer_and_serial_number": cms.IssuerAndSerialNumber({
-                    "issuer": leaf_asn1.issuer,
-                    "serial_number": leaf_asn1.serial_number,
-                }),
-            }),
-            "digest_algorithm": algos.DigestAlgorithm({"algorithm": signer_digest_algorithm}),
-            "signed_attrs": signed_attrs,
-            "signature_algorithm": algos.SignedDigestAlgorithm({
-                "algorithm": sig_alg_name,
-            }),
-            "signature": signature,
-        })
+        signer_info = cms.SignerInfo(
+            {
+                "version": "v1",
+                "sid": cms.SignerIdentifier(
+                    {
+                        "issuer_and_serial_number": cms.IssuerAndSerialNumber(
+                            {
+                                "issuer": leaf_asn1.issuer,
+                                "serial_number": leaf_asn1.serial_number,
+                            }
+                        ),
+                    }
+                ),
+                "digest_algorithm": algos.DigestAlgorithm({"algorithm": signer_digest_algorithm}),
+                "signed_attrs": signed_attrs,
+                "signature_algorithm": algos.SignedDigestAlgorithm(
+                    {
+                        "algorithm": sig_alg_name,
+                    }
+                ),
+                "signature": signature,
+            }
+        )
 
-        signed_data = cms.SignedData({
-            "version": "v3",
-            "digest_algorithms": [algos.DigestAlgorithm({"algorithm": signer_digest_algorithm})],
-            "encap_content_info": cms.EncapsulatedContentInfo({
-                "content_type": "tst_info",
-                "content": core.ParsableOctetString(tst_info_der),
-            }),
-            "certificates": [cms.CertificateChoices({"certificate": leaf_asn1})],
-            "signer_infos": [signer_info],
-        })
+        signed_data = cms.SignedData(
+            {
+                "version": "v3",
+                "digest_algorithms": [algos.DigestAlgorithm({"algorithm": signer_digest_algorithm})],
+                "encap_content_info": cms.EncapsulatedContentInfo(
+                    {
+                        "content_type": "tst_info",
+                        "content": core.ParsableOctetString(tst_info_der),
+                    }
+                ),
+                "certificates": [cms.CertificateChoices({"certificate": leaf_asn1})],
+                "signer_infos": [signer_info],
+            }
+        )
 
-        token = cms.ContentInfo({
-            "content_type": "signed_data",
-            "content": signed_data,
-        })
+        token = cms.ContentInfo(
+            {
+                "content_type": "signed_data",
+                "content": signed_data,
+            }
+        )
 
-        timestamp_response = tsp.TimeStampResp({
-            "status": tsp.PKIStatusInfo({"status": "granted"}),
-            "time_stamp_token": token,
-        })
+        timestamp_response = tsp.TimeStampResp(
+            {
+                "status": tsp.PKIStatusInfo({"status": "granted"}),
+                "time_stamp_token": token,
+            }
+        )
 
         der_bytes: bytes = timestamp_response.dump()
         return der_bytes
@@ -309,11 +337,7 @@ class TestTSAAuthority:
         """
         if gen_time.tzinfo is None:
             raise ValueError("gen_time must be UTC-aware")
-        payload = (
-            b"ATTESTPLANE-TEST-OCSP-V1|"
-            + gen_time.strftime("%Y%m%dT%H%M%SZ").encode("ascii")
-            + b"|status=good"
-        )
+        payload = b"ATTESTPLANE-TEST-OCSP-V1|" + gen_time.strftime("%Y%m%dT%H%M%SZ").encode("ascii") + b"|status=good"
         return payload
 
     def issue_real_ocsp_response(
@@ -371,66 +395,89 @@ class TestTSAAuthority:
             bit_string_bytes = bit_string_bytes[1:]
         issuer_key_hash = _sha1(bit_string_bytes)
 
-        cert_id = asn1_ocsp.CertId({
-            "hash_algorithm": algos.DigestAlgorithm({"algorithm": "sha1"}),
-            "issuer_name_hash": issuer_name_hash,
-            "issuer_key_hash": issuer_key_hash,
-            "serial_number": leaf_asn1.serial_number,
-        })
+        cert_id = asn1_ocsp.CertId(
+            {
+                "hash_algorithm": algos.DigestAlgorithm({"algorithm": "sha1"}),
+                "issuer_name_hash": issuer_name_hash,
+                "issuer_key_hash": issuer_key_hash,
+                "serial_number": leaf_asn1.serial_number,
+            }
+        )
 
         if revoked:
-            cert_status = asn1_ocsp.CertStatus({
-                "revoked": asn1_ocsp.RevokedInfo({
-                    "revocation_time": gen_time,
-                    "revocation_reason": "unspecified",
-                }),
-            })
+            cert_status = asn1_ocsp.CertStatus(
+                {
+                    "revoked": asn1_ocsp.RevokedInfo(
+                        {
+                            "revocation_time": gen_time,
+                            "revocation_reason": "unspecified",
+                        }
+                    ),
+                }
+            )
         else:
             cert_status = asn1_ocsp.CertStatus({"good": core.Null()})
 
-        single_response = asn1_ocsp.SingleResponse({
-            "cert_id": cert_id,
-            "cert_status": cert_status,
-            "this_update": gen_time,
-            "next_update": actual_next,
-        })
-
-        tbs = asn1_ocsp.ResponseData({
-            "responder_id": asn1_ocsp.ResponderId(
-                name="by_name", value=issuer_asn1["tbs_certificate"]["subject"],
-            ),
-            "produced_at": gen_time,
-            "responses": [single_response],
-        })
-        tbs_der = tbs.dump()
-        signature = issuer_key.sign(
-            tbs_der, padding.PKCS1v15(), hashes.SHA256(),
+        single_response = asn1_ocsp.SingleResponse(
+            {
+                "cert_id": cert_id,
+                "cert_status": cert_status,
+                "this_update": gen_time,
+                "next_update": actual_next,
+            }
         )
 
-        basic_response = asn1_ocsp.BasicOCSPResponse({
-            "tbs_response_data": tbs,
-            "signature_algorithm": algos.SignedDigestAlgorithm({
-                "algorithm": "rsassa_pkcs1v15",
-            }),
-            "signature": signature,
-        })
+        tbs = asn1_ocsp.ResponseData(
+            {
+                "responder_id": asn1_ocsp.ResponderId(
+                    name="by_name",
+                    value=issuer_asn1["tbs_certificate"]["subject"],
+                ),
+                "produced_at": gen_time,
+                "responses": [single_response],
+            }
+        )
+        tbs_der = tbs.dump()
+        signature = issuer_key.sign(
+            tbs_der,
+            padding.PKCS1v15(),
+            hashes.SHA256(),
+        )
 
-        full = asn1_ocsp.OCSPResponse({
-            "response_status": "successful",
-            "response_bytes": asn1_ocsp.ResponseBytes({
-                "response_type": "basic_ocsp_response",
-                "response": core.ParsableOctetString(basic_response.dump()),
-            }),
-        })
+        basic_response = asn1_ocsp.BasicOCSPResponse(
+            {
+                "tbs_response_data": tbs,
+                "signature_algorithm": algos.SignedDigestAlgorithm(
+                    {
+                        "algorithm": "rsassa_pkcs1v15",
+                    }
+                ),
+                "signature": signature,
+            }
+        )
+
+        full = asn1_ocsp.OCSPResponse(
+            {
+                "response_status": "successful",
+                "response_bytes": asn1_ocsp.ResponseBytes(
+                    {
+                        "response_type": "basic_ocsp_response",
+                        "response": core.ParsableOctetString(basic_response.dump()),
+                    }
+                ),
+            }
+        )
         der_bytes: bytes = full.dump()
         return der_bytes
 
     # --- Internal cert construction ---
 
     def _build_root_cert(self, key: RSAPrivateKey, now: datetime) -> x509.Certificate:
-        name = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, "Attestplane Test Root CA"),
-        ])
+        name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, "Attestplane Test Root CA"),
+            ]
+        )
         builder = (
             x509.CertificateBuilder()
             .subject_name(name)
@@ -467,9 +514,11 @@ class TestTSAAuthority:
         now: datetime,
         path_length: int,
     ) -> x509.Certificate:
-        name = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, f"Attestplane Test Intermediate CA T{tier}"),
-        ])
+        name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, f"Attestplane Test Intermediate CA T{tier}"),
+            ]
+        )
         builder = (
             x509.CertificateBuilder()
             .subject_name(name)
@@ -508,9 +557,11 @@ class TestTSAAuthority:
         signer_cert: x509.Certificate,
         now: datetime,
     ) -> x509.Certificate:
-        leaf_name = x509.Name([
-            x509.NameAttribute(NameOID.COMMON_NAME, self._common_name),
-        ])
+        leaf_name = x509.Name(
+            [
+                x509.NameAttribute(NameOID.COMMON_NAME, self._common_name),
+            ]
+        )
         builder = (
             x509.CertificateBuilder()
             .subject_name(leaf_name)
@@ -544,12 +595,14 @@ class TestTSAAuthority:
 
 def _sha256(data: bytes) -> bytes:
     from hashlib import sha256
+
     digest: bytes = sha256(data).digest()
     return digest
 
 
 def _digest(data: bytes, algorithm: str) -> bytes:
     from hashlib import sha256, sha384, sha512
+
     if algorithm == "sha256":
         digest: bytes = sha256(data).digest()
         return digest
@@ -574,6 +627,7 @@ def _hash_algorithm(algorithm: str) -> hashes.HashAlgorithm:
 
 def _sha1(data: bytes) -> bytes:
     from hashlib import sha1
+
     digest: bytes = sha1(data).digest()
     return digest
 
@@ -720,9 +774,7 @@ class TestRekorAuthority:
             "logID": self._log_id,
             "logIndex": self._index,
         }
-        set_payload_bytes = json.dumps(
-            set_payload, sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
+        set_payload_bytes = json.dumps(set_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         set_signature = self._log_key.sign(set_payload_bytes)
 
         log_entry = {
