@@ -14,6 +14,7 @@ import attestplane.sdk as attestplane_sdk
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PY_SRC = REPO_ROOT / "sdk" / "python" / "src"
+PASS_FIXTURE = REPO_ROOT / "fixtures" / "positive" / "minimal.json"
 
 
 def test_import_attestplane_smoke() -> None:
@@ -27,7 +28,9 @@ def test_public_all_symbols_are_defined() -> None:
 
 
 def test_core_readme_import_symbols_smoke() -> None:
-    from attestplane import AttestSubstrate, EventDraft, SubjectRef
+    from attestplane import AttestSubstrate, EventDraft, SubjectRef, verify
+
+    assert verify(str(PASS_FIXTURE)).taxonomy_version == 1
 
     sub = AttestSubstrate()
     sub.append(

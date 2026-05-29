@@ -186,6 +186,9 @@ from attestplane.verifier import (
     verify_proof_bundle,
     verify_proof_bundle_file,
 )
+from attestplane.verifier import (
+    verify_proof_bundle_file as verify,
+)
 from attestplane.verify_errors import (
     ALL_VERIFY_ERROR_CODES_V1,
     VERIFY_ERROR_DESCRIPTIONS,
@@ -357,6 +360,7 @@ __all__ = [
     "verify_replay_manifest",
     "verify_retention_proofs",
     "check_settlement_precondition",
+    "verify",
     "replay_fixture",
     "verify_chain",
     "verify_chain_with_anchors",
@@ -367,20 +371,22 @@ __all__ = [
 ]
 
 if _SIGNING_AVAILABLE:
-    __all__.extend([
-        "SIGNATURE_SCHEMA_VERSION",
-        "EnvKeyProvider",
-        "FileKeyProvider",
-        "InMemoryKeyProvider",
-        "KeyBoundaryError",
-        "KeyProvider",
-        "KeyProviderError",
-        "MultiSignerProvider",
-        "SignatureMode",
-        "SignatureRecord",
-        "SignatureVerificationError",
-        "SignaturePolicy",
-        "SigningError",
-        "SigningMaterial",
-        "derive_key_id",
-    ])
+    __all__.extend(
+        [
+            "SIGNATURE_SCHEMA_VERSION",
+            "EnvKeyProvider",
+            "FileKeyProvider",
+            "InMemoryKeyProvider",
+            "KeyBoundaryError",
+            "KeyProvider",
+            "KeyProviderError",
+            "MultiSignerProvider",
+            "SignatureMode",
+            "SignatureRecord",
+            "SignatureVerificationError",
+            "SignaturePolicy",
+            "SigningError",
+            "SigningMaterial",
+            "derive_key_id",
+        ]
+    )
