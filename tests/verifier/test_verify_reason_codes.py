@@ -71,7 +71,7 @@ def _signed_bundle() -> dict:
     return bundle
 
 
-def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
+def test_verify_reason_code_taxonomy_version_is_stable_and_namespaced() -> None:
     assert VERIFY_REASON_TAXONOMY_VERSION == 1
     expected = (
         VERIFY_REASON_ANCHOR_INVALID,
@@ -87,6 +87,8 @@ def test_verify_reason_code_taxonomy_is_stable_and_namespaced() -> None:
     )
 
     assert ALL_VERIFY_REASON_CODES_V1 == expected
+    result = verify_proof_bundle(_bundle())
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
     for code in ALL_VERIFY_REASON_CODES_V1:
         assert is_known_verify_reason_code(code)
         assert verify_reason_code_matches_format(code)
@@ -111,14 +113,18 @@ def test_verify_reason_code_canonical_mismatch_is_primary() -> None:
     assert result.primary_reason == VERIFY_REASON_CANONICAL_MISMATCH
 
 
-def test_verify_reason_code_signature_missing_is_primary_for_strict_unsigned_bundle() -> None:
+def test_verify_reason_code_signature_missing_is_primary_for_strict_unsigned_bundle() -> (
+    None
+):
     result = verify_proof_bundle(_bundle(), require_signed_attestation=True)
 
     assert result.ok is False
     assert result.primary_reason == VERIFY_REASON_SIGNATURE_MISSING
 
 
-def test_verify_reason_code_signature_invalid_is_primary_for_malformed_signature_material() -> None:
+def test_verify_reason_code_signature_invalid_is_primary_for_malformed_signature_material() -> (
+    None
+):
     bundle = _signed_bundle()
     bundle["signatures"][0]["signature_hex"] = "not-hex"
 
@@ -128,7 +134,9 @@ def test_verify_reason_code_signature_invalid_is_primary_for_malformed_signature
     assert result.primary_reason == VERIFY_REASON_SIGNATURE_INVALID
 
 
-def test_verify_reason_code_required_field_missing_is_primary_for_missing_signature_field() -> None:
+def test_verify_reason_code_required_field_missing_is_primary_for_missing_signature_field() -> (
+    None
+):
     bundle = _signed_bundle()
     del bundle["signatures"][0]["signature_hex"]
 
@@ -183,7 +191,9 @@ def test_verify_reason_code_additive_unknown_fields_are_accepted() -> None:
     assert result.secondary_reasons == ()
 
 
-def test_verify_reason_code_canonical_mismatch_keeps_primary_before_schema_version() -> None:
+def test_verify_reason_code_canonical_mismatch_keeps_primary_before_schema_version() -> (
+    None
+):
     bundle = _signed_bundle()
     bundle["events"][0]["event_hash_hex"] = "f" * 64
     bundle["chain_metadata"]["schema_version"] = 999
@@ -233,7 +243,9 @@ def test_verify_reason_code_schema_exception_classification(
 ) -> None:
     bundle = copy.deepcopy(_bundle())
     if "verification_method" in mutation:
-        bundle["verification_report"]["verification_method"] = mutation["verification_method"]
+        bundle["verification_report"]["verification_method"] = mutation[
+            "verification_method"
+        ]
     else:
         bundle.update(mutation)
 
@@ -243,7 +255,9 @@ def test_verify_reason_code_schema_exception_classification(
     assert classify_bundle_schema_error(exc_info.value) == expected
 
 
-def test_verify_reason_code_cli_json_smoke(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_verify_reason_code_cli_json_smoke(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     from attestplane.cli.main import main
 
     path = tmp_path / "unsigned.json"

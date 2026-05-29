@@ -11,7 +11,10 @@ import pytest
 
 from attestplane.cli.main import main
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
+from attestplane.verify_errors import (
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    VERIFY_REQUIRED_FIELDS_MISSING,
+)
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
@@ -24,18 +27,24 @@ ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 CANONICAL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 SIGNED_FIXTURE = ROOT / "tests" / "fixtures" / "v1.7.0_signed.json"
-MISSING_SIGNATURES_FIXTURE = ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
+MISSING_SIGNATURES_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
+)
 
 FIXED_SIGNER_SUBJECT = "key_id:4bf5122f344554c53bde2ebb8cd2b7e3"
 
 
 def _write_bundle(tmp_path: Path, bundle: dict[str, object], *, name: str) -> Path:
     path = tmp_path / name
-    path.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return path
 
 
-def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
+def _run_verify(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> tuple[int, str, str]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, captured.out, captured.err
@@ -90,16 +99,18 @@ def _assert_rationale_lines(
         assert part in rationale_line
 
 
-def _assert_failure_summary(stdout: str, *, signer_subject: str, schema_version: str) -> None:
+def _assert_failure_summary(
+    stdout: str, *, signer_subject: str, schema_version: str
+) -> None:
     assert stdout.strip() == (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy version=1 anchor=absent"
     )
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
     assert stdout.strip() == (
-        f"OK signer_subject={signer_subject} schema_version=1 taxonomy_version=1 anchor=absent"
+        f"OK signer_subject={signer_subject} schema_version=1 taxonomy version=1 anchor=absent"
     )
 
 
@@ -151,19 +162,19 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 ("at least one signed attestation",),
             ),
         ),
+        (
+            ["verify", "--explain", str(schema_unsupported_bundle)],
+            1,
+            FIXED_SIGNER_SUBJECT,
+            "2",
+            None,
+            "compact",
             (
-                ["verify", "--explain", str(schema_unsupported_bundle)],
-                1,
-                FIXED_SIGNER_SUBJECT,
-                "2",
-                None,
-                "compact",
-                (
-                    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
-                    "/chain_metadata/schema_version",
-                    ("chain_metadata.schema_version=2", "schema_version values (1,)"),
-                ),
+                VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                "/chain_metadata/schema_version",
+                ("chain_metadata.schema_version=2", "schema_version values (1,)"),
             ),
+        ),
         (
             ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
             1,
@@ -179,12 +190,18 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
     ]
 
-    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (reason, pointer, message_parts) in cases:
+    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
+        reason,
+        pointer,
+        message_parts,
+    ) in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
-            _assert_failure_summary(stdout, signer_subject=signer_subject, schema_version=schema_version)
+            _assert_failure_summary(
+                stdout, signer_subject=signer_subject, schema_version=schema_version
+            )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
         _assert_rationale_lines(
@@ -199,7 +216,9 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
 def test_verify_explain_canonicalization_failure_summary_is_generic(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, stdout, stderr = _run_verify(["verify", "--explain", str(CANONICAL_FIXTURE)], capsys)
+    rc, stdout, stderr = _run_verify(
+        ["verify", "--explain", str(CANONICAL_FIXTURE)], capsys
+    )
 
     assert rc == 1
     assert stdout.startswith("FAIL: canonicalization error in ")
@@ -230,12 +249,14 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
         for entry in explanations
     ]
 
-    rc, stdout, stderr = _run_verify(["verify", "--explain", str(multi_reason_bundle)], capsys)
+    rc, stdout, stderr = _run_verify(
+        ["verify", "--explain", str(multi_reason_bundle)], capsys
+    )
 
     assert rc == 1
     assert stdout.startswith("FAIL signer_subject=")
     assert "schema_version=999" in stdout
-    assert "taxonomy_version=1" in stdout
+    assert "taxonomy version=1" in stdout
     assert stderr.splitlines() == expected_lines
 
 
@@ -252,7 +273,9 @@ def test_verify_explain_compact_success_summary(
 def test_verify_explain_json_emits_explanation_array_for_success(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, stdout, stderr = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
+    rc, stdout, stderr = _run_verify(
+        ["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys
+    )
     payload = json.loads(stdout)
 
     assert rc == 0
@@ -264,7 +287,7 @@ def test_verify_explain_json_emits_explanation_array_for_success(
     assert summary["primary_reason"] is None
     assert summary["pointer"] == "/"
     assert summary["message"] == (
-        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy_version=1 anchor=absent"
+        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy version=1 anchor=absent"
     )
 
 
@@ -282,18 +305,30 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     payload_non_empty = json.loads(stdout_non_empty)
     assert rc_non_empty == 2
     assert payload_non_empty["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload_non_empty["explanation"][0]["primary_reason"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert (
+        payload_non_empty["explanation"][0]["primary_reason"]
+        == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    )
     assert payload_non_empty["explanation"][0]["pointer"] == "/events"
     assert stderr_non_empty == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
 
     rc_strict, stdout_strict, stderr_strict = _run_verify(
-        ["verify", "--json", "--explain", "--strict-schema", str(MISSING_SIGNATURES_FIXTURE)],
+        [
+            "verify",
+            "--json",
+            "--explain",
+            "--strict-schema",
+            str(MISSING_SIGNATURES_FIXTURE),
+        ],
         capsys,
     )
     payload_strict = json.loads(stdout_strict)
     assert rc_strict == 2
     assert payload_strict["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload_strict["explanation"][0]["primary_reason"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert (
+        payload_strict["explanation"][0]["primary_reason"]
+        == VERIFY_REASON_SIGNATURE_MISSING
+    )
     assert payload_strict["explanation"][0]["pointer"] == "/signatures"
     assert stderr_strict == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
@@ -304,6 +339,11 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     payload_schema = json.loads(stdout_schema)
     assert rc_schema == 1
     assert payload_schema["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
-    assert payload_schema["explanation"][0]["primary_reason"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
-    assert payload_schema["explanation"][0]["pointer"] == "/chain_metadata/schema_version"
+    assert (
+        payload_schema["explanation"][0]["primary_reason"]
+        == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    )
+    assert (
+        payload_schema["explanation"][0]["pointer"] == "/chain_metadata/schema_version"
+    )
     assert stderr_schema == ""

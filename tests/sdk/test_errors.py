@@ -4,7 +4,9 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -15,7 +17,14 @@ from attestplane.sdk import (
     IncompleteProofBundleError,
     verify_minimum_bundle,
 )
+from attestplane.verifier import verify_proof_bundle
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION
 from attestplane.types import EventDraft
+
+ROOT = Path(__file__).resolve().parents[2]
+SIGNED_SCHEMA_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+)
 
 
 def test_verify_minimum_bundle_raises_empty_error_for_zero_event_bundle() -> None:
@@ -41,3 +50,12 @@ def test_verify_minimum_bundle_raises_incomplete_error_for_unsigned_bundle() -> 
         verify_minimum_bundle(builder.build())
 
     assert exc_info.value.error_code == "bundle.schema.incomplete"
+
+
+def test_verify_result_taxonomy_version_matches_sdk_result_object() -> None:
+    bundle = json.loads(SIGNED_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
+
+    result = verify_proof_bundle(bundle)
+
+    assert result.ok is True
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
