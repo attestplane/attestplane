@@ -26,11 +26,13 @@ from attestplane import __version__
 from attestplane.cli.verify_json import (
     _verify_explanations,
     _verify_success_summary,
+    _taxonomy_version_requirement_failure,
     build_verify_json_outcome,
 )
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_IO_ERROR,
+    VERIFY_METADATA_CLOSURE_FAILED,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
 )
@@ -134,6 +136,15 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        help=(
+            "fail closed unless chain_metadata.evidence_taxonomy_version is present "
+            "and at least the requested value"
+        ),
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -429,12 +440,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
 
     if args.json_output:
         outcome = build_verify_json_outcome(
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -444,6 +457,40 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     try:
         bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+        taxonomy_failure = _taxonomy_version_requirement_failure(
+            bundle,
+            require_taxonomy_version=require_taxonomy_version,
+        )
+        if taxonomy_failure is not None:
+            code, path, detail = taxonomy_failure
+            explain = getattr(args, "explain", False)
+            human = f"FAIL: taxonomy version requirement failed: {detail}"
+            if not explain:
+                human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+            _emit(
+                {
+                    "ok": False,
+                    "error": "taxonomy_version",
+                    "error_code": VERIFY_METADATA_CLOSURE_FAILED,
+                    "primary_reason": code,
+                    "secondary_reasons": [],
+                    "detail": detail,
+                    **_verify_scope_metadata(),
+                },
+                args.json_output,
+                human=human,
+            )
+            if explain and not args.json_output:
+                _write_verify_explanations(
+                    [
+                        {
+                            "primary_reason": code,
+                            "pointer": path,
+                            "message": detail,
+                        }
+                    ]
+                )
+            return 1
         result = verify_proof_bundle(
             bundle,
             require_non_empty=require_non_empty,
@@ -560,6 +607,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=require_taxonomy_version,
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
