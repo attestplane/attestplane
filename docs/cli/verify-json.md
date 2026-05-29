@@ -30,6 +30,9 @@ The payload is fixed at schema version 1:
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
+- `taxonomy_version` appears in the `verify --json` payload for both plain
+  JSON mode and `verify --json --explain`; it is additive output metadata,
+  not a bundle field.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
@@ -46,7 +49,11 @@ The payload is fixed at schema version 1:
   stable `taxonomy_version`.
 
 Consumers should keep branching on `exit_code` first and then inspect
-`result` and `reasons[]` for diagnostics.
+`result`, `taxonomy_version`, and `reasons[]` for diagnostics. CI consumers
+that pin the taxonomy should treat a `taxonomy_version` change as a contract
+change and refresh the pinned expectation before relying on the reason-code
+surface. For the versioning background, see
+[`docs/release-notes/v1.7.x-delta.md`](../release-notes/v1.7.x-delta.md).
 
 ## `verify --explain`
 
@@ -86,6 +93,8 @@ the structured payload.
   "schema_version": 1,
   "result": "pass",
   "exit_code": 0,
+  "reason_code": null,
+  "taxonomy_version": 1,
   "reasons": [],
   "explanation": [
     {
@@ -146,6 +155,10 @@ if [ "$rc" -ne 0 ] || [ "$result" != "pass" ]; then
 fi
 ```
 
+Pinned CI consumers should assert the expected `taxonomy_version` before
+depending on the reason-code set, because that field is the contract marker for
+the shared `--json` / `--explain` taxonomy surface.
+
 ## See Also
 
 - [`docs/schema/verify-json.md`](../schema/verify-json.md) - schema-version
@@ -153,3 +166,6 @@ fi
 - [`schemas/cli/verify-result-v1.json`](../../schemas/cli/verify-result-v1.json)
   - JSON Schema for the structured result.
 - [`docs/errors.md`](../errors.md) - `att.verify.*` reason-code taxonomy.
+- [`docs/release-notes/v1.7.x-delta.md`](../release-notes/v1.7.x-delta.md) -
+  existing reason-code taxonomy versioning note referenced by the v1.8.x
+  consumer-pinning delta.
