@@ -34,58 +34,12 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+VERIFY_JSON_CONTRACT_GOLDEN = ROOT / "tests" / "fixtures" / "verify_json_contract.golden"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
 
-# Versioned snapshot for the consumer-facing verify --json contract.
-# Keep this fixture in sync with the intentional contract surface only.
-VERIFY_JSON_CONTRACT_V1 = {
-    "schema_version": 1,
-    "exit_codes": {
-        "accept": 0,
-        "verification_failure": 1,
-        "usage_or_io_error": 2,
-    },
-    "cases": {
-        "accept": {
-            "fixture": str(PASS_FIXTURE.relative_to(ROOT)),
-            "payload": {
-                "bundle": {
-                    "digest": "d4d37025f7452ad2525d6b37c898bf08cd335db3e7983ce04e242e898b77b2cb",
-                    "schema_version": 1,
-                },
-                "exit_code": 0,
-                "reason_code": None,
-                "reasons": [],
-                "result": "pass",
-                "schema_version": 1,
-                "taxonomy_version": 1,
-            },
-        },
-        "verification_failure": {
-            "fixture": str(FAIL_FIXTURE.relative_to(ROOT)),
-            "payload": {
-                "bundle": {
-                    "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",
-                    "schema_version": 1,
-                },
-                "exit_code": 1,
-                "reason_code": VERIFY_REASON_CANONICAL_MISMATCH,
-                "reasons": [
-                    {
-                        "code": VERIFY_REASON_CANONICAL_MISMATCH,
-                        "message": "canonicalization failed",
-                        "path": "/events/0/event/payload/artifact_ref",
-                    },
-                ],
-                "result": "fail",
-                "schema_version": 1,
-                "taxonomy_version": 1,
-            },
-        },
-    },
-}
+VERIFY_JSON_CONTRACT_PAYLOAD = json.loads(VERIFY_JSON_CONTRACT_GOLDEN.read_text(encoding="utf-8"))
 
 
 def _run_verify(
@@ -172,9 +126,9 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["accept"]
+    assert rc == 0
     assert stderr == ""
-    assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["accept"]["payload"]
+    assert payload == VERIFY_JSON_CONTRACT_PAYLOAD
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
@@ -196,7 +150,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent",
         }
     ]
 
@@ -206,9 +160,21 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["verification_failure"]
+    assert rc == 1
     assert stderr == ""
-    assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["verification_failure"]["payload"]
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 1
+    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["taxonomy_version"] == 1
+    assert payload["bundle"]["schema_version"] == 1
+    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
+    assert payload["reasons"]
+    reason = payload["reasons"][0]
+    assert set(reason) == {"code", "path", "message"}
+    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert reason["path"].startswith("/events/")
+    assert "canonicalization" in reason["message"]
 
 
 def test_verify_json_and_explain_keep_json_parseable(
@@ -262,7 +228,7 @@ def test_verify_json_reports_invalid_utf8(
 
     rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_or_io_error"]
+    assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1
@@ -318,7 +284,7 @@ def test_verify_json_reports_missing_bundle_path(
 
     rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_or_io_error"]
+    assert rc == 2
     assert stderr == f"{VERIFY_IO_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1

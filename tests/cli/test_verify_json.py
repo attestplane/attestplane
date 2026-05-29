@@ -18,12 +18,25 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+VALID_BUNDLE_FIXTURE = ROOT / "tests" / "fixtures" / "valid_bundle.json"
+VERIFY_JSON_CONTRACT_GOLDEN = ROOT / "tests" / "fixtures" / "verify_json_contract.golden"
 
 
 def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object]]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out)
+
+
+def test_verify_json_output_contract_matches_golden(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", "--json", str(VALID_BUNDLE_FIXTURE)])
+    captured = capsys.readouterr()
+
+    assert rc == 0
+    assert captured.err == ""
+    assert captured.out == VERIFY_JSON_CONTRACT_GOLDEN.read_text(encoding="utf-8")
 
 
 def test_verify_json_pass_fixture_emits_fixed_schema(
@@ -60,6 +73,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
     assert payload["reasons"]
     reason = payload["reasons"][0]
+    assert set(reason) == {"code", "path", "message"}
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["path"].startswith("/events/")
     assert "canonicalization" in reason["message"]
@@ -82,6 +96,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert first["pointer"].startswith("/events/")
     assert "Unicode-NFC" in first["message"]
     reason = payload["reasons"][0]
+    assert set(reason) == {"code", "path", "message", "explanation"}
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
