@@ -122,6 +122,18 @@ async def implement_activity(
             timeout=2700,
         )
 
+        # Auto-fix style issues so ruff/format CI checks pass.
+        # Errors that can't be auto-fixed are logged but don't block the commit.
+        try:
+            _run(["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", "."], cwd=worktree)
+        except RuntimeError as _ruff_err:
+            activity.logger.warning("ruff auto-fix had remaining errors (will commit anyway): %s",
+                                    str(_ruff_err)[:300])
+        try:
+            _run(["python3.11", "-m", "ruff", "format", "."], cwd=worktree)
+        except RuntimeError as _fmt_err:
+            activity.logger.warning("ruff format failed: %s", str(_fmt_err)[:300])
+
         # Detect changes
         porcelain = _run(["git", "status", "--porcelain"], cwd=worktree)
         has_changes = bool(porcelain.strip())
