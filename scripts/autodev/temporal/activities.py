@@ -605,27 +605,58 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             "GIT_COMMITTER_EMAIL": BOT_EMAIL,
         })
         _run(["git", "push", "origin", branch, "--force-with-lease"], cwd=worktree)
-    except RuntimeError as rebase_err:
-        activity.logger.warning("rebase failed for PR #%d: %s", pr_number, rebase_err)
-        # Abort rebase so worktree is clean; merge attempt below may still work or fail
+        # Rebase had conflicts — close the PR rather than retrying forever
+        activity.logger.error("rebase FAILED for PR #%d (true conflict) — closing PR", pr_number)
         try:
             _run(["git", "rebase", "--abort"], cwd=worktree)
         except RuntimeError:
             pass
+        try:
+            _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
+                 "--comment", "Closed by autodev-train: rebase onto main failed due to merge conflicts."])
+        except RuntimeError:
+            pass
+        db.upsert_run(issue_number, stage="failed")
+        db.log_event(issue_number, "merge", "conflict", f"pr={pr_number}")
+        try:
+            _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+        except RuntimeError:
+            pass
+        return {"merged": False, "reason": "conflict"}
     finally:
         try:
             _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
         except Exception:
             pass
 
+    # Rebase succeeded — use --auto so GitHub waits for fresh CI before merging
     _gh([
         "pr", "merge", str(pr_number),
         "-R", REPO_SLUG,
         "--squash",
+        "--auto",
         "--subject", f"autodev: implement issue #{issue_number} [autodev]",
         "--body",
         "Squash-merged by autodev-train Temporal worker after AI review + CI.",
     ])
+    # Poll until GitHub actually merges the PR (--auto is async)
+    poll_deadline = _time.monotonic() + 600
+    while True:
+        state = json.loads(_gh(
+            ["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "state,mergedAt"]
+        ))
+        if state.get("mergedAt"):
+            break
+        if state.get("state") == "CLOSED":
+            activity.logger.error("PR #%d was closed (not merged) after --auto", pr_number)
+            db.upsert_run(issue_number, stage="failed")
+            db.log_event(issue_number, "merge", "closed_not_merged", f"pr={pr_number}")
+            return {"merged": False, "reason": "closed_not_merged"}
+        if _time.monotonic() > poll_deadline:
+            activity.logger.warning("--auto merge timeout for PR #%d", pr_number)
+            break
+        await asyncio.sleep(20)
+
     db.upsert_run(issue_number, stage="merged")
     db.log_event(issue_number, "merge", "completed", f"pr={pr_number}")
     return {"merged": True}
