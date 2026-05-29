@@ -30,6 +30,8 @@ The payload is fixed at schema version 1:
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
+- Consumer pinning: `taxonomy_version` is always present at the top level,
+  including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
