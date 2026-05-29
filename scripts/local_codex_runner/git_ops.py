@@ -69,7 +69,9 @@ class GitOps:
 
     def ensure_clean_worktree(self) -> None:
         if self.run(["status", "--porcelain"]).strip():
-            raise GitSafetyError("Worktree is not clean; pass --allow-dirty only for supervised local recovery.")
+            raise GitSafetyError(
+                "Worktree is not clean; pass --allow-dirty only for supervised local recovery."
+            )
 
     def checkout_base_and_pull(self, base_ref: str) -> None:
         if base_ref.startswith("origin/"):
@@ -94,7 +96,9 @@ class GitOps:
         count = self.run(["rev-list", "--count", f"origin/{branch}..HEAD"]).strip()
         return int(count or "0") > 0
 
-    def create_branch(self, issue_number: int, title: str, *, lane_suffix: str | None = None) -> str:
+    def create_branch(
+        self, issue_number: int, title: str, *, lane_suffix: str | None = None
+    ) -> str:
         branch = f"codex/issue-{issue_number}-{slugify(title)}"
         if lane_suffix:
             branch = f"{branch}-{slugify(lane_suffix)}"
@@ -111,7 +115,9 @@ class GitOps:
         if current == "":
             self.run(["switch", "-C", branch])
             return
-        raise GitSafetyError(f"Refusing to continue on branch {current!r}; expected {branch!r}")
+        raise GitSafetyError(
+            f"Refusing to continue on branch {current!r}; expected {branch!r}"
+        )
 
     def has_changes(self) -> bool:
         return bool(self.run(["status", "--porcelain"]).strip())
@@ -142,11 +148,15 @@ class GitOps:
         changed = files if files is not None else self.changed_files()
         forbidden = [path for path in changed if is_forbidden_path(path)]
         if forbidden:
-            raise GitSafetyError(f"Forbidden sensitive file change blocked: {', '.join(forbidden)}")
+            raise GitSafetyError(
+                f"Forbidden sensitive file change blocked: {', '.join(forbidden)}"
+            )
 
     def remove_transient_evidence(self) -> list[str]:
         transient = [
-            (status, path) for status, path in self.status_paths() if is_transient_evidence_path(path)
+            (status, path)
+            for status, path in self.status_paths()
+            if is_transient_evidence_path(path)
         ]
         untracked = [path for status, path in transient if status == "??"]
         tracked = [path for status, path in transient if status != "??"]
@@ -156,7 +166,9 @@ class GitOps:
             self.run(["clean", "-f", "--", *untracked])
         return tracked + untracked
 
-    def commit_all(self, issue_number: int, message: str, *, expected_branch: str | None = None) -> None:
+    def commit_all(
+        self, issue_number: int, message: str, *, expected_branch: str | None = None
+    ) -> None:
         if expected_branch is not None:
             self.ensure_current_branch(expected_branch)
         branch = self.current_branch()
@@ -164,7 +176,10 @@ class GitOps:
             raise GitSafetyError("Refusing to commit directly on main/master")
         if not self.has_changes():
             raise GitSafetyError("Refusing to commit an empty diff")
-        if f"#{issue_number}" not in message and f"issue {issue_number}" not in message.lower():
+        if (
+            f"#{issue_number}" not in message
+            and f"issue {issue_number}" not in message.lower()
+        ):
             raise GitSafetyError("Commit message must include the issue number")
         self.remove_transient_evidence()
         if not self.has_changes():
@@ -182,7 +197,9 @@ class GitOps:
     def abort_or_stash_on_failure(self) -> str:
         if not self.has_changes():
             return "no changes to stash"
-        return truncate(self.run(["stash", "push", "-u", "-m", "local-codex-runner-failure"]))
+        return truncate(
+            self.run(["stash", "push", "-u", "-m", "local-codex-runner-failure"])
+        )
 
 
 class GitSafetyError(RuntimeError):
@@ -192,7 +209,7 @@ class GitSafetyError(RuntimeError):
 def slugify(title: str, *, max_length: int = 48) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     slug = re.sub(r"-+", "-", slug)
-    return (slug[:max_length].strip("-") or "task")
+    return slug[:max_length].strip("-") or "task"
 
 
 def is_forbidden_path(path: str) -> bool:
@@ -202,4 +219,6 @@ def is_forbidden_path(path: str) -> bool:
 
 def is_transient_evidence_path(path: str) -> bool:
     normalized = path.replace("\\", "/")
-    return any(fnmatch.fnmatch(normalized, pattern) for pattern in TRANSIENT_EVIDENCE_PATTERNS)
+    return any(
+        fnmatch.fnmatch(normalized, pattern) for pattern in TRANSIENT_EVIDENCE_PATTERNS
+    )

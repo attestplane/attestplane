@@ -37,8 +37,7 @@ def _build_chain(n: int) -> list[ChainedEvent]:
             actor=f"agent://test/{i}",
             payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=ts,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=ts, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -204,7 +203,8 @@ def test_mock_provider_uses_explicit_now() -> None:
     provider = MockTSAProvider()
     explicit = datetime(2030, 1, 1, 0, 0, 0, tzinfo=UTC)
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=b"\x00" * 32), now=explicit,
+        TimestampRequest(digest=b"\x00" * 32),
+        now=explicit,
     )
     assert anchor.issued_at_claimed == explicit
 
@@ -213,7 +213,8 @@ def test_mock_provider_writes_well_formed_anchor_record() -> None:
     provider = MockTSAProvider(fixed_time=datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC))
     chain = _build_chain(1)
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=chain[0].event_hash), anchored_seq=0,
+        TimestampRequest(digest=chain[0].event_hash),
+        anchored_seq=0,
     )
     assert anchor.anchor_schema_version == ANCHOR_SCHEMA_VERSION
     assert anchor.anchored_seq == 0
@@ -232,7 +233,8 @@ def test_multi_provider_fans_out() -> None:
     multi = MultiTSAProvider([p1, p2])
 
     anchors = multi.request_timestamps(
-        TimestampRequest(digest=b"\x00" * 32), anchored_seq=0,
+        TimestampRequest(digest=b"\x00" * 32),
+        anchored_seq=0,
     )
     assert len(anchors) == 2
     assert {a.tsa_provider_id for a in anchors} == {"alpha", "beta"}
@@ -287,7 +289,8 @@ def test_multi_provider_provider_ids_property() -> None:
 def _good_anchor(chain: list[ChainedEvent], seq: int) -> AnchorRecord:
     provider = MockTSAProvider(fixed_time=datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC))
     return provider.request_timestamp(
-        TimestampRequest(digest=chain[seq].event_hash), anchored_seq=seq,
+        TimestampRequest(digest=chain[seq].event_hash),
+        anchored_seq=seq,
     )
 
 
@@ -330,7 +333,8 @@ def test_verify_chain_with_multi_anchor_per_seq() -> None:
     p2 = MockTSAProvider(provider_id="beta", fixed_time=datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC))
     multi = MultiTSAProvider([p1, p2])
     anchors = multi.request_timestamps(
-        TimestampRequest(digest=chain[1].event_hash), anchored_seq=1,
+        TimestampRequest(digest=chain[1].event_hash),
+        anchored_seq=1,
     )
     result = verify_chain_with_anchors(chain, anchors)
     assert result.ok is True
@@ -416,6 +420,7 @@ def test_verify_propagates_chain_failure() -> None:
     chain = _build_chain(2)
     # Mutate the chain so verify_chain fails.
     from dataclasses import replace
+
     chain[1] = replace(chain[1], prev_hash=b"\xff" * 32)
     anchor = _good_anchor(chain, 0)
     result = verify_chain_with_anchors(chain, [anchor])

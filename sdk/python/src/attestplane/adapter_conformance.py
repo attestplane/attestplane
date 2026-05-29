@@ -81,6 +81,7 @@ def _eventdraft_to_dict(draft: EventDraft) -> dict[str, Any]:
 
 def _canonical_bytes_hash(d: dict[str, Any]) -> str:
     import hashlib
+
     return hashlib.sha256(canonicalize(d)).hexdigest()
 
 
@@ -98,65 +99,39 @@ def _load_and_validate_fixture(fixture_path: str | Path) -> dict[str, Any]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise AdapterConformanceError(
-            f"cannot load fixture {path}: {exc}"
-        ) from exc
+        raise AdapterConformanceError(f"cannot load fixture {path}: {exc}") from exc
 
     if not isinstance(raw, dict):
-        raise AdapterConformanceError(
-            f"fixture {path}: top level must be object, got {type(raw).__name__}"
-        )
+        raise AdapterConformanceError(f"fixture {path}: top level must be object, got {type(raw).__name__}")
     if raw.get("$schema_version") != 1:
-        raise AdapterConformanceError(
-            f"fixture {path}: $schema_version must be 1, got "
-            f"{raw.get('$schema_version')!r}"
-        )
+        raise AdapterConformanceError(f"fixture {path}: $schema_version must be 1, got {raw.get('$schema_version')!r}")
     if raw.get("fixture_kind") != "adapter_conformance":
         raise AdapterConformanceError(
-            f"fixture {path}: fixture_kind must be 'adapter_conformance', "
-            f"got {raw.get('fixture_kind')!r}"
+            f"fixture {path}: fixture_kind must be 'adapter_conformance', got {raw.get('fixture_kind')!r}"
         )
     if not isinstance(raw.get("runtime_kind"), str) or not raw["runtime_kind"]:
-        raise AdapterConformanceError(
-            f"fixture {path}: runtime_kind must be non-empty string"
-        )
+        raise AdapterConformanceError(f"fixture {path}: runtime_kind must be non-empty string")
     if not isinstance(raw.get("fixture_version"), int) or raw["fixture_version"] < 1:
-        raise AdapterConformanceError(
-            f"fixture {path}: fixture_version must be integer >= 1"
-        )
+        raise AdapterConformanceError(f"fixture {path}: fixture_version must be integer >= 1")
     cases = raw.get("cases")
     if not isinstance(cases, list) or not cases:
-        raise AdapterConformanceError(
-            f"fixture {path}: cases must be non-empty list"
-        )
+        raise AdapterConformanceError(f"fixture {path}: cases must be non-empty list")
     seen_names: set[str] = set()
     for i, case in enumerate(cases):
         if not isinstance(case, dict):
-            raise AdapterConformanceError(
-                f"fixture {path}: cases[{i}] must be object"
-            )
+            raise AdapterConformanceError(f"fixture {path}: cases[{i}] must be object")
         name = case.get("name")
         if not isinstance(name, str) or not name:
-            raise AdapterConformanceError(
-                f"fixture {path}: cases[{i}].name must be non-empty string"
-            )
+            raise AdapterConformanceError(f"fixture {path}: cases[{i}].name must be non-empty string")
         if name in seen_names:
-            raise AdapterConformanceError(
-                f"fixture {path}: duplicate case name {name!r}"
-            )
+            raise AdapterConformanceError(f"fixture {path}: duplicate case name {name!r}")
         seen_names.add(name)
         if "runtime_event_input" not in case:
-            raise AdapterConformanceError(
-                f"fixture {path}: cases[{i}] missing runtime_event_input"
-            )
+            raise AdapterConformanceError(f"fixture {path}: cases[{i}] missing runtime_event_input")
         if "expected_event_draft" not in case:
-            raise AdapterConformanceError(
-                f"fixture {path}: cases[{i}] missing expected_event_draft"
-            )
+            raise AdapterConformanceError(f"fixture {path}: cases[{i}] missing expected_event_draft")
         if not isinstance(case["expected_event_draft"], dict):
-            raise AdapterConformanceError(
-                f"fixture {path}: cases[{i}].expected_event_draft must be object"
-            )
+            raise AdapterConformanceError(f"fixture {path}: cases[{i}].expected_event_draft must be object")
     return raw
 
 
@@ -199,34 +174,41 @@ def replay_fixture(
                 runtime_event = runtime_input
             actual_draft = adapter.translate(runtime_event)
         except Exception as exc:
-            results.append(AdapterCaseResult(
-                case_name=case_name, ok=False,
-                reason=f"adapter raised: {type(exc).__name__}: {exc}",
-                expected_canonical_hash=expected_hash,
-                actual_canonical_hash=None,
-            ))
+            results.append(
+                AdapterCaseResult(
+                    case_name=case_name,
+                    ok=False,
+                    reason=f"adapter raised: {type(exc).__name__}: {exc}",
+                    expected_canonical_hash=expected_hash,
+                    actual_canonical_hash=None,
+                )
+            )
             failed += 1
             continue
 
         actual = _eventdraft_to_dict(actual_draft)
         actual_hash = _canonical_bytes_hash(actual)
         if actual_hash == expected_hash:
-            results.append(AdapterCaseResult(
-                case_name=case_name, ok=True, reason=None,
-                expected_canonical_hash=expected_hash,
-                actual_canonical_hash=actual_hash,
-            ))
+            results.append(
+                AdapterCaseResult(
+                    case_name=case_name,
+                    ok=True,
+                    reason=None,
+                    expected_canonical_hash=expected_hash,
+                    actual_canonical_hash=actual_hash,
+                )
+            )
             passed += 1
         else:
-            results.append(AdapterCaseResult(
-                case_name=case_name, ok=False,
-                reason=(
-                    f"canonical-bytes mismatch (expected hash {expected_hash}, "
-                    f"got {actual_hash})"
-                ),
-                expected_canonical_hash=expected_hash,
-                actual_canonical_hash=actual_hash,
-            ))
+            results.append(
+                AdapterCaseResult(
+                    case_name=case_name,
+                    ok=False,
+                    reason=(f"canonical-bytes mismatch (expected hash {expected_hash}, got {actual_hash})"),
+                    expected_canonical_hash=expected_hash,
+                    actual_canonical_hash=actual_hash,
+                )
+            )
             failed += 1
 
     return AdapterConformanceReport(

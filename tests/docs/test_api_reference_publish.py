@@ -61,22 +61,34 @@ def test_stage_api_reference_site_writes_exact_release_line_and_latest_aliases(
 
     assert ref.tag == "v1.5.0"
     assert "./api/latest/" in (site_root / "index.html").read_text(encoding="utf-8")
-    assert (site_root / "api" / "index.html").read_text(encoding="utf-8").count("Exact release snapshot") == 1
-    release_index = (site_root / "api" / "releases" / "v1.5.0" / "index.html").read_text(
-        encoding="utf-8"
-    )
+    assert (site_root / "api" / "index.html").read_text(encoding="utf-8").count(
+        "Exact release snapshot"
+    ) == 1
+    release_index = (
+        site_root / "api" / "releases" / "v1.5.0" / "index.html"
+    ).read_text(encoding="utf-8")
     assert "./python/" in release_index
     assert "./typescript/" in release_index
     assert "../../latest/" in release_index
-    assert (site_root / "api" / "releases" / "v1.5.0" / "python" / "index.html").read_text(
-        encoding="utf-8"
-    ) == "<h1>python</h1>"
-    assert (site_root / "api" / "releases" / "v1.5.0" / "typescript" / "nested" / "asset.txt").read_text(
-        encoding="utf-8"
-    ) == "typescript"
+    assert (
+        site_root / "api" / "releases" / "v1.5.0" / "python" / "index.html"
+    ).read_text(encoding="utf-8") == "<h1>python</h1>"
+    assert (
+        site_root
+        / "api"
+        / "releases"
+        / "v1.5.0"
+        / "typescript"
+        / "nested"
+        / "asset.txt"
+    ).read_text(encoding="utf-8") == "typescript"
 
-    latest_html = (site_root / "api" / "latest" / "index.html").read_text(encoding="utf-8")
-    line_html = (site_root / "api" / "lines" / "v1.5" / "index.html").read_text(encoding="utf-8")
+    latest_html = (site_root / "api" / "latest" / "index.html").read_text(
+        encoding="utf-8"
+    )
+    line_html = (site_root / "api" / "lines" / "v1.5" / "index.html").read_text(
+        encoding="utf-8"
+    )
 
     assert "../releases/v1.5.0/" in latest_html
     assert "../../releases/v1.5.0/" in line_html

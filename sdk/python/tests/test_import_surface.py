@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -39,6 +40,16 @@ def test_core_readme_import_symbols_smoke() -> None:
         )
     )
     assert sub.verify().ok is True
+
+
+def test_top_level_verify_alias_surfaces_taxonomy_version() -> None:
+    from attestplane import verify
+
+    fixture = REPO_ROOT / "fixtures" / "positive" / "minimal.json"
+    bundle = json.loads(fixture.read_text(encoding="utf-8"))
+    result = verify(bundle)
+
+    assert result.taxonomy_version == 1
 
 
 def test_adapter_public_symbols_exported_from_root() -> None:

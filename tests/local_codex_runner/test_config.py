@@ -1,12 +1,19 @@
 from pathlib import Path
 
 import pytest
-from scripts.local_codex_runner.config import ConfigError, load_config, parse_simple_yaml
+from scripts.local_codex_runner.config import (
+    ConfigError,
+    load_config,
+    parse_simple_yaml,
+)
 
 
 def test_config_defaults_to_dry_run(tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
-    config_path.write_text('repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\n', encoding="utf-8")
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\n',
+        encoding="utf-8",
+    )
 
     config = load_config(config_path)
 
@@ -25,7 +32,9 @@ def test_config_requires_repo_and_workdir(tmp_path: Path) -> None:
 
 def test_cli_overrides_config(tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
-    config_path.write_text('repo: "old/repo"\nworkdir: "/tmp/old"\ndry_run: true\n', encoding="utf-8")
+    config_path.write_text(
+        'repo: "old/repo"\nworkdir: "/tmp/old"\ndry_run: true\n', encoding="utf-8"
+    )
 
     config = load_config(config_path, {"repo": "new/repo", "dry_run": False})
 
@@ -35,7 +44,10 @@ def test_cli_overrides_config(tmp_path: Path) -> None:
 
 def test_checkout_ref_defaults_to_pr_base(tmp_path: Path) -> None:
     config_path = tmp_path / "runner.yml"
-    config_path.write_text('repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\n', encoding="utf-8")
+    config_path.write_text(
+        'repo: "attestplane/attestplane"\nworkdir: "/tmp/attestplane"\n',
+        encoding="utf-8",
+    )
 
     config = load_config(config_path)
 
