@@ -6,8 +6,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, datetime
+import importlib.util
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 from attestplane.proof_bundle import ProofBundleBuilder
@@ -17,6 +19,9 @@ ROOT = Path(__file__).resolve().parents[2]
 VECTOR_ROOT = ROOT / "tests" / "conformance" / "vectors" / "canonicalization"
 POSITIVE_DIR = VECTOR_ROOT / "positive"
 NEGATIVE_DIR = VECTOR_ROOT / "negative"
+GOLDEN_FIXTURE_HELPER = (
+    ROOT / "tests" / "conformance" / "canonicalization_golden_fixture.py"
+)
 
 
 class DuplicateKeyError(ValueError):
@@ -46,10 +51,24 @@ def load_negative_vectors() -> list[dict[str, Any]]:
     return load_negative_canonicalization_vectors()
 
 
+def load_canonicalization_golden_fixture() -> dict[str, Any]:
+    module_name = "attestplane_canonicalization_golden_fixture"
+    if module_name in sys.modules:
+        return sys.modules[module_name].GOLDEN_FIXTURE
+    spec = importlib.util.spec_from_file_location(module_name, GOLDEN_FIXTURE_HELPER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"could not load canonicalization golden fixture helper from {GOLDEN_FIXTURE_HELPER}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module.GOLDEN_FIXTURE
+
+
 def positive_canonicalization_vectors_by_case() -> dict[str, dict[str, Any]]:
     return {
-        vector["case_id"]: vector
-        for vector in load_positive_canonicalization_vectors()
+        vector["case_id"]: vector for vector in load_positive_canonicalization_vectors()
     }
 
 
@@ -128,7 +147,7 @@ def materialize_negative_canonicalization_candidate(
         assert needle in raw
         return raw.replace(needle, replacement, 1)
     if mutation["kind"] == "wrap_raw_json":
-        return f'{mutation["prefix"]}{canonical_json_text(source)}{mutation["suffix"]}'
+        return f"{mutation['prefix']}{canonical_json_text(source)}{mutation['suffix']}"
     raise AssertionError(f"unknown mutation kind: {mutation['kind']}")
 
 
