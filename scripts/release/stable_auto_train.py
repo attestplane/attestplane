@@ -842,7 +842,61 @@ def latest_stable() -> StableVersion:
     return max(versions)
 
 
-def next_stable_after(version: StableVersion) -> StableVersion:
+def release_label_from_merged_pr(commit: str) -> str | None:
+    try:
+        raw_pr_number = capture(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--search",
+                commit,
+                "--state",
+                "merged",
+                "--limit",
+                "1",
+                "--json",
+                "number",
+                "--jq",
+                ".[0].number",
+            ]
+        ).strip()
+        if not raw_pr_number:
+            return None
+        pr_number = int(raw_pr_number)
+        raw_labels = capture(["gh", "pr", "view", str(pr_number), "--json", "labels"])
+        payload = json.loads(raw_labels or "{}")
+    except (
+        ValueError,
+        subprocess.CalledProcessError,
+        json.JSONDecodeError,
+        IndexError,
+    ):
+        return None
+    labels = payload.get("labels")
+    if not isinstance(labels, list):
+        return None
+    for raw_label in labels:
+        if not isinstance(raw_label, dict):
+            continue
+        name = raw_label.get("name")
+        if isinstance(name, str) and name in {
+            "release:major",
+            "release:minor",
+            "release:patch",
+            "release:none",
+        }:
+            return name
+    return None
+
+
+def next_stable_after(
+    version: StableVersion, *, release_label: str | None = None
+) -> StableVersion:
+    if release_label == "release:major":
+        return StableVersion(version.major + 1, 0, 0)
+    if release_label == "release:minor":
+        return StableVersion(version.major, version.minor + 1, 0)
     if version.major == 0 and version.minor >= 9 and version.patch >= PATCH_ROLLOVER:
         return StableVersion(1, 0, 0)
     if version.patch >= PATCH_ROLLOVER:
@@ -850,9 +904,11 @@ def next_stable_after(version: StableVersion) -> StableVersion:
     return StableVersion(version.major, version.minor, version.patch + 1)
 
 
-def next_unabandoned_stable_after(version: StableVersion) -> StableVersion:
+def next_unabandoned_stable_after(
+    version: StableVersion, *, release_label: str | None = None
+) -> StableVersion:
     abandoned = abandoned_stable_tags()
-    candidate = next_stable_after(version)
+    candidate = next_stable_after(version, release_label=release_label)
     while candidate.tag in abandoned or git_ref_exists(f"refs/tags/{candidate.tag}"):
         if candidate.tag in abandoned:
             print(
@@ -986,7 +1042,14 @@ def select_target(path: Path) -> ReleaseTarget:
         return target
     if base is None:
         base = latest_stable()
-    generated = next_unabandoned_stable_after(base)
+    release_label: str | None = None
+    try:
+        release_label = release_label_from_merged_pr(
+            capture(["git", "rev-parse", "HEAD"])
+        )
+    except subprocess.CalledProcessError:
+        release_label = None
+    generated = next_unabandoned_stable_after(base, release_label=release_label)
     print(
         f"autodev-train stable: target queue exhausted; generated next target {generated.tag} after {base.tag}",
         flush=True,
