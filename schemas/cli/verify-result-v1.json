@@ -23,7 +23,8 @@
       "type": "string",
       "enum": [
         "pass",
-        "fail"
+        "fail",
+        "quarantined"
       ]
     },
     "exit_code": {

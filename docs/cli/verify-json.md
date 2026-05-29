@@ -24,7 +24,7 @@ The payload is fixed at schema version 1:
 ```
 
 - `schema_version` is the CLI result schema version.
-- `result` is `pass` or `fail`.
+- `result` is `pass`, `fail`, or the reserved `quarantined` status.
 - `exit_code` is the process exit code that callers should gate on. In v1,
   `0` means accept, `1` means the verifier rejected the bundle, and `2`
   means a usage, I/O, or schema/shape problem prevented verification.
@@ -51,6 +51,32 @@ The payload is fixed at schema version 1:
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
+
+## Versioned Contract Fixture
+
+The canonical consumer-facing contract is pinned in
+[`fixtures/contracts/verify_json_v1.json`](../../fixtures/contracts/verify_json_v1.json).
+It is the sorted JSON form of `attestplane verify --json fixtures/bundles/valid.json`
+and is used by CI to detect accidental contract drift.
+
+The fixture is versioned. Future shape changes require a new pinned file, not
+an edit to `verify_json_v1.json`.
+
+For local verification, the contract check used by CI is equivalent to:
+
+```sh
+attestplane verify --json fixtures/bundles/valid.json | jq -S . | diff - fixtures/contracts/verify_json_v1.json
+```
+
+Contract-gate exit codes are intentionally deterministic:
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Pinned JSON contract matches and the bundle verifies successfully. |
+| 1 | Bundle verification failed. |
+| 2 | Usage, I/O, or schema/shape error prevented verification. |
+| 3 | Reserved `quarantined` contract verdict. |
+| 4 | Pinned contract mismatch or drift. |
 
 ## `verify --explain`
 
