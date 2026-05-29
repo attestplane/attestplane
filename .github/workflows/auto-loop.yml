@@ -128,19 +128,26 @@ jobs:
           )
 
           # Days since last tag
-          days_since=$(( ( $(date +%s) - tag_epoch ) / 86400 ))
+          now_epoch=$(date +%s)
+          days_since=$(( ( now_epoch - tag_epoch ) / 86400 ))
+          seconds_since=$(( now_epoch - tag_epoch ))
 
           {
             echo "prs_since_tag=${prs_since}"
             echo "days_since_tag=${days_since}"
             echo "latest_tag=${latest_tag}"
           } >> "$GITHUB_OUTPUT"
-          echo "PRs since last tag: ${prs_since} merged, ${closed_failed_since} closed-failed, ${days_since} days"
+          echo "PRs since last tag: ${prs_since} merged, ${closed_failed_since} closed-failed, ${days_since} days (${seconds_since}s)"
 
+          # Cooldown: skip if last tag was < 5 min ago (prevents duplicate tags when
+          # multiple PR closures trigger auto-loop in rapid succession for the same batch)
+          if [ "${seconds_since}" -lt 300 ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "⏭ Cooldown: last tag ${latest_tag} was only ${seconds_since}s ago (< 300s)"
           # Proceed if: enough merges, OR time elapsed, OR entire batch failed (all closed, 0 merged)
-          if [ "$prs_since" -ge "$MIN_PRS_PER_TAG" ] || \
-             [ "$days_since" -ge "$MAX_DAYS_BETWEEN_TAGS" ] || \
-             { [ "$closed_failed_since" -ge 1 ] && [ "$prs_since" -eq 0 ]; }; then
+          elif [ "$prs_since" -ge "$MIN_PRS_PER_TAG" ] || \
+               [ "$days_since" -ge "$MAX_DAYS_BETWEEN_TAGS" ] || \
+               { [ "$closed_failed_since" -ge 1 ] && [ "$prs_since" -eq 0 ]; }; then
             echo "proceed=true" >> "$GITHUB_OUTPUT"
             echo "✅ Batch ready (${prs_since} merged / ${closed_failed_since} failed / ${days_since} days)"
           else
