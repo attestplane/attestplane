@@ -174,6 +174,36 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
 
+def _bundle_anchor_report(bundle: dict[str, Any] | None) -> dict[str, Any]:
+    """Return the outward-facing anchor verdict for JSON output.
+
+    ``valid`` is only emitted for bundles that explicitly declare the
+    anchor-aware verification method and a successful embedded
+    verification report. Anything else is treated as quarantined so
+    callers do not mistake an unverified bundle for a claim-safe
+    anchor.
+    """
+    if bundle is None:
+        return {"status": "quarantined"}
+
+    chain_metadata = bundle.get("chain_metadata")
+    verification_report = bundle.get("verification_report")
+    if not isinstance(chain_metadata, dict) or not isinstance(verification_report, dict):
+        return {"status": "quarantined"}
+
+    anchor_ref = chain_metadata.get("anchor_ref")
+    verification_method = verification_report.get("verification_method")
+    if (
+        isinstance(anchor_ref, str)
+        and anchor_ref
+        and verification_report.get("ok") is True
+        and verification_method == "canonical-bytes-walk+anchor"
+    ):
+        return {"status": "valid"}
+
+    return {"status": "quarantined"}
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
@@ -253,18 +283,20 @@ def _json_failure(
     exit_code: int,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    anchor: dict[str, Any] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [reason],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "fail",
+        "exit_code": exit_code,
+        "reason_code": reason["code"],
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [reason],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
+        "anchor": anchor if anchor is not None else {"status": "quarantined"},
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -279,18 +311,20 @@ def _json_pass(
     *,
     bundle_digest: str,
     explanation: list[dict[str, Any]] | None = None,
+    anchor: dict[str, Any] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "pass",
-            "exit_code": 0,
-            "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "pass",
+        "exit_code": 0,
+        "reason_code": None,
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "reasons": [],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
+        "anchor": anchor if anchor is not None else {"status": "quarantined"},
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -466,6 +500,7 @@ def build_verify_json_outcome(
                 if explain
                 else None
             ),
+            anchor={"status": "quarantined"},
         )
 
     bundle_digest = _bundle_digest(raw_bytes)
@@ -492,6 +527,7 @@ def build_verify_json_outcome(
                 if explain
                 else None
             ),
+            anchor={"status": "quarantined"},
         )
     except _DuplicateKeyError as exc:
         message = str(exc)
@@ -510,11 +546,8 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
+            anchor={"status": "quarantined"},
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
@@ -533,6 +566,7 @@ def build_verify_json_outcome(
                 if explain
                 else None
             ),
+            anchor={"status": "quarantined"},
         )
 
     if not isinstance(bundle, dict):
@@ -558,6 +592,7 @@ def build_verify_json_outcome(
                 if explain
                 else None
             ),
+            anchor={"status": "quarantined"},
         )
 
     canonical_index, canonical_exc = _canonicalization_probe(bundle)
@@ -574,10 +609,9 @@ def build_verify_json_outcome(
             ),
             exit_code=1,
             explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
-                if explain
-                else None
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
             ),
+            anchor={"status": "quarantined"},
         )
 
     try:
@@ -599,11 +633,8 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(code, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
+            anchor={"status": "quarantined"},
         )
     except CanonicalizationError as exc:
         path = "/events"
@@ -617,17 +648,15 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
+            anchor={"status": "quarantined"},
         )
 
     if result.ok:
         return _json_pass(
             bundle_digest=bundle_digest,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
+            anchor=_bundle_anchor_report(bundle),
         )
 
     reasons = _bundle_failure_reason(result, explain=explain)
@@ -653,11 +682,8 @@ def build_verify_json_outcome(
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-            **(
-                {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
-                if explain
-                else {}
-            ),
+            "anchor": _bundle_anchor_report(bundle),
+            **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,
         stderr_code=stderr_code,

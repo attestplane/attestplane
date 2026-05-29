@@ -27,7 +27,7 @@ Retry policy (ADR-0003 § 4 failure-mode table)
   (1 s, 2 s, 4 s, 8 s, 16 s, capped at :attr:`max_backoff_seconds`).
   Re-queue at tail.
 - :class:`AnchorVerificationError` → quarantine. Item moves to
-  ``failed_permanent`` state and is not retried automatically.
+  ``quarantined`` state and is not retried automatically.
 - Successful anchor → store result, transition to ``anchored``.
 
 Clock-skew tracking
@@ -221,7 +221,8 @@ class Anchorer:
             # state outside the TSA's view. The kwarg is forwarded so the
             # mock can echo the correct seq into AnchorRecord for tests.
             record = self._provider.request_timestamp(
-                request, anchored_seq=pending.seq,  # type: ignore[call-arg]
+                request,
+                anchored_seq=pending.seq,  # type: ignore[call-arg]
             )
         except TSAUnavailableError as exc:
             pending.attempts += 1
@@ -234,7 +235,7 @@ class Anchorer:
             return None
         except AnchorVerificationError as exc:
             pending.attempts += 1
-            pending.status = "failed_permanent"
+            pending.status = "quarantined"
             pending.last_error = f"AnchorVerificationError: {exc}"
             with self._lock:
                 self._stats.failed_permanent += 1
@@ -267,6 +268,7 @@ class Anchorer:
 
     def _now_plus(self, seconds: float) -> datetime:
         from datetime import timedelta
+
         return self._now() + timedelta(seconds=seconds)
 
     @staticmethod

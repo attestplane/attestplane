@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -55,6 +54,9 @@ VERIFY_JSON_CONTRACT_V1 = {
                     "digest": "d4d37025f7452ad2525d6b37c898bf08cd335db3e7983ce04e242e898b77b2cb",
                     "schema_version": 1,
                 },
+                "anchor": {
+                    "status": "quarantined",
+                },
                 "exit_code": 0,
                 "reason_code": None,
                 "reasons": [],
@@ -69,6 +71,9 @@ VERIFY_JSON_CONTRACT_V1 = {
                 "bundle": {
                     "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",
                     "schema_version": 1,
+                },
+                "anchor": {
+                    "status": "quarantined",
                 },
                 "exit_code": 1,
                 "reason_code": VERIFY_REASON_CANONICAL_MISMATCH,
@@ -123,6 +128,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchor",
     }
     if expect_explanation:
         expected_keys.add("explanation")
@@ -143,6 +149,11 @@ def _assert_matches_verify_result_v1(
     assert set(bundle) == {"schema_version", "digest"}
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+
+    anchor = payload["anchor"]
+    assert isinstance(anchor, dict)
+    assert set(anchor) == {"status"}
+    assert anchor["status"] in {"valid", "quarantined"}
 
     if expect_explanation:
         explanation = payload["explanation"]

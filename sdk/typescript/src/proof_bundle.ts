@@ -410,7 +410,7 @@ export interface AuditorExport {
     };
     readonly producer_runtime: string;
     readonly event_type_histogram: Record<string, number>;
-    readonly anchor_status: 'unanchored' | 'anchored_partial' | 'anchored_full';
+    readonly anchor_status: 'unanchored' | 'anchored_partial' | 'anchored_full' | 'quarantined';
   };
   readonly verification_status: {
     readonly ok: boolean;

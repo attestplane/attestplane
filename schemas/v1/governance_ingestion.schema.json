@@ -69,7 +69,7 @@
           "additionalProperties": { "type": "integer", "minimum": 0 }
         },
         "anchor_status": {
-          "enum": ["unanchored", "anchored_partial", "anchored_full"]
+          "enum": ["unanchored", "anchored_partial", "anchored_full", "quarantined"]
         }
       }
     },

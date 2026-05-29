@@ -174,7 +174,7 @@
         },
         "verification_method": {
           "enum": ["canonical-bytes-walk", "canonical-bytes-walk+anchor"],
-          "description": "v1 supports two values; 'canonical-bytes-walk+anchor' is reserved for the M5 RFC-3161 anchor verifier."
+          "description": "v1 supports two values; 'canonical-bytes-walk+anchor' is used when the bundle carries anchor-aware verification metadata."
         }
       }
     },

@@ -12,7 +12,8 @@
     "reason_code",
     "taxonomy_version",
     "reasons",
-    "bundle"
+    "bundle",
+    "anchor"
   ],
   "properties": {
     "schema_version": {
@@ -123,6 +124,22 @@
         "digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "valid",
+            "quarantined"
+          ]
         }
       }
     }

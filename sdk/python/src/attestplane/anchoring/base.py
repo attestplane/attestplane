@@ -34,7 +34,7 @@ ANCHOR_SCHEMA_VERSION: Final[int] = 1
 """Anchor schema version. Independent of ``chain.schema_version`` per ADR-0003 § 7."""
 
 
-AnchorStatus = Literal["unanchored", "pending", "anchored", "failed_permanent"]
+AnchorStatus = Literal["unanchored", "pending", "anchored", "quarantined", "failed_permanent"]
 
 
 class AnchorError(Exception):
@@ -98,14 +98,10 @@ class AnchorRecord:
     def __post_init__(self) -> None:
         if self.anchor_schema_version != ANCHOR_SCHEMA_VERSION:
             raise AnchorError(
-                f"AnchorRecord.anchor_schema_version must be {ANCHOR_SCHEMA_VERSION}, "
-                f"got {self.anchor_schema_version}"
+                f"AnchorRecord.anchor_schema_version must be {ANCHOR_SCHEMA_VERSION}, got {self.anchor_schema_version}"
             )
         if len(self.anchored_event_hash) != 32:
-            raise AnchorError(
-                f"AnchorRecord.anchored_event_hash must be 32 bytes, "
-                f"got {len(self.anchored_event_hash)}"
-            )
+            raise AnchorError(f"AnchorRecord.anchored_event_hash must be 32 bytes, got {len(self.anchored_event_hash)}")
         if self.anchored_seq < 0:
             raise AnchorError("AnchorRecord.anchored_seq must be ≥ 0")
         if not self.tsa_provider_id:
@@ -154,10 +150,7 @@ class TimestampRequest:
 
     def __post_init__(self) -> None:
         if len(self.digest) != 32:
-            raise AnchorError(
-                f"TimestampRequest.digest must be 32 bytes (SHA-256), "
-                f"got {len(self.digest)}"
-            )
+            raise AnchorError(f"TimestampRequest.digest must be 32 bytes (SHA-256), got {len(self.digest)}")
 
 
 class TSAProvider(ABC):
@@ -204,14 +197,15 @@ class TSAProvider(ABC):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         forbidden = {
-            "mutate", "rewrite", "replace",
-            "revoke", "retract",
-            "delete", "remove",
+            "mutate",
+            "rewrite",
+            "replace",
+            "revoke",
+            "retract",
+            "delete",
+            "remove",
         }
-        offenders = sorted(
-            name for name in vars(cls)
-            if not name.startswith("_") and name in forbidden
-        )
+        offenders = sorted(name for name in vars(cls) if not name.startswith("_") and name in forbidden)
         if offenders:
             raise AnchorBoundaryError(
                 f"{cls.__name__} defines forbidden mutating method(s) {offenders}; "
@@ -230,7 +224,7 @@ class TSAProvider(ABC):
           the :class:`AnchorRecord`. Malformed responses raise
           :class:`AnchorVerificationError`, not
           :class:`TSAUnavailableError` — the distinction matters because
-          the Anchorer worker retries on the former and quarantines on
+          the Anchorer worker quarantines on the former and retries on
           the latter (ADR-0003 § 4 failure-mode table).
         - Capture ``tsa_cert_chain`` and ``ocsp_responses`` at request
           time. A provider that returns an empty cert chain or empty

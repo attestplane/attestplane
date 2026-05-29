@@ -20,7 +20,7 @@ import type { ChainedEvent } from './types.js';
 
 export const ANCHOR_SCHEMA_VERSION = 1 as const;
 
-export type AnchorStatus = 'unanchored' | 'pending' | 'anchored' | 'failed_permanent';
+export type AnchorStatus = 'unanchored' | 'pending' | 'anchored' | 'quarantined' | 'failed_permanent';
 
 export type CertStatus =
   | 'VALID'

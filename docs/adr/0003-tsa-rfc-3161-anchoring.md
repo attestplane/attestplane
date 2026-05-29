@@ -83,7 +83,7 @@ Failure-mode handling:
 | Outcome | Append() effect | Anchorer state |
 |---|---|---|
 | TSA timeout / 5xx | none | queued for retry |
-| Malformed / non-RFC-3161 response | none | quarantined; `failed_permanent`; alert |
+| Malformed / non-RFC-3161 response | none | quarantine the item (`quarantined` state); alert |
 | Clock skew > 60s vs TSA `genTime` | none | anchor recorded with `clock_skew_warning`; TSA time is authoritative |
 | TSA cert expired/revoked **at verification time** | none | LTV concern (see §6), not an append concern |
 

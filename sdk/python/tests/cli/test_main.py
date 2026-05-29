@@ -14,6 +14,7 @@ import pytest
 
 from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
+from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
 from attestplane.verify_reason_codes import (
@@ -32,8 +33,7 @@ def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
             actor=f"agent://test/{i}",
             payload={"index": i},
         )
-        event = chain_extend(head, draft, now=ts,
-                             event_id=f"00000000-0000-7000-8000-{i:012d}")
+        event = chain_extend(head, draft, now=ts, event_id=f"00000000-0000-7000-8000-{i:012d}")
         backend.append(event)
         head = ChainHead(seq=event.seq, event_hash=event.event_hash)
     backend.close()
@@ -87,15 +87,23 @@ def test_doctor_command_json(capsys: pytest.CaptureFixture[str]) -> None:
     assert payload["storage"]["concurrent_append_behavior"] == "single_process_thread_lock_only"
 
 
-def test_export_then_verify_roundtrip(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_export_then_verify_roundtrip(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     bundle_path = tmp_path / "bundle.json"
     _seed_jsonl_chain(chain_path, n=3)
 
-    rc = main(["export", str(chain_path), "--out", str(bundle_path),
-               "--chain-id", "demo", "--producer-runtime", "demo-runtime"])
+    rc = main(
+        [
+            "export",
+            str(chain_path),
+            "--out",
+            str(bundle_path),
+            "--chain-id",
+            "demo",
+            "--producer-runtime",
+            "demo-runtime",
+        ]
+    )
     assert rc == 0
     assert bundle_path.exists()
 
@@ -110,9 +118,7 @@ def test_export_then_verify_roundtrip(
     assert "policy_trace_refs closure" in out
 
 
-def test_export_then_verify_json_output(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_export_then_verify_json_output(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     bundle_path = tmp_path / "bundle.json"
     _seed_jsonl_chain(chain_path, n=2)
@@ -131,11 +137,35 @@ def test_export_then_verify_json_output(
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
     assert payload["bundle"]["digest"]
+    assert payload["anchor"]["status"] == "quarantined"
 
 
-def test_verify_require_events_rejects_empty_bundle(
+def test_export_then_verify_json_with_anchor_ref_reports_valid(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    chain_path = tmp_path / "chain.jsonl"
+    bundle_path = tmp_path / "bundle.json"
+    _seed_jsonl_chain(chain_path, n=2)
+
+    backend = JsonlStorageBackend(chain_path)
+    scan = backend.scan()
+    builder = ProofBundleBuilder(
+        chain_id="demo-anchor",
+        producer_runtime="demo-runtime",
+        anchor_ref="fixture-anchor",
+    )
+    builder.extend(scan.events)
+    bundle = builder.build()
+    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+    capsys.readouterr()
+
+    rc = main(["verify", str(bundle_path), "--json"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["anchor"]["status"] == "valid"
+
+
+def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "empty.jsonl"
     bundle_path = tmp_path / "empty-bundle.json"
     chain_path.write_text("", encoding="utf-8")
@@ -154,9 +184,7 @@ def test_verify_require_events_rejects_empty_bundle(
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
 
 
-def test_verify_bundle_option_rejects_unsigned_bundle(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_verify_bundle_option_rejects_unsigned_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     bundle_path = tmp_path / "bundle.json"
     _seed_jsonl_chain(chain_path, n=1)
@@ -184,9 +212,7 @@ def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> N
     assert exc_info.value.code == 0
 
 
-def test_verify_detects_tampered_bundle(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_verify_detects_tampered_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     bundle_path = tmp_path / "bundle.json"
     _seed_jsonl_chain(chain_path, n=3)
@@ -204,27 +230,21 @@ def test_verify_detects_tampered_bundle(
     assert out.startswith("FAIL")
 
 
-def test_verify_missing_file(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_verify_missing_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["verify", str(tmp_path / "missing.json")])
     assert rc == 1
     out = capsys.readouterr().out
     assert "FAIL" in out
 
 
-def test_verify_malformed_json(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_verify_malformed_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text("not json", encoding="utf-8")
     rc = main(["verify", str(bad)])
     assert rc == 2
 
 
-def test_inspect_command(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_inspect_command(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     _seed_jsonl_chain(chain_path, n=4)
 
@@ -235,9 +255,7 @@ def test_inspect_command(
     assert "verify: OK" in out
 
 
-def test_inspect_command_json(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_inspect_command_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     _seed_jsonl_chain(chain_path, n=2)
 
@@ -249,9 +267,7 @@ def test_inspect_command_json(
     assert payload["event_type_histogram"] == {"eval_event": 2}
 
 
-def test_inspect_malformed_file(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_inspect_malformed_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     bad = tmp_path / "bad.jsonl"
     bad.write_text("not valid json\n", encoding="utf-8")
     rc = main(["inspect", str(bad)])
@@ -279,9 +295,7 @@ def test_inspect_partial_jsonl_reports_storage_corruption_json(
     assert payload["issue"]["kind"] == "partial_trailing_line"
 
 
-def test_export_command_emits_summary(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_export_command_emits_summary(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     bundle_path = tmp_path / "out" / "bundle.json"  # nested path triggers mkdir
     _seed_jsonl_chain(chain_path, n=2)
@@ -294,9 +308,7 @@ def test_export_command_emits_summary(
     assert "2 events" in out
 
 
-def test_export_refuses_corrupt_jsonl(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_export_refuses_corrupt_jsonl(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     chain_path = tmp_path / "chain.jsonl"
     bundle_path = tmp_path / "bundle.json"
     _seed_jsonl_chain(chain_path, n=1)
