@@ -102,6 +102,10 @@ jobs:
             --description "Verifier behavior and validation" \
             --color "0052cc" \
             --force
+          gh label create trigger-failed \
+            --description "planned-task issue whose implement-planned-task trigger failed after retries" \
+            --color "e4e669" \
+            --force
 
       - name: Resolve milestone tag
         id: milestone
@@ -301,23 +305,43 @@ jobs:
           # workflow_dispatch bypasses the GITHUB_TOKEN cascade restriction that
           # prevents issues: opened events from firing when created by Actions.
           "$ARCHITECTURE_AUDIT_PYTHON" - <<'PY'
-          import json, subprocess, sys, time
+          import json, subprocess, sys, time as _time_mod
+
+          repo_result = subprocess.run(
+              ["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
+              capture_output=True, text=True,
+          )
+          repo = repo_result.stdout.strip()
+
+          def trigger_with_retry(issue_number: int, max_attempts: int = 3) -> bool:
+              for attempt in range(1, max_attempts + 1):
+                  result = subprocess.run(
+                      ["gh", "workflow", "run", "implement-planned-task.yml",
+                       "--repo", repo,
+                       "--field", f"issue_number={issue_number}"],
+                      capture_output=True, text=True,
+                  )
+                  if result.returncode == 0:
+                      return True
+                  print(f"  Attempt {attempt}/{max_attempts} failed for issue #{issue_number}: {result.stderr[:200]}", file=sys.stderr)
+                  if attempt < max_attempts:
+                      _time_mod.sleep(5)
+              return False
 
           issues = json.load(open("planned-task-issues.json", encoding="utf-8"))
           failed = []
           for issue in issues:
-              num = str(issue["number"])
-              result = subprocess.run(
-                  ["gh", "workflow", "run", "implement-planned-task.yml",
-                   "--field", f"issue_number={num}"],
-                  capture_output=True, text=True,
-              )
-              if result.returncode != 0:
-                  print(f"  ⚠ issue #{num}: {result.stderr.strip()}", file=sys.stderr)
-                  failed.append(num)
-              else:
+              num = issue["number"]
+              if trigger_with_retry(num):
                   print(f"  ✅ triggered implement-planned-task for #{num}")
-              time.sleep(2)  # avoid GH API rate limit
+              else:
+                  failed.append(num)
+                  subprocess.run(
+                      ["gh", "issue", "edit", str(num), "--repo", repo,
+                       "--add-label", "trigger-failed"],
+                      capture_output=True,
+                  )
+              _time_mod.sleep(2)  # avoid GH API rate limit
 
           if failed:
               print(f"Failed to trigger for issues: {failed}", file=sys.stderr)
