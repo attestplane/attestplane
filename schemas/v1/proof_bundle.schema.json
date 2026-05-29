@@ -353,6 +353,22 @@
           }
         }
       }
+    },
+    "anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "quarantined"],
+      "properties": {
+        "status": {
+          "enum": ["anchored", "quarantined", "unanchored"],
+          "description": "Persisted claim-safe anchoring state for the bundle. Quarantined bundles are fail-closed, never verified."
+        },
+        "quarantined": {
+          "type": "boolean",
+          "description": "True when the producer quarantined the bundle after a TSA or timestamp failure."
+        }
+      },
+      "description": "Optional additive anchoring claim. Existing bundles remain valid without it."
     }
   }
 }

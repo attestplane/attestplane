@@ -28,7 +28,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, cast
 
 from attestplane.hashchain import SCHEMA_VERSION as _CHAIN_SCHEMA_VERSION
 from attestplane.hashchain import chain_extend, genesis_head, head_of, verify_chain
@@ -141,6 +141,7 @@ DEFAULT_FORBIDDEN_FIELDS: Final[tuple[str, ...]] = (
 """The thirteen-term redaction floor. Producers MAY add more; MUST NOT remove."""
 
 _VERIFICATION_METHOD = Literal["canonical-bytes-walk", "canonical-bytes-walk+anchor"]
+_ANCHORING_STATUS = Literal["anchored", "quarantined", "unanchored"]
 _LOWER_HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -349,7 +350,12 @@ class ProofBundleBuilder:
             validate_retention_proof(record)
         self.retention_proofs.extend(records)
 
-    def build(self, *, now: datetime | None = None) -> dict[str, Any]:
+    def build(
+        self,
+        *,
+        now: datetime | None = None,
+        anchoring: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Produce the bundle dict.
 
         Runs :func:`~attestplane.hashchain.verify_chain` on the accumulated
@@ -366,6 +372,9 @@ class ProofBundleBuilder:
         result = verify_chain(self.events)
         head = head_of(self.events)
         ts = actual_now.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+
+        if anchoring is not None:
+            _validate_anchoring_state(anchoring)
 
         # ADR-0012 P1.2: auto-derive policy_trace_refs (chain-seq-ordered hex hashes
         # for every policy_check_event). Absent when empty per ADR-0012 § 1.
@@ -410,7 +419,30 @@ class ProofBundleBuilder:
             # otherwise to keep existing tests + consumers untouched.
             **({"signatures": [_serialize_signature_record(r) for r in self.signatures]} if self.signatures else {}),
             **({"retention_proofs": list(self.retention_proofs)} if self.retention_proofs else {}),
+            **({"anchoring": anchoring} if anchoring is not None else {}),
         }
+
+
+def _validate_anchoring_state(anchoring: dict[str, Any]) -> None:
+    status = anchoring.get("status")
+    quarantined = anchoring.get("quarantined")
+    if status not in {"anchored", "quarantined", "unanchored"}:
+        raise ValueError("anchoring.status must be one of 'anchored', 'quarantined', or 'unanchored'")
+    if not isinstance(quarantined, bool):
+        raise ValueError("anchoring.quarantined must be a boolean")
+
+
+def _bundle_anchoring_status(bundle: dict[str, Any]) -> _ANCHORING_STATUS | None:
+    anchoring = bundle.get("anchoring")
+    if not isinstance(anchoring, dict):
+        return None
+    status = anchoring.get("status")
+    quarantined = anchoring.get("quarantined")
+    if status not in {"anchored", "quarantined", "unanchored"}:
+        return None
+    if not isinstance(quarantined, bool):
+        return None
+    return cast(_ANCHORING_STATUS, status)
 
 
 def build_auditor_export(
@@ -481,6 +513,10 @@ def build_auditor_export(
         "regulatory determination."
     )
 
+    anchor_status = _bundle_anchoring_status(bundle)
+    if anchor_status is None:
+        anchor_status = "anchored" if bundle["chain_metadata"].get("anchor_ref") else "unanchored"
+
     return {
         "export_version": 1,
         "chain_summary": {
@@ -490,7 +526,7 @@ def build_auditor_export(
             "time_range": time_range,
             "producer_runtime": bundle["chain_metadata"]["producer_runtime"],
             "event_type_histogram": dict(histogram),
-            "anchor_status": "unanchored",
+            "anchor_status": anchor_status,
         },
         "verification_status": {
             "ok": bundle["verification_report"]["ok"],

@@ -22,6 +22,7 @@ from attestplane.verify_errors import (
     VERIFY_SCHEMA_ERROR,
 )
 from attestplane.verify_reason_codes import (
+    VERIFY_REASON_ANCHOR_INVALID,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -168,11 +169,29 @@ def _bundle_schema_version(bundle: dict[str, Any]) -> str:
 
 
 def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
+    explicit = _bundle_explicit_anchoring_state(bundle)
+    if explicit is not None:
+        return explicit
     chain_metadata = bundle.get("chain_metadata")
     if not isinstance(chain_metadata, dict):
         return "unknown"
     anchor_ref = chain_metadata.get("anchor_ref")
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
+
+
+def _bundle_explicit_anchoring_state(bundle: dict[str, Any] | None) -> str | None:
+    if not isinstance(bundle, dict):
+        return None
+    anchoring = bundle.get("anchoring")
+    if not isinstance(anchoring, dict):
+        return None
+    status = anchoring.get("status")
+    quarantined = anchoring.get("quarantined")
+    if status not in {"anchored", "quarantined", "unanchored"}:
+        return None
+    if not isinstance(quarantined, bool):
+        return None
+    return str(status)
 
 
 def _bundle_anchor_ref_present(bundle: dict[str, Any] | None) -> bool:
@@ -190,7 +209,11 @@ def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict
         status = "quarantined"
         quarantined = True
     else:
-        status = "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
+        explicit = _bundle_explicit_anchoring_state(bundle)
+        if explicit is not None:
+            status = explicit
+        else:
+            status = "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
         quarantined = False
     return {
         "anchoring": {
@@ -242,6 +265,8 @@ def _verify_explanations(
 
 
 def _schema_path_from_bundle_error(text: str) -> str:
+    if "anchoring" in text:
+        return "/anchoring"
     if "chain_metadata.schema_version" in text:
         return "/chain_metadata/schema_version"
     if "chain_metadata" in text:
@@ -372,6 +397,7 @@ def _bundle_failure_reason(
     result: Any | None,
     *,
     explain: bool,
+    bundle: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     if result is None:
         return []
@@ -469,6 +495,17 @@ def _bundle_failure_reason(
                 "/retention_proofs",
                 summary="retention proof validation failed",
                 detail=result.retention_proofs_reason,
+                explain=explain,
+            )
+        )
+
+    if _bundle_explicit_anchoring_state(bundle) == "quarantined":
+        reasons.append(
+            _reason_entry(
+                VERIFY_REASON_ANCHOR_INVALID,
+                "/anchoring",
+                summary="anchor verification quarantined",
+                detail="bundle.anchoring.status=quarantined",
                 explain=explain,
             )
         )
@@ -672,7 +709,7 @@ def build_verify_json_outcome(
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
 
-    reasons = _bundle_failure_reason(result, explain=explain)
+    reasons = _bundle_failure_reason(result, explain=explain, bundle=bundle)
     exit_code = verify_result_exit_code(result)
     if result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,

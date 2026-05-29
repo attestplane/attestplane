@@ -254,6 +254,7 @@ _KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {
     "policy_trace_refs",
     "signatures",
     "retention_proofs",
+    "anchoring",
 }
 _KNOWN_CHAIN_METADATA_FIELDS = {
     "chain_id",
