@@ -265,7 +265,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --ref main \
             --field release_tag="${TAG}" \
-            --field channel="alpha" \
+            --field channel="latest" \
             --field dry_run="false" \
             --field audit_verified="false"
-          echo "✅ release-cd triggered for ${TAG} (channel=alpha)"
+          echo "✅ release-cd triggered for ${TAG} (channel=latest)"
