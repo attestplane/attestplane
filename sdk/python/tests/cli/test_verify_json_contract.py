@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -30,71 +29,27 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_STRUCTURE_INVALID,
 )
+from tests.cli.verify_json_contract_v1 import (
+    FAIL_FIXTURE,
+    PASS_FIXTURE,
+    UNKNOWN_REQUIRED_FIXTURE,
+    VERIFY_JSON_CONTRACT_V1,
+    render_verify_json_payload,
+)
 
 ROOT = Path(__file__).resolve().parents[4]
-PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
-FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
-
-# Versioned snapshot for the consumer-facing verify --json contract.
-# Keep this fixture in sync with the intentional contract surface only.
-VERIFY_JSON_CONTRACT_V1 = {
-    "schema_version": 1,
-    "exit_codes": {
-        "accept": 0,
-        "verification_failure": 1,
-        "usage_or_io_error": 2,
-    },
-    "cases": {
-        "accept": {
-            "fixture": str(PASS_FIXTURE.relative_to(ROOT)),
-            "payload": {
-                "bundle": {
-                    "digest": "d4d37025f7452ad2525d6b37c898bf08cd335db3e7983ce04e242e898b77b2cb",
-                    "schema_version": 1,
-                },
-                "exit_code": 0,
-                "reason_code": None,
-                "reasons": [],
-                "result": "pass",
-                "schema_version": 1,
-                "taxonomy_version": 1,
-            },
-        },
-        "verification_failure": {
-            "fixture": str(FAIL_FIXTURE.relative_to(ROOT)),
-            "payload": {
-                "bundle": {
-                    "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",
-                    "schema_version": 1,
-                },
-                "exit_code": 1,
-                "reason_code": VERIFY_REASON_CANONICAL_MISMATCH,
-                "reasons": [
-                    {
-                        "code": VERIFY_REASON_CANONICAL_MISMATCH,
-                        "message": "canonicalization failed",
-                        "path": "/events/0/event/payload/artifact_ref",
-                    },
-                ],
-                "result": "fail",
-                "schema_version": 1,
-                "taxonomy_version": 1,
-            },
-        },
-    },
-}
 
 
 def _run_verify(
     argv: list[str],
     capsys: pytest.CaptureFixture[str],
-) -> tuple[int, dict[str, object], str]:
+) -> tuple[int, str, dict[str, object], str]:
     rc = main(argv)
     captured = capsys.readouterr()
-    return rc, json.loads(captured.out), captured.err
+    return rc, captured.out, json.loads(captured.out), captured.err
 
 
 def _assert_matches_verify_result_v1(
@@ -170,17 +125,18 @@ def _assert_matches_verify_result_v1(
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc, stdout, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["accept"]
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["success"]
     assert stderr == ""
+    assert stdout == render_verify_json_payload(VERIFY_JSON_CONTRACT_V1["cases"]["accept"]["payload"])
     assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["accept"]["payload"]
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(
+    rc, _, payload, stderr = _run_verify(
         ["verify", "--json", "--explain", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)],
         capsys,
     )
@@ -196,7 +152,10 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": (
+                "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
+                "schema_version=1 taxonomy_version=1 anchor=absent"
+            ),
         }
     ]
 
@@ -204,17 +163,32 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    rc, stdout, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["verification_failure"]
     assert stderr == ""
+    assert stdout == render_verify_json_payload(VERIFY_JSON_CONTRACT_V1["cases"]["verification_failure"]["payload"])
     assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["verification_failure"]["payload"]
+
+
+def test_verify_json_unknown_required_field_rejects_with_pinned_exit_code(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, stdout, payload, stderr = _run_verify(
+        ["verify", "--json", str(UNKNOWN_REQUIRED_FIXTURE)],
+        capsys,
+    )
+
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["verification_failure"]
+    assert stderr == ""
+    assert stdout == render_verify_json_payload(VERIFY_JSON_CONTRACT_V1["cases"]["unknown_required_field"]["payload"])
+    assert payload == VERIFY_JSON_CONTRACT_V1["cases"]["unknown_required_field"]["payload"]
 
 
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
 
     assert rc == 1
     assert stderr == ""
@@ -236,7 +210,7 @@ def test_verify_json_reports_invalid_json(
     bundle = tmp_path / "bad.json"
     bundle.write_text("{", encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -260,9 +234,9 @@ def test_verify_json_reports_invalid_utf8(
     bundle = tmp_path / "bad-utf8.json"
     bundle.write_bytes(b"\xff")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_or_io_error"]
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1
@@ -279,7 +253,7 @@ def test_verify_json_rejects_duplicate_keys(
     bundle = tmp_path / "duplicate.json"
     bundle.write_text('{"chain_metadata": {}, "chain_metadata": {}}', encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -298,7 +272,7 @@ def test_verify_json_rejects_non_object_root(
     bundle = tmp_path / "array.json"
     bundle.write_text("[]", encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == 2
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -316,9 +290,9 @@ def test_verify_json_reports_missing_bundle_path(
 ) -> None:
     bundle = tmp_path / "missing.json"
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_or_io_error"]
+    assert rc == VERIFY_JSON_CONTRACT_V1["exit_codes"]["usage_error"]
     assert stderr == f"{VERIFY_IO_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["taxonomy_version"] == 1
@@ -337,7 +311,7 @@ def test_verify_json_schema_error_maps_missing_version_path(
     del payload["chain_metadata"]["schema_version"]
     bundle.write_text(json.dumps(payload), encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == 1
     assert stderr == ""
@@ -354,7 +328,7 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
     payload["chain_metadata"]["critical_future_field"] = True
     bundle.write_text(json.dumps(payload), encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == 1
     assert stderr == ""
