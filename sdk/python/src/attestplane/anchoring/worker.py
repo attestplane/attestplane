@@ -25,9 +25,10 @@ Retry policy (ADR-0003 § 4 failure-mode table)
 
 - :class:`TSAUnavailableError` → exponential backoff
   (1 s, 2 s, 4 s, 8 s, 16 s, capped at :attr:`max_backoff_seconds`).
-  Re-queue at tail.
+  Re-queue at tail unless the provider opts into claim-safe
+  quarantine on unavailability.
 - :class:`AnchorVerificationError` → quarantine. Item moves to
-  ``failed_permanent`` state and is not retried automatically.
+  ``quarantined`` state and is not retried automatically.
 - Successful anchor → store result, transition to ``anchored``.
 
 Clock-skew tracking
@@ -78,7 +79,7 @@ class WorkerStats:
 
     enqueued: int = 0
     anchored: int = 0
-    failed_permanent: int = 0
+    quarantined: int = 0
     retries_after_unavailable: int = 0
     clock_skew_warnings: int = 0
 
@@ -172,7 +173,7 @@ class Anchorer:
             return WorkerStats(
                 enqueued=self._stats.enqueued,
                 anchored=self._stats.anchored,
-                failed_permanent=self._stats.failed_permanent,
+                quarantined=self._stats.quarantined,
                 retries_after_unavailable=self._stats.retries_after_unavailable,
                 clock_skew_warnings=self._stats.clock_skew_warnings,
             )
@@ -221,10 +222,23 @@ class Anchorer:
             # state outside the TSA's view. The kwarg is forwarded so the
             # mock can echo the correct seq into AnchorRecord for tests.
             record = self._provider.request_timestamp(
-                request, anchored_seq=pending.seq,  # type: ignore[call-arg]
+                request,
+                anchored_seq=pending.seq,  # type: ignore[call-arg]
             )
         except TSAUnavailableError as exc:
             pending.attempts += 1
+            if getattr(self._provider, "quarantine_on_unavailable", False):
+                pending.status = "quarantined"
+                pending.last_error = f"TSAUnavailableError: {exc}"
+                with self._lock:
+                    self._stats.quarantined += 1
+                    result = AnchorerResult(
+                        pending=pending,
+                        record=None,
+                        clock_skew_seconds=0.0,
+                    )
+                    self._results.append(result)
+                return result
             backoff = min(2 ** (pending.attempts - 1), self._max_backoff)
             pending.next_attempt_at = self._now_plus(backoff)
             pending.last_error = f"TSAUnavailableError: {exc}"
@@ -234,10 +248,10 @@ class Anchorer:
             return None
         except AnchorVerificationError as exc:
             pending.attempts += 1
-            pending.status = "failed_permanent"
+            pending.status = "quarantined"
             pending.last_error = f"AnchorVerificationError: {exc}"
             with self._lock:
-                self._stats.failed_permanent += 1
+                self._stats.quarantined += 1
                 result = AnchorerResult(pending=pending, record=None, clock_skew_seconds=0.0)
                 self._results.append(result)
             return result
@@ -267,6 +281,7 @@ class Anchorer:
 
     def _now_plus(self, seconds: float) -> datetime:
         from datetime import timedelta
+
         return self._now() + timedelta(seconds=seconds)
 
     @staticmethod

@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -192,13 +191,34 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
     assert payload["reasons"] == []
-    assert payload["explanation"] == [
-        {
-            "primary_reason": None,
-            "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
-        }
-    ]
+    assert payload["explanation"][0]["primary_reason"] is None
+    assert payload["explanation"][0]["pointer"] == "/"
+    assert payload["explanation"][0]["message"] == (
+        "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent"
+    )
+
+
+def test_verify_json_uses_verification_report_anchor_status_when_present(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    bundle = json.loads(SCHEMA_VERSION_ADDITIVE_FIXTURE.read_text(encoding="utf-8"))
+    bundle["verification_report"]["anchor_status"] = "anchored"
+    bundle_path = tmp_path / "anchor-status.json"
+    bundle_path.write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    rc, payload, stderr = _run_verify(
+        ["verify", "--json", "--explain", str(bundle_path)],
+        capsys,
+    )
+
+    try:
+        assert rc == 0
+        assert stderr == ""
+        assert payload["result"] == "pass"
+        assert payload["explanation"][0]["message"].endswith("anchor=anchored")
+    finally:
+        bundle_path.unlink(missing_ok=True)
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(

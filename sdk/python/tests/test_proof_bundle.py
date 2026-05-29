@@ -54,7 +54,9 @@ def _build_good_chain(n: int) -> list[ChainedEvent]:
             session_id=f"sess-{i}",
         )
         event = chain_extend(
-            head, draft, now=ts,
+            head,
+            draft,
+            now=ts,
             event_id=f"00000000-0000-7000-8000-{i:012d}",
         )
         chain.append(event)
@@ -130,14 +132,28 @@ def test_bundle_validates_against_proof_bundle_schema() -> None:
     jsonschema.validate(bundle, _proof_bundle_schema())
 
 
+def test_bundle_with_anchor_status_validates_against_proof_bundle_schema() -> None:
+    builder = ProofBundleBuilder(
+        chain_id="schema-check-anchor",
+        producer_runtime="test",
+        anchor_status="anchored",
+    )
+    builder.extend(_build_good_chain(1))
+    bundle = builder.build()
+    jsonschema.validate(bundle, _proof_bundle_schema())
+    assert bundle["verification_report"]["anchor_status"] == "anchored"
+
+
 def test_bundle_with_framework_mapping_validates() -> None:
     builder = ProofBundleBuilder(chain_id="fm", producer_runtime="test")
     builder.extend(_build_good_chain(2))
-    builder.add_framework_mapping(FrameworkMapping(
-        obligation_id="eu_ai_act.art12.3c.matched_input_data",
-        evidence_event_indexes=(0,),
-        implementation_status_at_bundle_time="field_supported",
-    ))
+    builder.add_framework_mapping(
+        FrameworkMapping(
+            obligation_id="eu_ai_act.art12.3c.matched_input_data",
+            evidence_event_indexes=(0,),
+            implementation_status_at_bundle_time="field_supported",
+        )
+    )
     bundle = builder.build()
     jsonschema.validate(bundle, _proof_bundle_schema())
     assert bundle["framework_mappings"][0]["obligation_id"].startswith("eu_ai_act.")
@@ -147,11 +163,13 @@ def test_framework_mapping_with_bad_index_rejected() -> None:
     builder = ProofBundleBuilder(chain_id="fm", producer_runtime="test")
     builder.extend(_build_good_chain(2))
     with pytest.raises(ValueError, match="references event index"):
-        builder.add_framework_mapping(FrameworkMapping(
-            obligation_id="eu_ai_act.art12.1.automatic_recording",
-            evidence_event_indexes=(99,),
-            implementation_status_at_bundle_time="designed_toward",
-        ))
+        builder.add_framework_mapping(
+            FrameworkMapping(
+                obligation_id="eu_ai_act.art12.1.automatic_recording",
+                evidence_event_indexes=(99,),
+                implementation_status_at_bundle_time="designed_toward",
+            )
+        )
 
 
 def test_default_forbidden_fields_present() -> None:
@@ -174,6 +192,22 @@ def test_verify_proof_bundle_accepts_good_bundle() -> None:
     assert result.chain_result.ok is True
     assert result.metadata_ok is True
     assert result.policy_trace_refs_ok is True
+
+
+def test_verify_proof_bundle_rejects_quarantined_anchor_status() -> None:
+    builder = ProofBundleBuilder(
+        chain_id="v",
+        producer_runtime="test",
+        anchor_status="quarantined",
+    )
+    builder.extend(_build_good_chain(1))
+    bundle = builder.build()
+
+    result = verify_proof_bundle(bundle)
+
+    assert result.ok is False
+    assert result.metadata_ok is False
+    assert "anchor_status=quarantined" in (result.metadata_reason or "")
 
 
 def test_verify_proof_bundle_accepts_minimum_signed_attestation_schema() -> None:
@@ -407,15 +441,18 @@ def test_auditor_export_validates_against_schema() -> None:
 def test_auditor_export_with_framework_coverage() -> None:
     builder = ProofBundleBuilder(chain_id="ax-fm", producer_runtime="test")
     builder.extend(_build_good_chain(3))
-    builder.add_framework_mapping(FrameworkMapping(
-        obligation_id="eu_ai_act.art12.3c.matched_input_data",
-        evidence_event_indexes=(0,),
-        implementation_status_at_bundle_time="field_supported",
-    ))
+    builder.add_framework_mapping(
+        FrameworkMapping(
+            obligation_id="eu_ai_act.art12.3c.matched_input_data",
+            evidence_event_indexes=(0,),
+            implementation_status_at_bundle_time="field_supported",
+        )
+    )
     bundle = builder.build()
 
     export = build_auditor_export(
-        bundle, framework_coverage_registries=[load_eu_ai_act_article_12()],
+        bundle,
+        framework_coverage_registries=[load_eu_ai_act_article_12()],
     )
     jsonschema.validate(export, _auditor_export_schema())
 
@@ -449,6 +486,17 @@ def test_auditor_export_anchor_status_unanchored_in_v1() -> None:
     bundle = builder.build()
     export = build_auditor_export(bundle)
     assert export["chain_summary"]["anchor_status"] == "unanchored"
+
+
+def test_auditor_export_anchor_status_tracks_verification_report() -> None:
+    builder = ProofBundleBuilder(
+        chain_id="a",
+        producer_runtime="test",
+        anchor_status="quarantined",
+    )
+    bundle = builder.build()
+    export = build_auditor_export(bundle)
+    assert export["chain_summary"]["anchor_status"] == "quarantined"
 
 
 def test_auditor_export_disclaimer_present() -> None:

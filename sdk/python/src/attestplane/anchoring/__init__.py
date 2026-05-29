@@ -11,8 +11,9 @@ v0.0.2-alpha ships the **design skeleton**:
 - :func:`verify_chain_with_anchors` cross-reference verifier
 
 The real RFC-3161 / ASN.1 / OCSP-backed providers (``FreeTSAProvider``,
-``DigiCertProvider``) ship in a follow-up PR alongside
-``anchor_vectors.json``. Until then, the verifier reports
+``DigiCertProvider``) are available behind the recorded-transport test
+path in this release and quarantine on network/TSA unavailability.
+Until trust roots are configured, the verifier still reports
 ``cert_status="VALID_UNVERIFIED"`` for cross-reference-correct
 anchors with non-empty cert chains.
 
@@ -125,24 +126,28 @@ __all__ = [
 ]
 
 if _HTTP_AVAILABLE:
-    __all__.extend([
-        "DigiCertProvider",
-        "FreeTSAProvider",
-        "HttpTransport",
-        "RecordedHttpTransport",
-        "Rfc3161HttpProvider",
-        "UrllibHttpTransport",
-        "make_replay_transport",
-    ])
+    __all__.extend(
+        [
+            "DigiCertProvider",
+            "FreeTSAProvider",
+            "HttpTransport",
+            "RecordedHttpTransport",
+            "Rfc3161HttpProvider",
+            "UrllibHttpTransport",
+            "make_replay_transport",
+        ]
+    )
 
 if _SIGSTORE_AVAILABLE:
-    __all__.extend([
-        "PUBLIC_REKOR_URL",
-        "SIGSTORE_REKOR_OCSP_MARKER",
-        "SIGSTORE_REKOR_PROVIDER_PREFIX",
-        "ParsedRekorEntry",
-        "SigstoreRekorAnchor",
-        "is_sigstore_rekor_anchor",
-        "parse_rekor_log_entry",
-        "verify_rekor_signed_entry_timestamp",
-    ])
+    __all__.extend(
+        [
+            "PUBLIC_REKOR_URL",
+            "SIGSTORE_REKOR_OCSP_MARKER",
+            "SIGSTORE_REKOR_PROVIDER_PREFIX",
+            "ParsedRekorEntry",
+            "SigstoreRekorAnchor",
+            "is_sigstore_rekor_anchor",
+            "parse_rekor_log_entry",
+            "verify_rekor_signed_entry_timestamp",
+        ]
+    )

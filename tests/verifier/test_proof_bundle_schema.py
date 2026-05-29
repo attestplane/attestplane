@@ -107,6 +107,7 @@ def test_bundle_verifier_accepts_additive_unknown_fields() -> None:
     bundle["future_bundle_field"] = {"preserved": True}
     bundle["chain_metadata"]["future_metadata_field"] = "kept"
     bundle["verification_report"]["future_report_field"] = "ignored"
+    bundle["verification_report"]["anchor_status"] = "anchored"
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 
@@ -114,6 +115,17 @@ def test_bundle_verifier_accepts_additive_unknown_fields() -> None:
     assert result.error_code == VERIFY_OK
     assert result.primary_reason is None
     assert result.secondary_reasons == ()
+
+
+def test_bundle_verifier_rejects_quarantined_anchor_status() -> None:
+    bundle = _load_fixture("valid_signed_attestation.json")
+    bundle["verification_report"]["anchor_status"] = "quarantined"
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.error_code != VERIFY_OK
+    assert "anchor_status=quarantined" in (result.metadata_reason or "")
 
 
 def test_bundle_verifier_rejects_missing_schema_version() -> None:
