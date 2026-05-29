@@ -29,6 +29,9 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+SCHEMA_VERSION_ADDITIVE_FIXTURE = (
+    ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
+)
 
 
 def _run_verify(
@@ -118,6 +121,30 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert rc == 0
     assert stderr == ""
     _assert_matches_verify_result_v1(payload)
+
+
+def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(
+        ["verify", "--json", "--explain", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)],
+        capsys,
+    )
+
+    assert rc == 0
+    assert stderr == ""
+    _assert_matches_verify_result_v1(payload, expect_explanation=True)
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+    assert payload["reasons"] == []
+    assert payload["explanation"] == [
+        {
+            "primary_reason": None,
+            "pointer": "/",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+        }
+    ]
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
