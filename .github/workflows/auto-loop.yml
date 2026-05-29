@@ -1,0 +1,99 @@
+name: auto-loop
+
+# Closes the autonomous coding loop:
+#   autodev merge → bump patch tag → architecture-audit → Opus plan
+#   → planned-task issues → autodev-train → merge → (repeat)
+#
+# Fires on every push to main whose HEAD commit message contains "[autodev]".
+# Guards against runaway spirals: skips if any autodev-pr PR is still open
+# (the loop re-fires when THAT last PR merges).
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # push git tag
+  actions:  write   # gh workflow run (workflow_dispatch)
+  issues:   read
+
+concurrency:
+  group: auto-loop
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  loop:
+    name: Bump version + trigger architecture audit
+    # Only on autodev-originated merges
+    if: contains(github.event.head_commit.message, '[autodev]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Guard — skip if previous autodev batch still in flight
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open_prs=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --label autodev-pr \
+            --state open \
+            --json number \
+            --jq 'length')
+          echo "open_autodev_prs=${open_prs}" >> "$GITHUB_OUTPUT"
+          if [ "$open_prs" -gt 0 ]; then
+            echo "⏭ Skipping: ${open_prs} autodev PR(s) still open." \
+                 "Loop will retrigger when the last one merges."
+          else
+            echo "✅ No open autodev PRs — proceeding with loop."
+          fi
+
+      - name: Compute next patch version
+        id: version
+        if: steps.guard.outputs.open_autodev_prs == '0'
+        run: |
+          set -euo pipefail
+          latest=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+                   | head -1 || echo "v0.0.0")
+          next=$(python3 -c "
+          parts = '$latest'.lstrip('v').split('.')
+          parts[2] = str(int(parts[2]) + 1)
+          print('v' + '.'.join(parts))
+          ")
+          echo "tag=${next}" >> "$GITHUB_OUTPUT"
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "Loop cycle: ${latest} → ${next}"
+
+      - name: Create and push patch tag
+        if: steps.guard.outputs.open_autodev_prs == '0'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name  "autodev-bot"
+          git config user.email "258170091+merchloubna70-dot@users.noreply.github.com"
+          git tag "$TAG" -m "auto-loop patch bump from autodev merge"
+          git push origin "$TAG"
+          echo "✅ Tagged ${TAG}"
+
+      - name: Trigger architecture-audit
+        if: steps.guard.outputs.open_autodev_prs == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh workflow run architecture-audit \
+            --repo "${{ github.repository }}" \
+            --ref main \
+            --field milestone_tag="${TAG}"
+          echo "✅ architecture-audit triggered for ${TAG}"
+          echo "Next: Opus will plan → plan-to-issues → autodev-train implements → loop repeats"
