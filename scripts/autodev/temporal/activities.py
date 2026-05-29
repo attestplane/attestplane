@@ -29,7 +29,7 @@ def _run(
     *,
     cwd: str | None = None,
     env: dict[str, str] | None = None,
-    timeout: int = 2700,
+    timeout: int = 60,
 ) -> str:
     merged = {**os.environ}
     if env:
@@ -59,19 +59,13 @@ def _gh(args: list[str], **kwargs: Any) -> str:
 
 def _purge_whitespace_only_changes(worktree: str) -> None:
     """Reset files whose only changes are whitespace/formatting (no semantic diff)."""
-    changed = _run(["git", "diff", "--name-only"], cwd=worktree).splitlines()
-    reset: list[str] = []
-    for fname in changed:
-        if not fname.strip():
-            continue
-        # --ignore-all-space: if the diff is empty, the change is whitespace-only
-        semantic_diff = _run(
-            ["git", "diff", "--ignore-all-space", "--", fname], cwd=worktree
-        )
-        if not semantic_diff.strip():
-            reset.append(fname)
-    if reset:
-        _run(["git", "checkout", "--"] + reset, cwd=worktree)
+    all_changed = set(_run(["git", "diff", "--name-only"], cwd=worktree).splitlines())
+    semantic_changed = set(
+        _run(["git", "diff", "--ignore-all-space", "--name-only"], cwd=worktree).splitlines()
+    )
+    whitespace_only = [f for f in all_changed - semantic_changed if f.strip()]
+    if whitespace_only:
+        _run(["git", "checkout", "--"] + whitespace_only, cwd=worktree)
 
 
 # ── activity: implement ────────────────────────────────────────────────────────
@@ -123,24 +117,41 @@ async def implement_activity(
             "6. 只修改实现任务所需的最小文件集\n"
             "7. 严禁对整个仓库运行 ruff format .、black .、isort . 等批量格式化命令\n"
             "   只在新建或修改的具体文件上运行格式化\n"
-            "8. 最小化 diff：不要重构与任务无关的代码，不要重命名无关变量或调整无关缩进"
+            "8. 最小化 diff：不要重构与任务无关的代码，不要重命名无关变量或调整无关缩进\n"
+            "9. 修改完成后，在提交前必须先运行验证命令并修复所有错误：\n"
+            "   cd sdk/python && python3.11 -m pytest tests/ -q --tb=short 2>&1 | tail -20\n"
+            "   python3.11 -m ruff check sdk/python/ && python3.11 -m mypy sdk/python/src/ --ignore-missing-imports\n"
+            "   如有失败，继续修复直到通过，再执行 git add。\n"
+            "10. 若验证命令持续失败超过 3 次，停止并输出 'VERIFICATION_FAILED: <原因>'。\n"
         )
 
         # Codex blocks for up to 45 min; run in thread so the asyncio event
         # loop stays free for Temporal heartbeats and other workflow tasks.
-        await asyncio.to_thread(
-            _run,
-            ["codex", "exec", "--sandbox", "workspace-write", prompt],
-            cwd=worktree,
-            env={
-                "CODEX_HOME": CODEX_HOME,
-                "HOME": str(Path.home()),
-                "PATH": os.environ["PATH"],
-                "https_proxy": GFW_PROXY,
-                "http_proxy": GFW_PROXY,
-            },
-            timeout=2700,
-        )
+        try:
+            await asyncio.to_thread(
+                _run,
+                ["codex", "exec", "--sandbox", "workspace-write", prompt],
+                cwd=worktree,
+                env={
+                    "CODEX_HOME": CODEX_HOME,
+                    "HOME": str(Path.home()),
+                    "PATH": os.environ["PATH"],
+                    "https_proxy": GFW_PROXY,
+                    "http_proxy": GFW_PROXY,
+                },
+                timeout=2700,
+            )
+        except RuntimeError as exc:
+            # Save full Codex output for debugging
+            import time as _t
+            log_dir = MAIN_REPO / "data" / "codex-runs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_path = log_dir / f"issue-{issue_number}-attempt-{int(_t.time())}.log"
+            log_path.write_text(str(exc))
+            activity.logger.error(
+                "Codex failed for issue #%d — full log at %s", issue_number, log_path
+            )
+            raise
 
         # Purge files whose only changes are whitespace/formatting so the PR diff
         # stays focused on real implementation changes. Codex sometimes runs
@@ -152,13 +163,13 @@ async def implement_activity(
             f for f in _run(["git", "diff", "--name-only"], cwd=worktree).splitlines()
             if f.endswith(".py")
         ]
-        for _py_file in changed_py:
+        if changed_py:
             try:
-                _run(["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", _py_file],
+                _run(["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", *changed_py],
                      cwd=worktree)
-                _run(["python3.11", "-m", "ruff", "format", _py_file], cwd=worktree)
+                _run(["python3.11", "-m", "ruff", "format", *changed_py], cwd=worktree)
             except RuntimeError as _ruff_err:
-                activity.logger.warning("ruff on %s had errors: %s", _py_file, str(_ruff_err)[:200])
+                activity.logger.warning("ruff had errors: %s", str(_ruff_err)[:200])
 
         # Detect changes
         porcelain = _run(["git", "status", "--porcelain"], cwd=worktree)
@@ -412,6 +423,12 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
         ))
         merge_state = pr_info.get("mergeStateStatus", "UNKNOWN")
         checks = pr_info.get("statusCheckRollup", [])
+
+        if not checks:
+            # CI checks haven't registered yet — wait before evaluating state
+            await asyncio.sleep(15)
+            continue
+
         pending = [c for c in checks if c.get("status") not in ("COMPLETED",)]
 
         if merge_state == "CLEAN" and not pending:
@@ -443,9 +460,11 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
                     ln for ln in log.splitlines()
                     if any(kw in ln for kw in
                            ["error", "FAILED", "Error:", "E402", "assert", "Found", "✗",
-                            "ruff", "mypy", "biome", "markdownlint", "lychee", "TypeError"])
+                            "ruff", "mypy", "biome", "markdownlint", "lychee", "TypeError",
+                            "ImportError", "AttributeError", "raise ", "File \"", ">       ",
+                            "ERRORS", "short test summary", "pytest"])
                 ]
-                error_summary += f"\n### {check_name}\n" + "\n".join(kept[:40]) + "\n"
+                error_summary += f"\n### {check_name}\n" + "\n".join(kept[:80]) + "\n"
             except RuntimeError:
                 error_summary += f"\n### {check_name}\n(log unavailable)\n"
 
