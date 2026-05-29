@@ -19,15 +19,23 @@ SCHEMA_VERSION_VECTORS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
 )["cases"]
 SCHEMA_VERSION_CASE_IDS = {str(vector["case_id"]) for vector in SCHEMA_VERSION_VECTORS}
+SCHEMA_VERSION_CASE_ALIASES = {
+    "schema_version_additive_positive": "additive_with_unknown_field_ok",
+    "schema_version_unknown_required": "unknown_required_field",
+}
 
 
 def _bundle(case: str) -> dict:
-    return json.loads((SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (SCHEMA_VERSION_DIR / SCHEMA_VERSION_CASE_ALIASES.get(case, case) / "bundle.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 @pytest.mark.parametrize("case", sorted(SCHEMA_VERSION_CASE_IDS))
 def test_schema_version_vector_set_is_complete(case: str) -> None:
-    assert (SCHEMA_VERSION_DIR / case / "bundle.json").exists()
+    assert (SCHEMA_VERSION_DIR / SCHEMA_VERSION_CASE_ALIASES.get(case, case) / "bundle.json").exists()
 
 
 @pytest.mark.parametrize("vector", SCHEMA_VERSION_VECTORS, ids=lambda vector: vector["case_id"])

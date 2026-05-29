@@ -1,0 +1,17 @@
+{
+  "assertions": [
+    "future_bundle_field_is_preserved",
+    "recursive_unique_keys"
+  ],
+  "bundle_path": "fixtures/forward-compat/additive-optional.json",
+  "case_id": "schema_version_additive_positive",
+  "description": "Forward-compatible proof bundle fixture with an additive optional top-level field that the verifier accepts without changing canonical bytes.",
+  "expected_ok": true,
+  "expected_canonical_sha256": "a8f24c27dc2467f9b28783a6e8b1e59290a52bb92e847dbd0d8806cf81a942d1",
+  "helper": "bundle_path",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.positive.v1",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}

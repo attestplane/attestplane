@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -75,6 +76,8 @@ def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]
 
     assert result.ok is vector["expected_ok"]
     assert result.error_code == VERIFY_OK
+    if "expected_canonical_sha256" in vector:
+        assert hashlib.sha256(raw.encode("utf-8")).hexdigest() == vector["expected_canonical_sha256"]
     for assertion in vector["assertions"]:
         if assertion == "recursive_unique_keys":
             _assert_recursive_unique_keys(raw)
@@ -87,6 +90,8 @@ def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]
         elif assertion == "int64_boundary_payload_is_accepted":
             value = bundle["events"][0]["event"]["payload"]["boundary_timestamp_us"]
             assert value == 9223372036854775807
+        elif assertion == "future_bundle_field_is_preserved":
+            assert bundle["future_bundle_field"] == {"preserved": True}
         else:
             raise AssertionError(f"unknown assertion: {assertion}")
 

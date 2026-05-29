@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -20,6 +21,7 @@ FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
 SIGNED_BUNDLE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+FORWARD_COMPAT_BUNDLE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
 
 
 @pytest.mark.parametrize(
@@ -110,3 +112,16 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
+
+
+def test_verify_forward_compat_fixture_passes_and_pins_digest(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", str(FORWARD_COMPAT_BUNDLE), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["result"] == "pass"
+    assert payload["reason_code"] is None
+    assert payload["bundle"]["schema_version"] == 1
+    assert payload["bundle"]["digest"] == hashlib.sha256(FORWARD_COMPAT_BUNDLE.read_bytes()).hexdigest()

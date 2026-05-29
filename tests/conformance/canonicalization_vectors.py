@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.signing import InMemoryKeyProvider, Signer
 
 ROOT = Path(__file__).resolve().parents[2]
 VECTOR_ROOT = ROOT / "tests" / "conformance" / "vectors" / "canonicalization"
@@ -58,6 +57,8 @@ def parse_vector_utc(text: str) -> datetime:
 
 
 def signer_for_canonicalization_vector(vector: dict[str, Any]) -> Signer:
+    from attestplane.signing import InMemoryKeyProvider, Signer
+
     now = parse_vector_utc(vector["now"])
     return Signer(
         chain_id=vector["case_id"],
@@ -67,14 +68,21 @@ def signer_for_canonicalization_vector(vector: dict[str, Any]) -> Signer:
 
 
 def emit_positive_canonicalization_bundle(vector: dict[str, Any]) -> dict[str, Any]:
-    assert vector["helper"] == "ProofBundleBuilder.minimal"
-    return ProofBundleBuilder.minimal(
-        vector["subject_digest"],
-        signer_for_canonicalization_vector(vector),
-        extra_payload=vector.get("extra_payload"),
-        now=parse_vector_utc(vector["now"]),
-        event_id=vector["event_id"],
-    )
+    helper = vector.get("helper", "ProofBundleBuilder.minimal")
+    if helper == "ProofBundleBuilder.minimal":
+        return ProofBundleBuilder.minimal(
+            vector["subject_digest"],
+            signer_for_canonicalization_vector(vector),
+            extra_payload=vector.get("extra_payload"),
+            now=parse_vector_utc(vector["now"]),
+            event_id=vector["event_id"],
+        )
+    if helper == "bundle_path":
+        bundle_path = ROOT / vector["bundle_path"]
+        return deepcopy(json.loads(bundle_path.read_text(encoding="utf-8")))
+    if helper == "inline_bundle":
+        return deepcopy(vector["bundle"])
+    raise AssertionError(f"unknown helper: {helper}")
 
 
 def emit_positive_bundle(vector: dict[str, Any]) -> dict[str, Any]:

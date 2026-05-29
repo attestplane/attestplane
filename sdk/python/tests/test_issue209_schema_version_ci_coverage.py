@@ -49,6 +49,10 @@ SCHEMA_VERSION_DIR = REPO_ROOT / "tests" / "conformance" / "schema_version"
 SCHEMA_VERSION_VECTORS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
 )["cases"]
+SCHEMA_VERSION_CASE_ALIASES = {
+    "schema_version_additive_positive": "additive_with_unknown_field_ok",
+    "schema_version_unknown_required": "unknown_required_field",
+}
 
 
 def _fixture(name: str) -> dict:
@@ -56,7 +60,11 @@ def _fixture(name: str) -> dict:
 
 
 def _schema_case(name: str) -> dict:
-    return json.loads((SCHEMA_VERSION_DIR / name / "bundle.json").read_text(encoding="utf-8"))
+    return json.loads(
+        (SCHEMA_VERSION_DIR / SCHEMA_VERSION_CASE_ALIASES.get(name, name) / "bundle.json").read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def _unsigned_bundle() -> dict:
@@ -115,9 +123,9 @@ def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
 
 def test_unknown_required_field_maps_to_schema_unknown() -> None:
     vector = next(
-        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field"
+        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "schema_version_unknown_required"
     )
-    bundle = _schema_case("unknown_required_field")
+    bundle = _schema_case("schema_version_unknown_required")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 
