@@ -16,6 +16,10 @@ The payload is fixed at schema version 1:
   "reason_code": null,
   "taxonomy_version": 1,
   "reasons": [],
+  "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null
+  },
   "bundle": {
     "schema_version": 1,
     "digest": "..."
@@ -27,7 +31,9 @@ The payload is fixed at schema version 1:
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
   `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  means a usage, I/O, or schema/shape problem prevented verification. The
+  advisory anchoring quarantine path uses exit code `3` unless
+  `--strict-anchoring` is set.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -35,6 +41,10 @@ The payload is fixed at schema version 1:
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
+- `anchoring` is an additive advisory object. It always contains
+  `anchoring_status ∈ {verified, quarantined, absent}` and a nullable
+  `quarantine_reason`. A quarantined anchor is advisory by default and only
+  becomes a hard failure when `--strict-anchoring` is passed.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
   On success, the array contains a compact summary; on rejection, it mirrors
@@ -91,6 +101,10 @@ the structured payload.
   "result": "pass",
   "exit_code": 0,
   "reasons": [],
+  "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null
+  },
   "explanation": [
     {
       "primary_reason": null,
@@ -114,6 +128,10 @@ the structured payload.
   "exit_code": 1,
   "reason_code": "att.verify.schema_version_unsupported",
   "taxonomy_version": 1,
+  "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null
+  },
   "explanation": [
     {
       "primary_reason": "att.verify.schema_version_unsupported",

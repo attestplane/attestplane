@@ -26,6 +26,10 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `anchoring` is an additive advisory object. It is always present and carries
+  `anchoring_status ∈ {verified, quarantined, absent}` plus a nullable
+  `quarantine_reason`. By default, quarantined anchoring is advisory only;
+  pass `--strict-anchoring` to turn it into a hard failure.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the

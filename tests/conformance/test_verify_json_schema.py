@@ -25,7 +25,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> dict[str, object]:
     rc = main(argv)
-    assert rc in {0, 1, 2}
+    assert rc in {0, 1, 2, 3}
     return json.loads(capsys.readouterr().out)
 
 
@@ -40,6 +40,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "reason_code",
         "taxonomy_version",
         "reasons",
+        "anchoring",
         "bundle",
     ]
 
@@ -50,6 +51,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "reason_code",
         "taxonomy_version",
         "reasons",
+        "anchoring",
         "bundle",
     }
     if "explanation" in payload:
@@ -64,6 +66,13 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
+    )
+    anchoring = payload["anchoring"]
+    assert isinstance(anchoring, dict)
+    assert set(anchoring) == {"anchoring_status", "quarantine_reason"}
+    assert anchoring["anchoring_status"] in {"verified", "quarantined", "absent"}
+    assert anchoring["quarantine_reason"] is None or isinstance(
+        anchoring["quarantine_reason"], str
     )
     assert isinstance(payload["reasons"], list)
     if "explanation" in payload:
@@ -134,4 +143,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )

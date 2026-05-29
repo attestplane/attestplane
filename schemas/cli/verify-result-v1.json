@@ -12,6 +12,7 @@
     "reason_code",
     "taxonomy_version",
     "reasons",
+    "anchoring",
     "bundle"
   ],
   "properties": {
@@ -72,6 +73,35 @@
             "type": "string",
             "minLength": 1
           }
+        }
+      }
+    },
+    "anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "anchoring_status",
+        "quarantine_reason"
+      ],
+      "properties": {
+        "anchoring_status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "quarantined",
+            "absent"
+          ]
+        },
+        "quarantine_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
