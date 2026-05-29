@@ -920,7 +920,7 @@ def next_unabandoned_stable_after(
                 f"autodev-train stable: generated target {candidate.tag} already has stable tag; skipping",
                 flush=True,
             )
-        candidate = next_stable_after(candidate)
+        candidate = next_stable_after(candidate, release_label=release_label)
     return candidate
 
 
