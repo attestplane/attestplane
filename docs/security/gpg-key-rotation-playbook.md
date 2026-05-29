@@ -10,10 +10,12 @@ revoking the GPG key bound to `security@attestplane.com`. Owner: the
 Attestplane maintainer holding the security contact role (rotates per
 `MAINTAINERS.md`).
 
-**Status target.** First key generated and published **at or before M5 W6
-(2026-08-15 v1.0 GA)**. The placeholder block in `SECURITY.md` is replaced
-with the real fingerprint in the same commit that lands this playbook's
-output.
+**Status target.** This playbook is the future operational path. The
+project has explicitly deferred the `security@attestplane.com` GPG
+foundation until the later security milestone recorded in
+[`SECURITY.md`](../../SECURITY.md); no key material is generated yet, and
+no fingerprint is published in repository history, issue text, PR text, or
+logs.
 
 ## 1. Why GPG (and where it does not apply)
 
@@ -38,8 +40,9 @@ maintainer's cosign OIDC identity does not expose past CVE reports.
 
 ## 3. Generation — first key
 
-Run **on the maintainer's own secure laptop or an air-gapped machine**.
-Never on CI, never inside an agent context.
+When the deferral is lifted, run the generation step **on the maintainer's
+own secure laptop or an air-gapped machine**. Never on CI, never inside an
+agent context.
 
 ```bash
 ./scripts/security/generate-security-gpg-key.sh --dry-run   # review config
@@ -61,7 +64,7 @@ subkeys on a hardware token (YubiKey 5C / OpenPGP smartcard). Procedure:
 
 ## 4. Publication
 
-Three channels, all on the same day:
+Once the key exists, publish through these channels on the same day:
 
 1. **Keyserver upload:**
    `gpg --send-keys --keyserver hkps://keys.openpgp.org <fpr>`
@@ -70,9 +73,9 @@ Three channels, all on the same day:
    the key.
 2. **GitHub Settings → SSH and GPG keys → New GPG key** — paste the
    ASCII-armored public key block.
-3. **`SECURITY.md`** — open a PR replacing the `TBD` fingerprint placeholder
-   under `## GPG Key for security@attestplane.com` with the real fingerprint.
-   Reference: this playbook.
+3. **`SECURITY.md`** — open a PR replacing the deferred-status prose under
+   `## GPG Key for security@attestplane.com` with the real fingerprint and
+   publication details. Reference: this playbook.
 
 ## 5. Revocation certificate
 
@@ -100,11 +103,9 @@ Never commit `revoke-*.asc` to git. Never email it to yourself.
   revocation certificate, generate and publish a new key, post a
   `SECURITY-ADVISORY` issue tagged `key-rotation` describing the event.
 
-## 7. Alignment with the M5 W6 GA window
+## 7. Alignment with the deferred milestone
 
-`SECURITY.md` commits Attestplane to having a published GPG key on or
-before the **v1.0 GA target of 2026-08-15** (M5 W6). The supply-chain
-posture table in the same document targets cosign / SBOM / SLSA at M5 W4
-(2026-08-01). This playbook is the operational procedure that backs that
-commitment; it lands before any private key material exists so the
-process is review-ready when the maintainer executes step 3.
+`SECURITY.md` and `docs/security/release-signing.md` both record the
+current deferral. This playbook remains the operational procedure that
+will back the commitment once the deferred milestone is lifted. Until
+then, it is intentionally read-only guidance, not an execution recipe.

@@ -1,20 +1,20 @@
 ---
 source: "[SECURITY.md](./SECURITY.md)"
-source_sha: ff04817ec4405ca57c90998240c6ae09f8c1270c
+source_sha: 7df86083bf98b13799e979aa44f034914bba8cde
 translation_status: reviewed
 translator: "@merchloubna70-dot"
 reviewed_at: 2026-05-21
 reviewed_by: native-speaker (AI-assisted, fluency + normative-equivalence sweep)
 ---
 
-> **Source / 英文原文：** [SECURITY.md](./SECURITY.md) @ `ff04817e`
+> **Source / 英文原文：** [SECURITY.md](./SECURITY.md) @ `7df86083`
 
 # 安全策略
 
 **项目：** Attestplane — Open Trust Substrate for AI Agents（面向 AI 智能体的开放可信底座）
 **维护实体：** Attestplane Pte. Ltd.（Singapore，截至 2026-05-17 处于设立中状态）
 **联系方式：** security@attestplane.com
-**GPG 密钥：** 将于 M5 W6（目标 2026-08-15）之前发布在 `https://attestplane.com/.well-known/security.txt`。
+**GPG 密钥：** 已明确延期；当前仍通过邮件和 GitHub Security Advisories 接收私下披露。详见 [`docs/security/release-signing.md`](docs/security/release-signing.md) 中的决策与影响说明。
 
 ---
 
@@ -40,7 +40,7 @@ reviewed_by: native-speaker (AI-assisted, fluency + normative-equivalence sweep)
 | 通道 | 详情 |
 |---------|---------|
 | 邮件 | `security@attestplane.com` |
-| GPG | 公钥待定；将于 M5 W6 之前发布在 `https://attestplane.com/.well-known/security.txt` |
+| GPG | 目前延期；请改用邮件或 GitHub Security Advisories。详见 [`docs/security/release-signing.md`](docs/security/release-signing.md) 中的延期窗口、阻碍项与准备度影响。 |
 | GitHub Security Advisories | 使用 Security 标签页中的 "Report a vulnerability" 按钮（私下披露） |
 
 请在报告中提供：
@@ -54,31 +54,32 @@ reviewed_by: native-speaker (AI-assisted, fluency + normative-equivalence sweep)
 
 ## GPG 密钥（计划用于 v1.0 GA）
 
-将在 **v1.0 GA 目标日期 2026-08-15** 当天或之前，发布一份用于
-`security@attestplane.com` 的专用 GPG 密钥。在该日期之前，项目尚无
-任何 GPG 密钥在流通；在通过下列渠道正式发布之前，不要信任任何自称是
-`security@attestplane.com` 密钥的密钥材料。
+**状态**：已明确延期，直到 [`docs/security/release-signing.md`](docs/security/release-signing.md)
+记录的后续签名里程碑。
 
-**计划的发布渠道（GA 切版时三处一并发布）：**
+**为何延期**
 
-- 本 `SECURITY.md` 文件（fingerprint 内嵌在下方占位区块内）。
-- 项目主页 `https://attestplane.io`（安全页面）。
-- MIT PGP 密钥服务器（`pgp.mit.edu`），可通过 `security@attestplane.com` UID 检索。
+- 目前尚未批准用于发布签名材料或安全联系密钥的受保护环境托管流程。
+- 第二位分流联系人尚未指定，连续性不足。
+- 私钥材料绝不能出现在仓库历史、issue 文本、PR 文本或日志中；在托管模型定稿前延期，可以避免泄露风险。
 
-**Pre-GA / GA 之前的备选私密通道。** 在密钥发布之前，若报告人需要
-一条传输层加密的通道，**可以**使用 **GitHub Security Advisories**
-（本仓库 Security 标签页中的 "Report a vulnerability" 按钮）。
-GitHub Security Advisories 提供具备 TLS-in-transit 机密性的私下披露
-通道，是 Pre-GA / GA 之前对于不便以明文邮件提交敏感细节的报告人
-所推荐的路径。
+**当前报告路径**
 
-**Fingerprint 占位（<v1.0 GA 时填入>）：**
+- 邮件：`security@attestplane.com`
+- GitHub Security Advisories：通过 Security 标签页中的 "Report a vulnerability" 按钮进行私下披露，且具备传输层加密。
 
-```
-Primary fingerprint: <to be filled in at v1.0 GA cut, target 2026-08-15>
-UID:                 Attestplane Security <security@attestplane.com>
-Key type:            <to be filled in at v1.0 GA cut>
-```
+**延期的影响**
+
+- **CNA 准备度。** 漏洞披露流程仍可用，但 CNA / CVE 申请材料必须把专用 GPG 通道视为尚未上线。
+- **Scorecard。** 该延期不会改变当前 Scorecard 画像，因为 Scorecard 关注的是仓库可见的安全卫生项，而不是私密报告密钥的发布。
+- **准备度声明。** 在延期解除且密钥实际发布之前，不得宣称已发布 `security@attestplane.com` GPG 密钥、已启用加密报告通道，或已建立基于 GPG 的发布签名托管链路。
+
+**延期解除后的动作**
+
+维护者将会在安全机器上使用
+[`scripts/security/generate-security-gpg-key.sh`](scripts/security/generate-security-gpg-key.sh)
+生成密钥，然后通过轮换手册中列出的渠道发布 fingerprint 和公钥。
+在此之前，仓库历史、issue 文本、PR 文本和日志中都不应出现任何 fingerprint 文本。
 
 ---
 
