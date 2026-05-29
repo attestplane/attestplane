@@ -5,6 +5,7 @@
 import asyncio
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -486,26 +487,41 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
         await asyncio.sleep(30)
 
     # ── extract CI error logs ──────────────────────────────────────────────────
+    # databaseId = check-run ID ≠ workflow run ID; gh run view needs the latter.
+    # Extract workflow run ID from detailsUrl (…/actions/runs/{run_id}/job/…).
     failed_checks = [c for c in checks if c.get("conclusion") == "FAILURE"]
     error_summary = ""
+    seen_run_ids: set[str] = set()
     for check in failed_checks[:5]:
         check_name = check.get("name", "unknown")
-        run_id = str(check.get("databaseId", ""))
-        if run_id:
-            try:
-                log = _gh(["run", "view", run_id, "--log-failed", "--repo", REPO_SLUG], timeout=90)
-                # Keep only diagnostic lines to stay within Codex context
-                kept = [
-                    ln for ln in log.splitlines()
-                    if any(kw in ln for kw in
-                           ["error", "FAILED", "Error:", "E402", "assert", "Found", "✗",
-                            "ruff", "mypy", "biome", "markdownlint", "lychee", "TypeError",
-                            "ImportError", "AttributeError", "raise ", "File \"", ">       ",
-                            "ERRORS", "short test summary", "pytest"])
-                ]
-                error_summary += f"\n### {check_name}\n" + "\n".join(kept[:80]) + "\n"
-            except RuntimeError:
-                error_summary += f"\n### {check_name}\n(log unavailable)\n"
+        details_url = check.get("detailsUrl", "")
+        m = re.search(r"/actions/runs/(\d+)", details_url)
+        run_id = m.group(1) if m else ""
+        if not run_id or run_id in seen_run_ids:
+            continue
+        seen_run_ids.add(run_id)
+        try:
+            raw_log = _gh(["run", "view", run_id, "--log-failed", "--repo", REPO_SLUG], timeout=90)
+            # Strip "<job>\t<step>\t<ts>Z " prefix to target actual content
+            cleaned: list[str] = []
+            for raw_ln in raw_log.splitlines():
+                parts = raw_ln.split("\t", 2)
+                cln = parts[2] if len(parts) == 3 else raw_ln
+                ts_idx = cln.find("Z ")
+                cln = cln[ts_idx + 2:] if ts_idx != -1 else cln
+                cleaned.append(cln)
+            kept = [
+                ln for ln in cleaned
+                if any(kw in ln for kw in
+                       ["error", "FAILED", "Error:", "E402", "assert", "Found", "✗",
+                        "ruff", "mypy", "biome", "markdownlint", "lychee", "TypeError",
+                        "ImportError", "AttributeError", "raise ", 'File "', ">       ",
+                        "ERRORS", "short test summary", "pytest", "AssertionError",
+                        "##[error]", "allowlist", "manifest", "Unused", "type: ignore"])
+            ]
+            error_summary += f"\n### {check_name}\n" + "\n".join(kept[:80]) + "\n"
+        except RuntimeError:
+            error_summary += f"\n### {check_name}\n(log unavailable)\n"
 
     if not error_summary.strip():
         activity.logger.warning("No extractable CI errors for PR #%d — skipping Codex fix", pr_number)
