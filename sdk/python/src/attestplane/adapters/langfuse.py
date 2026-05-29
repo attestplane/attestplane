@@ -63,13 +63,22 @@ from attestplane.adapters.base import AdapterTranslationError, GenericRuntimeAda
 from attestplane.event_types import TOOL_CALL_EVENT
 from attestplane.types import EventDraft, SubjectRef
 
-_KNOWN_OBSERVATION_TYPES: frozenset[str] = frozenset({
-    "GENERATION", "SPAN", "EVENT",
-})
+_KNOWN_OBSERVATION_TYPES: frozenset[str] = frozenset(
+    {
+        "GENERATION",
+        "SPAN",
+        "EVENT",
+    }
+)
 
-_KNOWN_LEVELS: frozenset[str] = frozenset({
-    "DEFAULT", "DEBUG", "WARNING", "ERROR",
-})
+_KNOWN_LEVELS: frozenset[str] = frozenset(
+    {
+        "DEFAULT",
+        "DEBUG",
+        "WARNING",
+        "ERROR",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,15 +109,14 @@ class LangFuseObservation:
 
 
 def _hash_json(value: Any) -> str:
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"),
-                         default=str, ensure_ascii=False).encode("utf-8")
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str, ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
 def _truncate(text: str, n: int = 200) -> str:
     if len(text) <= n:
         return text
-    return text[:n - 3] + "..."
+    return text[: n - 3] + "..."
 
 
 def _level_to_status(level: str | None) -> Literal["OK", "ERROR"]:
@@ -125,9 +133,7 @@ class LangFuseAdapter(GenericRuntimeAdapter[LangFuseObservation]):
 
     def translate(self, runtime_event: LangFuseObservation) -> EventDraft:
         if not isinstance(runtime_event, LangFuseObservation):
-            raise AdapterTranslationError(
-                f"expected LangFuseObservation, got {type(runtime_event).__name__}"
-            )
+            raise AdapterTranslationError(f"expected LangFuseObservation, got {type(runtime_event).__name__}")
         obs = runtime_event
 
         if obs.type not in _KNOWN_OBSERVATION_TYPES:
@@ -154,9 +160,7 @@ class LangFuseAdapter(GenericRuntimeAdapter[LangFuseObservation]):
             payload["result_hash"] = _hash_json(obs.output)
 
         if obs.start_time is not None and obs.end_time is not None:
-            duration_ms = int(
-                (obs.end_time - obs.start_time).total_seconds() * 1000
-            )
+            duration_ms = int((obs.end_time - obs.start_time).total_seconds() * 1000)
             payload["latency_ms"] = duration_ms
 
         if obs.status_message and result_status == "ERROR":
@@ -199,9 +203,7 @@ class LangFuseAdapter(GenericRuntimeAdapter[LangFuseObservation]):
         required = ("id", "trace_id", "type")
         missing = [k for k in required if k not in raw]
         if missing:
-            raise AdapterTranslationError(
-                f"LangFuse observation dict missing required fields: {sorted(missing)}"
-            )
+            raise AdapterTranslationError(f"LangFuse observation dict missing required fields: {sorted(missing)}")
 
         def parse_dt(value: Any) -> datetime:
             if value is None:
@@ -213,12 +215,8 @@ class LangFuseAdapter(GenericRuntimeAdapter[LangFuseObservation]):
                 try:
                     return datetime.fromisoformat(normalized)
                 except ValueError as exc:
-                    raise AdapterTranslationError(
-                        f"unparsable datetime {value!r}: {exc}"
-                    ) from exc
-            raise AdapterTranslationError(
-                f"datetime field has type {type(value).__name__}"
-            )
+                    raise AdapterTranslationError(f"unparsable datetime {value!r}: {exc}") from exc
+            raise AdapterTranslationError(f"datetime field has type {type(value).__name__}")
 
         metadata = raw.get("metadata") or {}
         if not isinstance(metadata, dict):

@@ -29,9 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     vectors = load_negative_canonicalization_vectors()
     for vector in vectors:
         assert_negative_vector(vector)
-        sys.stdout.write(
-            f"{vector['case_id']}: {vector['expected']['reason_code']} {vector['expected']['pointer']}\n"
-        )
+        sys.stdout.write(f"{vector['case_id']}: {vector['expected']['reason_code']} {vector['expected']['pointer']}\n")
     return 0
 
 

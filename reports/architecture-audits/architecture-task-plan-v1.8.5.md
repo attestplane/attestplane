@@ -16,7 +16,7 @@ No standalone P0 product task is proposed for this daily plan. The active releas
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][verifier][cli] Close the remaining `taxonomy_version` parity gap in verify outputs
+### ISSUE 1 · \[P1\]\[verifier\]\[cli\] Close the remaining `taxonomy_version` parity gap in verify outputs
 
 Owner: verifier/CLI
 
@@ -45,7 +45,7 @@ Rollout / migration notes:
 - Keep the current failure semantics stable during the migration window.
 - Do not remove or rename existing error fields.
 
-### ISSUE 2 · [P1][conformance] Pin forward-compatible additive-optional acceptance and the CI output contract
+### ISSUE 2 · \[P1\]\[conformance\] Pin forward-compatible additive-optional acceptance and the CI output contract
 
 Owner: conformance
 
@@ -77,7 +77,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][release] Document the v1.8.5 user-visible delta and claim-safety boundary
+### ISSUE 3 · \[P2\]\[docs\]\[release\] Document the v1.8.5 user-visible delta and claim-safety boundary
 
 Owner: docs/release
 

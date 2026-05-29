@@ -37,8 +37,7 @@ def _build_chain(n: int) -> list:
             actor=f"agent://test/{i}",
             payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -208,18 +207,21 @@ def test_verify_chain_with_anchors_walks_intermediates() -> None:
     provider = TestTSAProvider(authority)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[1].event_hash),
-        anchored_seq=1, now=_NOW,
+        anchored_seq=1,
+        now=_NOW,
     )
     # The TestTSAProvider only puts leaf + root in tsa_cert_chain; we
     # need to extend it with the intermediate for verification to succeed.
     materials = authority.materials()
     from dataclasses import replace
+
     anchor = replace(
         anchor,
         tsa_cert_chain=anchor.tsa_cert_chain + materials.intermediate_certs_der,
     )
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
