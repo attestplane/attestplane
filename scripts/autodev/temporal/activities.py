@@ -589,6 +589,7 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
     main = str(MAIN_REPO)
 
     # Rebase branch on current main to resolve any conflicts before merging.
+    rebase_ok = False
     try:
         _run(["git", "fetch", "origin", "main", branch], cwd=main)
         if Path(worktree).exists():
@@ -605,12 +606,20 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             "GIT_COMMITTER_EMAIL": BOT_EMAIL,
         })
         _run(["git", "push", "origin", branch, "--force-with-lease"], cwd=worktree)
-        # Rebase had conflicts — close the PR rather than retrying forever
-        activity.logger.error("rebase FAILED for PR #%d (true conflict) — closing PR", pr_number)
+        rebase_ok = True
+    except RuntimeError as rebase_err:
+        activity.logger.error("rebase FAILED for PR #%d (true conflict) — closing PR: %s", pr_number, str(rebase_err)[:200])
         try:
             _run(["git", "rebase", "--abort"], cwd=worktree)
         except RuntimeError:
             pass
+    finally:
+        try:
+            _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
+        except Exception:
+            pass
+
+    if not rebase_ok:
         try:
             _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
                  "--comment", "Closed by autodev-train: rebase onto main failed due to merge conflicts."])
@@ -623,11 +632,6 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
         except RuntimeError:
             pass
         return {"merged": False, "reason": "conflict"}
-    finally:
-        try:
-            _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
-        except Exception:
-            pass
 
     # Rebase succeeded — use --auto so GitHub waits for fresh CI before merging
     _gh([
