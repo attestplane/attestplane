@@ -7,6 +7,15 @@
       "ok": true
     },
     {
+      "case_id": "additive_optional_pass",
+      "chain_metadata_fields": [
+        "future_metadata_field"
+      ],
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "ok": true
+    },
+    {
       "case_id": "additive_with_unknown_field_ok",
       "chain_metadata_fields": [
         "future_metadata_field"

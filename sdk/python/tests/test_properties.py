@@ -20,6 +20,10 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import pytest
+
+pytest.importorskip("hypothesis")
+
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -49,18 +53,10 @@ def _safe_text() -> st.SearchStrategy[str]:
 
 def _restricted_json_value() -> st.SearchStrategy[Any]:
     """Recursive JSON values that satisfy the restricted-JSON profile."""
-    primitives = (
-        st.none()
-        | st.booleans()
-        | st.integers(min_value=-(2**63), max_value=2**63 - 1)
-        | _safe_text()
-    )
+    primitives = st.none() | st.booleans() | st.integers(min_value=-(2**63), max_value=2**63 - 1) | _safe_text()
     return st.recursive(
         primitives,
-        lambda children: (
-            st.lists(children, max_size=4)
-            | st.dictionaries(_safe_text(), children, max_size=4)
-        ),
+        lambda children: st.lists(children, max_size=4) | st.dictionaries(_safe_text(), children, max_size=4),
         max_leaves=12,
     )
 
@@ -116,9 +112,7 @@ def test_canonicalize_event_is_deterministic(draft: EventDraft) -> None:
     keys=st.lists(_safe_text(), min_size=2, max_size=8, unique=True),
     values=st.lists(_restricted_json_value(), min_size=2, max_size=8),
 )
-def test_canonicalize_object_is_insertion_order_invariant(
-    keys: list[str], values: list[Any]
-) -> None:
+def test_canonicalize_object_is_insertion_order_invariant(keys: list[str], values: list[Any]) -> None:
     n = min(len(keys), len(values))
     items = list(zip(keys[:n], values[:n], strict=True))
     forward = dict(items)
@@ -137,9 +131,7 @@ def test_chain_of_n_appends_verifies(drafts: list[EventDraft]) -> None:
 
 
 @given(drafts=st.lists(_event_draft, min_size=2, max_size=8), data=st.data())
-def test_tampering_with_event_hash_is_detected(
-    drafts: list[EventDraft], data: st.DataObject
-) -> None:
+def test_tampering_with_event_hash_is_detected(drafts: list[EventDraft], data: st.DataObject) -> None:
     sub = AttestSubstrate()
     for i, draft in enumerate(drafts):
         sub.append(draft, now=_FIXED_NOW + timedelta(microseconds=i))
@@ -154,9 +146,7 @@ def test_tampering_with_event_hash_is_detected(
 
 
 @given(drafts=st.lists(_event_draft, min_size=2, max_size=8), data=st.data())
-def test_tampering_with_prev_hash_is_detected(
-    drafts: list[EventDraft], data: st.DataObject
-) -> None:
+def test_tampering_with_prev_hash_is_detected(drafts: list[EventDraft], data: st.DataObject) -> None:
     sub = AttestSubstrate()
     for i, draft in enumerate(drafts):
         sub.append(draft, now=_FIXED_NOW + timedelta(microseconds=i))
@@ -171,9 +161,7 @@ def test_tampering_with_prev_hash_is_detected(
 
 
 @given(drafts=st.lists(_event_draft, min_size=2, max_size=8), data=st.data())
-def test_tampering_with_seq_is_detected(
-    drafts: list[EventDraft], data: st.DataObject
-) -> None:
+def test_tampering_with_seq_is_detected(drafts: list[EventDraft], data: st.DataObject) -> None:
     sub = AttestSubstrate()
     for i, draft in enumerate(drafts):
         sub.append(draft, now=_FIXED_NOW + timedelta(microseconds=i))
@@ -212,6 +200,4 @@ def test_rehydrate_then_verify_round_trip(drafts: list[EventDraft]) -> None:
     rehydrated = AttestSubstrate.from_events(source.snapshot())
     assert rehydrated.tip() == source.tip()
     assert rehydrated.verify().ok
-    assert [e.event_hash for e in rehydrated.snapshot()] == [
-        e.event_hash for e in source.snapshot()
-    ]
+    assert [e.event_hash for e in rehydrated.snapshot()] == [e.event_hash for e in source.snapshot()]

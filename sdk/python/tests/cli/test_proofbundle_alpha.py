@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("asn1crypto")
+
 from attestplane.cli.main import main
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -134,9 +136,7 @@ def test_p3_2_signature_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries signature_material but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "signature_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("signature_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
     assert payload["signature_verification_status"] == "skipped"
 
@@ -145,9 +145,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries anchor_records but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "anchor_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("anchor_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
     assert payload["anchor_verification_status"] == "skipped"
 
