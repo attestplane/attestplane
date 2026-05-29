@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "attestplane"
-version = "1.8.12"
+version = "1.8.13"
 description = "Apache-2.0 attestation and audit substrate for AI agent evidence chains."
 readme = "README.md"
 requires-python = ">=3.11"
