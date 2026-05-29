@@ -22,6 +22,7 @@ import attestplane
 import pytest
 
 from attestplane.canonical import CanonicalizationError
+from attestplane.cli.main import main
 from attestplane.proof_bundle import (
     FrameworkMapping,
     ProofBundleBuilder,
@@ -31,6 +32,7 @@ from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained
 from attestplane.types import ChainedEvent
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_errors import VERIFY_OK
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION
 
 ROOT = Path(__file__).resolve().parents[2]
 SIGNED_FIXTURES = (ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",)
@@ -230,6 +232,35 @@ def test_signed_schema_roundtrip_keeps_strict_verifier_contract(case: _RoundTrip
     assert result.signed_attestation_schema_reason is None, (
         f"{case.case_id}: {result.signed_attestation_schema_reason}"
     )
+
+
+def test_taxonomy_version_consistency_across_cli_and_sdk_result(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = json.loads(SIGNED_FIXTURES[0].read_text(encoding="utf-8"))
+    rebuilt = rebuild_signed_schema_fixture(bundle)
+
+    sdk_result = verify_proof_bundle(
+        rebuilt,
+        require_non_empty=True,
+        require_signed_attestation=True,
+    )
+
+    json_rc = main(["verify", "--json", str(SIGNED_FIXTURES[0])])
+    json_stdout = capsys.readouterr().out
+    explain_rc = main(["verify", "--explain", str(SIGNED_FIXTURES[0])])
+    explain_capture = capsys.readouterr()
+
+    json_payload = json.loads(json_stdout)
+
+    assert json_rc == 0
+    assert explain_rc == 0
+    assert json_payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
+    assert sdk_result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
+    assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
+    assert f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION}" in explain_capture.out
+    assert explain_capture.err == ""
+    assert explain_capture.out.startswith("OK ")
 
 
 @pytest.mark.parametrize(

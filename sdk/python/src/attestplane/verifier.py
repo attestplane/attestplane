@@ -17,7 +17,7 @@ import json
 import re
 import sys
 from base64 import b64decode
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -55,6 +55,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
 )
 
@@ -109,6 +110,10 @@ class BundleVerificationResult:
     error_code: VerifyErrorCode
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
+    taxonomy_version: int = field(
+        default=VERIFY_REASON_TAXONOMY_VERSION,
+        kw_only=True,
+    )
 
     def short_summary(self) -> str:
         if self.ok:
