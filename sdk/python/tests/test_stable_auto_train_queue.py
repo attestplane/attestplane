@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+"""Regression suite for stable release-train fix-forward cases.
+
+This file keeps the recent release pipeline regressions together:
+- stale signing workflow run selection,
+- cadence suppression when there is no real work,
+- local stable tag recovery isolation, and
+- release-gate boundary checks for the stable train.
+"""
+
 import importlib.util
 import json
 import subprocess
@@ -1078,6 +1087,31 @@ def test_trigger_sign_release_returns_true_on_success(monkeypatch: pytest.Monkey
     assert "tag=v1.3.9" in dispatch
     assert "execute=true" in dispatch
     assert calls[-1] == ["gh", "run", "watch", "12345", "--exit-status"]
+
+
+def test_trigger_sign_release_ignores_stale_runs_and_prefers_newest_visible_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(stable_auto_train, "run", lambda argv, **kwargs: calls.append(argv))
+    monkeypatch.setattr(
+        stable_auto_train,
+        "capture",
+        lambda argv: (
+            "["
+            '{"databaseId":11111,"headBranch":"main","createdAt":"2026-05-21T07:59:59Z"},'
+            '{"databaseId":22222,"headBranch":"main","createdAt":"2026-05-21T08:00:00Z"},'
+            '{"databaseId":12345,"headBranch":"main","createdAt":"2026-05-21T08:00:00Z"}'
+            "]"
+        ),
+    )
+    monkeypatch.setattr(stable_auto_train, "utc_now_iso", lambda: "2026-05-21T08:00:00Z")
+    monkeypatch.setattr(stable_auto_train.time, "monotonic", iter([0.0, 1.0, 2.0]).__next__)
+    monkeypatch.setattr(stable_auto_train.time, "sleep", lambda seconds: None)
+
+    assert stable_auto_train.trigger_sign_release("v1.3.9") is True
+    assert calls[-1] == ["gh", "run", "watch", "22222", "--exit-status"]
 
 
 def test_trigger_sign_release_returns_false_on_workflow_failure(monkeypatch: pytest.MonkeyPatch) -> None:

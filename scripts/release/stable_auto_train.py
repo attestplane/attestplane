@@ -11,6 +11,13 @@ prepares local package artifacts, commits the version bump, creates an
 immutable annotated tag, pushes main plus that tag, and delegates publication
 to GitHub release-cd.
 
+The stable release pipeline is treated as a deterministic state machine with
+the externally observable phases idle -> probe -> sign-wait -> tag -> publish.
+The implementation enters probe while it fetches, syncs, and reconciles local
+state; enters sign-wait only after the tag has been published and the release-cd
+sidecar dispatch is being watched; and then returns to the normal tag/publish
+loop on the next cycle.
+
 The train does not force-push, delete tags, publish directly from the local
 machine, or move npm ca. Suffix-free stable packages publish through
 release-cd with channel=latest, which also means PyPI default installs advance
@@ -1585,6 +1592,38 @@ def emit_train_event(event: str, **fields: Any) -> None:
     )
 
 
+def parse_utc_timestamp(value: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def select_new_signing_run_id(raw_runs: list[dict[str, Any]], dispatch_started_at: str) -> str | None:
+    """Choose the newest visible signing workflow run after dispatch started."""
+    started_at = parse_utc_timestamp(dispatch_started_at)
+    if started_at is None:
+        return None
+
+    candidates: list[tuple[datetime, int, str]] = []
+    for run in raw_runs:
+        if run.get("headBranch") != "main":
+            continue
+        created_at = parse_utc_timestamp(str(run.get("createdAt", "")))
+        if created_at is None or created_at < started_at:
+            continue
+        run_id = run.get("databaseId")
+        try:
+            database_id = int(run_id)
+        except (TypeError, ValueError):
+            continue
+        candidates.append((created_at, database_id, str(run_id)))
+
+    if not candidates:
+        return None
+    return max(candidates)[2]
+
+
 def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) -> bool:
     """Dispatch a signing-class workflow with execute=true and wait for completion.
 
@@ -1639,16 +1678,9 @@ def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) ->
                 ]
             )
             runs = json.loads(raw_runs or "[]")
-            candidates = [
-                run
-                for run in runs
-                if run.get("headBranch") == "main"
-                and str(run.get("createdAt", "")) >= dispatch_started_at
-                and run.get("databaseId")
-            ]
-            if not candidates:
+            run_id = select_new_signing_run_id(runs, dispatch_started_at)
+            if run_id is None:
                 raise IndexError("new signing workflow run not visible yet")
-            run_id = str(candidates[0]["databaseId"])
         except (subprocess.CalledProcessError, IndexError, json.JSONDecodeError):
             time.sleep(5)
             continue
