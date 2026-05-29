@@ -28,3 +28,5 @@ fixture hash lock in sync in the same change.
 The schema-version replay cases under `tests/conformance/schema_version/` are
 likewise data-driven via `vectors.json`, which binds each case to its stable
 expected reason code without changing the proof-bundle fixtures themselves.
+Known `schema_version` values intentionally ignore additive optional fields,
+but unknown required fields remain fail-closed at the same boundary.

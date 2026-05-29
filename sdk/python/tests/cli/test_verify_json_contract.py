@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -34,9 +33,7 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[4]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
-SCHEMA_VERSION_ADDITIVE_FIXTURE = (
-    ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
-)
+SCHEMA_VERSION_ADDITIVE_FIXTURE = ROOT / "fixtures" / "conformance" / "additive_optional_field.attest"
 
 # Versioned snapshot for the consumer-facing verify --json contract.
 # Keep this fixture in sync with the intentional contract surface only.
@@ -196,7 +193,10 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": (
+                "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
+                "schema_version=1 taxonomy_version=1 anchor=absent"
+            ),
         }
     ]
 
