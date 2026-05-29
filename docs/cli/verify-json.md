@@ -26,8 +26,11 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
-  `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  the stable contract is:
+  - `0` = valid / accepted
+  - `1` = invalid / verifier rejected the bundle
+  - `2` = usage, I/O, or schema/shape problem
+  - `3` = quarantined verifier outcome
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
