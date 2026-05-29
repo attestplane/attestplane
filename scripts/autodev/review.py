@@ -29,7 +29,7 @@ prompt = (
     "2. **REUSE 合规** — 新增文件是否包含 SPDX-License-Identifier 和 SPDX-FileCopyrightText 头部？\n"
     "3. **代码正确性** — 逻辑是否正确，有无明显 bug 或边界条件遗漏？\n"
     "4. **安全性** — 无硬编码密钥，无命令注入，无路径穿越。\n"
-    "5. **项目规范** — 未修改 .github/workflows/、scripts/release/、CHANGELOG.md。\n\n"
+    "5. **项目规范** — 未修改 .github/workflows/、CHANGELOG.md；scripts/release/ 下的文件仅当 Issue 明确要求时可改。\n\n"
     "## 输出格式（严格遵守）\n"
     "第一行必须且只能是以下两个词之一（不加任何标点或空格）：\n"
     "APPROVE\n"
@@ -55,14 +55,18 @@ req = urllib.request.Request(
 
 try:
     with urllib.request.urlopen(req, timeout=120) as resp:
-        result = json.loads(resp.read())
+        raw = resp.read()
+        result = json.loads(raw)
         content = result["choices"][0]["message"]["content"].strip()
+        if not content:
+            content = f"REQUEST_CHANGES\n\n❌ AI review 返回了空响应（finish_reason={result['choices'][0].get('finish_reason')}）。请重新运行 review 工作流或人工审查。"
 except Exception as exc:
     content = f"REQUEST_CHANGES\n\n❌ AI review API 调用失败: {exc}\n\n请重新运行 review 工作流或人工审查。"
 
 with open("/tmp/review_output.txt", "w") as f:
     f.write(content)
 
-first_line = content.splitlines()[0].strip()
+lines = content.splitlines()
+first_line = lines[0].strip() if lines else ""
 decision = first_line if first_line in ("APPROVE", "REQUEST_CHANGES") else "REQUEST_CHANGES"
 print(f"DECISION={decision}")
