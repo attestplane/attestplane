@@ -50,7 +50,13 @@ ANCHOR_TYPE_ALLOWLIST = {"rfc3161"}
 CheckStatus = Literal["pass", "fail"]
 FailureKind = Literal["verification_failed", "invalid_input"]
 ExtensionStatus = Literal[
-    "skipped", "passed", "failed", "invalid_input", "unsupported", "not_implemented"
+    "skipped",
+    "passed",
+    "failed",
+    "quarantined",
+    "invalid_input",
+    "unsupported",
+    "not_implemented",
 ]
 
 
@@ -158,10 +164,7 @@ def _check_proof_bundle(root: dict[str, Any]) -> tuple[dict[str, Any] | None, li
         checks.append(_pass("hash_chain_recompute"))
     else:
         reason = (
-            result.chain_result.reason
-            or result.metadata_reason
-            or result.policy_trace_refs_reason
-            or "bundle failed"
+            result.chain_result.reason or result.metadata_reason or result.policy_trace_refs_reason or "bundle failed"
         )
         checks.append(_fail("hash_chain_recompute", "verification_failed", reason))
     return proof_bundle, checks
@@ -384,9 +387,7 @@ def _signature_extension(
         check = _fail(
             "signature_verification",
             "invalid_input",
-            (
-                "--verify-signature requested but dsse_envelope.signatures is empty"
-            ),
+            ("--verify-signature requested but dsse_envelope.signatures is empty"),
         )
         return "invalid_input", summary, check
     if not isinstance(material, dict):
@@ -548,10 +549,7 @@ def _signature_extension(
             check = _fail(
                 "signature_verification",
                 "verification_failed",
-                (
-                    f"DSSE ed25519 signature[{sidx}] (keyid={keyid!r}) does not "
-                    f"verify against payload PAE"
-                ),
+                (f"DSSE ed25519 signature[{sidx}] (keyid={keyid!r}) does not verify against payload PAE"),
             )
             return "failed", summary, check
         verified += 1
@@ -560,9 +558,13 @@ def _signature_extension(
     summary["verified_signature_count"] = verified
     summary["allowlist"] = sorted(SIGNATURE_ALGORITHM_ALLOWLIST)
     summary["reason"] = "dsse_ed25519_pae_signatures_verified"
-    return "passed", summary, _pass(
-        "signature_verification",
-        f"verified {verified} DSSE ed25519 signature(s) over PAE",
+    return (
+        "passed",
+        summary,
+        _pass(
+            "signature_verification",
+            f"verified {verified} DSSE ed25519 signature(s) over PAE",
+        ),
     )
 
 
@@ -579,7 +581,7 @@ def _anchor_extension(
     * any record with ``anchor_type`` outside
       :data:`ANCHOR_TYPE_ALLOWLIST` → ``unsupported`` + exit 2
     * material present and verify-success → ``passed`` + exit 0
-    * material present and verify-failure → ``failed`` + exit 1
+    * material present and verify-failure → ``quarantined`` + exit 1
 
     Verification calls
     :func:`attestplane.anchoring.rfc3161.verify_timestamp_token` with
@@ -726,6 +728,7 @@ def _anchor_extension(
         # Optional intermediates_der pass-through (cert-chain depth > 1).
         intermediates_der: list[bytes] = []
         import contextlib
+
         chain_b64s = record.get("tsa_cert_chain_b64")
         if isinstance(chain_b64s, list):
             # Skip the first entry (leaf) — it's already inside the token.
@@ -745,21 +748,26 @@ def _anchor_extension(
         except AnchorVerificationError as exc:
             summary["reason"] = "rfc3161_verify_failed"
             summary["failed_anchor_index"] = ridx
+            summary["quarantine_reason"] = "rfc3161_verification_failed"
             check = _fail(
                 "anchor_verification",
                 "verification_failed",
                 f"anchor_records[{ridx}] RFC-3161 verification failed: {exc}",
             )
-            return "failed", summary, check
+            return "quarantined", summary, check
         verified += 1
 
     summary["performed"] = True
     summary["verified_anchor_count"] = verified
     summary["allowlist"] = sorted(ANCHOR_TYPE_ALLOWLIST)
     summary["reason"] = "rfc3161_tokens_verified"
-    return "passed", summary, _pass(
-        "anchor_verification",
-        f"verified {verified} RFC-3161 anchor token(s) against trust roots",
+    return (
+        "passed",
+        summary,
+        _pass(
+            "anchor_verification",
+            f"verified {verified} RFC-3161 anchor token(s) against trust roots",
+        ),
     )
 
 
@@ -785,8 +793,10 @@ def verify_alpha_proofbundle_file(
     checks.append(parse_check)
     if parse_check.status == "fail":
         return _report(
-            path, checks,
-            verify_signature=verify_signature, verify_anchor=verify_anchor,
+            path,
+            checks,
+            verify_signature=verify_signature,
+            verify_anchor=verify_anchor,
             signature_status="skipped" if not verify_signature else "invalid_input",
             anchor_status="skipped" if not verify_anchor else "invalid_input",
             signature_summary={"performed": False, "reason": "input_unparsable"},
@@ -797,8 +807,10 @@ def verify_alpha_proofbundle_file(
     checks.append(shape_check)
     if root_dict is None:
         return _report(
-            path, checks,
-            verify_signature=verify_signature, verify_anchor=verify_anchor,
+            path,
+            checks,
+            verify_signature=verify_signature,
+            verify_anchor=verify_anchor,
             signature_status="skipped" if not verify_signature else "invalid_input",
             anchor_status="skipped" if not verify_anchor else "invalid_input",
             signature_summary={"performed": False, "reason": "root_not_object"},
@@ -808,15 +820,17 @@ def verify_alpha_proofbundle_file(
     checks.append(_check_schema_version(root_dict))
     proof_bundle, proof_checks = _check_proof_bundle(root_dict)
     checks.extend(proof_checks)
-    checks.extend([
-        _check_artifact(root_dict),
-        _check_hash_chain(root_dict, proof_bundle),
-        _check_obligation_refs(root_dict, proof_bundle),
-        _check_in_toto_statement(root_dict, proof_bundle),
-        _check_dsse_envelope(root_dict),
-        _check_storage_compatibility(root_dict),
-        _check_provenance(root_dict),
-    ])
+    checks.extend(
+        [
+            _check_artifact(root_dict),
+            _check_hash_chain(root_dict, proof_bundle),
+            _check_obligation_refs(root_dict, proof_bundle),
+            _check_in_toto_statement(root_dict, proof_bundle),
+            _check_dsse_envelope(root_dict),
+            _check_storage_compatibility(root_dict),
+            _check_provenance(root_dict),
+        ]
+    )
 
     sig_status, sig_summary, sig_check = _signature_extension(root_dict, verify_signature)
     if sig_check is not None:
@@ -826,10 +840,14 @@ def verify_alpha_proofbundle_file(
         checks.append(anc_check)
 
     return _report(
-        path, checks,
-        verify_signature=verify_signature, verify_anchor=verify_anchor,
-        signature_status=sig_status, anchor_status=anc_status,
-        signature_summary=sig_summary, anchor_summary=anc_summary,
+        path,
+        checks,
+        verify_signature=verify_signature,
+        verify_anchor=verify_anchor,
+        signature_status=sig_status,
+        anchor_status=anc_status,
+        signature_summary=sig_summary,
+        anchor_summary=anc_summary,
     )
 
 
@@ -849,7 +867,7 @@ def _report(
     exit_code = 2 if invalid else 1 if failed else 0
     error_code = _alpha_error_code(failed)
     sig_perf = signature_status == "passed"
-    anc_perf = anchor_status == "passed"
+    anc_perf = anchor_status in {"passed", "quarantined"}
     return {
         "ok": exit_code == 0,
         "exit_code": exit_code,

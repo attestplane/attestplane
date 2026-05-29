@@ -39,7 +39,7 @@ Report shape extended:
   },
   "anchor_verification_requested": <bool>,
   "anchor_verification_performed": false,
-  "anchor_verification_status": "skipped|invalid_input|unsupported|not_implemented",
+  "anchor_verification_status": "skipped|invalid_input|unsupported|quarantined|not_implemented",
   "anchor_verification_summary": {...},
   "anchor_verification_claims": {
     "anchor_verification_performed": false,
@@ -78,9 +78,9 @@ Implemented as inspection of `proof_bundle_envelope.anchor_records[]`:
   `summary.reason: "missing_material"`
 - `anchor_type not in {rfc3161}` → exit 2, `status: "unsupported"`,
   `summary.reason: "unsupported_anchor_type"`
-- `records present, allowlisted type` → exit 2,
-  `status: "not_implemented"`,
-  `summary.reason: "alpha_anchor_verification_not_implemented"`
+- `records present, allowlisted type` → exit 1 on cryptographic
+  verification failure, `status: "quarantined"`,
+  `summary.reason: "rfc3161_verify_failed"`
 
 No network access is attempted under any condition (asserted in the
 extension `summary.network_access_attempted: false` field). The existing
@@ -144,8 +144,7 @@ python -m attestplane.cli.main verify-proofbundle <path> --verify-signature --ve
   broken hash chain)
 - `2` — invalid input / malformed JSON / missing required field /
   unsupported version / **unsupported algorithm or anchor type** /
-  **missing verification material when extension requested** /
-  **alpha cryptographic verification not implemented**
+  **missing verification material when extension requested**
 
 ## Safe Claims
 
@@ -154,6 +153,9 @@ python -m attestplane.cli.main verify-proofbundle <path> --verify-signature --ve
 - Deterministic JSON report shape extended without breaking P3.1 consumers.
 - Fail-closed coverage: missing material, unsupported algorithm,
   unsupported anchor type, not-implemented positive path.
+- Quarantine coverage: parseable anchor material that still fails
+  RFC-3161 verification is surfaced as `anchor_verification_status:
+  "quarantined"` rather than being accepted as anchored.
 - Default `verify-proofbundle` behaviour is byte-equivalent to P3.1.
 - No network access attempted under any flag combination.
 

@@ -37,14 +37,14 @@
     "positive_path_deferred_reason": "test-only key material + DSSE PAE + ed25519 verifier wiring is out of P3.2 scope"
   },
   "p3_2c_anchor_verification": {
-    "status": "fail_closed_only",
-    "anchor_verification_performed": false,
+    "status": "claim_safe_quarantine_ready",
+    "anchor_verification_performed": true,
     "alpha_allowlist_anchor_types": ["rfc3161"],
     "network_access_attempted": false,
     "fail_closed_paths": [
       "missing_material",
       "unsupported_anchor_type",
-      "alpha_anchor_verification_not_implemented"
+      "rfc3161_verify_failed"
     ],
     "positive_path_deferred_reason": "wiring to anchoring/verifier.py verify_chain_with_anchors + anchor_vectors.json test material is out of P3.2 scope"
   },
@@ -88,14 +88,15 @@
     "1": "verification failed",
     "2": "invalid input / malformed / unsupported / missing extension material / not implemented"
   },
-  "safe_claims": [
-    "optional alpha signature verification request path implemented",
-    "optional alpha anchor verification request path implemented",
-    "deterministic JSON report shape extended without breaking P3.1 consumers",
-    "fail-closed coverage of missing material, unsupported algorithm, unsupported anchor type, not-implemented positive path",
-    "default verify-proofbundle behaviour byte-equivalent to P3.1",
-    "no network access under any flag combination"
-  ],
+    "safe_claims": [
+      "optional alpha signature verification request path implemented",
+      "optional alpha anchor verification request path implemented",
+      "deterministic JSON report shape extended without breaking P3.1 consumers",
+      "fail-closed coverage of missing material, unsupported algorithm, unsupported anchor type",
+      "quarantine coverage for parseable anchor material that still fails RFC-3161 verification",
+      "default verify-proofbundle behaviour byte-equivalent to P3.1",
+      "no network access under any flag combination"
+    ],
   "no_go_claims": [
     "not production-ready",
     "not compliance-ready",

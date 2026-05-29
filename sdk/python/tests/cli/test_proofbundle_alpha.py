@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from importlib.util import find_spec
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,8 @@ from attestplane.cli.main import main
 
 ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "proofbundle"
+ANCHOR_EXTRAS_AVAILABLE = find_spec("asn1crypto") is not None and find_spec("cryptography") is not None
+ANCHOR_MISSING_TRUST_ROOT_REASON = "missing_trust_roots" if ANCHOR_EXTRAS_AVAILABLE else "anchor_extras_missing"
 
 
 def _run_fixture(name: str, capsys: pytest.CaptureFixture[str]) -> tuple[int, dict]:
@@ -134,9 +137,7 @@ def test_p3_2_signature_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries signature_material but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "signature_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("signature_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
     assert payload["signature_verification_status"] == "skipped"
 
@@ -145,9 +146,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries anchor_records but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "anchor_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("anchor_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
     assert payload["anchor_verification_status"] == "skipped"
 
@@ -221,7 +220,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             2,
             "anchor_verification_status",
             "invalid_input",
-            "missing_trust_roots",
+            ANCHOR_MISSING_TRUST_ROOT_REASON,
         ),
         (
             "invalid_anchor_chain.json",
@@ -229,7 +228,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             2,
             "anchor_verification_status",
             "invalid_input",
-            "missing_trust_roots",
+            ANCHOR_MISSING_TRUST_ROOT_REASON,
         ),
         (
             "anchor_shape_valid_but_not_requested.json",
@@ -237,7 +236,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
             2,
             "anchor_verification_status",
             "invalid_input",
-            "missing_trust_roots",
+            ANCHOR_MISSING_TRUST_ROOT_REASON,
         ),
     ],
 )
@@ -411,13 +410,21 @@ def test_p3_4_verify_signature_tampered_signature_fails(
     assert payload["signature_verification_summary"]["reason"] == "signature_does_not_verify"
 
 
-def _build_positive_anchor_bundle(tmp_path):  # type: ignore[no-untyped-def]
+def _build_positive_anchor_bundle(
+    tmp_path,  # type: ignore[no-untyped-def]
+    *,
+    authority_now=None,
+    cert_validity_days: int = 365,
+):
     """Build a ProofBundle envelope JSON with a real RFC-3161 token anchor.
 
     Uses the in-tree TestTSAAuthority to issue a real, byte-valid timestamp
     response over the ProofBundle chain head hash. The trust root is the
     authority's own self-signed root cert.
     """
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+
     import base64
     import json
     from datetime import UTC, datetime
@@ -433,8 +440,8 @@ def _build_positive_anchor_bundle(tmp_path):  # type: ignore[no-untyped-def]
     # verify_timestamp_token). Otherwise a fixed future "now" produces a
     # leaf cert that is not-yet-valid at verify time and the verifier
     # correctly rejects it.
-    now = datetime.now(UTC)
-    authority = TestTSAAuthority(now=now)
+    now = authority_now or datetime.now(UTC)
+    authority = TestTSAAuthority(now=now, cert_validity_days=cert_validity_days)
     materials = authority.materials()
     token_der = authority.sign_timestamp_response(digest, gen_time=now, serial_number=1)
 
@@ -493,6 +500,9 @@ def test_p3_4_verify_anchor_wrong_trust_root_fails(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Anchor signed by authority A but verified against root of authority B fails."""
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+
     import base64
     import json as json_mod
     from datetime import UTC, datetime
@@ -515,6 +525,68 @@ def test_p3_4_verify_anchor_wrong_trust_root_fails(
     payload = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert payload["ok"] is False
-    assert payload["anchor_verification_status"] == "failed"
-    assert payload["anchor_verification_performed"] is False
+    assert payload["anchor_verification_status"] == "quarantined"
+    assert payload["anchor_verification_performed"] is True
     assert payload["anchor_verification_summary"]["reason"] == "rfc3161_verify_failed"
+    assert payload["anchor_verification_summary"]["quarantine_reason"] == "rfc3161_verification_failed"
+
+
+def test_p3_4_verify_anchor_tampered_token_quarantines(
+    tmp_path,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A parseable-but-tampered RFC-3161 token must quarantine, not pass."""
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+
+    import base64
+    import json as json_mod
+
+    path = _build_positive_anchor_bundle(tmp_path)
+    bundle = json_mod.loads(path.read_text(encoding="utf-8"))
+    token_b64 = bundle["anchor_records"][0]["tsa_token_b64"]
+    token_bytes = bytearray(base64.standard_b64decode(token_b64))
+    token_bytes[-32] ^= 0x01
+    bundle["anchor_records"][0]["tsa_token_b64"] = base64.standard_b64encode(
+        bytes(token_bytes),
+    ).decode("ascii")
+    quarantine_path = tmp_path / "quarantine_tampered_tsa.json"
+    quarantine_path.write_text(json_mod.dumps(bundle, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    rc = main(["verify-proofbundle", str(quarantine_path), "--verify-anchor"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 1
+    assert payload["ok"] is False
+    assert payload["anchor_verification_status"] == "quarantined"
+    assert payload["anchor_verification_performed"] is True
+    assert payload["anchor_verification_summary"]["reason"] == "rfc3161_verify_failed"
+    assert payload["anchor_verification_summary"]["quarantine_reason"] == "rfc3161_verification_failed"
+
+
+def test_p3_4_verify_anchor_expired_token_quarantines(
+    tmp_path,  # type: ignore[no-untyped-def]
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A timestamp whose cert is expired at verification time must quarantine."""
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+
+    from datetime import UTC, datetime
+
+    expired_at = datetime(2026, 5, 1, tzinfo=UTC)
+    path = _build_positive_anchor_bundle(
+        tmp_path,
+        authority_now=expired_at,
+        cert_validity_days=1,
+    )
+
+    rc = main(["verify-proofbundle", str(path), "--verify-anchor"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 1
+    assert payload["ok"] is False
+    assert payload["anchor_verification_status"] == "quarantined"
+    assert payload["anchor_verification_performed"] is True
+    assert payload["anchor_verification_summary"]["reason"] == "rfc3161_verify_failed"
+    assert payload["anchor_verification_summary"]["quarantine_reason"] == "rfc3161_verification_failed"

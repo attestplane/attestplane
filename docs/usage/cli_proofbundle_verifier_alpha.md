@@ -85,9 +85,14 @@ Status semantics for `signature_verification_status` /
 |-------------------|--------------------------------------------------------------------|------|
 | `skipped`         | flag not set; extension not exercised                              | 0/1  |
 | `invalid_input`   | flag set but verification material missing or shape invalid       | 2    |
-| `unsupported`    | flag set but declared algorithm / anchor type outside allowlist   | 2    |
-| `not_implemented`| flag set, material present, alpha verifier does not perform crypto | 2    |
+| `unsupported`     | flag set but declared algorithm / anchor type outside allowlist   | 2    |
+| `not_implemented` | flag set, material present, alpha verifier does not perform crypto | 2    |
+| `quarantined`     | verification ran but the TSA token could not be accepted as anchored | 1    |
 | `passed`          | reserved for follow-up branch with positive cryptographic path     | 0    |
+
+`quarantined` is claim-safe and distinct from `invalid_input`: the verifier
+reached the anchor verification path, but the token could not be accepted as
+anchored and must not be treated as a pass.
 
 Alpha allowlists (subject to change in follow-up branches):
 
