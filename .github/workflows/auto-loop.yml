@@ -77,26 +77,29 @@ jobs:
           latest_tag=$(git tag --sort=-v:refname \
             | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "")
           if [ -z "$latest_tag" ]; then
-            tag_date="1970-01-01T00:00:00Z"
+            tag_epoch=0
           else
-            tag_date=$(git log -1 --format=%cI "$latest_tag" 2>/dev/null || echo "1970-01-01T00:00:00Z")
+            # Normalize to UTC epoch seconds to avoid timezone string comparison bugs
+            tag_epoch=$(python3 -c "
+from datetime import datetime
+s = '$(git log -1 --format=%cI "$latest_tag" 2>/dev/null || echo "1970-01-01T00:00:00Z")'
+print(int(datetime.fromisoformat(s).timestamp()))
+" 2>/dev/null || echo 0)
           fi
 
-          # Count autodev PRs merged after last tag
+          # Count autodev PRs merged after last tag (compare as epoch seconds)
           prs_since=$(gh pr list \
             --repo "${{ github.repository }}" \
             --label autodev-pr \
             --state merged \
             --json mergedAt \
-            --jq "[.[] | select(.mergedAt > \"${tag_date}\")] | length")
+            --jq "[.[] | select((.mergedAt | fromdateiso8601) > ${tag_epoch})] | length")
 
           # Days since last tag
           days_since=$(python3 -c "
-          from datetime import datetime, timezone
-          import sys
-          tag_dt = datetime.fromisoformat('${tag_date}'.replace('Z','+00:00'))
-          now = datetime.now(timezone.utc)
-          print(int((now - tag_dt).days))
+import time
+now = time.time()
+print(int((now - ${tag_epoch}) / 86400))
           ")
 
           {
