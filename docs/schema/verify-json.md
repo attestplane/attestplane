@@ -24,6 +24,9 @@ accompanies the structured JSON contract.
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
   `verify --json` and `verify --explain`.
+- The same stable value is exposed on the SDK result object as
+  `BundleVerificationResult.taxonomy_version` in both Python and TypeScript,
+  so callers can branch on the parsed result without re-deriving the version.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `explanation[]` is the additive operator-facing companion surface. Each

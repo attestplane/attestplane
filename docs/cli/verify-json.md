@@ -34,6 +34,9 @@ The payload is fixed at schema version 1:
   `--json` and `--explain` use.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- The same value is also surfaced by the SDK result object as
+  `BundleVerificationResult.taxonomy_version`, and `--explain` human output
+  renders that same field in the compact summary.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
@@ -90,6 +93,7 @@ the structured payload.
   "schema_version": 1,
   "result": "pass",
   "exit_code": 0,
+  "taxonomy_version": 1,
   "reasons": [],
   "explanation": [
     {

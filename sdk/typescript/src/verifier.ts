@@ -80,6 +80,7 @@ export interface BundleVerificationResult {
   readonly agreement: boolean;
   readonly event_count: number;
   readonly bundle_version: number;
+  /** Shared verifier rejection taxonomy version surfaced by CLI and SDK. */
   readonly taxonomy_version: typeof VERIFY_REASON_TAXONOMY_VERSION;
   readonly chain_id: string;
   readonly head_hash_hex: string;
