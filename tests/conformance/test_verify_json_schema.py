@@ -25,7 +25,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> dict[str, object]:
     rc = main(argv)
-    assert rc in {0, 1, 2}
+    assert rc in {0, 1, 2, 3}
     return json.loads(capsys.readouterr().out)
 
 
@@ -99,6 +99,7 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["schema_version"]["const"] == 1
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
+    assert schema["properties"]["exit_code"]["enum"] == [0, 1, 2, 3]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
 
@@ -134,4 +135,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )

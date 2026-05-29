@@ -14,7 +14,9 @@ SECRET_RE = re.compile(
     r"(ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
     re.S,
 )
-CODEX_REVIEW_STATUS_RE = re.compile(r"^\s*Status:\s*\*\*(?P<status>PASS|WARN|FAIL)\*\*\s*$", re.M | re.I)
+CODEX_REVIEW_STATUS_RE = re.compile(
+    r"^\s*Status:\s*\*\*(?P<status>PASS|WARN|FAIL)\*\*\s*$", re.M | re.I
+)
 
 
 @dataclass(frozen=True)
@@ -42,11 +44,18 @@ def run_review_guard(
 
     if SECRET_RE.search(diff):
         blocking.append("Potential secret/private key/token material appears in diff")
-    if re.search(r"[-].*release_blocking:\s*true[\s\S]{0,300}[+].*release_blocking:\s*false", lowered_diff):
+    if re.search(
+        r"[-].*release_blocking:\s*true[\s\S]{0,300}[+].*release_blocking:\s*false",
+        lowered_diff,
+    ):
         blocking.append("release_blocking appears to be weakened from true to false")
-    if re.search(r"[-].*required:\s*true[\s\S]{0,300}[+].*required:\s*false", lowered_diff):
+    if re.search(
+        r"[-].*required:\s*true[\s\S]{0,300}[+].*required:\s*false", lowered_diff
+    ):
         blocking.append("required gate appears to be weakened from true to false")
-    if re.search(r"[-].*severity:\s*p[01][\s\S]{0,300}[+].*severity:\s*p[2-9]", lowered_diff):
+    if re.search(
+        r"[-].*severity:\s*p[01][\s\S]{0,300}[+].*severity:\s*p[2-9]", lowered_diff
+    ):
         blocking.append("P0/P1 severity appears to be downgraded")
     added_skip_lines = [
         line
@@ -54,26 +63,33 @@ def run_review_guard(
         if line.startswith("+") and re.search(r"(pytest\.mark\.)?(skip|xfail)\b", line)
     ]
     if added_skip_lines:
-        warnings.append("New skip/xfail marker detected; verify it is not masking the issue")
+        warnings.append(
+            "New skip/xfail marker detected; verify it is not masking the issue"
+        )
     if len(added_skip_lines) >= 3:
         blocking.append("Multiple new skip/xfail markers detected")
     if has_test_deletion(diff):
         blocking.append("Test deletion detected")
 
-    publish_files = [path for path in changed_files if path.startswith(".github/workflows/publish")]
+    publish_files = [
+        path for path in changed_files if path.startswith(".github/workflows/publish")
+    ]
     if publish_files and "publish-workflow-approved" not in labels:
-        blocking.append(f"Publish workflow modified without publish-workflow-approved: {', '.join(publish_files)}")
+        blocking.append(
+            f"Publish workflow modified without publish-workflow-approved: {', '.join(publish_files)}"
+        )
     release_files = [
         path
         for path in changed_files
-        if "release" in path.lower() and (path.startswith("scripts/") or path.startswith(".github/workflows/"))
+        if "release" in path.lower()
+        and (path.startswith("scripts/") or path.startswith(".github/workflows/"))
     ]
     if release_files and "release-workflow-approved" not in labels:
-        blocking.append(f"Release/tag script modified without release-workflow-approved: {', '.join(release_files)}")
+        blocking.append(
+            f"Release/tag script modified without release-workflow-approved: {', '.join(release_files)}"
+        )
     if (
-        "claim-safety" in labels
-        or "severity:P0" in labels
-        or "P0" in labels
+        "claim-safety" in labels or "severity:P0" in labels or "P0" in labels
     ) and not has_test_or_evidence_change(changed_files):
         blocking.append("claim-safety/P0 issue lacks test or evidence changes")
     if codex_review_status(codex_review_report) == "FAIL":
@@ -89,19 +105,28 @@ def run_review_guard(
         json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    (evidence_dir / "review_guard_report.md").write_text(render_markdown(report), encoding="utf-8")
+    (evidence_dir / "review_guard_report.md").write_text(
+        render_markdown(report), encoding="utf-8"
+    )
     return report
 
 
 def has_test_or_evidence_change(paths: list[str]) -> bool:
-    return any(path.startswith("tests/") or path.startswith("docs/validation/") for path in paths)
+    return any(
+        path.startswith("tests/") or path.startswith("docs/validation/")
+        for path in paths
+    )
 
 
 def has_test_deletion(diff: str) -> bool:
     removed_tests = 0
     added_tests = 0
     for line in diff.splitlines():
-        if line.startswith("diff --git ") or line.startswith("--- ") or line.startswith("+++ "):
+        if (
+            line.startswith("diff --git ")
+            or line.startswith("--- ")
+            or line.startswith("+++ ")
+        ):
             continue
         if not line.startswith(("-", "+")):
             continue
@@ -131,9 +156,13 @@ def render_markdown(report: ReviewGuardReport) -> str:
     lines = [f"# Review Guard: {report.status}", ""]
     lines.append("## Blocking Reasons")
     lines.append("")
-    lines.extend(f"- {item}" for item in report.blocking_reasons) if report.blocking_reasons else lines.append("- None")
+    lines.extend(
+        f"- {item}" for item in report.blocking_reasons
+    ) if report.blocking_reasons else lines.append("- None")
     lines.append("")
     lines.append("## Warnings")
     lines.append("")
-    lines.extend(f"- {item}" for item in report.warnings) if report.warnings else lines.append("- None")
+    lines.extend(
+        f"- {item}" for item in report.warnings
+    ) if report.warnings else lines.append("- None")
     return "\n".join(lines) + "\n"

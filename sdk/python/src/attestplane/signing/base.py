@@ -49,8 +49,7 @@ try:
     )
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.signing requires the 'signing' extras. "
-        "Install with: pip install attestplane[signing]"
+        "attestplane.signing requires the 'signing' extras. Install with: pip install attestplane[signing]"
     ) from exc
 
 
@@ -181,23 +180,16 @@ class SignatureRecord:
         if self.signed_seq < 0:
             raise SigningError("SignatureRecord.signed_seq must be ≥ 0")
         if len(self.signed_event_hash) != 32:
-            raise SigningError(
-                f"SignatureRecord.signed_event_hash must be 32 bytes, "
-                f"got {len(self.signed_event_hash)}"
-            )
+            raise SigningError(f"SignatureRecord.signed_event_hash must be 32 bytes, got {len(self.signed_event_hash)}")
         if len(self.signature) != 64:
-            raise SigningError(
-                f"SignatureRecord.signature must be 64 bytes (Ed25519), "
-                f"got {len(self.signature)}"
-            )
+            raise SigningError(f"SignatureRecord.signature must be 64 bytes (Ed25519), got {len(self.signature)}")
         if not self.key_id:
             raise SigningError("SignatureRecord.key_id must be non-empty")
         if not self.public_key_der:
             raise SigningError("SignatureRecord.public_key_der must be non-empty")
         if self.signature_mode not in ("segment_head", "per_event"):
             raise SigningError(
-                f"SignatureRecord.signature_mode must be 'segment_head' "
-                f"or 'per_event', got {self.signature_mode!r}"
+                f"SignatureRecord.signature_mode must be 'segment_head' or 'per_event', got {self.signature_mode!r}"
             )
         if not self.signed_payload:
             raise SigningError("SignatureRecord.signed_payload must be non-empty")
@@ -236,9 +228,14 @@ class SignaturePolicy:
 # --- KeyProvider abstract base ----------------------------------------------
 
 
-_FORBIDDEN_KEY_PROVIDER_VERBS: Final[frozenset[str]] = frozenset({
-    "revoke", "rotate", "delete", "replace",
-})
+_FORBIDDEN_KEY_PROVIDER_VERBS: Final[frozenset[str]] = frozenset(
+    {
+        "revoke",
+        "rotate",
+        "delete",
+        "replace",
+    }
+)
 
 
 class KeyProvider(ABC):
@@ -277,9 +274,7 @@ class KeyProvider(ABC):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         offenders = sorted(
-            name
-            for name in vars(cls)
-            if not name.startswith("_") and name in _FORBIDDEN_KEY_PROVIDER_VERBS
+            name for name in vars(cls) if not name.startswith("_") and name in _FORBIDDEN_KEY_PROVIDER_VERBS
         )
         if offenders:
             raise KeyBoundaryError(

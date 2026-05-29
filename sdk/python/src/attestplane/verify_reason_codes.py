@@ -34,15 +34,9 @@ VERIFY_REASON_SIGNATURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.signatu
 VERIFY_REASON_SIGNATURE_MISSING: Final[VerifyReasonCodeV1] = "att.verify.signature_missing"
 VERIFY_REASON_SCHEMA_UNKNOWN: Final[VerifyReasonCodeV1] = "att.verify.schema_unknown"
 VERIFY_REASON_SCHEMA_INVALID: Final[VerifyReasonCodeV1] = "att.verify.schema_invalid"
-VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_missing"
-)
-VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_unsupported"
-)
-VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.required_field_missing"
-)
+VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = "att.verify.schema_version_missing"
+VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verify.schema_version_unsupported"
+VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = "att.verify.required_field_missing"
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
 
@@ -84,9 +78,7 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
-_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"^att\.verify\.[a-z][a-z0-9_]*$"
-)
+_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^att\.verify\.[a-z][a-z0-9_]*$")
 
 
 def is_known_verify_reason_code(value: str) -> bool:

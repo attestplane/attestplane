@@ -123,16 +123,22 @@ class GenericRuntimeAdapter(ABC, Generic[RuntimeEvent]):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         forbidden = {
-            "execute", "run", "dispatch",
-            "grant", "revoke", "issue",
-            "decide", "approve", "reject",
-            "settle", "charge", "credit",
-            "schedule", "allocate",
+            "execute",
+            "run",
+            "dispatch",
+            "grant",
+            "revoke",
+            "issue",
+            "decide",
+            "approve",
+            "reject",
+            "settle",
+            "charge",
+            "credit",
+            "schedule",
+            "allocate",
         }
-        offenders = sorted(
-            name for name in vars(cls)
-            if not name.startswith("_") and name in forbidden
-        )
+        offenders = sorted(name for name in vars(cls) if not name.startswith("_") and name in forbidden)
         if offenders:
             raise TypeError(
                 f"{cls.__name__} defines forbidden authority/execution method(s) "

@@ -12,7 +12,9 @@ def test_codex_command_construction(tmp_path: Path) -> None:
     prompt = tmp_path / "prompt.md"
     prompt.write_text("x", encoding="utf-8")
 
-    command, prompt_stdin = CodexDriver(command="codex", sandbox="workspace-write").build_command(prompt, tmp_path)
+    command, prompt_stdin = CodexDriver(
+        command="codex", sandbox="workspace-write"
+    ).build_command(prompt, tmp_path)
 
     assert command == [
         "codex",
@@ -32,13 +34,17 @@ def test_codex_command_can_pin_model(tmp_path: Path) -> None:
     prompt = tmp_path / "prompt.md"
     prompt.write_text("x", encoding="utf-8")
 
-    command, prompt_stdin = CodexDriver(model="gpt-5.4-mini").build_command(prompt, tmp_path)
+    command, prompt_stdin = CodexDriver(model="gpt-5.4-mini").build_command(
+        prompt, tmp_path
+    )
 
     assert command[:4] == ["codex", "exec", "--model", "gpt-5.4-mini"]
     assert prompt_stdin == "x"
 
 
-def test_codex_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_codex_dry_run_does_not_execute(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     called = False
 
     def fake_run(*args, **kwargs):
@@ -55,9 +61,13 @@ def test_codex_dry_run_does_not_execute(monkeypatch: pytest.MonkeyPatch, tmp_pat
     assert "dry-run" in (tmp_path / "codex.log").read_text(encoding="utf-8")
 
 
-def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_codex_failure_redacts_stderr(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     def fake_run(command, workdir, prompt_stdin, timeout):
-        return subprocess.CompletedProcess(command, 1, "", "GITHUB_TOKEN=github_pat_abc123")
+        return subprocess.CompletedProcess(
+            command, 1, "", "GITHUB_TOKEN=github_pat_abc123"
+        )
 
     monkeypatch.setattr(codex_driver, "run_with_process_group_timeout", fake_run)
     prompt = tmp_path / "prompt.md"
@@ -69,7 +79,9 @@ def test_codex_failure_redacts_stderr(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert "github_pat" not in str(excinfo.value)
 
 
-def test_codex_timeout_writes_redacted_log(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_codex_timeout_writes_redacted_log(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     def fake_run(command, workdir, prompt_stdin, timeout):
         exc = subprocess.TimeoutExpired(command, timeout)
         exc.stdout = ""

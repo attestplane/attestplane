@@ -28,7 +28,9 @@ TAG_RE = re.compile(
 )
 AUDIT_LABELS = frozenset({"audit-required", "security", "compat-break"})
 AUDIT_MILESTONES = frozenset({"ga", "ca"})
-PRODUCT_DELTA_BYPASS_LABELS = frozenset({"release-hotfix", "security-patch", "test-only"})
+PRODUCT_DELTA_BYPASS_LABELS = frozenset(
+    {"release-hotfix", "security-patch", "test-only"}
+)
 PRODUCT_IMPLEMENTATION_PREFIXES = (
     "sdk/python/src/attestplane/",
     "sdk/typescript/src/",
@@ -116,12 +118,19 @@ class ProductDeltaVerification:
 def parse_release_tag(release_tag: str) -> tuple[int, int, int]:
     match = TAG_RE.fullmatch(release_tag)
     if match is None:
-        raise ValueError("release tag must match vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-(alpha|beta|rc).N")
+        raise ValueError(
+            "release tag must match vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-(alpha|beta|rc).N"
+        )
     return tuple(int(match.group(name)) for name in ("major", "minor", "patch"))
 
 
 def audit_disabled(env: Mapping[str, str]) -> bool:
-    return env.get("ATTESTPLANE_RELEASE_AUDIT", "").strip().lower() in {"0", "false", "no", "off"}
+    return env.get("ATTESTPLANE_RELEASE_AUDIT", "").strip().lower() in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
 
 
 def truthy(value: str) -> bool:
@@ -163,7 +172,9 @@ def classify_product_delta(
             continue
         if path in VERSION_ONLY_FILES:
             ignored_files.append(path)
-        elif path in PRODUCT_IMPLEMENTATION_FILES or _has_prefix(path, PRODUCT_IMPLEMENTATION_PREFIXES):
+        elif path in PRODUCT_IMPLEMENTATION_FILES or _has_prefix(
+            path, PRODUCT_IMPLEMENTATION_PREFIXES
+        ):
             product_files.append(path)
         elif _has_prefix(path, PRODUCT_SUPPORT_PREFIXES):
             product_support_files.append(path)
@@ -267,13 +278,17 @@ def decide_release_gate(
         raise ValueError(f"unsupported release channel: {channel}")
 
     if audit_disabled(env):
-        return ReleaseGateDecision(track="fast", audit_required=False, reasons=["audit_disabled"])
+        return ReleaseGateDecision(
+            track="fast", audit_required=False, reasons=["audit_disabled"]
+        )
 
     reasons: list[str] = []
     if major >= 1 and minor == 0 and patch == 0:
         reasons.append("major_boundary")
 
-    normalized_labels = sorted({label.strip().lower() for label in labels if label.strip()})
+    normalized_labels = sorted(
+        {label.strip().lower() for label in labels if label.strip()}
+    )
     for label in normalized_labels:
         if label in AUDIT_LABELS:
             reasons.append(f"label:{label}")
@@ -291,7 +306,9 @@ def decide_release_gate(
 
     if reasons:
         return ReleaseGateDecision(track="audit", audit_required=True, reasons=reasons)
-    return ReleaseGateDecision(track="fast", audit_required=False, reasons=["default_fast_track"])
+    return ReleaseGateDecision(
+        track="fast", audit_required=False, reasons=["default_fast_track"]
+    )
 
 
 def validate_audit_verification(
@@ -302,9 +319,15 @@ def validate_audit_verification(
 ) -> AuditVerification:
     normalized_plan_url = audit_plan_url.strip()
     if not decision.audit_required:
-        return AuditVerification(allowed=True, reason="audit_not_required", audit_plan_url=normalized_plan_url)
+        return AuditVerification(
+            allowed=True,
+            reason="audit_not_required",
+            audit_plan_url=normalized_plan_url,
+        )
     if audit_verified and normalized_plan_url:
-        return AuditVerification(allowed=True, reason="audit_verified", audit_plan_url=normalized_plan_url)
+        return AuditVerification(
+            allowed=True, reason="audit_verified", audit_plan_url=normalized_plan_url
+        )
     return AuditVerification(
         allowed=False,
         reason="audit_required_without_verified_plan",
@@ -312,7 +335,9 @@ def validate_audit_verification(
     )
 
 
-def write_github_outputs(decision: ReleaseGateDecision, verification: AuditVerification) -> None:
+def write_github_outputs(
+    decision: ReleaseGateDecision, verification: AuditVerification
+) -> None:
     output_path = os.environ.get("GITHUB_OUTPUT")
     if not output_path:
         return
@@ -333,7 +358,9 @@ def write_product_delta_github_outputs(product_delta: ProductDeltaVerification) 
         handle.write(f"product_delta_allowed={str(product_delta.allowed).lower()}\n")
         handle.write(f"product_delta_reason={product_delta.reason}\n")
         handle.write(f"product_delta_files={','.join(product_delta.product_files)}\n")
-        handle.write(f"product_support_files={','.join(product_delta.product_support_files)}\n")
+        handle.write(
+            f"product_support_files={','.join(product_delta.product_support_files)}\n"
+        )
 
 
 def parse_labels(raw: str) -> list[str]:
@@ -382,8 +409,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.require_product_delta:
         if not args.product_delta_base:
-            raise SystemExit("--product-delta-base is required when --require-product-delta is set")
-        changed_files = changed_files_between(args.product_delta_base, args.product_delta_head)
+            raise SystemExit(
+                "--product-delta-base is required when --require-product-delta is set"
+            )
+        changed_files = changed_files_between(
+            args.product_delta_base, args.product_delta_head
+        )
         product_delta = classify_product_delta(changed_files, labels=labels)
         write_product_delta_github_outputs(product_delta)
     if args.json:

@@ -144,7 +144,9 @@ def build_report(window: str, rows: list[tuple[str, str, str]]) -> dict:
     by_class_out = {c: by_class.get(c, 0) for c in _CLASS_ORDER if by_class.get(c, 0)}
     by_day_out: dict[str, dict[str, int]] = {}
     for day in sorted(by_day.keys(), reverse=True):
-        by_day_out[day] = {c: by_day[day][c] for c in _CLASS_ORDER if by_day[day].get(c, 0)}
+        by_day_out[day] = {
+            c: by_day[day][c] for c in _CLASS_ORDER if by_day[day].get(c, 0)
+        }
 
     return {
         "window": window,
@@ -206,9 +208,7 @@ def format_text(report: dict) -> str:
         lines.append("  (none)")
     else:
         for entry in report["recent_real"]:
-            lines.append(
-                f"  {entry['time']} {entry['sha'][:7]} {entry['subject']}"
-            )
+            lines.append(f"  {entry['time']} {entry['sha'][:7]} {entry['subject']}")
     return "\n".join(lines) + "\n"
 
 

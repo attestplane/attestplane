@@ -43,7 +43,10 @@ def test_minimal_bundle_passes_non_empty_and_signed_schema() -> None:
     }
     assert bundle["events"][0]["event"]["matched_input_ref"] == SUBJECT_DIGEST
     assert bundle["events"][0]["event"]["payload"]["subject_digest"] == SUBJECT_DIGEST
-    assert bundle["signatures"][0]["signed_event_hash_hex"] == bundle["events"][0]["event_hash_hex"]
+    assert (
+        bundle["signatures"][0]["signed_event_hash_hex"]
+        == bundle["events"][0]["event_hash_hex"]
+    )
 
 
 def test_minimal_docstring_documents_v17_stability() -> None:
@@ -61,7 +64,9 @@ def test_minimal_docstring_documents_v17_stability() -> None:
         "g" * 64,
     ],
 )
-def test_minimal_rejects_invalid_subject_digest_with_typed_error(subject_digest: str) -> None:
+def test_minimal_rejects_invalid_subject_digest_with_typed_error(
+    subject_digest: str,
+) -> None:
     with pytest.raises(IncompleteProofBundleError) as exc_info:
         ProofBundleBuilder.minimal(subject_digest, _signer())
 
