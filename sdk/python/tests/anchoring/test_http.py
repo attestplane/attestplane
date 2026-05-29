@@ -40,7 +40,9 @@ _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 def _make_response(digest: bytes, *, nonce: bytes | None = None) -> tuple[bytes, bytes, bytes]:
     authority = TestTSAAuthority(now=_NOW)
     der = authority.sign_timestamp_response(
-        digest, gen_time=_NOW, nonce=nonce,
+        digest,
+        gen_time=_NOW,
+        nonce=nonce,
     )
     materials = authority.materials()
     return der, materials.root_cert_der, b"ATTESTPLANE-TEST-OCSP-V1|status=good"
@@ -73,7 +75,9 @@ def test_rfc3161_http_provider_round_trips() -> None:
         ocsp_responses_der=[ocsp],
     )
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=0, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=0,
+        now=_NOW,
     )
     assert anchor.anchored_event_hash == digest
     assert anchor.tsa_provider_id == "test-provider"
@@ -150,7 +154,9 @@ def test_rfc3161_http_provider_no_trust_roots_does_not_verify() -> None:
         ocsp_responses_der=[ocsp],
     )
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=7, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=7,
+        now=_NOW,
     )
     assert anchor.anchored_seq == 7
 

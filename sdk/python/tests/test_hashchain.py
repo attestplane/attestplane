@@ -42,9 +42,7 @@ def test_schema_version_is_frozen_at_v1() -> None:
 
 def test_chain_extend_assigns_seq_and_links_genesis() -> None:
     draft = EventDraft(event_type="ai_decision", actor="agent-a")
-    chained = chain_extend(
-        genesis_head(), draft, now=_utc(2026, 5, 17), event_id="evt-1"
-    )
+    chained = chain_extend(genesis_head(), draft, now=_utc(2026, 5, 17), event_id="evt-1")
     assert chained.seq == 0
     assert chained.prev_hash == GENESIS_HASH
     assert chained.event.schema_version == SCHEMA_VERSION

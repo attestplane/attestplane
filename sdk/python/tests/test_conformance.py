@@ -65,16 +65,9 @@ def test_vector_event_hash_reproducible(index: int) -> None:
     entry = vectors["entries"][index]
     ts = datetime.strptime(entry["timestamp"], "%Y-%m-%dT%H:%M:%S.%f%z").astimezone(UTC)
     head = genesis_head() if index == 0 else _head_at(vectors, index - 1)
-    chained = chain_extend(
-        head, _build_draft(entry["draft"]), now=ts, event_id=entry["event_id"]
-    )
-    assert chained.event_hash.hex() == entry["event_hash_hex"], (
-        f"vector {entry['name']!r}: event_hash drift"
-    )
-    assert (
-        hashlib.sha256(canonicalize(chained.event)).hexdigest()
-        == entry["canonical_bytes_sha256_hex"]
-    )
+    chained = chain_extend(head, _build_draft(entry["draft"]), now=ts, event_id=entry["event_id"])
+    assert chained.event_hash.hex() == entry["event_hash_hex"], f"vector {entry['name']!r}: event_hash drift"
+    assert hashlib.sha256(canonicalize(chained.event)).hexdigest() == entry["canonical_bytes_sha256_hex"]
     assert chained.prev_hash.hex() == entry["prev_hash_hex"]
     assert chained.seq == entry["seq"]
 
@@ -85,9 +78,7 @@ def test_final_chain_head_matches() -> None:
     chain = []
     for entry in vectors["entries"]:
         ts = datetime.strptime(entry["timestamp"], "%Y-%m-%dT%H:%M:%S.%f%z").astimezone(UTC)
-        chained = chain_extend(
-            head, _build_draft(entry["draft"]), now=ts, event_id=entry["event_id"]
-        )
+        chained = chain_extend(head, _build_draft(entry["draft"]), now=ts, event_id=entry["event_id"])
         chain.append(chained)
         head = head_of(chain)
     assert head.event_hash.hex() == vectors["final_chain_head_hex"]

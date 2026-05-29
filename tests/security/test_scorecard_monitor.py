@@ -27,7 +27,9 @@ scorecard_diff = _load_module(DIFF_PATH, "scorecard_diff")
 scorecard_monitor = _load_module(MONITOR_PATH, "scorecard_monitor")
 
 
-def _summary(score: float, checks: list[tuple[str, float, str]] | None = None) -> dict[str, object]:
+def _summary(
+    score: float, checks: list[tuple[str, float, str]] | None = None
+) -> dict[str, object]:
     return {
         "schema": "attestplane.scorecard.summary.v1",
         "repo": "github.com/attestplane/attestplane",
@@ -39,11 +41,33 @@ def _summary(score: float, checks: list[tuple[str, float, str]] | None = None) -
     }
 
 
-def test_compare_summaries_flags_meaningful_regression_from_score_drop(tmp_path: Path) -> None:
+def test_compare_summaries_flags_meaningful_regression_from_score_drop(
+    tmp_path: Path,
+) -> None:
     baseline_path = tmp_path / "baseline.json"
     current_path = tmp_path / "current.json"
-    baseline_path.write_text(json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok"), ("Signed-Releases", 8.0, "ok")])) + "\n", encoding="utf-8")
-    current_path.write_text(json.dumps(_summary(7.0, [("Branch-Protection", 8.0, "changed"), ("Signed-Releases", 6.0, "changed")])) + "\n", encoding="utf-8")
+    baseline_path.write_text(
+        json.dumps(
+            _summary(
+                9.0, [("Branch-Protection", 10.0, "ok"), ("Signed-Releases", 8.0, "ok")]
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    current_path.write_text(
+        json.dumps(
+            _summary(
+                7.0,
+                [
+                    ("Branch-Protection", 8.0, "changed"),
+                    ("Signed-Releases", 6.0, "changed"),
+                ],
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     report = scorecard_diff.compare_summaries(
         scorecard_diff.load_summary(baseline_path),
@@ -52,14 +76,23 @@ def test_compare_summaries_flags_meaningful_regression_from_score_drop(tmp_path:
 
     assert report.meaningful_regression is True
     assert report.score_drop == 2.0
-    assert [item.name for item in report.regressions] == ["Branch-Protection", "Signed-Releases"]
+    assert [item.name for item in report.regressions] == [
+        "Branch-Protection",
+        "Signed-Releases",
+    ]
 
 
 def test_compare_summaries_ignores_small_drift(tmp_path: Path) -> None:
     baseline_path = tmp_path / "baseline.json"
     current_path = tmp_path / "current.json"
-    baseline_path.write_text(json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok")])) + "\n", encoding="utf-8")
-    current_path.write_text(json.dumps(_summary(8.5, [("Branch-Protection", 9.5, "small drift")])) + "\n", encoding="utf-8")
+    baseline_path.write_text(
+        json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok")])) + "\n",
+        encoding="utf-8",
+    )
+    current_path.write_text(
+        json.dumps(_summary(8.5, [("Branch-Protection", 9.5, "small drift")])) + "\n",
+        encoding="utf-8",
+    )
 
     report = scorecard_diff.compare_summaries(
         scorecard_diff.load_summary(baseline_path),
@@ -70,13 +103,23 @@ def test_compare_summaries_ignores_small_drift(tmp_path: Path) -> None:
     assert report.score_drop == 0.5
 
 
-def test_scorecard_diff_main_returns_nonzero_on_meaningful_regression(tmp_path: Path, capsys) -> None:
+def test_scorecard_diff_main_returns_nonzero_on_meaningful_regression(
+    tmp_path: Path, capsys
+) -> None:
     baseline_path = tmp_path / "baseline.json"
     current_path = tmp_path / "current.json"
-    baseline_path.write_text(json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok")])) + "\n", encoding="utf-8")
-    current_path.write_text(json.dumps(_summary(7.5, [("Branch-Protection", 8.0, "changed")])) + "\n", encoding="utf-8")
+    baseline_path.write_text(
+        json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok")])) + "\n",
+        encoding="utf-8",
+    )
+    current_path.write_text(
+        json.dumps(_summary(7.5, [("Branch-Protection", 8.0, "changed")])) + "\n",
+        encoding="utf-8",
+    )
 
-    rc = scorecard_diff.main(["--baseline", str(baseline_path), "--current", str(current_path)])
+    rc = scorecard_diff.main(
+        ["--baseline", str(baseline_path), "--current", str(current_path)]
+    )
     payload = json.loads(capsys.readouterr().out)
 
     assert rc == 1
@@ -84,11 +127,16 @@ def test_scorecard_diff_main_returns_nonzero_on_meaningful_regression(tmp_path: 
     assert payload["score_drop"] == 1.5
 
 
-def test_monitor_bootstraps_missing_baseline_and_writes_latest_summary(tmp_path: Path, monkeypatch) -> None:
+def test_monitor_bootstraps_missing_baseline_and_writes_latest_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
     current_path = tmp_path / "current.json"
     baseline_path = tmp_path / "baseline.json"
     latest_path = tmp_path / "latest.json"
-    current_path.write_text(json.dumps(_summary(8.0, [("Branch-Protection", 10.0, "ok")])) + "\n", encoding="utf-8")
+    current_path.write_text(
+        json.dumps(_summary(8.0, [("Branch-Protection", 10.0, "ok")])) + "\n",
+        encoding="utf-8",
+    )
 
     result = scorecard_monitor.run_monitor(
         baseline_path=baseline_path,
@@ -106,12 +154,34 @@ def test_monitor_bootstraps_missing_baseline_and_writes_latest_summary(tmp_path:
     assert json.loads(latest_path.read_text(encoding="utf-8"))["score"] == 8.0
 
 
-def test_monitor_opens_issue_on_meaningful_regression(tmp_path: Path, monkeypatch) -> None:
+def test_monitor_opens_issue_on_meaningful_regression(
+    tmp_path: Path, monkeypatch
+) -> None:
     current_path = tmp_path / "current.json"
     baseline_path = tmp_path / "baseline.json"
     latest_path = tmp_path / "latest.json"
-    baseline_path.write_text(json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok"), ("Signed-Releases", 8.0, "ok")])) + "\n", encoding="utf-8")
-    current_path.write_text(json.dumps(_summary(7.0, [("Branch-Protection", 8.0, "changed"), ("Signed-Releases", 6.0, "changed")])) + "\n", encoding="utf-8")
+    baseline_path.write_text(
+        json.dumps(
+            _summary(
+                9.0, [("Branch-Protection", 10.0, "ok"), ("Signed-Releases", 8.0, "ok")]
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    current_path.write_text(
+        json.dumps(
+            _summary(
+                7.0,
+                [
+                    ("Branch-Protection", 8.0, "changed"),
+                    ("Signed-Releases", 6.0, "changed"),
+                ],
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     calls: list[list[str]] = []
 
@@ -122,7 +192,9 @@ def test_monitor_opens_issue_on_meaningful_regression(tmp_path: Path, monkeypatc
         if command[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(command, 0, "[]", "")
         if command[:3] == ["gh", "issue", "create"]:
-            return subprocess.CompletedProcess(command, 0, "https://example.test/issues/7\n", "")
+            return subprocess.CompletedProcess(
+                command, 0, "https://example.test/issues/7\n", ""
+            )
         raise AssertionError(command)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -142,12 +214,20 @@ def test_monitor_opens_issue_on_meaningful_regression(tmp_path: Path, monkeypatc
     assert any(command[:3] == ["gh", "issue", "create"] for command in calls)
 
 
-def test_monitor_updates_existing_issue_on_repeat_regression(tmp_path: Path, monkeypatch) -> None:
+def test_monitor_updates_existing_issue_on_repeat_regression(
+    tmp_path: Path, monkeypatch
+) -> None:
     current_path = tmp_path / "current.json"
     baseline_path = tmp_path / "baseline.json"
     latest_path = tmp_path / "latest.json"
-    baseline_path.write_text(json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok")])) + "\n", encoding="utf-8")
-    current_path.write_text(json.dumps(_summary(7.0, [("Branch-Protection", 8.0, "changed")])) + "\n", encoding="utf-8")
+    baseline_path.write_text(
+        json.dumps(_summary(9.0, [("Branch-Protection", 10.0, "ok")])) + "\n",
+        encoding="utf-8",
+    )
+    current_path.write_text(
+        json.dumps(_summary(7.0, [("Branch-Protection", 8.0, "changed")])) + "\n",
+        encoding="utf-8",
+    )
 
     calls: list[list[str]] = []
 

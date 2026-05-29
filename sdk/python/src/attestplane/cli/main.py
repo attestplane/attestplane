@@ -38,6 +38,8 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_TAXONOMY_VERSION,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -83,8 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="attestplane",
         description=(
-            "Verifiable audit substrate CLI. See "
-            "https://github.com/attestplane/attestplane for documentation."
+            "Verifiable audit substrate CLI. See https://github.com/attestplane/attestplane for documentation."
         ),
     )
     parser.add_argument("--version", action="version", version=f"attestplane {__version__}")
@@ -124,16 +125,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--require-non-empty",
         dest="require_non_empty",
         action="store_true",
-        help=(
-            "enforce the proof-bundle contract that strict bundles contain "
-            "at least one event"
-        ),
+        help=("enforce the proof-bundle contract that strict bundles contain at least one event"),
     )
     p_verify.add_argument(
         "--strict-schema",
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        metavar="VERSION",
+        help="fail closed unless the verifier taxonomy version matches VERSION",
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -179,15 +184,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_export = sub.add_parser("export", help="build a proof bundle from a JSONL chain")
     p_export.add_argument("chain", type=Path, help="path to chain.jsonl")
     p_export.add_argument(
-        "--out", "-o", type=Path, required=True,
+        "--out",
+        "-o",
+        type=Path,
+        required=True,
         help="output path for the proof bundle JSON",
     )
     p_export.add_argument(
-        "--chain-id", default="cli-export",
+        "--chain-id",
+        default="cli-export",
         help="chain_id to embed in the bundle metadata (default: 'cli-export')",
     )
     p_export.add_argument(
-        "--producer-runtime", default="attestplane-cli",
+        "--producer-runtime",
+        default="attestplane-cli",
         help="producer_runtime to embed (default: 'attestplane-cli')",
     )
     _add_format_flag(p_export)
@@ -424,17 +434,54 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     strict_bundle_mode = getattr(args, "bundle_option", None) is not None
     require_non_empty = (
-        getattr(args, "require_non_empty", False)
-        or getattr(args, "require_events", False)
-        or strict_bundle_mode
+        getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
+
+    if (
+        require_taxonomy_version is not None
+        and require_taxonomy_version != VERIFY_REASON_TAXONOMY_VERSION
+        and not args.json_output
+    ):
+        explain = getattr(args, "explain", False)
+        message = (
+            f"required taxonomy_version={require_taxonomy_version}; "
+            f"current taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION}"
+        )
+        human = f"FAIL: taxonomy version requirement failed ({message})"
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+        _emit(
+            {
+                "ok": False,
+                "error": "taxonomy_version_mismatch",
+                "detail": message,
+                "primary_reason": VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+                "secondary_reasons": [],
+                **_verify_scope_metadata(),
+            },
+            args.json_output,
+            human=human,
+        )
+        if explain:
+            _write_verify_explanations(
+                [
+                    {
+                        "primary_reason": VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+                        "pointer": "/taxonomy_version",
+                        "message": message,
+                    }
+                ]
+            )
+        return 1
 
     if args.json_output:
         outcome = build_verify_json_outcome(
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -560,6 +607,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=require_taxonomy_version,
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
@@ -769,7 +817,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         "python_version": platform.python_version(),
         "attestplane_version": __version__,
         "platform": platform.platform(),
-        "storage": JsonlStorageBackend(":memory:").health_report() | {
+        "storage": JsonlStorageBackend(":memory:").health_report()
+        | {
             "path": None,
         },
     }
@@ -784,6 +833,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         import attestplane.proof_bundle
         import attestplane.storage
         import attestplane.verifier
+
         payload["imports"] = "ok"
         payload["package_root"] = attestplane.__file__
     except ImportError as exc:
@@ -794,6 +844,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     # Sanity-check that the EU AI Act registry loads.
     try:
         from attestplane.obligations import load_eu_ai_act_article_12
+
         reg = load_eu_ai_act_article_12()
         payload["eu_ai_act_art12_entries"] = len(reg.entries)
     except Exception as exc:

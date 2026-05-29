@@ -20,9 +20,7 @@ def test_negative_canonicalization_vector_set_is_versioned() -> None:
 
 
 def test_negative_canonicalization_vector_set_is_complete() -> None:
-    assert {
-        vector["case_id"] for vector in NEGATIVE_VECTORS
-    } == {
+    assert {vector["case_id"] for vector in NEGATIVE_VECTORS} == {
         "canonicalization-negative-duplicate-json-keys-v1",
         "canonicalization-negative-embedded-nul-string-v1",
         "canonicalization-negative-invalid-surrogate-pair-string-v1",
@@ -35,7 +33,9 @@ def test_negative_canonicalization_vector_set_is_complete() -> None:
     }
 
 
-@pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
+@pytest.mark.parametrize(
+    "vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"]
+)
 def test_negative_canonicalization_vectors_pin_reason_and_pointer(
     vector: dict[str, object],
 ) -> None:

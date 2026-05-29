@@ -43,8 +43,7 @@ try:
     )
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.signing.signer requires the 'signing' extras. "
-        "Install with: pip install attestplane[signing]"
+        "attestplane.signing.signer requires the 'signing' extras. Install with: pip install attestplane[signing]"
     ) from exc
 
 from attestplane.canonical import canonicalize
@@ -100,9 +99,7 @@ def _build_segment_head_payload(chain_id: str, head: ChainHead) -> bytes:
     }
     # Defensive: canonicalize() output's key order is alphabetical, but
     # explicitly enumerating the 5 keys above documents the contract.
-    assert set(payload) == set(_FIVE_KEY_PAYLOAD), (
-        "segment-head payload key set must be exactly the five-key tuple"
-    )
+    assert set(payload) == set(_FIVE_KEY_PAYLOAD), "segment-head payload key set must be exactly the five-key tuple"
     return canonicalize(payload)
 
 
@@ -250,8 +247,7 @@ class Signer:
         """Sign one chain head in segment-head mode."""
         if head.seq < 0:
             raise SigningError(
-                "Signer.sign_segment_head requires a real chain head "
-                "(seq >= 0); refusing to sign genesis sentinel"
+                "Signer.sign_segment_head requires a real chain head (seq >= 0); refusing to sign genesis sentinel"
             )
         materials = _resolve_materials(self._key_provider)
         signed_at = self._now()
@@ -278,9 +274,7 @@ class Signer:
     def enqueue_segment_head(self, head: ChainHead) -> None:
         """Add a segment head to the worker queue."""
         if head.seq < 0:
-            raise SigningError(
-                "enqueue_segment_head requires a real chain head (seq >= 0)"
-            )
+            raise SigningError("enqueue_segment_head requires a real chain head (seq >= 0)")
         with self._lock:
             self._queue.append(_PendingSignature(head=head, mode="segment_head"))
         self._wakeup.set()
@@ -288,11 +282,13 @@ class Signer:
     def enqueue_event(self, event: ChainedEvent) -> None:
         """Add a single event to the worker queue for per-event signing."""
         with self._lock:
-            self._queue.append(_PendingSignature(
-                head=ChainHead(seq=event.seq, event_hash=event.event_hash),
-                mode="per_event",
-                audit_event=event.event,
-            ))
+            self._queue.append(
+                _PendingSignature(
+                    head=ChainHead(seq=event.seq, event_hash=event.event_hash),
+                    mode="per_event",
+                    audit_event=event.event,
+                )
+            )
         self._wakeup.set()
 
     def step_once(self) -> SignerResult | None:
@@ -320,10 +316,7 @@ class Signer:
         except Exception as exc:
             with self._lock:
                 self._stats.provider_errors += 1
-            raise SigningError(
-                f"Signer.step_once failed on seq={pending.head.seq} "
-                f"mode={pending.mode}: {exc}"
-            ) from exc
+            raise SigningError(f"Signer.step_once failed on seq={pending.head.seq} mode={pending.mode}: {exc}") from exc
 
         result = SignerResult(
             pending_seq=pending.head.seq,
@@ -334,7 +327,8 @@ class Signer:
             self._results.append(result)
             if pending.mode == "segment_head":
                 self._last_signed_segment_head_seq = max(
-                    self._last_signed_segment_head_seq, pending.head.seq,
+                    self._last_signed_segment_head_seq,
+                    pending.head.seq,
                 )
         return result
 
@@ -375,7 +369,9 @@ class Signer:
             return
         self._shutdown.clear()
         thread = threading.Thread(
-            target=self._run, daemon=True, name="attestplane-signer",
+            target=self._run,
+            daemon=True,
+            name="attestplane-signer",
         )
         thread.start()
         self._thread = thread

@@ -23,7 +23,14 @@ spec.loader.exec_module(alpha_release_train)
 
 def write_queue(tmp_path: Path, candidates: list[dict[str, object]]) -> Path:
     path = tmp_path / "queue.json"
-    path.write_text(json.dumps({"schema": "attestplane_alpha_release_train_queue.v1", "candidates": candidates}))
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "attestplane_alpha_release_train_queue.v1",
+                "candidates": candidates,
+            }
+        )
+    )
     return path
 
 
@@ -62,7 +69,9 @@ def test_queue_rejects_non_alpha_npm_version(tmp_path: Path) -> None:
 
 def test_advisory_release_input_is_rejected(tmp_path: Path) -> None:
     advisory = tmp_path / "advisory.md"
-    advisory.write_text("STATUS: ADVISORY\nAUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH\n", encoding="utf-8")
+    advisory.write_text(
+        "STATUS: ADVISORY\nAUTHORITY: NOT_AUTHORIZED_FOR_PUBLISH\n", encoding="utf-8"
+    )
     with pytest.raises(RuntimeError, match="advisory planning output"):
         alpha_release_train.reject_advisory_release_input(advisory)
 
@@ -83,11 +92,15 @@ def test_advisory_plan_strips_forbidden_commands(tmp_path: Path) -> None:
     assert "Issue B" in text
 
 
-def test_advisory_planning_failure_writes_limitation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_advisory_planning_failure_writes_limitation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.delenv("ATTESTPLANE_ALPHA_PLAN_FAKE_RESPONSE", raising=False)
 
     def fail_run(*args: object, **kwargs: object) -> object:
-        return alpha_release_train.subprocess.CompletedProcess(["ask_opus.sh"], 1, "", "")
+        return alpha_release_train.subprocess.CompletedProcess(
+            ["ask_opus.sh"], 1, "", ""
+        )
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fail_run)
     output = alpha_release_train.plan_next_alpha_issues(
@@ -107,8 +120,12 @@ def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
     plan = tmp_path / "next-alpha.md"
     plan.write_text("STATUS: ADVISORY\n", encoding="utf-8")
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
-    alpha_release_train.mark_stage(state_file, candidate_value, "registry_verified", "done")
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        candidate("v0.0.8-alpha")
+    )
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "registry_verified", "done"
+    )
     report = alpha_release_train.write_pipeline_report(
         advisory_plan=plan,
         queue=tmp_path / "queue.json",
@@ -116,7 +133,12 @@ def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
         executed=True,
         reports_dir=tmp_path,
         state_path=state_file,
-        retired_prepared=[{"release": "v0.0.7-alpha", "reason": "older_than_latest_alpha:v0.0.8-alpha"}],
+        retired_prepared=[
+            {
+                "release": "v0.0.7-alpha",
+                "reason": "older_than_latest_alpha:v0.0.8-alpha",
+            }
+        ],
     )
     payload = json.loads(report.read_text(encoding="utf-8"))
     assert payload["schema"] == "attestplane_alpha_release_pipeline_report.v1"
@@ -124,7 +146,9 @@ def test_pipeline_report_keeps_opus_non_authoritative(tmp_path: Path) -> None:
     assert payload["candidate_releases"] == ["v0.0.8-alpha"]
     assert payload["state_backend"] == "sqlite"
     assert payload["retired_prepared_releases"][0]["release"] == "v0.0.7-alpha"
-    assert payload["release_stage_summary"]["v0.0.8-alpha"]["registry_verified"] == "done"
+    assert (
+        payload["release_stage_summary"]["v0.0.8-alpha"]["registry_verified"] == "done"
+    )
     assert payload["stages"][0]["authority"] == "advisory_only"
     assert payload["stages"][1]["candidate_count"] == 1
     assert payload["explicit_non_claims"]["opus_authorized_publish"] is False
@@ -156,16 +180,24 @@ def test_continuous_state_filters_processed_releases(tmp_path: Path) -> None:
     assert [item.release for item in remaining] == ["v0.0.7-alpha"]
 
 
-def test_bootstrap_repo_root_adds_repo_root_to_sys_path(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bootstrap_repo_root_adds_repo_root_to_sys_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     repo_root = str(REPO_ROOT)
-    monkeypatch.setattr(alpha_release_train.sys, "path", [p for p in alpha_release_train.sys.path if p != repo_root])
+    monkeypatch.setattr(
+        alpha_release_train.sys,
+        "path",
+        [p for p in alpha_release_train.sys.path if p != repo_root],
+    )
     alpha_release_train.bootstrap_repo_root()
     assert alpha_release_train.sys.path[0] == repo_root
 
 
 def test_continuous_state_uses_sqlite_with_json_snapshot(tmp_path: Path) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        candidate("v0.0.8-alpha")
+    )
 
     alpha_release_train.mark_prepared(state_file, candidate_value, dry_run=False)
     alpha_release_train.mark_processed(state_file, candidate_value, dry_run=False)
@@ -214,8 +246,12 @@ def test_retire_obsolete_prepared_release_marks_stale_state(
 
     alpha_release_train.mark_prepared(state_file, stale, dry_run=False)
     alpha_release_train.mark_processed(state_file, released, dry_run=False)
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: False
+    )
 
     retired = alpha_release_train.retire_obsolete_prepared_releases(
         state_file,
@@ -224,7 +260,9 @@ def test_retire_obsolete_prepared_release_marks_stale_state(
     )
     state = alpha_release_train.load_continuous_state(state_file)
 
-    assert retired == [{"release": "v0.0.7-alpha", "reason": "older_than_latest_alpha:v0.1.3-alpha"}]
+    assert retired == [
+        {"release": "v0.0.7-alpha", "reason": "older_than_latest_alpha:v0.1.3-alpha"}
+    ]
     assert "v0.0.7-alpha" not in state["prepared_releases"]
     assert state["retired_releases"] == ["v0.0.7-alpha"]
 
@@ -237,8 +275,12 @@ def test_retire_obsolete_prepared_keeps_active_candidate(
     stale = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.7-alpha"))
 
     alpha_release_train.mark_prepared(state_file, stale, dry_run=False)
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: True)
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: True
+    )
 
     retired = alpha_release_train.retire_obsolete_prepared_releases(
         state_file,
@@ -247,7 +289,9 @@ def test_retire_obsolete_prepared_keeps_active_candidate(
     )
 
     assert retired == []
-    assert alpha_release_train.load_continuous_state(state_file)["prepared_releases"] == ["v0.0.7-alpha"]
+    assert alpha_release_train.load_continuous_state(state_file)[
+        "prepared_releases"
+    ] == ["v0.0.7-alpha"]
 
 
 def test_retire_obsolete_prepared_keeps_minor_boundary_until_registry_done(
@@ -255,14 +299,22 @@ def test_retire_obsolete_prepared_keeps_minor_boundary_until_registry_done(
     tmp_path: Path,
 ) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.7.0-alpha")
+    candidate_value = alpha_release_train.prepared_candidate_from_release(
+        "v0.7.0-alpha"
+    )
 
     alpha_release_train.mark_prepared(state_file, candidate_value, dry_run=False)
-    alpha_release_train.mark_stage(state_file, candidate_value, "local_gates_passed", "done")
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "local_gates_passed", "done"
+    )
     alpha_release_train.mark_stage(state_file, candidate_value, "main_pushed", "done")
     alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.7.0-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: True)
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.7.0-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: True
+    )
 
     retired = alpha_release_train.retire_obsolete_prepared_releases(
         state_file,
@@ -280,14 +332,22 @@ def test_retire_obsolete_prepared_keeps_tag_only_patch_alpha(
     tmp_path: Path,
 ) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.7.1-alpha")
+    candidate_value = alpha_release_train.prepared_candidate_from_release(
+        "v0.7.1-alpha"
+    )
 
     alpha_release_train.mark_prepared(state_file, candidate_value, dry_run=False)
-    alpha_release_train.mark_stage(state_file, candidate_value, "local_gates_passed", "done")
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "local_gates_passed", "done"
+    )
     alpha_release_train.mark_stage(state_file, candidate_value, "main_pushed", "done")
     alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.7.1-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: True)
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.7.1-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: True
+    )
 
     retired = alpha_release_train.retire_obsolete_prepared_releases(
         state_file,
@@ -310,8 +370,12 @@ def test_retire_obsolete_prepared_dry_run_does_not_report_actual_retirement(
 
     alpha_release_train.mark_prepared(state_file, stale, dry_run=False)
     alpha_release_train.mark_processed(state_file, released, dry_run=False)
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.1.3-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: False
+    )
 
     retired = alpha_release_train.retire_obsolete_prepared_releases(
         state_file,
@@ -320,7 +384,9 @@ def test_retire_obsolete_prepared_dry_run_does_not_report_actual_retirement(
     )
 
     assert retired == []
-    assert alpha_release_train.load_continuous_state(state_file)["prepared_releases"] == ["v0.0.7-alpha"]
+    assert alpha_release_train.load_continuous_state(state_file)[
+        "prepared_releases"
+    ] == ["v0.0.7-alpha"]
 
 
 def test_retire_obsolete_prepared_handles_empty_release_floor(
@@ -329,13 +395,18 @@ def test_retire_obsolete_prepared_handles_empty_release_floor(
 ) -> None:
     state_file = tmp_path / "state.json"
 
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.0.0-alpha")
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.0.0-alpha"
+    )
 
-    assert alpha_release_train.retire_obsolete_prepared_releases(
-        state_file,
-        active_candidates=[],
-        dry_run=True,
-    ) == []
+    assert (
+        alpha_release_train.retire_obsolete_prepared_releases(
+            state_file,
+            active_candidates=[],
+            dry_run=True,
+        )
+        == []
+    )
 
 
 def test_recoverable_failed_publish_candidates_retry_latest_partial_release(
@@ -346,28 +417,52 @@ def test_recoverable_failed_publish_candidates_retry_latest_partial_release(
     older = alpha_release_train.prepared_candidate_from_release("v0.6.5-alpha")
     latest = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
 
-    alpha_release_train.mark_failed(state_file, older, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_failed(
+        state_file, older, reason="RuntimeError", dry_run=False
+    )
     alpha_release_train.mark_stage(state_file, older, "gh_release_created", "done")
-    alpha_release_train.mark_stage(state_file, older, "pypi_published", "done", {"run": "older"})
-    alpha_release_train.mark_failed(state_file, latest, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_stage(
+        state_file, older, "pypi_published", "done", {"run": "older"}
+    )
+    alpha_release_train.mark_failed(
+        state_file, latest, reason="RuntimeError", dry_run=False
+    )
     alpha_release_train.mark_stage(state_file, latest, "gh_release_created", "done")
-    alpha_release_train.mark_stage(state_file, latest, "pypi_published", "done", {"run": "latest"})
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha")
-    monkeypatch.setattr(alpha_release_train, "verify_candidate_files", lambda candidate: None)
+    alpha_release_train.mark_stage(
+        state_file, latest, "pypi_published", "done", {"run": "latest"}
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "verify_candidate_files", lambda candidate: None
+    )
 
     recovered = alpha_release_train.recoverable_failed_publish_candidates(state_file)
 
     assert [candidate.release for candidate in recovered] == ["v0.6.6-alpha"]
 
 
-def test_recoverable_failed_publish_candidates_ignore_registry_verified(tmp_path: Path) -> None:
+def test_recoverable_failed_publish_candidates_ignore_registry_verified(
+    tmp_path: Path,
+) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+    candidate_value = alpha_release_train.prepared_candidate_from_release(
+        "v0.6.6-alpha"
+    )
 
-    alpha_release_train.mark_failed(state_file, candidate_value, reason="RuntimeError", dry_run=False)
-    alpha_release_train.mark_stage(state_file, candidate_value, "gh_release_created", "done")
-    alpha_release_train.mark_stage(state_file, candidate_value, "pypi_published", "done", {"run": "latest"})
-    alpha_release_train.mark_stage(state_file, candidate_value, "registry_verified", "done")
+    alpha_release_train.mark_failed(
+        state_file, candidate_value, reason="RuntimeError", dry_run=False
+    )
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "gh_release_created", "done"
+    )
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "pypi_published", "done", {"run": "latest"}
+    )
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "registry_verified", "done"
+    )
 
     assert alpha_release_train.recoverable_failed_publish_candidates(state_file) == []
 
@@ -380,11 +475,17 @@ def test_recoverable_failed_publish_candidates_ignore_obsolete_failures(
     obsolete = alpha_release_train.prepared_candidate_from_release("v0.6.3-alpha")
     released = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
 
-    alpha_release_train.mark_failed(state_file, obsolete, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_failed(
+        state_file, obsolete, reason="RuntimeError", dry_run=False
+    )
     alpha_release_train.mark_stage(state_file, obsolete, "gh_release_created", "done")
-    alpha_release_train.mark_stage(state_file, obsolete, "pypi_published", "done", {"run": "older"})
+    alpha_release_train.mark_stage(
+        state_file, obsolete, "pypi_published", "done", {"run": "older"}
+    )
     alpha_release_train.mark_processed(state_file, released, dry_run=False)
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha")
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha"
+    )
 
     assert alpha_release_train.recoverable_failed_publish_candidates(state_file) == []
 
@@ -396,10 +497,16 @@ def test_recoverable_failed_publish_candidates_ignore_missing_artifacts(
     state_file = tmp_path / "state.json"
     failed = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
 
-    alpha_release_train.mark_failed(state_file, failed, reason="RuntimeError", dry_run=False)
+    alpha_release_train.mark_failed(
+        state_file, failed, reason="RuntimeError", dry_run=False
+    )
     alpha_release_train.mark_stage(state_file, failed, "gh_release_created", "done")
-    alpha_release_train.mark_stage(state_file, failed, "pypi_published", "done", {"run": "latest"})
-    monkeypatch.setattr(alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha")
+    alpha_release_train.mark_stage(
+        state_file, failed, "pypi_published", "done", {"run": "latest"}
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "latest_alpha_release_from_notes", lambda: "v0.6.6-alpha"
+    )
     monkeypatch.setattr(
         alpha_release_train,
         "verify_candidate_files",
@@ -419,7 +526,9 @@ def test_auto_promote_merge_is_dry_run_safe(tmp_path: Path) -> None:
         }
     )
 
-    merged = alpha_release_train.merge_prepared_candidates(queue, [promoted], dry_run=True)
+    merged = alpha_release_train.merge_prepared_candidates(
+        queue, [promoted], dry_run=True
+    )
 
     assert [item.release for item in merged] == ["v0.0.8-alpha"]
     assert json.loads(queue.read_text(encoding="utf-8"))["candidates"] == []
@@ -451,7 +560,9 @@ def test_auto_promote_merge_can_stay_in_memory_for_full_auto(tmp_path: Path) -> 
         }
     )
 
-    merged = alpha_release_train.merge_prepared_candidates(queue, [promoted], dry_run=True)
+    merged = alpha_release_train.merge_prepared_candidates(
+        queue, [promoted], dry_run=True
+    )
 
     assert [candidate.release for candidate in merged] == ["v0.0.8-alpha"]
     assert json.loads(queue.read_text(encoding="utf-8"))["candidates"] == []
@@ -486,10 +597,14 @@ def test_git_push_retries_transient_failures(monkeypatch: pytest.MonkeyPatch) ->
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
+    monkeypatch.setattr(
+        alpha_release_train, "git_push_remote_status", lambda argv: (False, None)
+    )
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
-    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+    result = alpha_release_train.run_git_push(
+        ["git", "push", "origin", "main"], dry_run=False
+    )
 
     assert result.returncode == 0
     assert calls == [expected, expected]
@@ -506,11 +621,15 @@ def test_git_push_retry_remains_fail_closed(monkeypatch: pytest.MonkeyPatch) -> 
         raise alpha_release_train.subprocess.CalledProcessError(128, argv)
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
+    monkeypatch.setattr(
+        alpha_release_train, "git_push_remote_status", lambda argv: (False, None)
+    )
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     with pytest.raises(alpha_release_train.subprocess.CalledProcessError):
-        alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+        alpha_release_train.run_git_push(
+            ["git", "push", "origin", "main"], dry_run=False
+        )
 
     assert len(calls) == alpha_release_train.REMOTE_PUSH_ATTEMPTS
 
@@ -525,15 +644,21 @@ def test_git_push_timeouts_fail_fast(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> alpha_release_train.subprocess.CompletedProcess[str]:
         calls.append(argv)
         if len(calls) == 1:
-            raise alpha_release_train.subprocess.TimeoutExpired(argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+            raise alpha_release_train.subprocess.TimeoutExpired(
+                argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS
+            )
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, None))
+    monkeypatch.setattr(
+        alpha_release_train, "git_push_remote_status", lambda argv: (False, None)
+    )
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     with pytest.raises(alpha_release_train.subprocess.TimeoutExpired):
-        alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+        alpha_release_train.run_git_push(
+            ["git", "push", "origin", "main"], dry_run=False
+        )
 
     assert calls == [expected]
 
@@ -545,7 +670,10 @@ def test_git_push_failure_reason_classifies_network_errors() -> None:
         stderr="fatal: unable to access 'https://github.com/attestplane/attestplane.git/': Failed to connect to github.com port 443 after 75003 ms: Couldn't connect to server",
     )
 
-    assert alpha_release_train.classify_git_push_failure(exc) == "git_push_network_unavailable"
+    assert (
+        alpha_release_train.classify_git_push_failure(exc)
+        == "git_push_network_unavailable"
+    )
 
 
 def test_git_push_failure_reason_classifies_timeouts() -> None:
@@ -584,65 +712,104 @@ def test_git_push_cooldown_seconds_are_reason_aware() -> None:
     )
 
 
-def test_ensure_main_pushed_enqueues_task_without_blocking(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+def test_ensure_main_pushed_enqueues_task_without_blocking(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        candidate("v0.0.8-alpha")
+    )
     state_file = tmp_path / "state.json"
     queue_calls: list[tuple[str, str]] = []
     stage_calls: list[tuple[str, str]] = []
 
-    monkeypatch.setattr(alpha_release_train, "stage_done", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        alpha_release_train, "stage_done", lambda *args, **kwargs: False
+    )
     monkeypatch.setattr(
         alpha_release_train,
         "enqueue_git_push_task",
-        lambda path, candidate, ref, *, dry_run: queue_calls.append((candidate.release, ref)),
+        lambda path, candidate, ref, *, dry_run: queue_calls.append(
+            (candidate.release, ref)
+        ),
     )
     monkeypatch.setattr(
         alpha_release_train,
         "mark_stage",
-        lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
+        lambda path, candidate, stage, status, detail=None: stage_calls.append(
+            (stage, status)
+        ),
     )
-    monkeypatch.setattr(alpha_release_train, "run_git_push", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("run_git_push should not run")))
+    monkeypatch.setattr(
+        alpha_release_train,
+        "run_git_push",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("run_git_push should not run")
+        ),
+    )
 
-    alpha_release_train.ensure_main_pushed(candidate_value, dry_run=False, state_path=state_file)
+    alpha_release_train.ensure_main_pushed(
+        candidate_value, dry_run=False, state_path=state_file
+    )
 
     assert queue_calls == [("v0.0.8-alpha", "main")]
     assert stage_calls == [("main_pushed", "queued")]
 
 
-def test_create_tag_and_release_enqueues_tag_push_without_blocking(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    candidate_value = alpha_release_train.AlphaCandidate.from_json({**candidate("v0.0.8-alpha"), "create_github_release": False})
+def test_create_tag_and_release_enqueues_tag_push_without_blocking(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        {**candidate("v0.0.8-alpha"), "create_github_release": False}
+    )
     state_file = tmp_path / "state.json"
     queue_calls: list[tuple[str, str]] = []
     stage_calls: list[tuple[str, str]] = []
     run_calls: list[list[str]] = []
 
-    monkeypatch.setattr(alpha_release_train, "stage_done", lambda *args, **kwargs: False)
-    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: True)
+    monkeypatch.setattr(
+        alpha_release_train, "stage_done", lambda *args, **kwargs: False
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "local_tag_points_at_head", lambda release: True
+    )
     monkeypatch.setattr(
         alpha_release_train,
         "enqueue_git_push_task",
-        lambda path, candidate, ref, *, dry_run: queue_calls.append((candidate.release, ref)),
+        lambda path, candidate, ref, *, dry_run: queue_calls.append(
+            (candidate.release, ref)
+        ),
     )
     monkeypatch.setattr(
         alpha_release_train,
         "mark_stage",
-        lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
+        lambda path, candidate, stage, status, detail=None: stage_calls.append(
+            (stage, status)
+        ),
     )
     monkeypatch.setattr(
         alpha_release_train,
         "run",
-        lambda argv, *, dry_run, env=None: run_calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
+        lambda argv, *, dry_run, env=None: (
+            run_calls.append(argv)
+            or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+        ),
     )
 
-    with pytest.raises(alpha_release_train.QueueDependencyPending, match="tag push pending"):
-        alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=state_file)
+    with pytest.raises(
+        alpha_release_train.QueueDependencyPending, match="tag push pending"
+    ):
+        alpha_release_train.create_tag_and_release(
+            candidate_value, dry_run=False, state_path=state_file
+        )
 
     assert queue_calls == [("v0.0.8-alpha", "v0.0.8-alpha")]
     assert stage_calls == [("tag_pushed", "queued")]
     assert ["git", "push", "origin", "v0.0.8-alpha"] not in run_calls
 
 
-def test_git_push_timeout_continues_when_main_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_git_push_timeout_continues_when_main_reached_remote(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
     remote_checks = 0
 
@@ -651,7 +818,9 @@ def test_git_push_timeout_continues_when_main_reached_remote(monkeypatch: pytest
         **kwargs: object,
     ) -> alpha_release_train.subprocess.CompletedProcess[str]:
         calls.append(argv)
-        raise alpha_release_train.subprocess.TimeoutExpired(argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+        raise alpha_release_train.subprocess.TimeoutExpired(
+            argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS
+        )
 
     def fake_capture(argv: list[str], timeout: int | None = None) -> str:
         nonlocal remote_checks
@@ -669,13 +838,17 @@ def test_git_push_timeout_continues_when_main_reached_remote(monkeypatch: pytest
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
 
-    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+    result = alpha_release_train.run_git_push(
+        ["git", "push", "origin", "main"], dry_run=False
+    )
 
     assert result.returncode == 0
     assert len(calls) == 1
 
 
-def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_git_push_timeout_continues_when_tag_reached_remote(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
     remote_checks = 0
 
@@ -684,7 +857,9 @@ def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.
         **kwargs: object,
     ) -> alpha_release_train.subprocess.CompletedProcess[str]:
         calls.append(argv)
-        raise alpha_release_train.subprocess.TimeoutExpired(argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS)
+        raise alpha_release_train.subprocess.TimeoutExpired(
+            argv, timeout=alpha_release_train.REMOTE_PUSH_TIMEOUT_SECONDS
+        )
 
     def fake_capture(argv: list[str], timeout: int | None = None) -> str:
         nonlocal remote_checks
@@ -698,7 +873,9 @@ def test_git_push_timeout_continues_when_tag_reached_remote(monkeypatch: pytest.
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
 
-    result = alpha_release_train.run_git_push(["git", "push", "origin", "v0.1.1-alpha"], dry_run=False)
+    result = alpha_release_train.run_git_push(
+        ["git", "push", "origin", "v0.1.1-alpha"], dry_run=False
+    )
 
     assert result.returncode == 0
     assert len(calls) == 1
@@ -709,9 +886,15 @@ def test_process_git_push_queue_processes_all_ready_pushes_in_cycle(
     tmp_path: Path,
 ) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
-    alpha_release_train.enqueue_git_push_task(state_file, candidate_value, "main", dry_run=False)
-    alpha_release_train.enqueue_git_push_task(state_file, candidate_value, candidate_value.release, dry_run=False)
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        candidate("v0.0.8-alpha")
+    )
+    alpha_release_train.enqueue_git_push_task(
+        state_file, candidate_value, "main", dry_run=False
+    )
+    alpha_release_train.enqueue_git_push_task(
+        state_file, candidate_value, candidate_value.release, dry_run=False
+    )
 
     calls: list[list[str]] = []
     pushed_tags: set[str] = set()
@@ -719,12 +902,16 @@ def test_process_git_push_queue_processes_all_ready_pushes_in_cycle(
     def fake_remote_status(argv: list[str]) -> tuple[bool, str | None]:
         return argv[-1] in pushed_tags, None
 
-    def fake_push(argv: list[str], *, dry_run: bool) -> alpha_release_train.subprocess.CompletedProcess[str]:
+    def fake_push(
+        argv: list[str], *, dry_run: bool
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
         calls.append(argv)
         pushed_tags.update(ref for ref in argv[5:] if ref != "main")
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", fake_remote_status)
+    monkeypatch.setattr(
+        alpha_release_train, "git_push_remote_status", fake_remote_status
+    )
     monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", fake_push)
 
     events = alpha_release_train.process_git_push_queue(
@@ -742,8 +929,12 @@ def test_process_git_push_queue_processes_all_ready_pushes_in_cycle(
         ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "main"],
         ["git", "-c", "http.version=HTTP/1.1", "push", "origin", "v0.0.8-alpha"],
     ]
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]["status"] == "done"
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "main"][0][
+        "status"
+    ] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][
+        0
+    ]["status"] == "done"
 
 
 def test_process_git_push_queue_batches_ready_alpha_tags(
@@ -753,8 +944,12 @@ def test_process_git_push_queue_batches_ready_alpha_tags(
     state_file = tmp_path / "state.json"
     first = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
     second = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.9-alpha"))
-    alpha_release_train.enqueue_git_push_task(state_file, first, first.release, dry_run=False)
-    alpha_release_train.enqueue_git_push_task(state_file, second, second.release, dry_run=False)
+    alpha_release_train.enqueue_git_push_task(
+        state_file, first, first.release, dry_run=False
+    )
+    alpha_release_train.enqueue_git_push_task(
+        state_file, second, second.release, dry_run=False
+    )
 
     calls: list[list[str]] = []
     pushed_tags: set[str] = set()
@@ -762,12 +957,16 @@ def test_process_git_push_queue_batches_ready_alpha_tags(
     def fake_remote_status(argv: list[str]) -> tuple[bool, str | None]:
         return argv[-1] in pushed_tags, None
 
-    def fake_push(argv: list[str], *, dry_run: bool) -> alpha_release_train.subprocess.CompletedProcess[str]:
+    def fake_push(
+        argv: list[str], *, dry_run: bool
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
         calls.append(argv)
         pushed_tags.update(argv[5:])
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", fake_remote_status)
+    monkeypatch.setattr(
+        alpha_release_train, "git_push_remote_status", fake_remote_status
+    )
     monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", fake_push)
 
     events = alpha_release_train.process_git_push_queue(
@@ -792,8 +991,12 @@ def test_process_git_push_queue_batches_ready_alpha_tags(
             "v0.0.9-alpha",
         ],
     ]
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.9-alpha"][0]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][
+        0
+    ]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.9-alpha"][
+        0
+    ]["status"] == "done"
 
 
 def test_process_git_push_queue_reconciles_partial_batch_tag_push(
@@ -804,8 +1007,12 @@ def test_process_git_push_queue_reconciles_partial_batch_tag_push(
     first = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
     second = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.9-alpha"))
     monkeypatch.setattr(alpha_release_train.time, "time", lambda: 1_000_000)
-    alpha_release_train.enqueue_git_push_task(state_file, first, first.release, dry_run=False)
-    alpha_release_train.enqueue_git_push_task(state_file, second, second.release, dry_run=False)
+    alpha_release_train.enqueue_git_push_task(
+        state_file, first, first.release, dry_run=False
+    )
+    alpha_release_train.enqueue_git_push_task(
+        state_file, second, second.release, dry_run=False
+    )
 
     pushed = False
 
@@ -816,12 +1023,18 @@ def test_process_git_push_queue_reconciles_partial_batch_tag_push(
             return True, None
         return False, None
 
-    def fake_push(argv: list[str], *, dry_run: bool) -> alpha_release_train.subprocess.CompletedProcess[str]:
+    def fake_push(
+        argv: list[str], *, dry_run: bool
+    ) -> alpha_release_train.subprocess.CompletedProcess[str]:
         nonlocal pushed
         pushed = True
-        raise alpha_release_train.subprocess.CalledProcessError(1, argv, stderr="failed to push some refs")
+        raise alpha_release_train.subprocess.CalledProcessError(
+            1, argv, stderr="failed to push some refs"
+        )
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", fake_remote_status)
+    monkeypatch.setattr(
+        alpha_release_train, "git_push_remote_status", fake_remote_status
+    )
     monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", fake_push)
 
     events = alpha_release_train.process_git_push_queue(
@@ -831,12 +1044,21 @@ def test_process_git_push_queue_reconciles_partial_batch_tag_push(
     )
 
     state = alpha_release_train.load_continuous_state(state_file)
-    assert events[0] == {"release": "v0.0.8-alpha", "ref": "v0.0.8-alpha", "status": "done", "observed": True}
+    assert events[0] == {
+        "release": "v0.0.8-alpha",
+        "ref": "v0.0.8-alpha",
+        "status": "done",
+        "observed": True,
+    }
     assert events[1]["release"] == "v0.0.9-alpha"
     assert events[1]["status"] == "cooldown"
     assert events[1]["reason"] == "git_push_rejected"
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][0]["status"] == "done"
-    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.9-alpha"][0]["status"] == "cooldown"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.8-alpha"][
+        0
+    ]["status"] == "done"
+    assert [task for task in state["git_push_tasks"] if task["ref"] == "v0.0.9-alpha"][
+        0
+    ]["status"] == "cooldown"
 
 
 def test_process_git_push_queue_uses_longer_cooldown_for_network_failures(
@@ -844,12 +1066,26 @@ def test_process_git_push_queue_uses_longer_cooldown_for_network_failures(
     tmp_path: Path,
 ) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        candidate("v0.0.8-alpha")
+    )
     monkeypatch.setattr(alpha_release_train.time, "time", lambda: 1_000_000)
-    alpha_release_train.enqueue_git_push_task(state_file, candidate_value, "main", dry_run=False)
+    alpha_release_train.enqueue_git_push_task(
+        state_file, candidate_value, "main", dry_run=False
+    )
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, "git_push_network_unavailable"))
-    monkeypatch.setattr(alpha_release_train, "attempt_git_push_once", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("attempt_git_push_once should not run")))
+    monkeypatch.setattr(
+        alpha_release_train,
+        "git_push_remote_status",
+        lambda argv: (False, "git_push_network_unavailable"),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "attempt_git_push_once",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("attempt_git_push_once should not run")
+        ),
+    )
 
     events = alpha_release_train.process_git_push_queue(
         state_file,
@@ -861,30 +1097,48 @@ def test_process_git_push_queue_uses_longer_cooldown_for_network_failures(
     task = [task for task in state["git_push_tasks"] if task["ref"] == "main"][0]
 
     assert events[0]["reason"] == "git_push_network_unavailable"
-    assert events[0]["cooldown_seconds"] > alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS
+    assert (
+        events[0]["cooldown_seconds"]
+        > alpha_release_train.CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS
+    )
     assert task["status"] == "cooldown"
     assert task["attempts"] == 1
     assert task["next_attempt_at_epoch"] > 1_000_000
 
 
-def test_run_git_push_network_probe_short_circuits_before_real_push(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_git_push_network_probe_short_circuits_before_real_push(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
 
-    monkeypatch.setattr(alpha_release_train, "git_push_remote_status", lambda argv: (False, "git_push_network_unavailable"))
+    monkeypatch.setattr(
+        alpha_release_train,
+        "git_push_remote_status",
+        lambda argv: (False, "git_push_network_unavailable"),
+    )
     monkeypatch.setattr(
         alpha_release_train,
         "attempt_git_push_once",
-        lambda argv, *, dry_run: calls.append(argv) or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", ""),
+        lambda argv, *, dry_run: (
+            calls.append(argv)
+            or alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
+        ),
     )
 
     with pytest.raises(alpha_release_train.subprocess.CalledProcessError) as excinfo:
-        alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+        alpha_release_train.run_git_push(
+            ["git", "push", "origin", "main"], dry_run=False
+        )
 
-    assert "preflight git remote probe failed: git_push_network_unavailable" in str(excinfo.value.stderr)
+    assert "preflight git remote probe failed: git_push_network_unavailable" in str(
+        excinfo.value.stderr
+    )
     assert calls == []
 
 
-def test_git_push_skips_when_main_already_reached_remote(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_git_push_skips_when_main_already_reached_remote(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
 
     def fake_run(
@@ -904,13 +1158,17 @@ def test_git_push_skips_when_main_already_reached_remote(monkeypatch: pytest.Mon
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
 
-    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+    result = alpha_release_train.run_git_push(
+        ["git", "push", "origin", "main"], dry_run=False
+    )
 
     assert result.returncode == 0
     assert calls == []
 
 
-def test_git_push_skips_main_using_local_tracking_without_network(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_git_push_skips_main_using_local_tracking_without_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[list[str]] = []
 
     def fake_run(
@@ -926,13 +1184,17 @@ def test_git_push_skips_main_using_local_tracking_without_network(monkeypatch: p
         if argv == ["git", "rev-parse", "HEAD"]:
             return "abc123"
         if argv == ["git", "ls-remote", "origin", "refs/heads/main"]:
-            raise AssertionError("network probe should not run when local tracking is converged")
+            raise AssertionError(
+                "network probe should not run when local tracking is converged"
+            )
         raise AssertionError(argv)
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
 
-    result = alpha_release_train.run_git_push(["git", "push", "origin", "main"], dry_run=False)
+    result = alpha_release_train.run_git_push(
+        ["git", "push", "origin", "main"], dry_run=False
+    )
 
     assert result.returncode == 0
     assert calls == []
@@ -942,7 +1204,9 @@ def test_daily_release_count_defaults_to_zero(tmp_path: Path) -> None:
     assert alpha_release_train.daily_release_count(tmp_path / "missing-state.json") == 0
 
 
-def test_next_alpha_release_from_notes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_next_alpha_release_from_notes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
     (docs / "v0.0.9-alpha.draft.md").write_text("# v0.0.9-alpha\n", encoding="utf-8")
@@ -951,7 +1215,9 @@ def test_next_alpha_release_from_notes(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert alpha_release_train.next_alpha_release() == "v0.1.0-alpha"
 
 
-def test_next_alpha_release_after_milestone_uses_patch_one(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_next_alpha_release_after_milestone_uses_patch_one(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
     (docs / "v0.1.0-alpha.draft.md").write_text("# v0.1.0-alpha\n", encoding="utf-8")
@@ -959,7 +1225,9 @@ def test_next_alpha_release_after_milestone_uses_patch_one(monkeypatch: pytest.M
     assert alpha_release_train.next_alpha_release() == "v0.1.1-alpha"
 
 
-def test_next_alpha_release_rolls_minor_after_ten_patch_alphas(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_next_alpha_release_rolls_minor_after_ten_patch_alphas(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
     (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
@@ -973,7 +1241,9 @@ def test_alpha_registry_publish_enabled_only_for_minor_boundaries() -> None:
 
 
 def test_explicit_next_alpha_release_override_is_validated() -> None:
-    assert alpha_release_train.resolve_next_alpha_release("v0.1.0-alpha") == "v0.1.0-alpha"
+    assert (
+        alpha_release_train.resolve_next_alpha_release("v0.1.0-alpha") == "v0.1.0-alpha"
+    )
     with pytest.raises(ValueError, match="invalid alpha release"):
         alpha_release_train.resolve_next_alpha_release("0.1.0-alpha")
 
@@ -985,8 +1255,13 @@ def test_milestone_alpha_requires_version_evaluation() -> None:
     assert alpha_release_train.requires_version_evaluation("v0.1.10-alpha") is False
 
 
-def test_version_evaluation_advisory_is_non_authoritative(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "Version number looks appropriate.")
+def test_version_evaluation_advisory_is_non_authoritative(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv(
+        "ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE",
+        "Version number looks appropriate.",
+    )
 
     output = alpha_release_train.plan_alpha_version_evaluation(
         release="v0.1.0-alpha",
@@ -1016,7 +1291,9 @@ def test_non_milestone_version_evaluation_is_skipped(tmp_path: Path) -> None:
     assert list(tmp_path.iterdir()) == []
 
 
-def test_opus_can_select_milestone_alpha_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_opus_can_select_milestone_alpha_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
     (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
@@ -1045,7 +1322,9 @@ def test_opus_version_decision_missing_selected_version_falls_back_to_determinis
     docs.mkdir(parents=True)
     (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
-    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "verdict: appropriate\n")
+    monkeypatch.setenv(
+        "ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "verdict: appropriate\n"
+    )
 
     selected, advisory = alpha_release_train.resolve_opus_decided_alpha_release(
         release_override=None,
@@ -1058,12 +1337,16 @@ def test_opus_version_decision_missing_selected_version_falls_back_to_determinis
     assert advisory is not None
 
 
-def test_opus_version_decision_rejects_non_alpha_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_opus_version_decision_rejects_non_alpha_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
     (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
-    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "SELECTED_VERSION: v1.0.0\n")
+    monkeypatch.setenv(
+        "ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "SELECTED_VERSION: v1.0.0\n"
+    )
 
     with pytest.raises(ValueError, match="invalid alpha release"):
         alpha_release_train.resolve_opus_decided_alpha_release(
@@ -1074,12 +1357,17 @@ def test_opus_version_decision_rejects_non_alpha_version(monkeypatch: pytest.Mon
         )
 
 
-def test_opus_version_decision_rejects_non_increasing_version(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_opus_version_decision_rejects_non_increasing_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     docs = tmp_path / "docs" / "release-notes"
     docs.mkdir(parents=True)
     (docs / "v0.1.10-alpha.draft.md").write_text("# v0.1.10-alpha\n", encoding="utf-8")
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
-    monkeypatch.setenv("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE", "SELECTED_VERSION: v0.1.10-alpha\n")
+    monkeypatch.setenv(
+        "ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE",
+        "SELECTED_VERSION: v0.1.10-alpha\n",
+    )
 
     with pytest.raises(ValueError, match="must be greater than latest"):
         alpha_release_train.resolve_opus_decided_alpha_release(
@@ -1090,7 +1378,9 @@ def test_opus_version_decision_rejects_non_increasing_version(monkeypatch: pytes
         )
 
 
-def test_draft_candidate_bundle_is_not_release_queue_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_draft_candidate_bundle_is_not_release_queue_entry(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
     monkeypatch.setattr(alpha_release_train, "capture", lambda argv: "abc123")
     candidate = alpha_release_train.AlphaCandidate.from_json(
@@ -1137,7 +1427,9 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    queue = write_queue(tmp_path, [candidate("v0.0.8-alpha"), candidate("v0.0.9-alpha")])
+    queue = write_queue(
+        tmp_path, [candidate("v0.0.8-alpha"), candidate("v0.0.9-alpha")]
+    )
     stop_file = tmp_path / "STOP"
     state_file = tmp_path / "state.json"
     calls: list[str] = []
@@ -1158,7 +1450,9 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
             )
 
     monkeypatch.setattr(alpha_release_train, "run_candidate", fail_remote_push)
-    monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(
+        alpha_release_train.time, "sleep", lambda seconds: sleeps.append(seconds)
+    )
 
     args = alpha_release_train.parse_args(
         [
@@ -1184,13 +1478,17 @@ def test_continuous_remote_push_failure_cooldowns_without_stop(
     assert calls == ["v0.0.8-alpha", "v0.0.9-alpha"]
     assert sleeps == []
     assert not stop_file.exists()
-    assert alpha_release_train.load_continuous_state(state_file)["processed_releases"] == [
+    assert alpha_release_train.load_continuous_state(state_file)[
+        "processed_releases"
+    ] == [
         "v0.0.8-alpha",
         "v0.0.9-alpha",
     ]
 
 
-def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_create_tag_and_release_recovers_existing_head_tag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     commands: list[list[str]] = []
     queue_calls: list[tuple[str, str]] = []
     stage_calls: list[tuple[str, str]] = []
@@ -1203,21 +1501,35 @@ def test_create_tag_and_release_recovers_existing_head_tag(monkeypatch: pytest.M
         }
     )
 
-    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: True)
-    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+    monkeypatch.setattr(
+        alpha_release_train, "local_tag_points_at_head", lambda release: True
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "run",
+        lambda argv, *, dry_run, env=None: commands.append(argv),
+    )
     monkeypatch.setattr(
         alpha_release_train,
         "enqueue_git_push_task",
-        lambda path, candidate, ref, *, dry_run: queue_calls.append((candidate.release, ref)),
+        lambda path, candidate, ref, *, dry_run: queue_calls.append(
+            (candidate.release, ref)
+        ),
     )
     monkeypatch.setattr(
         alpha_release_train,
         "mark_stage",
-        lambda path, candidate, stage, status, detail=None: stage_calls.append((stage, status)),
+        lambda path, candidate, stage, status, detail=None: stage_calls.append(
+            (stage, status)
+        ),
     )
 
-    with pytest.raises(alpha_release_train.QueueDependencyPending, match="tag push pending"):
-        alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=tmp_path / "state.json")
+    with pytest.raises(
+        alpha_release_train.QueueDependencyPending, match="tag push pending"
+    ):
+        alpha_release_train.create_tag_and_release(
+            candidate_value, dry_run=False, state_path=tmp_path / "state.json"
+        )
 
     assert ["git", "tag", "-a", "v0.0.8-alpha", "-m", "v0.0.8-alpha"] not in commands
     assert queue_calls == [("v0.0.8-alpha", "v0.0.8-alpha")]
@@ -1240,20 +1552,32 @@ def test_create_tag_and_release_skips_recorded_partial_release_tag(
     )
 
     alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
-    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: False)
-    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+    monkeypatch.setattr(
+        alpha_release_train, "local_tag_points_at_head", lambda release: False
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "run",
+        lambda argv, *, dry_run, env=None: commands.append(argv),
+    )
 
-    alpha_release_train.create_tag_and_release(candidate_value, dry_run=False, state_path=state_file)
+    alpha_release_train.create_tag_and_release(
+        candidate_value, dry_run=False, state_path=state_file
+    )
 
     assert ["git", "tag", "-a", "v0.6.6-alpha", "-m", "v0.6.6-alpha"] not in commands
 
 
-def test_local_tag_points_at_head_suppresses_missing_tag_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_local_tag_points_at_head_suppresses_missing_tag_stderr(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[dict[str, object]] = []
 
     def fake_run(*args: object, **kwargs: object) -> object:
         calls.append({"argv": args[0], "stderr": kwargs.get("stderr")})
-        return alpha_release_train.subprocess.CompletedProcess(args[0], 128, "", "fatal: missing tag")
+        return alpha_release_train.subprocess.CompletedProcess(
+            args[0], 128, "", "fatal: missing tag"
+        )
 
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
 
@@ -1276,12 +1600,22 @@ def test_external_stage_ledger_skips_completed_publish_steps(
     )
     commands: list[list[str]] = []
 
-    alpha_release_train.mark_stage(state_file, candidate_value, "pypi_published", "done")
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "pypi_published", "done"
+    )
     alpha_release_train.mark_stage(state_file, candidate_value, "npm_published", "done")
-    alpha_release_train.mark_stage(state_file, candidate_value, "dist_tag_synced", "done")
-    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "dist_tag_synced", "done"
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "run",
+        lambda argv, *, dry_run, env=None: commands.append(argv),
+    )
 
-    alpha_release_train.publish_platforms(candidate_value, dry_run=False, state_path=state_file)
+    alpha_release_train.publish_platforms(
+        candidate_value, dry_run=False, state_path=state_file
+    )
 
     assert commands == []
     state = alpha_release_train.load_continuous_state(state_file)
@@ -1295,12 +1629,22 @@ def test_registry_verified_stage_is_idempotent(
     tmp_path: Path,
 ) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.AlphaCandidate.from_json(candidate("v0.0.8-alpha"))
+    candidate_value = alpha_release_train.AlphaCandidate.from_json(
+        candidate("v0.0.8-alpha")
+    )
 
-    alpha_release_train.mark_stage(state_file, candidate_value, "registry_verified", "done")
-    monkeypatch.setattr(alpha_release_train, "pypi_version_exists", lambda version: (_ for _ in ()).throw(AssertionError))
+    alpha_release_train.mark_stage(
+        state_file, candidate_value, "registry_verified", "done"
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "pypi_version_exists",
+        lambda version: (_ for _ in ()).throw(AssertionError),
+    )
 
-    alpha_release_train.verify_registries(candidate_value, dry_run=False, state_path=state_file)
+    alpha_release_train.verify_registries(
+        candidate_value, dry_run=False, state_path=state_file
+    )
 
 
 def test_preflight_allows_partial_release_tag_recovery(
@@ -1308,32 +1652,58 @@ def test_preflight_allows_partial_release_tag_recovery(
     tmp_path: Path,
 ) -> None:
     state_file = tmp_path / "state.json"
-    candidate_value = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
+    candidate_value = alpha_release_train.prepared_candidate_from_release(
+        "v0.6.6-alpha"
+    )
 
     alpha_release_train.mark_stage(state_file, candidate_value, "tag_pushed", "done")
     monkeypatch.setattr(
         alpha_release_train.subprocess,
         "run",
-        lambda *args, **kwargs: alpha_release_train.subprocess.CompletedProcess(args[0], 0, "", ""),
+        lambda *args, **kwargs: alpha_release_train.subprocess.CompletedProcess(
+            args[0], 0, "", ""
+        ),
     )
-    monkeypatch.setattr(alpha_release_train, "local_tag_points_at_head", lambda release: False)
+    monkeypatch.setattr(
+        alpha_release_train, "local_tag_points_at_head", lambda release: False
+    )
     monkeypatch.setattr(alpha_release_train, "remote_tag_exists", lambda release: True)
     monkeypatch.setattr(alpha_release_train, "gh_release_exists", lambda release: False)
 
-    alpha_release_train.preflight_public_release_surfaces(candidate_value, state_path=state_file)
+    alpha_release_train.preflight_public_release_surfaces(
+        candidate_value, state_path=state_file
+    )
 
 
-def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     observed_envs: list[dict[str, str]] = []
 
     monkeypatch.setattr(alpha_release_train, "assert_clean_tree", lambda: None)
-    monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
-    monkeypatch.setattr(alpha_release_train, "sync_version_state", lambda candidate: None)
-    monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: None)
-    monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: None)
-    monkeypatch.setattr(alpha_release_train, "write_release_metadata", lambda candidate: None)
-    monkeypatch.setattr(alpha_release_train, "commit_release_prep", lambda candidate: None)
+    monkeypatch.setattr(
+        alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: False
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "sync_version_state", lambda candidate: None
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "write_release_notes",
+        lambda candidate, advisory_plan: None,
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "build_release_artifacts", lambda candidate: None
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "write_release_metadata", lambda candidate: None
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "commit_release_prep", lambda candidate: None
+    )
 
     def fake_run(
         argv: list[str],
@@ -1354,17 +1724,47 @@ def test_finalize_next_alpha_verifies_prebuilt_release_artifacts(monkeypatch: py
     assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
 
 
-def test_finalize_next_alpha_syncs_python_lock_before_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_finalize_next_alpha_syncs_python_lock_before_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[str] = []
 
-    monkeypatch.setattr(alpha_release_train, "assert_clean_tree", lambda: calls.append("clean"))
-    monkeypatch.setattr(alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha")
-    monkeypatch.setattr(alpha_release_train, "alpha_release_exists", lambda release: False)
-    monkeypatch.setattr(alpha_release_train, "sync_version_state", lambda candidate: calls.extend(["pyproject", "runtime", "uv-lock", "npm", "readme"]))
-    monkeypatch.setattr(alpha_release_train, "write_release_notes", lambda candidate, advisory_plan: calls.append("notes"))
-    monkeypatch.setattr(alpha_release_train, "build_release_artifacts", lambda candidate: calls.append("artifacts"))
-    monkeypatch.setattr(alpha_release_train, "write_release_metadata", lambda candidate: calls.append("metadata"))
-    monkeypatch.setattr(alpha_release_train, "commit_release_prep", lambda candidate: calls.append("commit"))
+    monkeypatch.setattr(
+        alpha_release_train, "assert_clean_tree", lambda: calls.append("clean")
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "next_alpha_release", lambda: "v0.0.8-alpha"
+    )
+    monkeypatch.setattr(
+        alpha_release_train, "alpha_release_exists", lambda release: False
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "sync_version_state",
+        lambda candidate: calls.extend(
+            ["pyproject", "runtime", "uv-lock", "npm", "readme"]
+        ),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "write_release_notes",
+        lambda candidate, advisory_plan: calls.append("notes"),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "build_release_artifacts",
+        lambda candidate: calls.append("artifacts"),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "write_release_metadata",
+        lambda candidate: calls.append("metadata"),
+    )
+    monkeypatch.setattr(
+        alpha_release_train,
+        "commit_release_prep",
+        lambda candidate: calls.append("commit"),
+    )
 
     def fake_run(
         argv: list[str],
@@ -1386,7 +1786,9 @@ def test_finalize_next_alpha_syncs_python_lock_before_commit(monkeypatch: pytest
     assert calls.index("uv-lock") < calls.index("artifacts")
 
 
-def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_local_gates_verify_prebuilt_release_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     observed_envs: list[dict[str, str]] = []
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
@@ -1413,7 +1815,9 @@ def test_local_gates_verify_prebuilt_release_artifacts(monkeypatch: pytest.Monke
     assert observed_envs[0]["ATTESTPLANE_RELEASE_ASSETS_PREBUILT"] == "1"
 
 
-def test_release_prep_commit_includes_python_lockfile(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_release_prep_commit_includes_python_lockfile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     staged: list[str] = []
     candidate = alpha_release_train.prepared_candidate_from_release("v0.0.8-alpha")
 
@@ -1455,11 +1859,13 @@ def test_sync_version_state_updates_import_surface_version(
     )
     import_surface = tmp_path / "sdk" / "python" / "tests" / "test_import_surface.py"
     import_surface.write_text(
-        'def test_import_attestplane_smoke() -> None:\n'
+        "def test_import_attestplane_smoke() -> None:\n"
         '    assert attestplane.__version__ == "0.1.0a0"\n',
         encoding="utf-8",
     )
-    (tmp_path / "sdk" / "typescript" / "package.json").write_text('{"version": "0.1.0-alpha"}\n', encoding="utf-8")
+    (tmp_path / "sdk" / "typescript" / "package.json").write_text(
+        '{"version": "0.1.0-alpha"}\n', encoding="utf-8"
+    )
     (tmp_path / "sdk" / "typescript" / "package-lock.json").write_text(
         '{"version": "0.1.0-alpha", "packages": {"": {"version": "0.1.0-alpha"}}}\n',
         encoding="utf-8",
@@ -1473,11 +1879,15 @@ def test_sync_version_state_updates_import_surface_version(
 
     monkeypatch.setattr(alpha_release_train, "ROOT", tmp_path)
     monkeypatch.setattr(alpha_release_train, "sync_python_lockfile", lambda: None)
-    monkeypatch.setattr(alpha_release_train, "update_readme_release_state", lambda candidate: None)
+    monkeypatch.setattr(
+        alpha_release_train, "update_readme_release_state", lambda candidate: None
+    )
 
     alpha_release_train.sync_version_state(candidate)
 
-    assert 'attestplane.__version__ == "0.1.1a0"' in import_surface.read_text(encoding="utf-8")
+    assert 'attestplane.__version__ == "0.1.1a0"' in import_surface.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_parse_args_accepts_explicit_next_alpha_release() -> None:
@@ -1487,11 +1897,20 @@ def test_parse_args_accepts_explicit_next_alpha_release() -> None:
 
 
 def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(alpha_release_train, "capture", lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git")
+    monkeypatch.setattr(
+        alpha_release_train,
+        "capture",
+        lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git",
+    )
 
     def fake_run(*args: object, **kwargs: object) -> object:
         argv = args[0]
-        if isinstance(argv, list) and argv[:4] == ["git", "rev-parse", "-q", "--verify"]:
+        if isinstance(argv, list) and argv[:4] == [
+            "git",
+            "rev-parse",
+            "-q",
+            "--verify",
+        ]:
             return alpha_release_train.subprocess.CompletedProcess(argv, 1, "", "")
         raise alpha_release_train.subprocess.TimeoutExpired(cmd=argv, timeout=45)
 
@@ -1503,7 +1922,11 @@ def test_remote_tag_timeout_is_fail_closed(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_remote_tag_check_uses_github_api(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[list[str]] = []
-    monkeypatch.setattr(alpha_release_train, "capture", lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git")
+    monkeypatch.setattr(
+        alpha_release_train,
+        "capture",
+        lambda argv, timeout=None: "https://github.com/attestplane/attestplane.git",
+    )
 
     def fake_run(*args: object, **kwargs: object) -> object:
         argv = args[0]
@@ -1513,10 +1936,16 @@ def test_remote_tag_check_uses_github_api(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(alpha_release_train.subprocess, "run", fake_run)
 
     assert alpha_release_train.remote_tag_exists("v0.0.8-alpha") is False
-    assert calls[0][:3] == ["gh", "api", "repos/attestplane/attestplane/git/ref/tags/v0.0.8-alpha"]
+    assert calls[0][:3] == [
+        "gh",
+        "api",
+        "repos/attestplane/attestplane/git/ref/tags/v0.0.8-alpha",
+    ]
 
 
-def test_continuous_unhandled_exception_writes_stop_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_continuous_unhandled_exception_writes_stop_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     stop_file = tmp_path / "STOP"
 
     def fail_continuous(args: object) -> int:
@@ -1525,12 +1954,18 @@ def test_continuous_unhandled_exception_writes_stop_file(monkeypatch: pytest.Mon
     monkeypatch.setattr(alpha_release_train, "run_continuous_pipeline", fail_continuous)
 
     with pytest.raises(RuntimeError, match="boom"):
-        alpha_release_train.main(["--continuous", "--execute", "--stop-file", str(stop_file)])
+        alpha_release_train.main(
+            ["--continuous", "--execute", "--stop-file", str(stop_file)]
+        )
 
-    assert "fail-closed continuous pipeline: RuntimeError" in stop_file.read_text(encoding="utf-8")
+    assert "fail-closed continuous pipeline: RuntimeError" in stop_file.read_text(
+        encoding="utf-8"
+    )
 
 
-def test_registry_verification_retries_for_propagation(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_registry_verification_retries_for_propagation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
             "release": "v0.1.0-alpha",
@@ -1561,7 +1996,12 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
         return FakeResponse(simple_index_payloads.pop(0))
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        return json.dumps({"version": "0.1.0-alpha", "dist-tags": {"alpha": "0.1.0-alpha", "latest": "0.1.0-alpha"}})
+        return json.dumps(
+            {
+                "version": "0.1.0-alpha",
+                "dist-tags": {"alpha": "0.1.0-alpha", "latest": "0.1.0-alpha"},
+            }
+        )
 
     monkeypatch.setattr(alpha_release_train.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
@@ -1573,7 +2013,9 @@ def test_registry_verification_retries_for_propagation(monkeypatch: pytest.Monke
     assert simple_index_payloads == []
 
 
-def test_pypi_version_exists_falls_back_to_simple_index(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pypi_version_exists_falls_back_to_simple_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     seen_urls: list[str] = []
 
     class FakeResponse(io.StringIO):
@@ -1601,7 +2043,9 @@ def test_pypi_version_exists_falls_back_to_simple_index(monkeypatch: pytest.Monk
     ]
 
 
-def test_npm_version_exists_falls_back_to_registry_json(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_npm_version_exists_falls_back_to_registry_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     seen_urls: list[str] = []
 
     class FakeResponse(io.StringIO):
@@ -1612,7 +2056,9 @@ def test_npm_version_exists_falls_back_to_registry_json(monkeypatch: pytest.Monk
             return None
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        raise alpha_release_train.subprocess.CalledProcessError(1, argv, output="", stderr="npm ERR! 404")
+        raise alpha_release_train.subprocess.CalledProcessError(
+            1, argv, output="", stderr="npm ERR! 404"
+        )
 
     def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
         url = str(args[0])
@@ -1638,7 +2084,9 @@ def test_npm_version_exists_falls_back_to_registry_json(monkeypatch: pytest.Monk
     assert seen_urls == ["https://registry.npmjs.org/@attestplane%2Fattestplane"]
 
 
-def test_npm_dist_tags_synced_falls_back_to_registry_json(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_npm_dist_tags_synced_falls_back_to_registry_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     seen_urls: list[str] = []
 
     class FakeResponse(io.StringIO):
@@ -1649,7 +2097,9 @@ def test_npm_dist_tags_synced_falls_back_to_registry_json(monkeypatch: pytest.Mo
             return None
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        raise alpha_release_train.subprocess.CalledProcessError(1, argv, output="", stderr="npm ERR! 404")
+        raise alpha_release_train.subprocess.CalledProcessError(
+            1, argv, output="", stderr="npm ERR! 404"
+        )
 
     def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
         url = str(args[0])
@@ -1696,7 +2146,9 @@ def test_npm_dist_tags_synced_only_requires_alpha_dist_tag(
     assert alpha_release_train.npm_dist_tags_synced("0.0.8-alpha") is True
 
 
-def test_publish_platforms_syncs_npm_alpha_after_publish(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_publish_platforms_syncs_npm_alpha_after_publish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     candidate = alpha_release_train.AlphaCandidate.from_json(
         {
             "release": "v0.1.0-alpha",
@@ -1728,7 +2180,9 @@ def test_publish_platforms_syncs_npm_alpha_after_publish(monkeypatch: pytest.Mon
 
     monkeypatch.setattr(alpha_release_train, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
-    monkeypatch.setattr(alpha_release_train, "npm_version_exists", fake_npm_version_exists)
+    monkeypatch.setattr(
+        alpha_release_train, "npm_version_exists", fake_npm_version_exists
+    )
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     alpha_release_train.publish_platforms(candidate, dry_run=False)
@@ -1745,7 +2199,10 @@ def test_publish_platforms_syncs_npm_alpha_after_publish(monkeypatch: pytest.Mon
         "--ref",
         "main",
     ] in commands
-    assert not any(command[:4] == ["gh", "workflow", "run", "manage-npm.yml"] for command in commands)
+    assert not any(
+        command[:4] == ["gh", "workflow", "run", "manage-npm.yml"]
+        for command in commands
+    )
 
 
 def test_publish_platforms_skips_patch_alpha_registries(
@@ -1756,10 +2213,18 @@ def test_publish_platforms_skips_patch_alpha_registries(
     candidate = alpha_release_train.prepared_candidate_from_release("v0.6.6-alpha")
     commands: list[list[str]] = []
 
-    monkeypatch.setattr(alpha_release_train, "run", lambda argv, *, dry_run, env=None: commands.append(argv))
+    monkeypatch.setattr(
+        alpha_release_train,
+        "run",
+        lambda argv, *, dry_run, env=None: commands.append(argv),
+    )
 
-    alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
-    alpha_release_train.verify_registries(candidate, dry_run=False, state_path=state_file)
+    alpha_release_train.publish_platforms(
+        candidate, dry_run=False, state_path=state_file
+    )
+    alpha_release_train.verify_registries(
+        candidate, dry_run=False, state_path=state_file
+    )
 
     state = alpha_release_train.load_continuous_state(state_file)
     stages = state["release_stages"]["v0.6.6-alpha"]
@@ -1802,18 +2267,39 @@ def test_publish_platforms_retries_transient_pypi_watch_failure(
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        if argv[:4] == ["gh", "run", "list", "--workflow"] and argv[4] == "publish-python.yml":
+        if (
+            argv[:4] == ["gh", "run", "list", "--workflow"]
+            and argv[4] == "publish-python.yml"
+        ):
             return next(run_ids)
         return ""
 
     monkeypatch.setattr(alpha_release_train, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
-    monkeypatch.setattr(alpha_release_train, "pypi_version_exists", lambda version: False)
+    monkeypatch.setattr(
+        alpha_release_train, "pypi_version_exists", lambda version: False
+    )
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
-    alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
+    alpha_release_train.publish_platforms(
+        candidate, dry_run=False, state_path=state_file
+    )
 
-    assert commands.count(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"]) == 2
+    assert (
+        commands.count(
+            [
+                "gh",
+                "workflow",
+                "run",
+                "publish-python.yml",
+                "-f",
+                "target=pypi",
+                "--ref",
+                "main",
+            ]
+        )
+        == 2
+    )
     assert commands.count(["gh", "run", "watch", "python-run-1", "--exit-status"]) == 1
     assert commands.count(["gh", "run", "watch", "python-run-2", "--exit-status"]) == 1
     state = alpha_release_train.load_continuous_state(state_file)
@@ -1846,17 +2332,24 @@ def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
         return alpha_release_train.subprocess.CompletedProcess(argv, 0, "", "")
 
     def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
-        if argv[:4] == ["gh", "run", "list", "--workflow"] and argv[4] == "publish-typescript.yml":
+        if (
+            argv[:4] == ["gh", "run", "list", "--workflow"]
+            and argv[4] == "publish-typescript.yml"
+        ):
             return next(run_ids)
         return ""
 
     monkeypatch.setattr(alpha_release_train, "run", fake_run)
     monkeypatch.setattr(alpha_release_train, "capture", fake_capture)
-    monkeypatch.setattr(alpha_release_train, "npm_version_exists", lambda version: False)
+    monkeypatch.setattr(
+        alpha_release_train, "npm_version_exists", lambda version: False
+    )
     monkeypatch.setattr(alpha_release_train.time, "sleep", lambda seconds: None)
 
     with pytest.raises(RuntimeError, match="CalledProcessError"):
-        alpha_release_train.publish_platforms(candidate, dry_run=False, state_path=state_file)
+        alpha_release_train.publish_platforms(
+            candidate, dry_run=False, state_path=state_file
+        )
 
     state = alpha_release_train.load_continuous_state(state_file)
     stages = state.get("release_stages", {}).get("v0.1.0-alpha", {})
@@ -1865,25 +2358,35 @@ def test_publish_platforms_raises_after_exhausted_npm_publish_failures(
 
 
 def test_publish_typescript_workflow_uses_trusted_publishing_without_token() -> None:
-    workflow = (REPO_ROOT / ".github" / "workflows" / "publish-typescript.yml").read_text(encoding="utf-8")
+    workflow = (
+        REPO_ROOT / ".github" / "workflows" / "publish-typescript.yml"
+    ).read_text(encoding="utf-8")
     assert "package-manager-cache: false" in workflow
     assert "environment:" not in workflow
     assert "unset NODE_AUTH_TOKEN" in workflow
     assert "NPM_CONFIG_USERCONFIG" in workflow
     assert "npm-trusted-publishing.npmrc" in workflow
     assert "npx --yes --package 'npm@^11.5.1' npm --version" in workflow
-    assert 'npx --yes --package \'npm@^11.5.1\' npm publish --provenance --access public --tag "$TAG"' in workflow
-    assert "OIDC trusted publishing failed; retrying with configured npm automation token." in workflow
+    assert (
+        "npx --yes --package 'npm@^11.5.1' npm publish --provenance --access public --tag \"$TAG\""
+        in workflow
+    )
+    assert (
+        "OIDC trusted publishing failed; retrying with configured npm automation token."
+        in workflow
+    )
     assert "npm-token-publish.npmrc" in workflow
     assert "NPM_TOKEN: ${{ secrets.NPM_TOKEN }}" in workflow
-    assert 'printf \'//registry.npmjs.org/:_authToken=%s\\n\' "$NPM_TOKEN"' in workflow
+    assert "printf '//registry.npmjs.org/:_authToken=%s\\n' \"$NPM_TOKEN\"" in workflow
     assert 'chmod 0600 "$NPM_CONFIG_USERCONFIG"' in workflow
     assert 'rm -f "$NPM_CONFIG_USERCONFIG"' in workflow
     assert 'npm publish --access public --tag "$TAG"' in workflow
 
 
 def test_typescript_package_repository_matches_npm_trusted_publisher() -> None:
-    package_json = json.loads((REPO_ROOT / "sdk" / "typescript" / "package.json").read_text(encoding="utf-8"))
+    package_json = json.loads(
+        (REPO_ROOT / "sdk" / "typescript" / "package.json").read_text(encoding="utf-8")
+    )
     assert package_json["repository"] == {
         "type": "git",
         "url": "git+https://github.com/attestplane/attestplane.git",

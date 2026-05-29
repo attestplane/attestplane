@@ -17,12 +17,8 @@ from attestplane.event_payloads import (
     validate_policy_check_event_payload,
 )
 
-_VECTORS_PATH = (
-    Path(__file__).resolve().parent / "conformance" / "lease_lifecycle_event_vectors.json"
-)
-_POLICY_VECTORS_PATH = (
-    Path(__file__).resolve().parent / "conformance" / "policy_check_event_vectors.json"
-)
+_VECTORS_PATH = Path(__file__).resolve().parent / "conformance" / "lease_lifecycle_event_vectors.json"
+_POLICY_VECTORS_PATH = Path(__file__).resolve().parent / "conformance" / "policy_check_event_vectors.json"
 
 
 def _load_vectors() -> dict:
@@ -60,17 +56,23 @@ def test_negative_vectors_rejected(vec: dict) -> None:
     with pytest.raises(ValueError) as excinfo:
         validate_lease_lifecycle_event_payload(vec["payload"])
     assert vec["expected_error_contains"] in str(excinfo.value), (
-        f"vector {vec['name']!r}: expected reason containing "
-        f"{vec['expected_error_contains']!r}, got {excinfo.value!s}"
+        f"vector {vec['name']!r}: expected reason containing {vec['expected_error_contains']!r}, got {excinfo.value!s}"
     )
 
 
 def test_forbidden_field_list_complete() -> None:
     """Sanity: forbidden list covers the documented AIOS authority signal set."""
     expected_min = {
-        "signature", "private_key", "secret", "token",
-        "capability", "capability_required", "budget", "budget_cap",
-        "expression", "hmac",
+        "signature",
+        "private_key",
+        "secret",
+        "token",
+        "capability",
+        "capability_required",
+        "budget",
+        "budget_cap",
+        "expression",
+        "hmac",
     }
     assert expected_min <= FORBIDDEN_PAYLOAD_FIELDS
 
@@ -93,24 +95,28 @@ def test_non_dict_input_rejected() -> None:
 
 def test_artifact_hash_ref_format_enforced() -> None:
     with pytest.raises(ValueError, match="artifact_hash_ref"):
-        validate_lease_lifecycle_event_payload({
-            "lease_event_schema_version": 1,
-            "lease_id_hash": "0" * 64,
-            "lifecycle": "consumed",
-            "observed_at": "2026-05-17T12:00:00.000000Z",
-            "artifact_hash_ref": "too-short",
-        })
+        validate_lease_lifecycle_event_payload(
+            {
+                "lease_event_schema_version": 1,
+                "lease_id_hash": "0" * 64,
+                "lifecycle": "consumed",
+                "observed_at": "2026-05-17T12:00:00.000000Z",
+                "artifact_hash_ref": "too-short",
+            }
+        )
 
 
 def test_optional_string_field_must_be_string() -> None:
     with pytest.raises(ValueError, match="grantor_runtime_id"):
-        validate_lease_lifecycle_event_payload({
-            "lease_event_schema_version": 1,
-            "lease_id_hash": "0" * 64,
-            "lifecycle": "granted",
-            "observed_at": "2026-05-17T12:00:00.000000Z",
-            "grantor_runtime_id": 12345,
-        })
+        validate_lease_lifecycle_event_payload(
+            {
+                "lease_event_schema_version": 1,
+                "lease_id_hash": "0" * 64,
+                "lifecycle": "granted",
+                "observed_at": "2026-05-17T12:00:00.000000Z",
+                "grantor_runtime_id": 12345,
+            }
+        )
 
 
 # --- policy_check_event vectors -------------------------------------------
@@ -141,8 +147,7 @@ def test_policy_negative_vectors_rejected(vec: dict) -> None:
     with pytest.raises(ValueError) as excinfo:
         validate_policy_check_event_payload(vec["payload"])
     assert vec["expected_error_contains"] in str(excinfo.value), (
-        f"vector {vec['name']!r}: expected reason containing "
-        f"{vec['expected_error_contains']!r}, got {excinfo.value!s}"
+        f"vector {vec['name']!r}: expected reason containing {vec['expected_error_contains']!r}, got {excinfo.value!s}"
     )
 
 
@@ -160,24 +165,28 @@ def test_policy_typed_dict_minimal() -> None:
 def test_policy_expression_body_forbidden_explicitly() -> None:
     """ADR-0004 § 2 case #10 — expression body must be redacted to hash."""
     with pytest.raises(ValueError, match="forbidden field"):
-        validate_policy_check_event_payload({
-            "policy_event_schema_version": 1,
-            "policy_id": "p",
-            "rule_id": "r",
-            "decision": "deny",
-            "observed_at": "2026-05-17T12:00:00.000000Z",
-            "expression": "amount > 10000",
-        })
+        validate_policy_check_event_payload(
+            {
+                "policy_event_schema_version": 1,
+                "policy_id": "p",
+                "rule_id": "r",
+                "decision": "deny",
+                "observed_at": "2026-05-17T12:00:00.000000Z",
+                "expression": "amount > 10000",
+            }
+        )
 
 
 def test_policy_evidence_refs_max_256() -> None:
     refs = [f"{i:064d}" for i in range(257)]
     with pytest.raises(ValueError, match="max 256 entries"):
-        validate_policy_check_event_payload({
-            "policy_event_schema_version": 1,
-            "policy_id": "p",
-            "rule_id": "r",
-            "decision": "allow",
-            "observed_at": "2026-05-17T12:00:00.000000Z",
-            "evidence_refs": refs,
-        })
+        validate_policy_check_event_payload(
+            {
+                "policy_event_schema_version": 1,
+                "policy_id": "p",
+                "rule_id": "r",
+                "decision": "allow",
+                "observed_at": "2026-05-17T12:00:00.000000Z",
+                "evidence_refs": refs,
+            }
+        )
