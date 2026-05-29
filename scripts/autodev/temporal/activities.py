@@ -85,6 +85,16 @@ async def implement_activity(
 
     branch = f"autodev/issue-{issue_number}"
 
+    # If previous attempt ended in conflict/failure, delete the stale branch so
+    # Codex re-implements from the current main rather than reusing broken code.
+    if run and run.get("stage") == "failed":
+        activity.logger.info("issue #%d previously failed — purging stale branch to re-implement", issue_number)
+        try:
+            _run(["git", "push", "origin", "--delete", branch], cwd=str(MAIN_REPO))
+        except RuntimeError:
+            pass
+        db.upsert_run(issue_number, stage="pending", pr_number=None, branch=None)
+
     # On retry: if the branch already exists on remote, skip Codex re-run.
     # This prevents a retry from overwriting an in-progress CI/review with a new SHA.
     attempt = activity.info().attempt
