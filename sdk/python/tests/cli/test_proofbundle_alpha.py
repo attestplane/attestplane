@@ -134,9 +134,7 @@ def test_p3_2_signature_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries signature_material but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "signature_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("signature_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
     assert payload["signature_verification_status"] == "skipped"
 
@@ -145,9 +143,7 @@ def test_p3_2_anchor_shape_valid_but_not_requested(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Bundle carries anchor_records but flag is OFF → skipped, exit 0."""
-    rc, payload = _run_with_flags(
-        "anchor_shape_valid_but_not_requested.json", capsys, flags=()
-    )
+    rc, payload = _run_with_flags("anchor_shape_valid_but_not_requested.json", capsys, flags=())
     assert rc == 0
     assert payload["anchor_verification_status"] == "skipped"
 
@@ -250,6 +246,8 @@ def test_p3_2_signature_anchor_extension_fail_closed(
     expected_reason: str,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    if "--verify-anchor" in flags:
+        pytest.importorskip("asn1crypto")
     rc, payload = _run_with_flags(fixture, capsys, flags=flags)
     assert rc == expected_exit
     assert payload["ok"] is False
@@ -493,6 +491,7 @@ def test_p3_4_verify_anchor_wrong_trust_root_fails(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Anchor signed by authority A but verified against root of authority B fails."""
+    pytest.importorskip("asn1crypto")
     import base64
     import json as json_mod
     from datetime import UTC, datetime

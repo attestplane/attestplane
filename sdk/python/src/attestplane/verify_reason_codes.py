@@ -34,15 +34,9 @@ VERIFY_REASON_SIGNATURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.signatu
 VERIFY_REASON_SIGNATURE_MISSING: Final[VerifyReasonCodeV1] = "att.verify.signature_missing"
 VERIFY_REASON_SCHEMA_UNKNOWN: Final[VerifyReasonCodeV1] = "att.verify.schema_unknown"
 VERIFY_REASON_SCHEMA_INVALID: Final[VerifyReasonCodeV1] = "att.verify.schema_invalid"
-VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_missing"
-)
-VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_unsupported"
-)
-VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.required_field_missing"
-)
+VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = "att.verify.schema_version_missing"
+VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verify.schema_version_unsupported"
+VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = "att.verify.required_field_missing"
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
 
@@ -84,9 +78,27 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
-_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"^att\.verify\.[a-z][a-z0-9_]*$"
-)
+_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^att\.verify\.[a-z][a-z0-9_]*$")
+
+
+def resolve_verify_reason_taxonomy_version() -> int:
+    """Return the stable verifier reason-code taxonomy version.
+
+    This is the single source of truth for the verifier's public surfaces.
+    Callers should read this helper instead of hardcoding a numeric literal.
+    """
+    return VERIFY_REASON_TAXONOMY_VERSION
+
+
+def format_verify_reason_taxonomy_version(value: int | None) -> str:
+    """Render a taxonomy version for human-readable output.
+
+    Absent values render as ``unknown`` so callers can surface a stable,
+    documented representation instead of omitting the field or crashing.
+    """
+    if value is None:
+        return "unknown"
+    return str(value)
 
 
 def is_known_verify_reason_code(value: str) -> bool:
@@ -122,6 +134,8 @@ __all__ = [
     "VERIFY_REASON_STRUCTURE_INVALID",
     "VerifyReasonCodeV1",
     "is_known_verify_reason_code",
+    "format_verify_reason_taxonomy_version",
+    "resolve_verify_reason_taxonomy_version",
     "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
 ]

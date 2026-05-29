@@ -9,6 +9,8 @@ This file keeps the recent release pipeline regressions together:
 - release-gate boundary checks for the stable train.
 """
 
+# ruff: noqa: E402
+
 import importlib.util
 import json
 import subprocess
@@ -486,9 +488,7 @@ def test_recover_existing_release_retries_later_on_unknown_probe() -> None:
             stable_auto_train.recover_existing_release(version)
 
 
-def test_run_once_resumes_locally_tagged_unpublished_release(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_run_once_resumes_locally_tagged_unpublished_release(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     queue.write_text(
         json.dumps(
@@ -697,9 +697,7 @@ def test_run_once_skips_generated_target_before_remote_probe_when_no_real_work(
     assert calls == ["cadence:v1.0.8"]
 
 
-def test_run_once_refuses_unknown_status_for_existing_tag(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_run_once_refuses_unknown_status_for_existing_tag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     queue.write_text(
         json.dumps(
@@ -1027,8 +1025,7 @@ def test_release_cd_dispatch_args_omits_audit_inputs_by_default(monkeypatch: pyt
 
 def test_release_cd_dispatch_args_forwards_verified_audit_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
     audit_plan_url = (
-        "https://github.com/attestplane/attestplane/blob/main/"
-        "docs/validation/v1_0_0_release_audit_plan_20260520.md"
+        "https://github.com/attestplane/attestplane/blob/main/docs/validation/v1_0_0_release_audit_plan_20260520.md"
     )
     monkeypatch.setenv("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", "1")
     monkeypatch.setenv("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", audit_plan_url)
@@ -1049,8 +1046,9 @@ def test_write_release_notes_uses_subjects_without_commit_hashes(
     monkeypatch.setattr(
         stable_auto_train,
         "capture",
-        lambda argv: "fix(release): wait for push CI before publishing stable train\n"
-        "docs(release): approve v1.0.0 audit gate",
+        lambda argv: (
+            "fix(release): wait for push CI before publishing stable train\ndocs(release): approve v1.0.0 audit gate"
+        ),
     )
 
     stable_auto_train.write_release_notes(
@@ -1174,11 +1172,7 @@ def test_trigger_slsa_provenance_returns_false_on_timeout(monkeypatch: pytest.Mo
 def test_cadence_limiter_skips_when_only_release_prep_commits(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    subjects = (
-        "chore(release): prepare v1.4.0\n"
-        "chore(release): prepare v1.3.10\n"
-        "chore(release): prepare v1.3.9"
-    )
+    subjects = "chore(release): prepare v1.4.0\nchore(release): prepare v1.3.10\nchore(release): prepare v1.3.9"
 
     monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)
 
@@ -1258,9 +1252,7 @@ def test_cadence_limiter_returns_true_conservatively_on_missing_tag(
     assert stable_auto_train.commits_since_tag_have_real_work("v999.999.999") is True
 
 
-def test_cadence_limiter_handles_force_env_var(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_cadence_limiter_handles_force_env_var(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     queue.write_text(
         json.dumps(
@@ -1299,6 +1291,7 @@ def test_cadence_limiter_handles_force_env_var(
             python_visible=True, npm_visible=True, npm_latest=True, github_release=True
         ),
     )
+
     # If the cadence limiter were applied (it should NOT be, under force env),
     # the cycle would short-circuit. We sentinel by asserting the dry-run path
     # actually runs (returns the new tag, not the previous tag).
@@ -1314,9 +1307,7 @@ def test_cadence_limiter_handles_force_env_var(
     assert calls == []
 
 
-def test_run_once_soft_skips_support_only_delta(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_run_once_soft_skips_support_only_delta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     queue = tmp_path / "queue.json"
     queue.write_text(
         json.dumps(
