@@ -81,6 +81,8 @@ jobs:
         if: steps.ai_review.outputs.decision == 'APPROVE'
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           PR="${{ github.event.pull_request.number }}"
@@ -91,13 +93,19 @@ jobs:
             "---" \
             "*Reviewed by autodev-train - DeepSeek v4.0 Pro*" \
             > /tmp/approve_body.txt
-          gh pr review "${PR}" --approve --body-file /tmp/approve_body.txt
+          # Use REST API directly to avoid gh CLI GraphQL Projects-classic deprecation errors
+          gh api -X POST "repos/${REPO}/pulls/${PR}/reviews" \
+            --field commit_id="${PR_HEAD_SHA}" \
+            --field event=APPROVE \
+            --field body="$(cat /tmp/approve_body.txt)"
           gh pr edit "${PR}" --add-label "review-passed"
 
       - name: Post request-changes review
         if: steps.ai_review.outputs.decision == 'REQUEST_CHANGES'
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           PR="${{ github.event.pull_request.number }}"
@@ -109,4 +117,7 @@ jobs:
             "*Reviewed by autodev-train - DeepSeek v4.0 Pro*" \
             "Retry: push a new commit to this branch; review will re-run automatically." \
             > /tmp/rc_body.txt
-          gh pr review "${PR}" --request-changes --body-file /tmp/rc_body.txt
+          gh api -X POST "repos/${REPO}/pulls/${PR}/reviews" \
+            --field commit_id="${PR_HEAD_SHA}" \
+            --field event=REQUEST_CHANGES \
+            --field body="$(cat /tmp/rc_body.txt)"
