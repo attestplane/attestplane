@@ -103,4 +103,5 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert summary["pointer"] == "/"
     assert "signer_subject=" in summary["message"]
     assert "schema_version=1" in summary["message"]
+    assert "taxonomy_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
