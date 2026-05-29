@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from scripts.observability.events import AUTODEV_TRAIN, emit_event as emit_observability_event
+
 
 ROOT = Path(__file__).resolve().parents[2]
 RELEASE_GATE_PATH = ROOT / "scripts" / "release" / "release_gate.py"
@@ -1347,7 +1349,7 @@ def publication_status(version: StableVersion) -> PublicationStatus:
         npm_latest=npm_latest_points_to(version),
         github_release=github_release_exists(version),
     )
-    emit_event(
+    emit_train_event(
         "publication_status",
         tag=version.tag,
         python_visible=status.python_visible,
@@ -1487,7 +1489,7 @@ def recover_existing_release(version: StableVersion) -> None:
 
 def wait_for_push_ci(head_sha: str) -> None:
     print(f"waiting for push CI workflows for {head_sha}", flush=True)
-    emit_event("push_ci_wait_start", head_sha=head_sha)
+    emit_train_event("push_ci_wait_start", head_sha=head_sha)
     deadline = time.monotonic() + 1800
     expected = set(PUSH_CI_WORKFLOWS)
     last_summary = ""
@@ -1509,7 +1511,7 @@ def wait_for_push_ci(head_sha: str) -> None:
             )
         except subprocess.CalledProcessError as exc:
             print(f"push CI probe failed: {exc}; retrying", flush=True)
-            emit_event("push_ci_probe_retry", head_sha=head_sha, error=str(exc))
+            emit_train_event("push_ci_probe_retry", head_sha=head_sha, error=str(exc))
             time.sleep(20)
             continue
 
@@ -1529,7 +1531,7 @@ def wait_for_push_ci(head_sha: str) -> None:
                 f"{run.get('name')}={run.get('conclusion')} ({run.get('url')})"
                 for run in sorted(failed, key=lambda item: item.get("name") or "")
             )
-            emit_event("push_ci_failed", head_sha=head_sha, details=details)
+            emit_train_event("push_ci_failed", head_sha=head_sha, details=details)
             raise RuntimeError(f"push CI failed for {head_sha}: {details}")
 
         missing = sorted(expected - set(matched))
@@ -1540,7 +1542,7 @@ def wait_for_push_ci(head_sha: str) -> None:
         )
         if not missing and not pending:
             print(f"push CI workflows passed for {head_sha}", flush=True)
-            emit_event("push_ci_passed", head_sha=head_sha)
+            emit_train_event("push_ci_passed", head_sha=head_sha)
             return
 
         now = time.monotonic()
@@ -1561,7 +1563,7 @@ def wait_for_push_ci(head_sha: str) -> None:
         summary = f"missing={','.join(missing) or '-'} pending={','.join(pending) or '-'}"
         if summary != last_summary:
             print(f"push CI waiting for {head_sha}: {summary}", flush=True)
-            emit_event("push_ci_waiting", head_sha=head_sha, summary=summary)
+            emit_train_event("push_ci_waiting", head_sha=head_sha, summary=summary)
             last_summary = summary
         time.sleep(20)
 
@@ -1572,14 +1574,15 @@ def utc_now_iso() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def emit_event(event: str, **fields: Any) -> None:
-    record = {
-        "event": event,
-        "ts": utc_now_iso(),
-        "train": "autodev-train",
-        **fields,
-    }
-    print(json.dumps(record, sort_keys=True), flush=True)
+def emit_train_event(event: str, **fields: Any) -> None:
+    emit_observability_event(
+        {
+            "event": event,
+            "ts": utc_now_iso(),
+            "train": AUTODEV_TRAIN,
+            **fields,
+        }
+    )
 
 
 def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) -> bool:
@@ -1678,7 +1681,7 @@ def trigger_slsa_provenance(tag: str) -> bool:
 
 def wait_for_release_cd(version: StableVersion) -> None:
     print(f"waiting for release-cd workflow for {version.tag}", flush=True)
-    emit_event("release_cd_wait_start", target_tag=version.tag)
+    emit_train_event("release_cd_wait_start", target_tag=version.tag)
     deadline = time.monotonic() + 1800
     head_sha = capture(["git", "rev-parse", "HEAD"])
     run_id = ""
@@ -1710,7 +1713,7 @@ def wait_for_release_cd(version: StableVersion) -> None:
             except subprocess.CalledProcessError:
                 if publication_status(version).complete:
                     print(f"release-cd reported failure but registries and GitHub Release are complete for {version.tag}", flush=True)
-                    emit_event("release_cd_failed_but_complete", target_tag=version.tag)
+                    emit_train_event("release_cd_failed_but_complete", target_tag=version.tag)
                     return
                 raise
             return
@@ -1733,7 +1736,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
         and not truthy_env(os.environ.get(FORCE_CADENCE_ENV, ""))
         and not commits_since_tag_have_real_work(previous.tag)
     ):
-        emit_event(
+        emit_train_event(
             "cadence_skipped",
             previous_tag=previous.tag,
             target_tag=version.tag,
@@ -1748,7 +1751,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     if not local_target_tag_exists:
         product_delta = product_delta_for_target(target, previous)
         if not product_delta.allowed:
-            emit_event(
+            emit_train_event(
                 "product_delta_skipped",
                 previous_tag=previous.tag,
                 target_tag=version.tag,
@@ -1781,7 +1784,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
         f"autodev-train stable: preparing {version.tag} from {previous.tag}; channel={target.channel}",
         flush=True,
     )
-    emit_event(
+    emit_train_event(
         "cycle_prepare",
         previous_tag=previous.tag,
         target_tag=version.tag,
@@ -1817,7 +1820,7 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
         push_and_dispatch(version, wait=wait)
     else:
         print(f"autodev-train stable: prepared local tag {version.tag}; publish disabled", flush=True)
-        emit_event("cycle_prepared_local", target_tag=version.tag, publish=False)
+        emit_train_event("cycle_prepared_local", target_tag=version.tag, publish=False)
     return version.tag
 
 
@@ -1846,7 +1849,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             if not args.continuous:
                 raise
-            emit_event("cycle_failed", error=str(exc), poll_seconds=args.poll_seconds)
+            emit_train_event("cycle_failed", error=str(exc), poll_seconds=args.poll_seconds)
             print(
                 f"autodev-train stable: cycle failed; sleeping {args.poll_seconds}s before retry: {exc}",
                 flush=True,
@@ -1855,7 +1858,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if not args.continuous:
             return 0 if result else 1
-        emit_event("cycle_finished", result=result, poll_seconds=args.poll_seconds)
+        emit_train_event("cycle_finished", result=result, poll_seconds=args.poll_seconds)
         print(f"autodev-train stable: cycle finished for {result}; sleeping {args.poll_seconds}s", flush=True)
         time.sleep(args.poll_seconds)
 
