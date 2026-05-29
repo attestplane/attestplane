@@ -14,11 +14,7 @@ from attestplane.settlement_verifier import (
     check_settlement_precondition,
 )
 
-_VECTORS_PATH = (
-    Path(__file__).resolve().parent
-    / "conformance"
-    / "settlement_precondition_vectors.json"
-)
+_VECTORS_PATH = Path(__file__).resolve().parent / "conformance" / "settlement_precondition_vectors.json"
 
 
 def _load_vectors() -> dict:
@@ -47,8 +43,7 @@ def test_verifier_vector(vec: dict) -> None:
     expected = vec["expected"]
 
     assert result.ok == expected["ok"], (
-        f"{vec['name']!r}: expected ok={expected['ok']}, got ok={result.ok}; "
-        f"reason={result.reason!r}"
+        f"{vec['name']!r}: expected ok={expected['ok']}, got ok={result.ok}; reason={result.reason!r}"
     )
     assert result.lease_consumed_seq == expected["lease_consumed_seq"]
     assert result.settlement_event_seq == expected["settlement_event_seq"]
@@ -60,10 +55,12 @@ def test_verifier_vector(vec: dict) -> None:
 
 def test_pure_function_identical_results() -> None:
     chain = [
-        {"seq": 0, "event_type": "lease_lifecycle_event",
-         "payload": {"lifecycle": "consumed", "lease_id_hash": "a" * 64}},
-        {"seq": 1, "event_type": "settlement_event",
-         "payload": {"settlement_run_id": "s"}},
+        {
+            "seq": 0,
+            "event_type": "lease_lifecycle_event",
+            "payload": {"lifecycle": "consumed", "lease_id_hash": "a" * 64},
+        },
+        {"seq": 1, "event_type": "settlement_event", "payload": {"settlement_run_id": "s"}},
     ]
     claim = SettlementPreconditionClaim(
         claim_kind="settlement_precondition",
@@ -78,10 +75,12 @@ def test_pure_function_identical_results() -> None:
 
 def test_read_only_invariant() -> None:
     chain = [
-        {"seq": 0, "event_type": "lease_lifecycle_event",
-         "payload": {"lifecycle": "consumed", "lease_id_hash": "a" * 64}},
-        {"seq": 1, "event_type": "settlement_event",
-         "payload": {"settlement_run_id": "s", "amount_hash": "b" * 64}},
+        {
+            "seq": 0,
+            "event_type": "lease_lifecycle_event",
+            "payload": {"lifecycle": "consumed", "lease_id_hash": "a" * 64},
+        },
+        {"seq": 1, "event_type": "settlement_event", "payload": {"settlement_run_id": "s", "amount_hash": "b" * 64}},
     ]
     before = json.loads(json.dumps(chain))
     claim = SettlementPreconditionClaim(
@@ -109,6 +108,7 @@ def test_handles_malformed_chain() -> None:
 
 def test_handles_naive_verification_time() -> None:
     from datetime import datetime
+
     result = check_settlement_precondition(
         [],
         SettlementPreconditionClaim(

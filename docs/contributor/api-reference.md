@@ -48,12 +48,9 @@ render output for a specific commit or pull request.
 Stable release API reference is published to GitHub Pages after the release CD gate passes.
 The stable surface is versioned by release line and exact stable release:
 
-- `https://attestplane.github.io/attestplane/api/latest/` redirects to the latest
-  suffix-free stable release.
-- `https://attestplane.github.io/attestplane/api/releases/vX.Y.Z/` is the exact release
-  snapshot for a stable tag such as `v1.5.0`.
-- `https://attestplane.github.io/attestplane/api/lines/vX.Y/` is the stable line alias for
-  a release line such as `v1.5`.
+- The `latest` Pages surface redirects to the latest suffix-free stable release.
+- The exact release snapshot path uses `vX.Y.Z` for stable tags such as `v1.5.0`.
+- The stable line alias path uses `vX.Y` for a release line such as `v1.5`.
 
 Prerelease tags may still render artifacts through the read-only workflow, but they do not
 move the public `latest` pointer or publish to the stable Pages surface.

@@ -43,12 +43,14 @@ import hashlib
 import unicodedata
 from typing import Final
 
-_ZERO_WIDTH_CHARS: Final[frozenset[str]] = frozenset({
-    "\u200b",  # ZERO WIDTH SPACE
-    "‌",  # ZERO WIDTH NON-JOINER
-    "‍",  # ZERO WIDTH JOINER
-    "﻿",  # ZERO WIDTH NO-BREAK SPACE (BOM)
-})
+_ZERO_WIDTH_CHARS: Final[frozenset[str]] = frozenset(
+    {
+        "\u200b",  # ZERO WIDTH SPACE
+        "‌",  # ZERO WIDTH NON-JOINER
+        "‍",  # ZERO WIDTH JOINER
+        "﻿",  # ZERO WIDTH NO-BREAK SPACE (BOM)
+    }
+)
 
 
 class CanonicalTextError(ValueError):
@@ -71,9 +73,7 @@ def canonicalize_text(text: str) -> bytes:
     output bytes.
     """
     if not isinstance(text, str):
-        raise CanonicalTextError(
-            f"canonicalize_text expects str, got {type(text).__name__}"
-        )
+        raise CanonicalTextError(f"canonicalize_text expects str, got {type(text).__name__}")
 
     # Reject inputs that contain code points that have no defensible
     # canonical form. Null bytes terminate strings in many languages and
@@ -84,9 +84,7 @@ def canonicalize_text(text: str) -> bytes:
         if code == 0:
             raise CanonicalTextError("input contains U+0000 (null) — forbidden")
         if 0xD800 <= code <= 0xDFFF:
-            raise CanonicalTextError(
-                f"input contains unpaired surrogate U+{code:04X} — forbidden"
-            )
+            raise CanonicalTextError(f"input contains unpaired surrogate U+{code:04X} — forbidden")
 
     # Stage 1: NFC.
     nfc = unicodedata.normalize("NFC", text)

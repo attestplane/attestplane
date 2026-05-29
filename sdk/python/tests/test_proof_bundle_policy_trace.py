@@ -16,11 +16,7 @@ from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import ChainHead, EventDraft
 from attestplane.verifier import verify_proof_bundle
 
-_VECTORS_PATH = (
-    Path(__file__).resolve().parent
-    / "conformance"
-    / "proof_bundle_policy_trace_vectors.json"
-)
+_VECTORS_PATH = Path(__file__).resolve().parent / "conformance" / "proof_bundle_policy_trace_vectors.json"
 
 _NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
@@ -83,9 +79,7 @@ def test_builder_vector(vec: dict) -> None:
     # Verify ordering matches the expected chain seqs (per ADR-0012 § 1
     # "chain seq ascending").
     if "expected_seqs" in vec:
-        expected_hashes = [
-            chain[seq].event_hash.hex() for seq in vec["expected_seqs"]
-        ]
+        expected_hashes = [chain[seq].event_hash.hex() for seq in vec["expected_seqs"]]
         assert refs == expected_hashes
 
 
@@ -98,9 +92,7 @@ def test_backward_compat_v0_0_1_alpha_bundle_unchanged() -> None:
     )
     builder.extend(chain)
     bundle = builder.build(now=_NOW)
-    assert "policy_trace_refs" not in bundle, (
-        "v0.0.1-alpha-shaped bundles MUST NOT contain policy_trace_refs key"
-    )
+    assert "policy_trace_refs" not in bundle, "v0.0.1-alpha-shaped bundles MUST NOT contain policy_trace_refs key"
 
 
 def test_refs_are_chain_seq_ordered() -> None:
