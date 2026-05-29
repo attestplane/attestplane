@@ -116,6 +116,35 @@ def test_bundle_verifier_accepts_additive_unknown_fields() -> None:
     assert result.secondary_reasons == ()
 
 
+def test_bundle_verifier_reports_anchoring_status_absent_by_default() -> None:
+    result = verify_proof_bundle(_load_fixture("valid_signed_attestation.json"))
+
+    assert result.anchoring_status == "absent"
+    assert result.quarantine_reason is None
+
+
+def test_bundle_verifier_reports_anchoring_status_verified_when_anchor_ref_present() -> (
+    None
+):
+    bundle = _load_fixture("valid_signed_attestation.json")
+    bundle["chain_metadata"]["anchor_ref"] = "freetsa:anchor-record-001"
+
+    result = verify_proof_bundle(bundle)
+
+    assert result.anchoring_status == "verified"
+    assert result.quarantine_reason is None
+
+
+def test_bundle_verifier_reports_quarantined_anchor_ref() -> None:
+    bundle = _load_fixture("valid_signed_attestation.json")
+    bundle["chain_metadata"]["anchor_ref"] = "quarantine:FreeTSA malformed response"
+
+    result = verify_proof_bundle(bundle)
+
+    assert result.anchoring_status == "quarantined"
+    assert result.quarantine_reason == "FreeTSA malformed response"
+
+
 def test_bundle_verifier_rejects_missing_schema_version() -> None:
     bundle = _load_fixture("valid_signed_attestation.json")
     del bundle["chain_metadata"]["schema_version"]

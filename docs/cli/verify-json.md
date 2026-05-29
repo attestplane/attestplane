@@ -19,6 +19,10 @@ The payload is fixed at schema version 1:
   "bundle": {
     "schema_version": 1,
     "digest": "..."
+  },
+  "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null
   }
 }
 ```
@@ -27,7 +31,9 @@ The payload is fixed at schema version 1:
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
   `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  means a usage, I/O, or schema/shape problem prevented verification. `3`
+  is an advisory exit code used when anchoring is quarantined but not
+  promoted to a hard failure.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -45,9 +51,16 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+- `anchoring.anchoring_status` reports whether anchoring evidence is present
+  and trustworthy. The fixed v1 values are `verified`, `quarantined`, and
+  `absent`.
+- `anchoring.quarantine_reason` is nullable and only populated when
+  `anchoring.anchoring_status == "quarantined"`.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
+- `--strict-anchoring` promotes quarantined anchoring state from advisory to
+  hard failure.
 
 Consumers should keep branching on `exit_code` first and then inspect
 `result` and `reasons[]` for diagnostics.
@@ -101,6 +114,10 @@ the structured payload.
   "bundle": {
     "schema_version": 1,
     "digest": "..."
+  },
+  "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null
   }
 }
 ```
@@ -131,6 +148,10 @@ the structured payload.
   "bundle": {
     "schema_version": 2,
     "digest": "..."
+  },
+  "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null
   }
 }
 ```

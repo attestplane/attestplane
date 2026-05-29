@@ -26,6 +26,12 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `anchoring` is an additive nested object that reports the bundle's anchoring
+  state without turning absence into a verifier error.
+- `anchoring.anchoring_status` is one of `verified`, `quarantined`, or
+  `absent`.
+- `anchoring.quarantine_reason` is nullable and only populated when the
+  status is `quarantined`.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the
@@ -36,6 +42,8 @@ accompanies the structured JSON contract.
   and `reasons[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
+- `--strict-anchoring` upgrades quarantined anchoring state from advisory to
+  hard failure for callers who need fail-closed behavior.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.

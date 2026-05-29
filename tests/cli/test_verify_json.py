@@ -20,7 +20,9 @@ PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 
 
-def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object]]:
+def _run_verify(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> tuple[int, dict[str, object]]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out)
@@ -38,6 +40,10 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert payload["reason_code"] is None
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
+    assert payload["anchoring"] == {
+        "anchoring_status": "absent",
+        "quarantine_reason": None,
+    }
     assert payload["bundle"] == {
         "schema_version": 1,
         "digest": payload["bundle"]["digest"],
@@ -68,7 +74,9 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, payload = _run_verify(
+        ["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys
+    )
 
     assert rc == 1
     assert payload["result"] == "fail"
@@ -90,7 +98,9 @@ def test_verify_json_and_explain_keep_json_parseable(
 def test_verify_json_explain_success_emits_compact_summary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload = _run_verify(["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys)
+    rc, payload = _run_verify(
+        ["verify", "--json", "--explain", str(PASS_FIXTURE)], capsys
+    )
 
     assert rc == 0
     assert payload["result"] == "pass"
@@ -105,3 +115,24 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "schema_version=1" in summary["message"]
     assert "taxonomy_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
+
+
+def test_verify_json_quarantined_anchor_emits_advisory_exit_code(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
+    bundle["chain_metadata"]["anchor_ref"] = "quarantine:FreeTSA malformed response"
+    path = tmp_path / "quarantined.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+
+    rc, payload = _run_verify(["verify", "--json", str(path)], capsys)
+
+    assert rc == 3
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 3
+    assert payload["reason_code"] is None
+    assert payload["anchoring"] == {
+        "anchoring_status": "quarantined",
+        "quarantine_reason": "FreeTSA malformed response",
+    }

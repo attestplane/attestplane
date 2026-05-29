@@ -58,6 +58,7 @@ CertStatus = Literal[
     "REVOKED",
 ]
 AnchorVerificationStatus = Literal["verified", "failed", "not_performed"]
+AnchoringStatus = Literal["verified", "quarantined", "absent"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +94,12 @@ class AnchorVerificationResult:
 
     verification_status: AnchorVerificationStatus
     """Explicit aggregate status; empty anchor evidence is not a successful anchored verification."""
+
+    anchoring_status: AnchoringStatus
+    """Public anchoring-state summary for additive surfacing."""
+
+    quarantine_reason: str | None
+    """Reason explaining why the anchoring state is quarantined, if applicable."""
 
     @property
     def ok(self) -> bool:
@@ -150,9 +157,11 @@ def verify_chain_with_anchors(
     if trust_roots_der is not None:
         try:
             from attestplane.anchoring import rfc3161 as _rfc3161_mod
+
             _rfc3161 = _rfc3161_mod
             if verify_ocsp:
                 from attestplane.anchoring import ocsp as _ocsp_module
+
                 _ocsp_mod = _ocsp_module
         except ImportError as exc:  # pragma: no cover
             raise AnchorVerificationError(
@@ -164,118 +173,125 @@ def verify_chain_with_anchors(
         provider = anchor.tsa_provider_id
 
         if anchor.anchor_schema_version != ANCHOR_SCHEMA_VERSION:
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=False,
-                cert_status="MISSING_LTV_ARTIFACTS",
-                ltv_artifacts_present=False,
-                reason=(
-                    f"anchor_schema_version={anchor.anchor_schema_version}; "
-                    f"this verifier handles version {ANCHOR_SCHEMA_VERSION} only"
-                ),
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=False,
+                    reason=(
+                        f"anchor_schema_version={anchor.anchor_schema_version}; "
+                        f"this verifier handles version {ANCHOR_SCHEMA_VERSION} only"
+                    ),
+                )
+            )
             continue
 
         if anchor.anchored_seq not in seqs_in_chain:
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=False,
-                cert_status="MISSING_LTV_ARTIFACTS",
-                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
-                reason=f"anchored_seq={anchor.anchored_seq} not in chain",
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                    reason=f"anchored_seq={anchor.anchored_seq} not in chain",
+                )
+            )
             continue
 
         target = events[anchor.anchored_seq]
         if target.event_hash != anchor.anchored_event_hash:
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=False,
-                cert_status="MISSING_LTV_ARTIFACTS",
-                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
-                reason=(
-                    f"anchored_event_hash mismatch at seq {anchor.anchored_seq}"
-                ),
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                    reason=(f"anchored_event_hash mismatch at seq {anchor.anchored_seq}"),
+                )
+            )
             continue
 
         if anchor.issued_at_claimed.tzinfo is None:
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=False,
-                cert_status="MISSING_LTV_ARTIFACTS",
-                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
-                reason="issued_at_claimed is naive datetime",
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                    reason="issued_at_claimed is naive datetime",
+                )
+            )
             continue
         if anchor.issued_at_claimed.utcoffset() != UTC.utcoffset(None):
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=False,
-                cert_status="MISSING_LTV_ARTIFACTS",
-                ltv_artifacts_present=bool(anchor.tsa_cert_chain),
-                reason="issued_at_claimed is not UTC",
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=bool(anchor.tsa_cert_chain),
+                    reason="issued_at_claimed is not UTC",
+                )
+            )
             continue
 
         ltv_present = bool(anchor.tsa_cert_chain) and bool(anchor.ocsp_responses)
         if not ltv_present:
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=False,
-                cert_status="MISSING_LTV_ARTIFACTS",
-                ltv_artifacts_present=False,
-                reason=(
-                    "tsa_cert_chain or ocsp_responses is empty; "
-                    "CAdES-A long-term validation requires both"
-                ),
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=False,
+                    cert_status="MISSING_LTV_ARTIFACTS",
+                    ltv_artifacts_present=False,
+                    reason=("tsa_cert_chain or ocsp_responses is empty; CAdES-A long-term validation requires both"),
+                )
+            )
             continue
 
         # Cross-reference checks have all passed. Decide cert_status:
         # Dispatch: Sigstore Rekor anchors take a different path per
         # ADR-0006 § 3 (provider_id prefix dispatch).
-        if (
-            trust_roots_der is not None
-            and provider.startswith("sigstore.rekor:")
-        ):
+        if trust_roots_der is not None and provider.startswith("sigstore.rekor:"):
             try:
                 from attestplane.anchoring import sigstore as _sigstore_mod
+
                 parsed_entry = _sigstore_mod.parse_rekor_log_entry(anchor.tsa_token)
                 # The Rekor public key was captured in tsa_cert_chain[0]
                 # at anchor issuance time per ADR-0006 § 3 mapping.
-                rekor_pubkey_der = (
-                    anchor.tsa_cert_chain[0] if anchor.tsa_cert_chain else b""
-                )
+                rekor_pubkey_der = anchor.tsa_cert_chain[0] if anchor.tsa_cert_chain else b""
                 _sigstore_mod.verify_rekor_signed_entry_timestamp(
                     parsed_entry,
                     expected_digest=anchor.anchored_event_hash,
                     rekor_public_key_der=rekor_pubkey_der,
                 )
             except AnchorVerificationError as exc:
-                anchor_results.append(SingleAnchorResult(
+                anchor_results.append(
+                    SingleAnchorResult(
+                        seq=anchor.anchored_seq,
+                        provider=provider,
+                        valid=False,
+                        cert_status="MISSING_LTV_ARTIFACTS",
+                        ltv_artifacts_present=True,
+                        reason=str(exc),
+                    )
+                )
+                continue
+            anchor_results.append(
+                SingleAnchorResult(
                     seq=anchor.anchored_seq,
                     provider=provider,
-                    valid=False,
-                    cert_status="MISSING_LTV_ARTIFACTS",
+                    valid=True,
+                    cert_status="VALID",
                     ltv_artifacts_present=True,
-                    reason=str(exc),
-                ))
-                continue
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=True,
-                cert_status="VALID",
-                ltv_artifacts_present=True,
-                reason=None,
-            ))
+                    reason=None,
+                )
+            )
             anchored_seqs.add(anchor.anchored_seq)
             continue
 
@@ -294,14 +310,16 @@ def verify_chain_with_anchors(
                     intermediates_der=list(anchor.tsa_cert_chain),
                 )
             except AnchorVerificationError as exc:
-                anchor_results.append(SingleAnchorResult(
-                    seq=anchor.anchored_seq,
-                    provider=provider,
-                    valid=False,
-                    cert_status="MISSING_LTV_ARTIFACTS",
-                    ltv_artifacts_present=True,
-                    reason=str(exc),
-                ))
+                anchor_results.append(
+                    SingleAnchorResult(
+                        seq=anchor.anchored_seq,
+                        provider=provider,
+                        valid=False,
+                        cert_status="MISSING_LTV_ARTIFACTS",
+                        ltv_artifacts_present=True,
+                        reason=str(exc),
+                    )
+                )
                 continue
 
             # OCSP path: verify each OCSP response against the issuer.
@@ -315,6 +333,7 @@ def verify_chain_with_anchors(
             if _ocsp_mod is not None and anchor.ocsp_responses:
                 try:
                     from asn1crypto import x509 as _asn1_x509
+
                     leaf_asn1 = _asn1_x509.Certificate.load(parsed.leaf_cert_der)
                     leaf_serial = int(leaf_asn1.serial_number)
                     # Find an issuer cert: walk tsa_cert_chain looking for
@@ -352,62 +371,78 @@ def verify_chain_with_anchors(
                 # rather than EXPIRED/REVOKED because the underlying
                 # signature might still be sound; we just couldn't
                 # confirm freshness.
-                anchor_results.append(SingleAnchorResult(
-                    seq=anchor.anchored_seq,
-                    provider=provider,
-                    valid=False,
-                    cert_status="MISSING_LTV_ARTIFACTS",
-                    ltv_artifacts_present=True,
-                    reason=f"OCSP: {ocsp_failure}",
-                ))
+                anchor_results.append(
+                    SingleAnchorResult(
+                        seq=anchor.anchored_seq,
+                        provider=provider,
+                        valid=False,
+                        cert_status="MISSING_LTV_ARTIFACTS",
+                        ltv_artifacts_present=True,
+                        reason=f"OCSP: {ocsp_failure}",
+                    )
+                )
                 continue
             if ocsp_status == "revoked":
-                anchor_results.append(SingleAnchorResult(
-                    seq=anchor.anchored_seq,
-                    provider=provider,
-                    valid=False,
-                    cert_status="REVOKED",
-                    ltv_artifacts_present=True,
-                    reason="OCSP responder reports the TSA leaf cert is revoked",
-                ))
+                anchor_results.append(
+                    SingleAnchorResult(
+                        seq=anchor.anchored_seq,
+                        provider=provider,
+                        valid=False,
+                        cert_status="REVOKED",
+                        ltv_artifacts_present=True,
+                        reason="OCSP responder reports the TSA leaf cert is revoked",
+                    )
+                )
                 continue
             if ocsp_status == "unknown":
-                anchor_results.append(SingleAnchorResult(
-                    seq=anchor.anchored_seq,
-                    provider=provider,
-                    valid=False,
-                    cert_status="MISSING_LTV_ARTIFACTS",
-                    ltv_artifacts_present=True,
-                    reason="OCSP responder reports cert status unknown",
-                ))
+                anchor_results.append(
+                    SingleAnchorResult(
+                        seq=anchor.anchored_seq,
+                        provider=provider,
+                        valid=False,
+                        cert_status="MISSING_LTV_ARTIFACTS",
+                        ltv_artifacts_present=True,
+                        reason="OCSP responder reports cert status unknown",
+                    )
+                )
                 continue
 
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=True,
-                cert_status="VALID",
-                ltv_artifacts_present=True,
-                reason=None,
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=True,
+                    cert_status="VALID",
+                    ltv_artifacts_present=True,
+                    reason=None,
+                )
+            )
         else:
-            anchor_results.append(SingleAnchorResult(
-                seq=anchor.anchored_seq,
-                provider=provider,
-                valid=True,
-                cert_status="VALID_UNVERIFIED",
-                ltv_artifacts_present=True,
-                reason=None,
-            ))
+            anchor_results.append(
+                SingleAnchorResult(
+                    seq=anchor.anchored_seq,
+                    provider=provider,
+                    valid=True,
+                    cert_status="VALID_UNVERIFIED",
+                    ltv_artifacts_present=True,
+                    reason=None,
+                )
+            )
         anchored_seqs.add(anchor.anchored_seq)
 
     unanchored_seqs = seqs_in_chain - anchored_seqs
     if not anchor_results:
         verification_status: AnchorVerificationStatus = "not_performed"
+        anchoring_status: AnchoringStatus = "absent"
+        quarantine_reason: str | None = None
     elif all(a.valid for a in anchor_results):
         verification_status = "verified"
+        anchoring_status = "verified"
+        quarantine_reason = None
     else:
         verification_status = "failed"
+        anchoring_status = "quarantined"
+        quarantine_reason = next((a.reason for a in anchor_results if not a.valid and a.reason), None)
 
     return AnchorVerificationResult(
         chain_ok=chain_result.ok,
@@ -416,12 +451,15 @@ def verify_chain_with_anchors(
         unanchored_seqs=frozenset(unanchored_seqs),
         anchor_results=tuple(anchor_results),
         verification_status=verification_status,
+        anchoring_status=anchoring_status,
+        quarantine_reason=quarantine_reason,
     )
 
 
 __all__ = [
     "AnchorVerificationResult",
     "AnchorVerificationStatus",
+    "AnchoringStatus",
     "CertStatus",
     "SingleAnchorResult",
     "verify_chain_with_anchors",

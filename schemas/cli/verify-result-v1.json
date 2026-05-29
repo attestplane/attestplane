@@ -12,7 +12,8 @@
     "reason_code",
     "taxonomy_version",
     "reasons",
-    "bundle"
+    "bundle",
+    "anchoring"
   ],
   "properties": {
     "schema_version": {
@@ -123,6 +124,35 @@
         "digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "anchoring_status",
+        "quarantine_reason"
+      ],
+      "properties": {
+        "anchoring_status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "quarantined",
+            "absent"
+          ]
+        },
+        "quarantine_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     }

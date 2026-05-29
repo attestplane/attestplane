@@ -25,7 +25,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> dict[str, object]:
     rc = main(argv)
-    assert rc in {0, 1, 2}
+    assert rc in {0, 1, 2, 3}
     return json.loads(capsys.readouterr().out)
 
 
@@ -41,6 +41,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     ]
 
     expected_keys = {
@@ -51,6 +52,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     }
     if "explanation" in payload:
         expected_keys.add("explanation")
@@ -66,6 +68,13 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
         str(payload["reason_code"]),
     )
     assert isinstance(payload["reasons"], list)
+    anchoring = payload["anchoring"]
+    assert isinstance(anchoring, dict)
+    assert set(anchoring) == {"anchoring_status", "quarantine_reason"}
+    assert anchoring["anchoring_status"] in {"verified", "quarantined", "absent"}
+    assert anchoring["quarantine_reason"] is None or isinstance(
+        anchoring["quarantine_reason"], str
+    )
     if "explanation" in payload:
         explanation = payload["explanation"]
         assert isinstance(explanation, list)
@@ -101,6 +110,7 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
+    assert schema["properties"]["anchoring"]["additionalProperties"] is False
 
 
 def test_verify_json_pass_payload_matches_schema(capsys) -> None:
@@ -111,6 +121,23 @@ def test_verify_json_pass_payload_matches_schema(capsys) -> None:
 def test_verify_json_fail_payload_matches_schema(capsys) -> None:
     payload = _payload(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
     _assert_matches_verify_result_v1(payload)
+
+
+def test_verify_json_quarantined_anchor_payload_matches_schema(
+    tmp_path: Path, capsys
+) -> None:
+    bundle = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
+    bundle["chain_metadata"]["anchor_ref"] = "quarantine:FreeTSA malformed response"
+    path = tmp_path / "quarantined.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+
+    payload = _payload(["verify", "--json", str(path)], capsys)
+    _assert_matches_verify_result_v1(payload)
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 3
+    assert payload["reason_code"] is None
+    assert payload["anchoring"]["anchoring_status"] == "quarantined"
+    assert payload["anchoring"]["quarantine_reason"] == "FreeTSA malformed response"
 
 
 def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
@@ -134,4 +161,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )

@@ -26,6 +26,7 @@ from attestplane.adapters import (
 from attestplane.anchoring import (
     ANCHOR_SCHEMA_VERSION,
     AnchorError,
+    AnchoringStatus,
     AnchorPolicy,
     AnchorRecord,
     AnchorVerificationError,
@@ -258,6 +259,7 @@ __all__ = [
     "AnchorRecord",
     "AnchorVerificationError",
     "AnchorVerificationResult",
+    "AnchoringStatus",
     "BundleSchemaError",
     "BundleVerificationError",
     "BundleVerificationResult",
@@ -367,20 +369,22 @@ __all__ = [
 ]
 
 if _SIGNING_AVAILABLE:
-    __all__.extend([
-        "SIGNATURE_SCHEMA_VERSION",
-        "EnvKeyProvider",
-        "FileKeyProvider",
-        "InMemoryKeyProvider",
-        "KeyBoundaryError",
-        "KeyProvider",
-        "KeyProviderError",
-        "MultiSignerProvider",
-        "SignatureMode",
-        "SignatureRecord",
-        "SignatureVerificationError",
-        "SignaturePolicy",
-        "SigningError",
-        "SigningMaterial",
-        "derive_key_id",
-    ])
+    __all__.extend(
+        [
+            "SIGNATURE_SCHEMA_VERSION",
+            "EnvKeyProvider",
+            "FileKeyProvider",
+            "InMemoryKeyProvider",
+            "KeyBoundaryError",
+            "KeyProvider",
+            "KeyProviderError",
+            "MultiSignerProvider",
+            "SignatureMode",
+            "SignatureRecord",
+            "SignatureVerificationError",
+            "SignaturePolicy",
+            "SigningError",
+            "SigningMaterial",
+            "derive_key_id",
+        ]
+    )

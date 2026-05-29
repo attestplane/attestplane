@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -60,6 +59,10 @@ VERIFY_JSON_CONTRACT_V1 = {
                 "reasons": [],
                 "result": "pass",
                 "schema_version": 1,
+                "anchoring": {
+                    "anchoring_status": "absent",
+                    "quarantine_reason": None,
+                },
                 "taxonomy_version": 1,
             },
         },
@@ -81,6 +84,10 @@ VERIFY_JSON_CONTRACT_V1 = {
                 ],
                 "result": "fail",
                 "schema_version": 1,
+                "anchoring": {
+                    "anchoring_status": "absent",
+                    "quarantine_reason": None,
+                },
                 "taxonomy_version": 1,
             },
         },
@@ -113,6 +120,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     ]
 
     expected_keys = {
@@ -123,6 +131,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchoring",
     }
     if expect_explanation:
         expected_keys.add("explanation")
@@ -137,6 +146,11 @@ def _assert_matches_verify_result_v1(
         str(payload["reason_code"]),
     )
     assert isinstance(payload["reasons"], list)
+    anchoring = payload["anchoring"]
+    assert isinstance(anchoring, dict)
+    assert set(anchoring) == {"anchoring_status", "quarantine_reason"}
+    assert anchoring["anchoring_status"] in {"verified", "quarantined", "absent"}
+    assert anchoring["quarantine_reason"] is None or isinstance(anchoring["quarantine_reason"], str)
 
     bundle = payload["bundle"]
     assert isinstance(bundle, dict)
@@ -196,9 +210,34 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": (
+                "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
+                "schema_version=1 taxonomy_version=1 anchor=absent"
+            ),
         }
     ]
+
+
+def test_verify_json_quarantined_anchor_reports_advisory_exit_code(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
+    bundle["chain_metadata"]["anchor_ref"] = "quarantine:FreeTSA malformed response"
+    path = tmp_path / "quarantined.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+
+    rc, payload, stderr = _run_verify(["verify", "--json", str(path)], capsys)
+
+    assert rc == 3
+    assert stderr == ""
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 3
+    assert payload["reason_code"] is None
+    assert payload["anchoring"] == {
+        "anchoring_status": "quarantined",
+        "quarantine_reason": "FreeTSA malformed response",
+    }
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(

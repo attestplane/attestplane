@@ -37,6 +37,7 @@ from attestplane.anchoring.base import (
 from attestplane.anchoring.composite import MultiTSAProvider
 from attestplane.anchoring.mock import MockTSAProvider
 from attestplane.anchoring.verifier import (
+    AnchoringStatus,
     AnchorVerificationResult,
     CertStatus,
     SingleAnchorResult,
@@ -109,6 +110,7 @@ __all__ = [
     "AnchorerResult",
     "CertStatus",
     "EidasError",
+    "AnchoringStatus",
     "MockTSAProvider",
     "MultiTSAProvider",
     "PendingAnchor",
@@ -125,24 +127,28 @@ __all__ = [
 ]
 
 if _HTTP_AVAILABLE:
-    __all__.extend([
-        "DigiCertProvider",
-        "FreeTSAProvider",
-        "HttpTransport",
-        "RecordedHttpTransport",
-        "Rfc3161HttpProvider",
-        "UrllibHttpTransport",
-        "make_replay_transport",
-    ])
+    __all__.extend(
+        [
+            "DigiCertProvider",
+            "FreeTSAProvider",
+            "HttpTransport",
+            "RecordedHttpTransport",
+            "Rfc3161HttpProvider",
+            "UrllibHttpTransport",
+            "make_replay_transport",
+        ]
+    )
 
 if _SIGSTORE_AVAILABLE:
-    __all__.extend([
-        "PUBLIC_REKOR_URL",
-        "SIGSTORE_REKOR_OCSP_MARKER",
-        "SIGSTORE_REKOR_PROVIDER_PREFIX",
-        "ParsedRekorEntry",
-        "SigstoreRekorAnchor",
-        "is_sigstore_rekor_anchor",
-        "parse_rekor_log_entry",
-        "verify_rekor_signed_entry_timestamp",
-    ])
+    __all__.extend(
+        [
+            "PUBLIC_REKOR_URL",
+            "SIGSTORE_REKOR_OCSP_MARKER",
+            "SIGSTORE_REKOR_PROVIDER_PREFIX",
+            "ParsedRekorEntry",
+            "SigstoreRekorAnchor",
+            "is_sigstore_rekor_anchor",
+            "parse_rekor_log_entry",
+            "verify_rekor_signed_entry_timestamp",
+        ]
+    )
