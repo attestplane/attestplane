@@ -10,6 +10,7 @@ from pathlib import Path
 from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
+    VERIFY_REASON_TAXONOMY_VERSION,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -59,7 +60,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] >= 0
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
