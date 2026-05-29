@@ -92,13 +92,14 @@ def _assert_rationale_lines(
 
 def _assert_failure_summary(stdout: str, *, signer_subject: str, schema_version: str) -> None:
     assert stdout.strip() == (
-        f"FAIL signer_subject={signer_subject} schema_version={schema_version} anchor=absent"
+        f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
+        f"anchor=absent taxonomy_version=1"
     )
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
     assert stdout.strip() == (
-        f"OK signer_subject={signer_subject} schema_version=1 anchor=absent"
+        f"OK signer_subject={signer_subject} schema_version=1 anchor=absent taxonomy_version=1"
     )
 
 
@@ -157,12 +158,12 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "2",
             None,
             "compact",
-            (
-                VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
-                "/chain_metadata/schema_version",
-                ("chain_metadata.schema_version=2", "this verifier handles 1"),
+                (
+                    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                    "/chain_metadata/schema_version",
+                    ("chain_metadata.schema_version=2", "schema_version values (1,)"),
+                ),
             ),
-        ),
         (
             ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
             1,

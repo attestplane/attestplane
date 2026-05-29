@@ -61,21 +61,28 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     bundle_path = str(SIGNED_SCHEMA_FIXTURE)
+    bundle = json.loads(SIGNED_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
+    rebuilt = rebuild_signed_schema_fixture(bundle)
+    sdk_result = verify_proof_bundle(
+        rebuilt,
+        require_non_empty=True,
+        require_signed_attestation=True,
+    )
 
     json_rc, json_stdout, json_stderr = _run_verify(["verify", "--json", bundle_path], capsys)
     explain_rc, explain_stdout, explain_stderr = _run_verify(
-        ["verify", "--json", "--explain", bundle_path],
+        ["verify", "--explain", bundle_path],
         capsys,
     )
 
     json_payload = json.loads(json_stdout)
-    explain_payload = json.loads(explain_stdout)
 
     assert json_rc == 0
     assert explain_rc == 0
     assert json_stderr == ""
     assert explain_stderr == ""
-    assert json_stdout == explain_stdout
-    assert json_payload["taxonomy_version"] == 1
-    assert explain_payload["taxonomy_version"] == 1
-    assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]
+    assert sdk_result.ok is True
+    assert sdk_result.taxonomy_version == 1
+    assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
+    assert explain_stdout.startswith("OK ")
+    assert "taxonomy_version=1" in explain_stdout

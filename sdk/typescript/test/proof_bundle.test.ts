@@ -132,6 +132,7 @@ describe('verifyProofBundle', () => {
     const bundle = builder.build();
     const result = verifyProofBundle(bundle);
     expect(result.ok).toBe(true);
+    expect(result.taxonomy_version).toBe(1);
     expect(result.event_count).toBe(3);
     expect(result.agreement).toBe(true);
     expect(result.chain_result.ok).toBe(true);
