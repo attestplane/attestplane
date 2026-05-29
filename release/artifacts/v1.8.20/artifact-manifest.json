@@ -1,0 +1,13 @@
+{
+  "artifacts": [
+    {"kind":"python-wheel","name":"attestplane","path":"sdk/python/dist/attestplane-1.8.20-py3-none-any.whl","sha256":"pending","size_bytes":0,"version":"1.8.20"},
+    {"kind":"python-sdist","name":"attestplane","path":"sdk/python/dist/attestplane-1.8.20.tar.gz","sha256":"pending","size_bytes":0,"version":"1.8.20"},
+    {"kind":"npm-tarball","name":"@attestplane/attestplane","path":"sdk/typescript/attestplane-attestplane-1.8.20.tgz","sha256":"pending","size_bytes":0,"version":"1.8.20"}
+  ],
+  "checksums_file":"release/artifacts/v1.8.20/checksums.sha256",
+  "release":"v1.8.20",
+  "release_notes_file":"docs/release-notes/v1.8.20.draft.md",
+  "schema":"attestplane_release_artifact_manifest.v1",
+  "source_state":{"prepared_by":"auto-loop","target_commit":"a1b39380180284b3ccb08469dadf63e623863b5e"},
+  "upload_plan_file":"release/artifacts/v1.8.20/upload-plan.md"
+}
