@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -38,4 +41,61 @@ def test_best_effort_fetch_tags_updates_origin_main(monkeypatch) -> None:
             "refs/heads/main:refs/remotes/origin/main",
             "--tags",
         ]
+    ]
+
+
+@pytest.mark.parametrize(
+    ("release_label", "expected"),
+    [
+        ("release:minor", "v1.3.0"),
+        ("release:major", "v2.0.0"),
+        ("release:patch", "v1.2.10"),
+        ("release:none", "v1.2.10"),
+    ],
+)
+def test_next_stable_after_respects_release_label(
+    release_label: str, expected: str
+) -> None:
+    current = stable_auto_train.StableVersion.parse("1.2.9")
+
+    assert (
+        stable_auto_train.next_stable_after(current, release_label=release_label).tag
+        == expected
+    )
+
+
+def test_release_label_from_merged_pr_reads_gh_labels(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands: list[list[str]] = []
+
+    def fake_capture(argv: list[str], *, timeout: int | None = None) -> str:
+        del timeout
+        commands.append(argv)
+        if argv[:3] == ["gh", "pr", "list"]:
+            return "42\n"
+        if argv[:3] == ["gh", "pr", "view"]:
+            return json.dumps({"labels": [{"name": "release:minor"}]})
+        raise AssertionError(argv)
+
+    monkeypatch.setattr(stable_auto_train, "capture", fake_capture)
+
+    assert stable_auto_train.release_label_from_merged_pr("deadbeef") == "release:minor"
+    assert commands == [
+        [
+            "gh",
+            "pr",
+            "list",
+            "--search",
+            "deadbeef",
+            "--state",
+            "merged",
+            "--limit",
+            "1",
+            "--json",
+            "number",
+            "--jq",
+            ".[0].number",
+        ],
+        ["gh", "pr", "view", "42", "--json", "labels"],
     ]
