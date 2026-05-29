@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-FileCopyrightText: 2026 Attestplane Contributors -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.attestplane.temporal-server</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/temporal</string>
+    <string>server</string>
+    <string>start-dev</string>
+    <string>--db-filename</string>
+    <string>/Users/macworkers/projects/attestplane/data/temporal.db</string>
+    <string>--port</string>
+    <string>7233</string>
+    <string>--ui-port</string>
+    <string>8233</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macworkers/projects/attestplane</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macworkers/projects/attestplane/data/temporal-server.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/macworkers/projects/attestplane/data/temporal-server.log</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+</dict>
+</plist>

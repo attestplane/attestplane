@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- SPDX-FileCopyrightText: 2026 Attestplane Contributors -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.attestplane.autodev-worker</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3.11</string>
+    <string>-m</string>
+    <string>scripts.autodev.temporal.worker</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/macworkers/projects/attestplane</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TEMPORAL_ADDRESS</key>
+    <string>localhost:7233</string>
+    <key>AUTODEV_CONCURRENCY</key>
+    <string>5</string>
+    <key>CODEX_HOME</key>
+    <string>/Users/macworkers/codex-home</string>
+    <key>AUTODEV_MAIN_REPO</key>
+    <string>/Users/macworkers/projects/attestplane</string>
+    <key>AUTODEV_DB_PATH</key>
+    <string>/Users/macworkers/projects/attestplane/data/autodev_state.db</string>
+    <key>https_proxy</key>
+    <string>http://127.0.0.1:7897</string>
+    <key>http_proxy</key>
+    <string>http://127.0.0.1:7897</string>
+    <key>HOME</key>
+    <string>/Users/macworkers</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/macworkers/projects/attestplane/data/autodev-worker.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/macworkers/projects/attestplane/data/autodev-worker.log</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>15</integer>
+</dict>
+</plist>

@@ -53,3 +53,13 @@ docs/automation/
 tests/cross_sdk/py_emit.json
 tests/cross_sdk/ts_reemit.json
 .jit-review/
+
+# autodev-train Temporal / SQLite runtime data (generated at runtime)
+data/temporal.db
+data/temporal.db-shm
+data/temporal.db-wal
+data/autodev_state.db
+data/autodev_state.db-shm
+data/autodev_state.db-wal
+data/temporal-server.log
+data/autodev-worker.log
