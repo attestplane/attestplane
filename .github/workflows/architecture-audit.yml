@@ -292,6 +292,38 @@ jobs:
           PY
           gh issue comment "$PLANNING_ISSUE" --body-file planned-task-summary.md
 
+      - name: Trigger implement-planned-task for each new issue
+        if: steps.audit.outputs.should_open_issue == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # workflow_dispatch bypasses the GITHUB_TOKEN cascade restriction that
+          # prevents issues: opened events from firing when created by Actions.
+          "$ARCHITECTURE_AUDIT_PYTHON" - <<'PY'
+          import json, subprocess, sys, time
+
+          issues = json.load(open("planned-task-issues.json", encoding="utf-8"))
+          failed = []
+          for issue in issues:
+              num = str(issue["number"])
+              result = subprocess.run(
+                  ["gh", "workflow", "run", "implement-planned-task.yml",
+                   "--field", f"issue_number={num}"],
+                  capture_output=True, text=True,
+              )
+              if result.returncode != 0:
+                  print(f"  ⚠ issue #{num}: {result.stderr.strip()}", file=sys.stderr)
+                  failed.append(num)
+              else:
+                  print(f"  ✅ triggered implement-planned-task for #{num}")
+              time.sleep(2)  # avoid GH API rate limit
+
+          if failed:
+              print(f"Failed to trigger for issues: {failed}", file=sys.stderr)
+              sys.exit(1)
+          PY
+
       - name: Summary
         run: |
           {

@@ -18,10 +18,10 @@ on:
     branches: [main]
 
 permissions:
-  contents:    write   # push git tag
-  actions:     write   # gh workflow run (workflow_dispatch)
-  issues:      write   # open major RFC issue
-  discussions: write   # open major RFC Discussion (best-effort)
+  contents: write   # push git tag
+  actions: write    # gh workflow run (workflow_dispatch)
+  issues: write     # open major RFC issue
+  discussions: write  # open major RFC Discussion (best-effort)
   pull-requests: read
 
 concurrency:
@@ -229,7 +229,7 @@ jobs:
           steps.batch.outputs.proceed == 'true' &&
           steps.bump.outputs.level != 'major'
         env:
-          TAG:   ${{ steps.version.outputs.tag }}
+          TAG: ${{ steps.version.outputs.tag }}
           LEVEL: ${{ steps.bump.outputs.level }}
         run: |
           set -euo pipefail
@@ -247,7 +247,7 @@ jobs:
           steps.bump.outputs.level != 'major'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG:      ${{ steps.version.outputs.tag }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
           gh workflow run architecture-audit \
