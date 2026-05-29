@@ -325,6 +325,11 @@ async def post_review_activity(
         except RuntimeError:
             pass
         db.upsert_run(issue_number, stage="failed")
+        # Kick auto-loop so it can advance even if no [autodev] merge commit was produced
+        try:
+            _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+        except RuntimeError:
+            pass
 
     db.log_event(issue_number, "post_review", "completed", f"decision={decision}")
     return {"posted": True}
@@ -518,6 +523,10 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                 pass
             db.upsert_run(issue_number, stage="failed")
             db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=UNSTABLE")
+            try:
+                _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+            except RuntimeError:
+                pass
             return {"merged": False, "reason": "ci_unstable"}
         if merge_state == "BLOCKED":
             # If all checks completed and at least one failed → CI is done and broken
@@ -534,6 +543,10 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                     pass
                 db.upsert_run(issue_number, stage="failed")
                 db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=BLOCKED")
+                try:
+                    _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+                except RuntimeError:
+                    pass
                 return {"merged": False, "reason": "ci_blocked"}
         if mergeable == "CONFLICTING":
             activity.logger.info("PR #%d has merge conflict — will attempt rebase", pr_number)
@@ -549,6 +562,10 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                     pass
                 db.upsert_run(issue_number, stage="failed")
                 db.log_event(issue_number, "merge", "ci_timeout_blocked", f"pr={pr_number}")
+                try:
+                    _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+                except RuntimeError:
+                    pass
                 return {"merged": False, "reason": "ci_timeout_blocked"}
             activity.logger.warning("CI timeout for PR #%d (state=%s) — proceeding to merge", pr_number, merge_state)
             break
