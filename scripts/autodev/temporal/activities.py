@@ -648,10 +648,6 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                     pass
                 db.upsert_run(issue_number, stage="failed")
                 db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=UNSTABLE_CRITICAL")
-                try:
-                    _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
-                except RuntimeError:
-                    pass
                 return {"merged": False, "reason": "ci_unstable_critical"}
             activity.logger.info(
                 "CI UNSTABLE for PR #%d but only cosmetic failures — proceeding to merge", pr_number
@@ -672,17 +668,13 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                     pass
                 db.upsert_run(issue_number, stage="failed")
                 db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=BLOCKED")
-                try:
-                    _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
-                except RuntimeError:
-                    pass
                 return {"merged": False, "reason": "ci_blocked"}
         if mergeable == "CONFLICTING":
             activity.logger.info("PR #%d has merge conflict — will attempt rebase", pr_number)
             break
         if _time.monotonic() > ci_deadline:
-            # Timeout: if BLOCKED (not just slow), close instead of blindly merging
             if merge_state == "BLOCKED":
+                # required check still failing after timeout → close
                 activity.logger.error("CI timeout for PR #%d (BLOCKED) — closing PR", pr_number)
                 try:
                     _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
@@ -691,13 +683,27 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
                     pass
                 db.upsert_run(issue_number, stage="failed")
                 db.log_event(issue_number, "merge", "ci_timeout_blocked", f"pr={pr_number}")
+                return {"merged": False, "reason": "ci_timeout_blocked"}
+            elif mergeable == "CONFLICTING":
+                # merge conflict on timeout → proceed to rebase (will resolve or fail)
+                activity.logger.warning("CI timeout for PR #%d (CONFLICTING) — attempting rebase", pr_number)
+                break
+            elif merge_state == "UNKNOWN":
+                # unknown state → close safely
+                activity.logger.error("CI timeout for PR #%d (UNKNOWN state) — closing PR", pr_number)
                 try:
-                    _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
+                    _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
+                         "--comment", "Closed by autodev-train: CI timed out in unknown state."])
                 except RuntimeError:
                     pass
-                return {"merged": False, "reason": "ci_timeout_blocked"}
-            activity.logger.warning("CI timeout for PR #%d (state=%s) — proceeding to merge", pr_number, merge_state)
-            break
+                db.upsert_run(issue_number, stage="failed")
+                return {"merged": False, "reason": "ci_timeout_unknown"}
+            else:
+                # BEHIND, UNSTABLE etc → proceed to rebase/merge
+                activity.logger.warning(
+                    "CI timeout for PR #%d (state=%s) — proceeding to merge", pr_number, merge_state
+                )
+                break
         await asyncio.sleep(30)
     worktree = str(MAIN_REPO.parent / f"attestplane-merge-{issue_number}")
     main = str(MAIN_REPO)
@@ -712,6 +718,10 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             except RuntimeError:
                 pass
         _run(["git", "worktree", "add", "-B", branch, worktree, f"origin/{branch}"], cwd=main)
+
+        # Record tree hash before rebase to detect file-tree changes (Fix-3)
+        pre_rebase_tree = _run(["git", "rev-parse", "HEAD^{tree}"], cwd=worktree)
+
         _run(["git", "rebase", "origin/main"], cwd=worktree, env={
             **os.environ,
             "GIT_AUTHOR_NAME": BOT_NAME,
@@ -719,6 +729,22 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             "GIT_COMMITTER_NAME": BOT_NAME,
             "GIT_COMMITTER_EMAIL": BOT_EMAIL,
         })
+
+        # Warn if rebase changed file tree — review was on pre-rebase diff (Fix-3)
+        post_rebase_tree = _run(["git", "rev-parse", "HEAD^{tree}"], cwd=worktree)
+        if pre_rebase_tree != post_rebase_tree:
+            activity.logger.warning(
+                "PR #%d: rebase changed file tree (%s → %s) — review was on pre-rebase diff",
+                pr_number, pre_rebase_tree[:8], post_rebase_tree[:8],
+            )
+            try:
+                _gh(["pr", "comment", str(pr_number), "--repo", REPO_SLUG,
+                     "--body",
+                     "⚠️ **Rebase changed file tree** — this PR was reviewed on the pre-rebase diff. "
+                     "The merge commit may differ from what was reviewed."])
+            except RuntimeError:
+                pass
+
         _run(["git", "push", "origin", branch, "--force-with-lease"], cwd=worktree)
         rebase_ok = True
     except RuntimeError as rebase_err:
@@ -741,39 +767,12 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
             pass
         db.upsert_run(issue_number, stage="failed")
         db.log_event(issue_number, "merge", "conflict", f"pr={pr_number}")
-        try:
-            _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
-        except RuntimeError:
-            pass
         return {"merged": False, "reason": "conflict"}
 
-    # Rebase succeeded — use --auto so GitHub waits for fresh CI before merging
-    _gh([
-        "pr", "merge", str(pr_number),
-        "-R", REPO_SLUG,
-        "--squash",
-        "--auto",
-        "--subject", f"autodev: implement issue #{issue_number} [autodev]",
-        "--body",
-        "Squash-merged by autodev-train Temporal worker after AI review + CI.",
-    ])
-    # Poll until GitHub actually merges the PR (--auto is async)
-    poll_deadline = _time.monotonic() + 600
-    while True:
-        state = json.loads(_gh(
-            ["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "state,mergedAt"]
-        ))
-        if state.get("mergedAt"):
-            break
-        if state.get("state") == "CLOSED":
-            activity.logger.error("PR #%d was closed (not merged) after --auto", pr_number)
-            db.upsert_run(issue_number, stage="failed")
-            db.log_event(issue_number, "merge", "closed_not_merged", f"pr={pr_number}")
-            return {"merged": False, "reason": "closed_not_merged"}
-        if _time.monotonic() > poll_deadline:
-            activity.logger.warning("--auto merge timeout for PR #%d", pr_number)
-            break
-        await asyncio.sleep(20)
+    # Rebase succeeded — CI already confirmed clean above; squash-merge synchronously (Fix-1)
+    _gh(["pr", "merge", str(pr_number), "--repo", REPO_SLUG,
+         "--squash", "--delete-branch",
+         "--subject", f"feat: merge autodev PR #{pr_number} for issue #{issue_number}"])
 
     db.upsert_run(issue_number, stage="merged")
     db.log_event(issue_number, "merge", "completed", f"pr={pr_number}")
