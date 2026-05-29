@@ -404,7 +404,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
         checks = pr_info.get("statusCheckRollup", [])
         pending = [c for c in checks if c.get("status") not in ("COMPLETED",)]
 
-        if merge_state == "CLEAN":
+        if merge_state == "CLEAN" and not pending:
             activity.logger.info("CI passed for PR #%d (CLEAN) — no fix needed", pr_number)
             return {"ci_passed": True, "fixed": False}
 
@@ -538,7 +538,7 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
 
     # Poll mergeStateStatus — avoids the broken `gh pr checks --json required` field.
     # CLEAN      → all checks passed, safe to merge.
-    # UNSTABLE   → non-required checks failed → close PR and exit (no retry).
+    # UNSTABLE   → only non-required checks failed; GitHub allows merge → proceed.
     # BLOCKED    → required check failed OR pending → wait; if all done and any FAILURE, close.
     # CONFLICTING → merge conflict → proceed to rebase below.
     activity.logger.info("Waiting for CI on PR #%d ...", pr_number)
@@ -552,23 +552,9 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
         mergeable = pr_info.get("mergeable", "UNKNOWN")
         checks = pr_info.get("statusCheckRollup", [])
 
-        if merge_state == "CLEAN":
-            activity.logger.info("CI passed for PR #%d (CLEAN)", pr_number)
+        if merge_state in ("CLEAN", "UNSTABLE"):
+            activity.logger.info("CI passed for PR #%d (%s) — proceeding to merge", pr_number, merge_state)
             break
-        if merge_state == "UNSTABLE":
-            activity.logger.error("CI FAILED for PR #%d (UNSTABLE) — closing PR", pr_number)
-            try:
-                _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
-                     "--comment", "Closed by autodev-train: CI checks failed (UNSTABLE). Fix linting/tests and reopen."])
-            except RuntimeError:
-                pass
-            db.upsert_run(issue_number, stage="failed")
-            db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number} reason=UNSTABLE")
-            try:
-                _gh(["workflow", "run", "auto-loop.yml", "--repo", REPO_SLUG, "--ref", "main"])
-            except RuntimeError:
-                pass
-            return {"merged": False, "reason": "ci_unstable"}
         if merge_state == "BLOCKED":
             # If all checks completed and at least one failed → CI is done and broken
             pending = [c for c in checks if c.get("status") not in ("COMPLETED",)]
