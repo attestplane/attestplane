@@ -8,7 +8,11 @@ from __future__ import annotations
 import argparse
 import json
 
-from scripts.local_codex_runner.config import add_common_args, load_config, overrides_from_args
+from scripts.local_codex_runner.config import (
+    add_common_args,
+    load_config,
+    overrides_from_args,
+)
 from scripts.local_codex_runner.github_cli import GitHubCLI
 from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues
 
@@ -16,7 +20,9 @@ from scripts.local_codex_runner.models import candidate_fetch_limit, processable
 def poll_queue(args: argparse.Namespace) -> list[dict[str, object]]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
-    issues = gh.list_issues(config.repo or "", None, candidate_fetch_limit(config.max_issues_per_run))
+    issues = gh.list_issues(
+        config.repo or "", None, candidate_fetch_limit(config.max_issues_per_run)
+    )
     include = set(args.include_label or [])
     exclude = set(args.exclude_label or [])
     if not getattr(args, "retry_needs_human", False):

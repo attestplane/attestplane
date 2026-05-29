@@ -32,8 +32,7 @@ def _build_chain(n: int) -> list[ChainedEvent]:
             actor=f"agent://test/{i}",
             payload={"index": i},
         )
-        event = chain_extend(head, draft, now=ts,
-                             event_id=f"00000000-0000-7000-8000-{i:012d}")
+        event = chain_extend(head, draft, now=ts, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(event)
         head = ChainHead(seq=event.seq, event_hash=event.event_hash)
     return chain
@@ -139,8 +138,7 @@ def test_blank_lines_tolerated(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "forbidden_method",
-    ["delete", "remove", "purge", "truncate",
-     "update", "mutate", "rewrite", "overwrite", "compact"],
+    ["delete", "remove", "purge", "truncate", "update", "mutate", "rewrite", "overwrite", "compact"],
 )
 def test_forbidden_mutating_verb_rejected(forbidden_method: str) -> None:
     """ADR-0002 § immutability: storage backends MUST NOT expose mutating verbs."""
@@ -174,6 +172,7 @@ def test_private_method_with_forbidden_stem_allowed() -> None:
 
         def head(self) -> ChainHead:
             from attestplane.hashchain import head_of
+
             return head_of(self._events)
 
         def _delete_old_cache_if_any(self) -> None:
@@ -226,9 +225,7 @@ def test_append_writes_newline_terminated_record(tmp_path: Path) -> None:
     assert len(data.splitlines()) == 1
 
 
-def test_append_fsync_called_when_durable_enabled(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_append_fsync_called_when_durable_enabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[int] = []
 
     def fake_fsync(fd: int) -> None:
@@ -240,9 +237,7 @@ def test_append_fsync_called_when_durable_enabled(
     assert len(calls) == 1
 
 
-def test_append_skips_fsync_when_durable_disabled(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_append_skips_fsync_when_durable_disabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[int] = []
 
     def fake_fsync(fd: int) -> None:

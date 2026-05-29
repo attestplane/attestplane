@@ -12,7 +12,10 @@ from scripts.local_codex_runner.gate_runner import (
 
 def test_label_to_gate_mapping(tmp_path: Path) -> None:
     matrix = tmp_path / "gates.yml"
-    matrix.write_text('default:\n  - "pytest -q"\nclaim-safety:\n  - "pytest tests/sentinel -q"\n', encoding="utf-8")
+    matrix.write_text(
+        'default:\n  - "pytest -q"\nclaim-safety:\n  - "pytest tests/sentinel -q"\n',
+        encoding="utf-8",
+    )
 
     gate, commands = GateRunner(tmp_path, matrix).select_gate(["claim-safety"])
 
@@ -40,7 +43,9 @@ def test_preferred_gate_overrides_narrow_label_gate(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    gate, commands = GateRunner(tmp_path, matrix).select_gate(["area:verifier"], preferred_gate="ci:failed")
+    gate, commands = GateRunner(tmp_path, matrix).select_gate(
+        ["area:verifier"], preferred_gate="ci:failed"
+    )
 
     assert gate == "ci:failed"
     assert commands == ["pytest tests -q"]
@@ -55,7 +60,10 @@ def test_docs_gate_falls_back_when_non_doc_files_changed(tmp_path: Path) -> None
 
     gate, commands = GateRunner(tmp_path, matrix).select_gate(
         ["type:docs"],
-        changed_files=["docs/validation/local_codex_runner/issue-175/plan.md", "tests/canonicalization/test_properties.py"],
+        changed_files=[
+            "docs/validation/local_codex_runner/issue-175/plan.md",
+            "tests/canonicalization/test_properties.py",
+        ],
     )
 
     assert gate == "default"
@@ -93,7 +101,9 @@ def test_command_failure_is_captured(monkeypatch, tmp_path: Path) -> None:
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
-    result = GateRunner(tmp_path, tmp_path / "missing.yml").run_command("pytest -q", live_allowed=False)
+    result = GateRunner(tmp_path, tmp_path / "missing.yml").run_command(
+        "pytest -q", live_allowed=False
+    )
 
     assert result.exit_code == 2
     assert "[REDACTED]" in result.stderr
@@ -122,7 +132,9 @@ def test_gate_command_uses_argv_list(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_no_live_tests_by_default(tmp_path: Path) -> None:
-    result = GateRunner(tmp_path, tmp_path / "missing.yml").run_command("pytest --live", live_allowed=False)
+    result = GateRunner(tmp_path, tmp_path / "missing.yml").run_command(
+        "pytest --live", live_allowed=False
+    )
 
     assert result.exit_code == 2
     assert "blocked" in result.stderr

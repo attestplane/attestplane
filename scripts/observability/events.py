@@ -108,7 +108,9 @@ REQUIRED_FIELDS: dict[str, frozenset[str]] = {
     PUSH_CI_WAITING: _release_train_fields("head_sha", "summary"),
     RELEASE_CD_WAIT_START: _release_train_fields("target_tag"),
     RELEASE_CD_FAILED_BUT_COMPLETE: _release_train_fields("target_tag"),
-    CADENCE_SKIPPED: _release_train_fields("previous_tag", "target_tag", "force_cadence", "reason"),
+    CADENCE_SKIPPED: _release_train_fields(
+        "previous_tag", "target_tag", "force_cadence", "reason"
+    ),
     PRODUCT_DELTA_SKIPPED: _release_train_fields(
         "previous_tag",
         "target_tag",
@@ -118,7 +120,9 @@ REQUIRED_FIELDS: dict[str, frozenset[str]] = {
         "support_only_files",
         "ignored_files",
     ),
-    CYCLE_PREPARE: _release_train_fields("previous_tag", "target_tag", "channel", "publish", "wait", "dry_run"),
+    CYCLE_PREPARE: _release_train_fields(
+        "previous_tag", "target_tag", "channel", "publish", "wait", "dry_run"
+    ),
     CYCLE_PREPARED_LOCAL: _release_train_fields("target_tag", "publish"),
     CYCLE_FAILED: _release_train_fields("error", "poll_seconds"),
     CYCLE_FINISHED: _release_train_fields("result", "poll_seconds"),
@@ -147,15 +151,21 @@ def parse_event(payload: dict[str, Any]) -> ObservabilityEvent:
 
     event_type = payload.get("event")
     if not isinstance(event_type, str) or not event_type:
-        raise EventValidationError("event payload requires a non-empty string event field")
+        raise EventValidationError(
+            "event payload requires a non-empty string event field"
+        )
 
     required = REQUIRED_FIELDS.get(event_type)
     if required is None:
         raise EventValidationError(f"unknown observability event type: {event_type}")
 
-    missing = sorted(field for field in required if field not in payload or payload[field] is None)
+    missing = sorted(
+        field for field in required if field not in payload or payload[field] is None
+    )
     if missing:
-        raise EventValidationError(f"{event_type} missing required fields: {', '.join(missing)}")
+        raise EventValidationError(
+            f"{event_type} missing required fields: {', '.join(missing)}"
+        )
 
     for field in sorted(required):
         expected_type = FIELD_TYPES.get(field)
@@ -175,7 +185,9 @@ def parse_event(payload: dict[str, Any]) -> ObservabilityEvent:
                 raise EventValidationError(f"{event_type} {field} must be a list")
             continue
         if not isinstance(value, expected_type):
-            raise EventValidationError(f"{event_type} {field} must be a {expected_type.__name__}")
+            raise EventValidationError(
+                f"{event_type} {field} must be a {expected_type.__name__}"
+            )
 
     return ObservabilityEvent(dict(payload))
 

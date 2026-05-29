@@ -64,8 +64,16 @@ def validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
     if not isinstance(signatures, list):
         errors.append(f"{path}: signatures must be an array")
         signatures = []
-    checksum_names = {entry.get("artifact") or entry.get("name") for entry in checksums if isinstance(entry, dict)}
-    signature_names = {entry.get("artifact") or entry.get("name") for entry in signatures if isinstance(entry, dict)}
+    checksum_names = {
+        entry.get("artifact") or entry.get("name")
+        for entry in checksums
+        if isinstance(entry, dict)
+    }
+    signature_names = {
+        entry.get("artifact") or entry.get("name")
+        for entry in signatures
+        if isinstance(entry, dict)
+    }
 
     seen: set[str] = set()
     for artifact in artifacts:
@@ -82,24 +90,44 @@ def validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
         seen.add(name)
         if not isinstance(kind, str) or not kind:
             errors.append(f"{path}: {name}: missing non-empty kind")
-        for field in ("required", "published", "checksum_required", "signature_required"):
+        for field in (
+            "required",
+            "published",
+            "checksum_required",
+            "signature_required",
+        ):
             if not isinstance(artifact.get(field), bool):
                 errors.append(f"{path}: {name}: {field} must be boolean")
-        if as_bool(artifact.get("published")) and as_bool(artifact.get("checksum_required")):
-            remote_generated = kind == "github_source_archive" and artifact.get("checksum_status") == "remote_generated"
+        if as_bool(artifact.get("published")) and as_bool(
+            artifact.get("checksum_required")
+        ):
+            remote_generated = (
+                kind == "github_source_archive"
+                and artifact.get("checksum_status") == "remote_generated"
+            )
             if name not in checksum_names and not remote_generated:
-                errors.append(f"{path}: {name}: published artifact requiring checksum has no checksum entry")
+                errors.append(
+                    f"{path}: {name}: published artifact requiring checksum has no checksum entry"
+                )
         if as_bool(artifact.get("signature_required")) and name not in signature_names:
-            errors.append(f"{path}: {name}: signature_required=true but no signature entry exists")
-        if as_bool(artifact.get("signature_required")) and not as_bool(artifact.get("published")):
-            errors.append(f"{path}: {name}: unpublished artifact cannot require a signature")
+            errors.append(
+                f"{path}: {name}: signature_required=true but no signature entry exists"
+            )
+        if as_bool(artifact.get("signature_required")) and not as_bool(
+            artifact.get("published")
+        ):
+            errors.append(
+                f"{path}: {name}: unpublished artifact cannot require a signature"
+            )
 
     provenance = manifest.get("provenance")
     if not isinstance(provenance, dict):
         errors.append(f"{path}: provenance must be an object")
         provenance = {}
     if provenance.get("slsa_level_claimed") is not None:
-        errors.append(f"{path}: slsa_level_claimed must be null for alpha-safe manifests")
+        errors.append(
+            f"{path}: slsa_level_claimed must be null for alpha-safe manifests"
+        )
     no_go_claims = manifest.get("no_go_claims")
     if not isinstance(no_go_claims, list):
         errors.append(f"{path}: no_go_claims must be an array")
@@ -119,7 +147,9 @@ def validate_manifest(manifest: dict[str, Any], path: Path) -> list[str]:
             )
     expected = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     if path.read_text(encoding="utf-8") != expected:
-        errors.append(f"{path}: JSON is not deterministic; sort keys and use two-space indentation")
+        errors.append(
+            f"{path}: JSON is not deterministic; sort keys and use two-space indentation"
+        )
     return errors
 
 

@@ -21,9 +21,9 @@ from attestplane.signing import (
 )
 
 
-def _make_entry_yaml(seed: bytes, *, key_id: str | None = None,
-                     vf: str = "2026-05-17T00:00:00Z",
-                     vu: str = "2027-05-17T00:00:00Z") -> tuple[str, str]:
+def _make_entry_yaml(
+    seed: bytes, *, key_id: str | None = None, vf: str = "2026-05-17T00:00:00Z", vu: str = "2027-05-17T00:00:00Z"
+) -> tuple[str, str]:
     """Return (key_id, single-entry YAML string)."""
     p = InMemoryKeyProvider(seed=seed)
     der = p.get_signing_material().public_key_der
@@ -55,6 +55,7 @@ def test_load_minimal_valid_yaml(tmp_path: Path) -> None:
 def test_lookup_returns_entry() -> None:
     """Direct test of TrustRoots.lookup()."""
     from attestplane.signing.trust_roots import TrustRootEntry, TrustRoots
+
     entry = TrustRootEntry(
         key_id="ab" * 16,
         public_key_der=b"\x00" * 44,
@@ -143,11 +144,7 @@ def test_load_rejects_keys_not_list(tmp_path: Path) -> None:
 
 def test_load_rejects_entry_missing_field(tmp_path: Path) -> None:
     p = tmp_path / "x.yaml"
-    p.write_text(
-        "version: 1\n"
-        "keys:\n"
-        '  - key_id: "00112233445566778899aabbccddeeff"\n'
-    )
+    p.write_text('version: 1\nkeys:\n  - key_id: "00112233445566778899aabbccddeeff"\n')
     with pytest.raises(TrustRootsError, match="missing required fields"):
         load_trust_roots(p)
 
@@ -211,6 +208,7 @@ def test_load_rejects_duplicate_key_id(tmp_path: Path) -> None:
     derived, text_one = _make_entry_yaml(b"\x00" * 32)
     # Build a YAML with TWO entries having the same key_id.
     import base64
+
     der = InMemoryKeyProvider(seed=b"\x00" * 32).get_signing_material().public_key_der
     b64 = base64.standard_b64encode(der).decode("ascii")
     yaml_text = f"""version: 1

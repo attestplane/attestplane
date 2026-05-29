@@ -128,10 +128,7 @@ def verify_replay_manifest(
             continue
         if payload.get("original_run_id") != manifest.original_run_id:
             continue
-        if (
-            manifest.snapshot_id_ref is not None
-            and payload.get("snapshot_id_ref") != manifest.snapshot_id_ref
-        ):
+        if manifest.snapshot_id_ref is not None and payload.get("snapshot_id_ref") != manifest.snapshot_id_ref:
             continue
         seq = ev.get("seq")
         if not isinstance(seq, int):
@@ -143,10 +140,7 @@ def verify_replay_manifest(
             ok=False,
             coverage="no_replay_event",
             matching_seq=None,
-            reason=(
-                f"no replay_event payload found with "
-                f"replay_run_id={manifest.replay_run_id!r}"
-            ),
+            reason=(f"no replay_event payload found with replay_run_id={manifest.replay_run_id!r}"),
         )
 
     # Use the latest matching candidate (largest seq) — convention: the

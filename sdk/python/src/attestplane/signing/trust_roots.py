@@ -50,12 +50,20 @@ from attestplane.signing.base import (
 )
 
 _MAX_FILE_SIZE_BYTES: Final[int] = 1 * 1024 * 1024  # 1 MB
-_REQUIRED_ENTRY_KEYS: Final[frozenset[str]] = frozenset({
-    "key_id", "public_key_der_b64", "valid_from", "valid_until",
-})
-_OPTIONAL_ENTRY_KEYS: Final[frozenset[str]] = frozenset({
-    "provider_id", "label",
-})
+_REQUIRED_ENTRY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "key_id",
+        "public_key_der_b64",
+        "valid_from",
+        "valid_until",
+    }
+)
+_OPTIONAL_ENTRY_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        "provider_id",
+        "label",
+    }
+)
 _REQUIRED_TOP_KEYS: Final[frozenset[str]] = frozenset({"version", "keys"})
 
 
@@ -100,29 +108,19 @@ def _parse_datetime(raw: object, field_name: str) -> datetime:
         try:
             dt = datetime.fromisoformat(normalized)
         except ValueError as exc:
-            raise TrustRootsError(
-                f"{field_name}: not valid ISO 8601: {raw!r} ({exc})"
-            ) from exc
+            raise TrustRootsError(f"{field_name}: not valid ISO 8601: {raw!r} ({exc})") from exc
     else:
-        raise TrustRootsError(
-            f"{field_name}: must be string or datetime, got {type(raw).__name__}"
-        )
+        raise TrustRootsError(f"{field_name}: must be string or datetime, got {type(raw).__name__}")
     if dt.tzinfo is None:
-        raise TrustRootsError(
-            f"{field_name}: must be UTC-aware (use 'Z' or '+00:00' suffix)"
-        )
+        raise TrustRootsError(f"{field_name}: must be UTC-aware (use 'Z' or '+00:00' suffix)")
     if dt.utcoffset() != UTC.utcoffset(None):
-        raise TrustRootsError(
-            f"{field_name}: must be UTC (got offset {dt.utcoffset()})"
-        )
+        raise TrustRootsError(f"{field_name}: must be UTC (got offset {dt.utcoffset()})")
     return dt
 
 
 def _validate_entry(idx: int, raw: object) -> TrustRootEntry:
     if not isinstance(raw, dict):
-        raise TrustRootsError(
-            f"keys[{idx}]: entry must be a mapping, got {type(raw).__name__}"
-        )
+        raise TrustRootsError(f"keys[{idx}]: entry must be a mapping, got {type(raw).__name__}")
     keys_present = set(raw.keys())
     if not isinstance(idx, int):
         # Defensive — should never happen
@@ -130,49 +128,33 @@ def _validate_entry(idx: int, raw: object) -> TrustRootEntry:
 
     missing = _REQUIRED_ENTRY_KEYS - keys_present
     if missing:
-        raise TrustRootsError(
-            f"keys[{idx}]: missing required fields {sorted(missing)}"
-        )
+        raise TrustRootsError(f"keys[{idx}]: missing required fields {sorted(missing)}")
     allowed = _REQUIRED_ENTRY_KEYS | _OPTIONAL_ENTRY_KEYS
     unexpected = keys_present - allowed
     if unexpected:
-        raise TrustRootsError(
-            f"keys[{idx}]: unexpected fields {sorted(unexpected)} "
-            f"(allowed: {sorted(allowed)})"
-        )
+        raise TrustRootsError(f"keys[{idx}]: unexpected fields {sorted(unexpected)} (allowed: {sorted(allowed)})")
 
     key_id_raw = raw["key_id"]
     if not isinstance(key_id_raw, str):
-        raise TrustRootsError(
-            f"keys[{idx}].key_id: must be string, got {type(key_id_raw).__name__}"
-        )
+        raise TrustRootsError(f"keys[{idx}].key_id: must be string, got {type(key_id_raw).__name__}")
     key_id = key_id_raw.lower()
     if len(key_id) != 32 or any(c not in "0123456789abcdef" for c in key_id):
-        raise TrustRootsError(
-            f"keys[{idx}].key_id: must be 32 lowercase hex chars, got {key_id_raw!r}"
-        )
+        raise TrustRootsError(f"keys[{idx}].key_id: must be 32 lowercase hex chars, got {key_id_raw!r}")
 
     der_b64_raw = raw["public_key_der_b64"]
     if not isinstance(der_b64_raw, str):
-        raise TrustRootsError(
-            f"keys[{idx}].public_key_der_b64: must be string"
-        )
+        raise TrustRootsError(f"keys[{idx}].public_key_der_b64: must be string")
     try:
         public_key_der = base64.b64decode(der_b64_raw, validate=True)
     except Exception as exc:
-        raise TrustRootsError(
-            f"keys[{idx}].public_key_der_b64: invalid base64: {exc}"
-        ) from exc
+        raise TrustRootsError(f"keys[{idx}].public_key_der_b64: invalid base64: {exc}") from exc
     if not public_key_der:
-        raise TrustRootsError(
-            f"keys[{idx}].public_key_der_b64: decoded to empty bytes"
-        )
+        raise TrustRootsError(f"keys[{idx}].public_key_der_b64: decoded to empty bytes")
 
     derived = derive_key_id(public_key_der)
     if derived != key_id:
         raise TrustRootsError(
-            f"keys[{idx}].key_id ({key_id}) does not match derive_key_id() "
-            f"of public_key_der_b64 ({derived})"
+            f"keys[{idx}].key_id ({key_id}) does not match derive_key_id() of public_key_der_b64 ({derived})"
         )
 
     valid_from = _parse_datetime(raw["valid_from"], f"keys[{idx}].valid_from")
@@ -185,14 +167,10 @@ def _validate_entry(idx: int, raw: object) -> TrustRootEntry:
 
     provider_id = raw.get("provider_id")
     if provider_id is not None and not isinstance(provider_id, str):
-        raise TrustRootsError(
-            f"keys[{idx}].provider_id: must be string or absent"
-        )
+        raise TrustRootsError(f"keys[{idx}].provider_id: must be string or absent")
     label = raw.get("label")
     if label is not None and not isinstance(label, str):
-        raise TrustRootsError(
-            f"keys[{idx}].label: must be string or absent"
-        )
+        raise TrustRootsError(f"keys[{idx}].label: must be string or absent")
 
     return TrustRootEntry(
         key_id=key_id,
@@ -219,22 +197,16 @@ def load_trust_roots(path: str | os.PathLike[str]) -> TrustRoots:
     try:
         size = p.stat().st_size
     except FileNotFoundError as exc:
-        raise TrustRootsError(
-            f"TrustRoots file not found: {p}"
-        ) from exc
+        raise TrustRootsError(f"TrustRoots file not found: {p}") from exc
     except OSError as exc:
         raise TrustRootsError(f"cannot stat TrustRoots file {p}: {exc}") from exc
     if size > _MAX_FILE_SIZE_BYTES:
-        raise TrustRootsError(
-            f"TrustRoots file {p} exceeds 1 MB cap (got {size} bytes)"
-        )
+        raise TrustRootsError(f"TrustRoots file {p} exceeds 1 MB cap (got {size} bytes)")
 
     try:
         text = p.read_text(encoding="utf-8")
     except OSError as exc:
-        raise TrustRootsError(
-            f"cannot read TrustRoots file {p}: {exc}"
-        ) from exc
+        raise TrustRootsError(f"cannot read TrustRoots file {p}: {exc}") from exc
 
     try:
         import yaml
@@ -248,51 +220,34 @@ def load_trust_roots(path: str | os.PathLike[str]) -> TrustRoots:
     try:
         raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
-        raise TrustRootsError(
-            f"TrustRoots {p}: YAML parse failed: {exc}"
-        ) from exc
+        raise TrustRootsError(f"TrustRoots {p}: YAML parse failed: {exc}") from exc
 
     if not isinstance(raw, dict):
-        raise TrustRootsError(
-            f"TrustRoots {p}: top-level must be a mapping, got "
-            f"{type(raw).__name__}"
-        )
+        raise TrustRootsError(f"TrustRoots {p}: top-level must be a mapping, got {type(raw).__name__}")
 
     keys_present = set(raw.keys())
     missing = _REQUIRED_TOP_KEYS - keys_present
     if missing:
-        raise TrustRootsError(
-            f"TrustRoots {p}: missing required top-level fields {sorted(missing)}"
-        )
+        raise TrustRootsError(f"TrustRoots {p}: missing required top-level fields {sorted(missing)}")
     unexpected = keys_present - _REQUIRED_TOP_KEYS
     if unexpected:
-        raise TrustRootsError(
-            f"TrustRoots {p}: unexpected top-level fields {sorted(unexpected)}"
-        )
+        raise TrustRootsError(f"TrustRoots {p}: unexpected top-level fields {sorted(unexpected)}")
 
     version = raw["version"]
     if version != 1:
-        raise TrustRootsError(
-            f"TrustRoots {p}: version must be 1 (v1 schema), got {version!r}"
-        )
+        raise TrustRootsError(f"TrustRoots {p}: version must be 1 (v1 schema), got {version!r}")
 
     keys_raw = raw["keys"]
     if not isinstance(keys_raw, list):
-        raise TrustRootsError(
-            f"TrustRoots {p}: 'keys' must be a list, got {type(keys_raw).__name__}"
-        )
+        raise TrustRootsError(f"TrustRoots {p}: 'keys' must be a list, got {type(keys_raw).__name__}")
     if not keys_raw:
-        raise TrustRootsError(
-            f"TrustRoots {p}: 'keys' must contain at least one entry"
-        )
+        raise TrustRootsError(f"TrustRoots {p}: 'keys' must contain at least one entry")
 
     entries = tuple(_validate_entry(i, e) for i, e in enumerate(keys_raw))
     seen_ids: set[str] = set()
     for entry in entries:
         if entry.key_id in seen_ids:
-            raise TrustRootsError(
-                f"TrustRoots {p}: duplicate key_id {entry.key_id!r}"
-            )
+            raise TrustRootsError(f"TrustRoots {p}: duplicate key_id {entry.key_id!r}")
         seen_ids.add(entry.key_id)
 
     return TrustRoots(version=version, entries=entries)

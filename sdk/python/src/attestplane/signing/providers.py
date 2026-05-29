@@ -34,8 +34,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.signing.providers requires the 'signing' extras. "
-        "Install with: pip install attestplane[signing]"
+        "attestplane.signing.providers requires the 'signing' extras. Install with: pip install attestplane[signing]"
     ) from exc
 
 from attestplane.signing.base import (
@@ -76,8 +75,7 @@ class InMemoryKeyProvider(KeyProvider):
         if seed is not None:
             if len(seed) != _ED25519_SEED_LEN:
                 raise KeyProviderError(
-                    f"InMemoryKeyProvider seed must be exactly {_ED25519_SEED_LEN} "
-                    f"bytes, got {len(seed)}"
+                    f"InMemoryKeyProvider seed must be exactly {_ED25519_SEED_LEN} bytes, got {len(seed)}"
                 )
             self._private_key = Ed25519PrivateKey.from_private_bytes(seed)
         else:
@@ -119,28 +117,20 @@ class FileKeyProvider(KeyProvider):
         try:
             pem_bytes = self._path.read_bytes()
         except FileNotFoundError as exc:
-            raise KeyProviderError(
-                f"FileKeyProvider: key file not found at {self._path}"
-            ) from exc
+            raise KeyProviderError(f"FileKeyProvider: key file not found at {self._path}") from exc
         except OSError as exc:
-            raise KeyProviderError(
-                f"FileKeyProvider: cannot read {self._path}: {exc}"
-            ) from exc
+            raise KeyProviderError(f"FileKeyProvider: cannot read {self._path}: {exc}") from exc
 
         try:
             key = serialization.load_pem_private_key(
-                pem_bytes, password=self._passphrase,
+                pem_bytes,
+                password=self._passphrase,
             )
         except Exception as exc:
-            raise KeyProviderError(
-                f"FileKeyProvider: failed to load PEM key from {self._path}: {exc}"
-            ) from exc
+            raise KeyProviderError(f"FileKeyProvider: failed to load PEM key from {self._path}: {exc}") from exc
 
         if not isinstance(key, Ed25519PrivateKey):
-            raise KeyProviderError(
-                f"FileKeyProvider: key at {self._path} is not Ed25519 "
-                f"(got {type(key).__name__})"
-            )
+            raise KeyProviderError(f"FileKeyProvider: key at {self._path} is not Ed25519 (got {type(key).__name__})")
         return SigningMaterial(private_key=key)
 
 
@@ -174,26 +164,19 @@ class EnvKeyProvider(KeyProvider):
     def get_signing_material(self) -> SigningMaterial:
         pem_text = os.environ.get(self._env_var)
         if pem_text is None:
-            raise KeyProviderError(
-                f"EnvKeyProvider: env var {self._env_var!r} is not set"
-            )
+            raise KeyProviderError(f"EnvKeyProvider: env var {self._env_var!r} is not set")
         if not pem_text.strip():
-            raise KeyProviderError(
-                f"EnvKeyProvider: env var {self._env_var!r} is empty"
-            )
+            raise KeyProviderError(f"EnvKeyProvider: env var {self._env_var!r} is empty")
         try:
             key = serialization.load_pem_private_key(
-                pem_text.encode("utf-8"), password=self._passphrase,
+                pem_text.encode("utf-8"),
+                password=self._passphrase,
             )
         except Exception as exc:
-            raise KeyProviderError(
-                f"EnvKeyProvider: failed to load PEM key from "
-                f"env {self._env_var!r}: {exc}"
-            ) from exc
+            raise KeyProviderError(f"EnvKeyProvider: failed to load PEM key from env {self._env_var!r}: {exc}") from exc
         if not isinstance(key, Ed25519PrivateKey):
             raise KeyProviderError(
-                f"EnvKeyProvider: key from {self._env_var!r} is not Ed25519 "
-                f"(got {type(key).__name__})"
+                f"EnvKeyProvider: key from {self._env_var!r} is not Ed25519 (got {type(key).__name__})"
             )
         return SigningMaterial(private_key=key)
 
@@ -224,9 +207,7 @@ class MultiSignerProvider:
             raise ValueError("MultiSignerProvider requires at least one provider")
         seen_ids = {p.provider_id for p in providers}
         if len(seen_ids) != len(providers):
-            raise ValueError(
-                "MultiSignerProvider providers must have distinct provider_id values"
-            )
+            raise ValueError("MultiSignerProvider providers must have distinct provider_id values")
         for p in providers:
             if p.schema_version != SIGNATURE_SCHEMA_VERSION:
                 raise ValueError(

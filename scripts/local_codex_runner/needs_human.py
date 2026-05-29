@@ -69,7 +69,9 @@ class NeedsHumanRecovery:
 
 def recover_needs_human(config: RunnerConfig, gh: GitHubCLI) -> dict[str, object]:
     """Classify and recover bounded needs-human issues for one poll cycle."""
-    return recover_needs_human_for_labels(config, gh, include_labels=None, exclude_labels=None)
+    return recover_needs_human_for_labels(
+        config, gh, include_labels=None, exclude_labels=None
+    )
 
 
 def recover_needs_human_for_labels(
@@ -89,14 +91,24 @@ def recover_needs_human_for_labels(
         issues = gh.list_issues(
             config.repo or "",
             config.needs_human_label,
-            max(config.needs_human_scan_limit, config.max_needs_human_recoveries_per_run),
+            max(
+                config.needs_human_scan_limit, config.max_needs_human_recoveries_per_run
+            ),
         )
     except RunnerCommandError as exc:
-        return {"enabled": True, "results": [], "external_errors": [{"stage": "list_needs_human", "error": str(exc)}]}
+        return {
+            "enabled": True,
+            "results": [],
+            "external_errors": [{"stage": "list_needs_human", "error": str(exc)}],
+        }
     try:
         prs = gh.list_pull_requests(config.repo or "", config.base_branch, 100)
     except RunnerCommandError as exc:
-        return {"enabled": True, "results": [], "external_errors": [{"stage": "list_pull_requests", "error": str(exc)}]}
+        return {
+            "enabled": True,
+            "results": [],
+            "external_errors": [{"stage": "list_pull_requests", "error": str(exc)}],
+        }
     results: list[NeedsHumanRecovery] = []
     recoverable_reasons = set(config.needs_human_recoverable_reasons)
     policy_block_labels = set(config.needs_human_policy_block_labels)
@@ -121,7 +133,13 @@ def recover_needs_human_for_labels(
             continue
         if config.approved_label not in labels:
             results.append(
-                NeedsHumanRecovery(issue.number, "kept", POLICY_REASON, 0, detail="missing approved label")
+                NeedsHumanRecovery(
+                    issue.number,
+                    "kept",
+                    POLICY_REASON,
+                    0,
+                    detail="missing approved label",
+                )
             )
             continue
 
@@ -170,7 +188,10 @@ def recover_needs_human_for_labels(
         attempt += 1
         if pr is None:
             result = requeue_issue(config, gh, issue, signal, attempt)
-            if recovery_attempt_counts_toward_cap(signal, result) and not config.dry_run:
+            if (
+                recovery_attempt_counts_toward_cap(signal, result)
+                and not config.dry_run
+            ):
                 state.retry_counts[key] = attempt
                 save_state(config.state_file(), state)
             results.append(result)
@@ -182,10 +203,16 @@ def recover_needs_human_for_labels(
             save_state(config.state_file(), state)
         results.append(result)
         recoveries += 1
-    return {"enabled": True, "results": [item.to_dict() for item in results], "external_errors": external_errors}
+    return {
+        "enabled": True,
+        "results": [item.to_dict() for item in results],
+        "external_errors": external_errors,
+    }
 
 
-def has_existing_clean_recovery_commits(config: RunnerConfig, branch: str | None) -> bool:
+def has_existing_clean_recovery_commits(
+    config: RunnerConfig, branch: str | None
+) -> bool:
     """Return whether the lane already has clean local commits to validate/push."""
     if not branch:
         return False
@@ -198,7 +225,9 @@ def has_existing_clean_recovery_commits(config: RunnerConfig, branch: str | None
         return False
 
 
-def recovery_attempt_counts_toward_cap(signal: StopSignal, result: NeedsHumanRecovery) -> bool:
+def recovery_attempt_counts_toward_cap(
+    signal: StopSignal, result: NeedsHumanRecovery
+) -> bool:
     """Return whether a recovery result should consume the stop-signal retry cap."""
     if result.reason == EXTERNAL_MODEL_API_BLOCKER_REASON:
         return False
@@ -218,7 +247,9 @@ def issue_in_lane(
     return not (exclude_labels and labels.intersection(exclude_labels))
 
 
-def find_issue_pr(issue_number: int, prs: list[dict[str, object]]) -> dict[str, object] | None:
+def find_issue_pr(
+    issue_number: int, prs: list[dict[str, object]]
+) -> dict[str, object] | None:
     needle = f"#{issue_number}"
     for pr in prs:
         title = str(pr.get("title", ""))
@@ -249,29 +280,54 @@ def classify_issue_needs_human(
     if pr is not None:
         owner_detail = validate_recovery_pr(config, issue.number, pr)
         if owner_detail is not None:
-            return StopSignal(POLICY_REASON, stable_signature(owner_detail), owner_detail)
-        checks = gh.pr_checks(config.repo or "", str(pr_number(pr) or pr_branch(pr) or ""))
+            return StopSignal(
+                POLICY_REASON, stable_signature(owner_detail), owner_detail
+            )
+        checks = gh.pr_checks(
+            config.repo or "", str(pr_number(pr) or pr_branch(pr) or "")
+        )
         failed = [check for check in checks if check.bucket in {"fail", "cancel"}]
         status = classify_checks(checks)
         if status == "PASS":
-            return StopSignal("ci_passed", stable_signature("ci_passed"), "checks already pass")
+            return StopSignal(
+                "ci_passed", stable_signature("ci_passed"), "checks already pass"
+            )
         branch = pr_branch(pr)
         worktree_detail = branch_checked_out_elsewhere(config, branch)
         if worktree_detail is not None:
-            return StopSignal("local_workspace_blocked", stable_signature(worktree_detail), worktree_detail)
+            return StopSignal(
+                "local_workspace_blocked",
+                stable_signature(worktree_detail),
+                worktree_detail,
+            )
         if status == "FAIL":
-            names = ",".join(sorted(check.name for check in failed if check.name)) or "failed-check"
+            names = (
+                ",".join(sorted(check.name for check in failed if check.name))
+                or "failed-check"
+            )
             return StopSignal("ci_failed", stable_signature(names), names)
         if status == "PENDING":
-            return StopSignal("ci_pending", stable_signature("ci_pending"), "checks still pending")
-        return StopSignal(UNKNOWN_REASON, stable_signature("ci_unknown"), "checks are not classifiable")
+            return StopSignal(
+                "ci_pending", stable_signature("ci_pending"), "checks still pending"
+            )
+        return StopSignal(
+            UNKNOWN_REASON,
+            stable_signature("ci_unknown"),
+            "checks are not classifiable",
+        )
 
     if config.pr_opened_label in issue.labels:
-        return StopSignal("missing_pr", stable_signature("missing_pr"), "issue has PR label but no matching PR")
+        return StopSignal(
+            "missing_pr",
+            stable_signature("missing_pr"),
+            "issue has PR label but no matching PR",
+        )
     return classify_local_evidence(config, issue.number)
 
 
-def validate_recovery_pr(config: RunnerConfig, issue_number: int, pr: dict[str, object]) -> str | None:
+def validate_recovery_pr(
+    config: RunnerConfig, issue_number: int, pr: dict[str, object]
+) -> str | None:
     branch = pr_branch(pr)
     if not branch or not branch.startswith(f"codex/issue-{issue_number}-"):
         return f"branch {branch or 'n/a'} is not runner-owned for issue {issue_number}"
@@ -304,7 +360,9 @@ def pr_label_names(pr: dict[str, object]) -> list[str]:
     return [str(label.get("name", label)) for label in labels if label]
 
 
-def branch_checked_out_elsewhere(config: RunnerConfig, branch: str | None) -> str | None:
+def branch_checked_out_elsewhere(
+    config: RunnerConfig, branch: str | None
+) -> str | None:
     if config.dry_run:
         return None
     if not branch:
@@ -337,8 +395,13 @@ def classify_local_evidence(config: RunnerConfig, issue_number: int) -> StopSign
     text = read_evidence_text(evidence_dir)
     lowered = text.lower()
     if not lowered.strip():
-        return StopSignal(UNKNOWN_REASON, stable_signature("no-evidence"), "no local failure evidence")
-    if any(token in lowered for token in ("rate limit", "usage limit", "quota", "429", "try again later")):
+        return StopSignal(
+            UNKNOWN_REASON, stable_signature("no-evidence"), "no local failure evidence"
+        )
+    if any(
+        token in lowered
+        for token in ("rate limit", "usage limit", "quota", "429", "try again later")
+    ):
         return StopSignal(
             "rate_limit",
             stable_signature(first_matching_line(text, ("limit", "quota", "429"))),
@@ -358,16 +421,24 @@ def classify_local_evidence(config: RunnerConfig, issue_number: int) -> StopSign
     ):
         return StopSignal(
             "network_timeout",
-            stable_signature(first_matching_line(text, ("timeout", "connect", "network", "443"))),
+            stable_signature(
+                first_matching_line(text, ("timeout", "connect", "network", "443"))
+            ),
             "network timeout evidence",
         )
     if "policy" in lowered or "forbidden" in lowered or "refusing to push" in lowered:
         return StopSignal(
             POLICY_REASON,
-            stable_signature(first_matching_line(text, ("policy", "forbidden", "refusing"))),
+            stable_signature(
+                first_matching_line(text, ("policy", "forbidden", "refusing"))
+            ),
             "policy or redline evidence",
         )
-    return StopSignal(UNKNOWN_REASON, stable_signature(first_error_line(text)), "failure evidence is not recoverable")
+    return StopSignal(
+        UNKNOWN_REASON,
+        stable_signature(first_error_line(text)),
+        "failure evidence is not recoverable",
+    )
 
 
 def read_evidence_text(evidence_dir: Path) -> str:
@@ -406,7 +477,9 @@ def codex_driver_external_blocker(exc: RunnerCommandError) -> StopSignal | None:
     if any(pattern in lowered for pattern in EXTERNAL_MODEL_API_ERROR_PATTERNS):
         return StopSignal(
             EXTERNAL_MODEL_API_BLOCKER_REASON,
-            stable_signature(first_matching_line(text, EXTERNAL_MODEL_API_ERROR_PATTERNS)),
+            stable_signature(
+                first_matching_line(text, EXTERNAL_MODEL_API_ERROR_PATTERNS)
+            ),
             "Codex model/API backend blocked recovery; retry later without consuming CI attempt cap",
         )
     return None
@@ -428,7 +501,9 @@ def requeue_issue(
     else:
         action = "requeued"
         gh.ensure_labels(config.repo or "", [config.needs_human_recovered_label])
-        gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label])
+        gh.add_labels(
+            config.repo or "", issue.number, [config.needs_human_recovered_label]
+        )
         gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
         gh.comment_issue(
             config.repo or "",
@@ -461,8 +536,15 @@ def recover_passed_ci_pr(
         action = "would_mark_ci_green"
     else:
         action = "marked_ci_green"
-        gh.ensure_labels(config.repo or "", [config.needs_human_recovered_label, config.ci_green_label])
-        gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label, config.ci_green_label])
+        gh.ensure_labels(
+            config.repo or "",
+            [config.needs_human_recovered_label, config.ci_green_label],
+        )
+        gh.add_labels(
+            config.repo or "",
+            issue.number,
+            [config.needs_human_recovered_label, config.ci_green_label],
+        )
         if number is not None:
             gh.add_labels(config.repo or "", number, [config.ci_green_label])
         gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])
@@ -559,7 +641,9 @@ def recover_ci_pr(
                 ),
             )
             git.push_branch(branch)
-            return complete_ci_recovery(config, gh, issue, signal, attempt, number, branch, evidence_dir)
+            return complete_ci_recovery(
+                config, gh, issue, signal, attempt, number, branch, evidence_dir
+            )
     except (GitSafetyError, RunnerCommandError) as exc:
         return NeedsHumanRecovery(
             issue.number,
@@ -600,7 +684,9 @@ def recover_ci_pr(
     )
     recovery_log = evidence_dir / f"codex_needs_human_ci_recovery_round_{attempt}.log"
     try:
-        codex.run_codex(fix_prompt, workdir, recovery_log, timeout=config.codex_timeout_seconds)
+        codex.run_codex(
+            fix_prompt, workdir, recovery_log, timeout=config.codex_timeout_seconds
+        )
     except RunnerCommandError as exc:
         external_signal = codex_driver_external_blocker(exc)
         if external_signal is not None:
@@ -670,7 +756,9 @@ def recover_ci_pr(
                 gh,
                 issue,
                 fresh_pr,
-                StopSignal("ci_passed", stable_signature("ci_passed"), "checks already pass"),
+                StopSignal(
+                    "ci_passed", stable_signature("ci_passed"), "checks already pass"
+                ),
             )
         return NeedsHumanRecovery(
             issue.number,
@@ -691,7 +779,9 @@ def recover_ci_pr(
         ),
     )
     git.push_branch(branch or "")
-    return complete_ci_recovery(config, gh, issue, signal, attempt, number, branch, evidence_dir)
+    return complete_ci_recovery(
+        config, gh, issue, signal, attempt, number, branch, evidence_dir
+    )
 
 
 def complete_ci_recovery(
@@ -712,8 +802,15 @@ def complete_ci_recovery(
         poll_seconds=config.ci_poll_seconds,
     )
     if ci.status == "PASS":
-        gh.ensure_labels(config.repo or "", [config.needs_human_recovered_label, config.ci_green_label])
-        gh.add_labels(config.repo or "", issue.number, [config.needs_human_recovered_label, config.ci_green_label])
+        gh.ensure_labels(
+            config.repo or "",
+            [config.needs_human_recovered_label, config.ci_green_label],
+        )
+        gh.add_labels(
+            config.repo or "",
+            issue.number,
+            [config.needs_human_recovered_label, config.ci_green_label],
+        )
         if number is not None:
             gh.add_labels(config.repo or "", number, [config.ci_green_label])
         gh.remove_labels(config.repo or "", issue.number, [config.needs_human_label])

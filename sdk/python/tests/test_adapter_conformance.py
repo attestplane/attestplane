@@ -16,9 +16,7 @@ from attestplane.adapter_conformance import (
 from attestplane.adapters.langfuse import LangFuseAdapter
 from attestplane.adapters.langsmith import LangSmithAdapter
 
-_FIXTURES_DIR = (
-    Path(__file__).resolve().parent / "fixtures" / "adapter_conformance"
-)
+_FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "adapter_conformance"
 
 
 def test_fixtures_directory_exists() -> None:
@@ -28,12 +26,8 @@ def test_fixtures_directory_exists() -> None:
 def test_langsmith_v1_fixture_passes_replay() -> None:
     fixture = _FIXTURES_DIR / "langsmith_v1.json"
     adapter = LangSmithAdapter()
-    report = replay_fixture(
-        fixture, adapter, pre_translate=LangSmithAdapter.from_dict
-    )
-    assert report.ok, (
-        f"LangSmith fixture FAILED: {[r for r in report.results if not r.ok]}"
-    )
+    report = replay_fixture(fixture, adapter, pre_translate=LangSmithAdapter.from_dict)
+    assert report.ok, f"LangSmith fixture FAILED: {[r for r in report.results if not r.ok]}"
     assert report.runtime_kind == "langsmith"
     assert report.fixture_version == 1
     assert report.cases_total == 2
@@ -44,12 +38,8 @@ def test_langsmith_v1_fixture_passes_replay() -> None:
 def test_langfuse_v1_fixture_passes_replay() -> None:
     fixture = _FIXTURES_DIR / "langfuse_v1.json"
     adapter = LangFuseAdapter()
-    report = replay_fixture(
-        fixture, adapter, pre_translate=LangFuseAdapter.from_dict
-    )
-    assert report.ok, (
-        f"LangFuse fixture FAILED: {[r for r in report.results if not r.ok]}"
-    )
+    report = replay_fixture(fixture, adapter, pre_translate=LangFuseAdapter.from_dict)
+    assert report.ok, f"LangFuse fixture FAILED: {[r for r in report.results if not r.ok]}"
     assert report.runtime_kind == "langfuse"
     assert report.cases_total == 2
 
@@ -88,7 +78,8 @@ def test_replayer_reports_byte_mismatch() -> None:
     bad_path.write_text(json.dumps(bad_fixture))
     try:
         report = replay_fixture(
-            bad_path, LangSmithAdapter(),
+            bad_path,
+            LangSmithAdapter(),
             pre_translate=LangSmithAdapter.from_dict,
         )
         assert not report.ok
@@ -110,9 +101,13 @@ def test_replayer_reports_adapter_raise() -> None:
                 "name": "malformed_input",
                 "runtime_event_input": {},  # missing required fields → from_dict raises
                 "expected_event_draft": {
-                    "event_type": "tool_call_event", "actor": "x",
-                    "payload": {}, "subject_ref": None, "session_id": None,
-                    "reference_db_ref": None, "matched_input_ref": None,
+                    "event_type": "tool_call_event",
+                    "actor": "x",
+                    "payload": {},
+                    "subject_ref": None,
+                    "session_id": None,
+                    "reference_db_ref": None,
+                    "matched_input_ref": None,
                     "human_verifier": None,
                 },
             },
@@ -122,7 +117,8 @@ def test_replayer_reports_adapter_raise() -> None:
     path.write_text(json.dumps(fixture))
     try:
         report = replay_fixture(
-            path, LangSmithAdapter(),
+            path,
+            LangSmithAdapter(),
             pre_translate=LangSmithAdapter.from_dict,
         )
         assert not report.ok
@@ -173,10 +169,6 @@ def test_replayer_rejects_duplicate_case_names() -> None:
 def test_replayer_is_pure() -> None:
     """Same fixture + adapter → same report shape."""
     fixture = _FIXTURES_DIR / "langsmith_v1.json"
-    r1 = replay_fixture(
-        fixture, LangSmithAdapter(), pre_translate=LangSmithAdapter.from_dict
-    )
-    r2 = replay_fixture(
-        fixture, LangSmithAdapter(), pre_translate=LangSmithAdapter.from_dict
-    )
+    r1 = replay_fixture(fixture, LangSmithAdapter(), pre_translate=LangSmithAdapter.from_dict)
+    r2 = replay_fixture(fixture, LangSmithAdapter(), pre_translate=LangSmithAdapter.from_dict)
     assert r1 == r2
