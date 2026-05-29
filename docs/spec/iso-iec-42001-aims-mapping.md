@@ -29,6 +29,15 @@ This crosswalk lists the cited primitives; it does not perform a management
 system audit and does not interpret clause language for any specific
 organisation.
 
+## Source metadata
+
+- **Version**: `alpha-2026-05`
+- **Source planning issue**: [#61](https://github.com/attestplane/attestplane/issues/61)
+- **Traceability matrix**: [`docs/spec/compliance-traceability-matrix.md`](compliance-traceability-matrix.md)
+
+The traceability matrix records the claim -> argument -> evidence chain for
+this mapping and the explicit gap rows tied to issue #61.
+
 ## Explicit non-claims
 
 This crosswalk does not claim:
