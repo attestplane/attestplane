@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 VERIFY_REASON_TAXONOMY_VERSION: Final[int] = 1
 VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
@@ -34,15 +34,9 @@ VERIFY_REASON_SIGNATURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.signatu
 VERIFY_REASON_SIGNATURE_MISSING: Final[VerifyReasonCodeV1] = "att.verify.signature_missing"
 VERIFY_REASON_SCHEMA_UNKNOWN: Final[VerifyReasonCodeV1] = "att.verify.schema_unknown"
 VERIFY_REASON_SCHEMA_INVALID: Final[VerifyReasonCodeV1] = "att.verify.schema_invalid"
-VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_missing"
-)
-VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = (
-    "att.verify.schema_version_unsupported"
-)
-VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
-    "att.verify.required_field_missing"
-)
+VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = "att.verify.schema_version_missing"
+VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verify.schema_version_unsupported"
+VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = "att.verify.required_field_missing"
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
 
@@ -84,9 +78,7 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
-_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"^att\.verify\.[a-z][a-z0-9_]*$"
-)
+_VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^att\.verify\.[a-z][a-z0-9_]*$")
 
 
 def is_known_verify_reason_code(value: str) -> bool:
@@ -102,6 +94,21 @@ def verify_reason_code_matches_format(value: str) -> bool:
 def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     """Return the stable human-readable explanation for a verify reason code."""
     return VERIFY_REASON_TAXONOMY[value]
+
+
+def resolve_verify_reason_taxonomy_version(result: Any | None = None) -> int:
+    """Return the stable public taxonomy version used by verify surfaces.
+
+    Missing, absent, or otherwise non-numeric values are normalized to the
+    documented v1 representation so callers do not need to special-case older
+    result objects or partial data structures.
+    """
+    if isinstance(result, int) and not isinstance(result, bool):
+        return result
+    taxonomy_version = getattr(result, "taxonomy_version", None)
+    if isinstance(taxonomy_version, int) and not isinstance(taxonomy_version, bool):
+        return taxonomy_version
+    return VERIFY_REASON_TAXONOMY_VERSION
 
 
 __all__ = [
@@ -120,6 +127,7 @@ __all__ = [
     "VERIFY_REASON_SIGNATURE_INVALID",
     "VERIFY_REASON_SIGNATURE_MISSING",
     "VERIFY_REASON_STRUCTURE_INVALID",
+    "resolve_verify_reason_taxonomy_version",
     "VerifyReasonCodeV1",
     "is_known_verify_reason_code",
     "verify_reason_code_explanation",
