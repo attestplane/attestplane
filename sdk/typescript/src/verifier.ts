@@ -55,7 +55,6 @@ import {
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
-  VERIFY_REASON_TAXONOMY_VERSION,
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
 
@@ -80,7 +79,11 @@ export interface BundleVerificationResult {
   readonly agreement: boolean;
   readonly event_count: number;
   readonly bundle_version: number;
-  readonly taxonomy_version: typeof VERIFY_REASON_TAXONOMY_VERSION;
+  /**
+   * Bundle-declared verifier taxonomy version, or `null` for legacy bundles
+   * that do not carry `chain_metadata.evidence_taxonomy_version`.
+   */
+  readonly taxonomy_version: number | null;
   readonly chain_id: string;
   readonly head_hash_hex: string;
   readonly metadata_ok: boolean;
@@ -245,6 +248,13 @@ function unknownRequiredFieldReason(
     .sort();
   if (criticalFields.length === 0) return null;
   return `${sectionName}.${criticalFields[0]} is an unknown required field`;
+}
+
+function resolveTaxonomyVersion(
+  bundle: { chain_metadata?: { evidence_taxonomy_version?: unknown } } | null | undefined,
+): number | null {
+  const version = bundle?.chain_metadata?.evidence_taxonomy_version;
+  return typeof version === 'number' ? version : null;
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -562,10 +572,7 @@ function verifyMetadataClosure(
       reason: 'chain_metadata.genesis_hash_hex does not match substrate genesis hash',
     };
   }
-  if (
-    metadata.evidence_taxonomy_version !== undefined &&
-    metadata.evidence_taxonomy_version !== 1
-  ) {
+  if (metadata.evidence_taxonomy_version !== undefined && metadata.evidence_taxonomy_version !== 1) {
     return { ok: false, reason: 'chain_metadata.evidence_taxonomy_version must be 1 when present' };
   }
   const head = headOf(events);
@@ -688,6 +695,7 @@ export function verifyProofBundle(
     bundle.retention_proofs,
     new Set(events.map((event) => bytesToHex(event.event_hash))),
   );
+  const taxonomyVersion = resolveTaxonomyVersion(bundle);
   let errorCode: VerifyErrorCode = VERIFY_OK;
   if (!chainResult.ok || !agreement) {
     errorCode = VERIFY_CHAIN_RECOMPUTE_FAILED;
@@ -728,7 +736,7 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
-    taxonomy_version: VERIFY_REASON_TAXONOMY_VERSION,
+    taxonomy_version: taxonomyVersion,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,

@@ -60,7 +60,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] >= 0
-    assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
+    assert payload["taxonomy_version"] in {VERIFY_REASON_TAXONOMY_VERSION, None}
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
@@ -99,6 +99,10 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["schema_version"]["const"] == 1
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
+    assert schema["properties"]["taxonomy_version"]["anyOf"] == [
+        {"type": "integer", "const": 1},
+        {"type": "null"},
+    ]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
 
@@ -134,4 +138,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )

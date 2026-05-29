@@ -65,7 +65,7 @@ export interface ProofBundle {
     readonly head_hash_hex: string;
     readonly head_seq: number;
     readonly producer_runtime: string;
-    readonly evidence_taxonomy_version: 1;
+    readonly evidence_taxonomy_version?: 1;
     readonly anchor_ref?: string;
   };
   readonly events: readonly SerializedChainedEvent[];

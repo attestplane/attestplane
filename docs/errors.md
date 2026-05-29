@@ -64,19 +64,20 @@ by `verify` paths. Issue #236 threads that same taxonomy through both
   results, and `secondary_reasons` is an ordered list of additional failed
   checks. Successful verifier results use `primary_reason: null` and
   `secondary_reasons: []`.
-- CLI JSON surfaces the same taxonomy with `reason_code` and
+- CLI JSON surfaces the same taxonomy with `reason_code` and the resolved
   `taxonomy_version`, while `--explain` renders the same code set in human
   form and adds a top-level `explanation[]` array with
   `{primary_reason, pointer, message}` entries.
 
-These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
-`taxonomy_version = 1` and is additive-only: adding a new code is allowed with
-documentation and tests, but removing, renaming, or reusing an existing code
-is a breaking change and must be called out in `CHANGELOG.md`.
+These codes are namespaced under `att.verify.*`. The taxonomy is pinned by the
+resolved `taxonomy_version` value and is additive-only: adding a new code is
+allowed with documentation and tests, but removing, renaming, or reusing an
+existing code is a breaking change and must be called out in `CHANGELOG.md`.
 
 The v1.7.x release-note delta names the same stability knob
-`reason_code_version`; in the canonical docs, the stable version is surfaced as
-`verify_reason_code_schema_version: 1` / `taxonomy_version = 1`.
+`reason_code_version`; in the canonical docs, the stable version is surfaced
+as `verify_reason_code_schema_version: 1` / `taxonomy_version = 1` for bundles
+that declare the taxonomy version, and `null` for legacy bundles that do not.
 
 | Code | Meaning |
 |---|---|

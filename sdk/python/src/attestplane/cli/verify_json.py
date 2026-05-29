@@ -14,7 +14,12 @@ from typing import Any
 from attestplane.canonical import CanonicalizationError
 from attestplane.hashchain import hash_event
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
-from attestplane.verifier import BundleSchemaError, classify_bundle_schema_error, verify_proof_bundle
+from attestplane.verifier import (
+    BundleSchemaError,
+    _resolve_taxonomy_version,
+    classify_bundle_schema_error,
+    verify_proof_bundle,
+)
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_IO_ERROR,
@@ -31,7 +36,6 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
-    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
     verify_reason_code_explanation,
 )
@@ -174,11 +178,16 @@ def _bundle_anchor_state(bundle: dict[str, Any]) -> str:
     return "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
 
 
+def _taxonomy_version_text(bundle: dict[str, Any] | None) -> str:
+    taxonomy_version = _resolve_taxonomy_version(bundle)
+    return "null" if taxonomy_version is None else str(taxonomy_version)
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
-        f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} "
+        f"taxonomy_version={_taxonomy_version_text(bundle)} "
         f"anchor={_bundle_anchor_state(bundle)}"
     )
 
@@ -197,8 +206,7 @@ def _verify_explanations(
                 _explanation_entry(
                     None,
                     "/",
-                    f"signer_subject=unknown schema_version=unknown "
-                    f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} anchor=unknown",
+                    "signer_subject=unknown schema_version=unknown taxonomy_version=null anchor=unknown",
                 )
             ]
         return [_explanation_entry(None, "/", _verify_success_summary(bundle))]
@@ -249,22 +257,23 @@ def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[VerifyReasonCod
 def _json_failure(
     *,
     bundle_digest: str,
+    taxonomy_version: int | None,
     reason: dict[str, Any],
     exit_code: int,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": reason["code"],
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [reason],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "fail",
+        "exit_code": exit_code,
+        "reason_code": reason["code"],
+        "taxonomy_version": taxonomy_version,
+        "reasons": [reason],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -278,19 +287,20 @@ def _json_failure(
 def _json_pass(
     *,
     bundle_digest: str,
+    taxonomy_version: int | None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "pass",
-            "exit_code": 0,
-            "reason_code": None,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
-            "reasons": [],
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "result": "pass",
+        "exit_code": 0,
+        "reason_code": None,
+        "taxonomy_version": taxonomy_version,
+        "reasons": [],
+        "bundle": {
+            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
+            "digest": bundle_digest,
+        },
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -452,6 +462,7 @@ def build_verify_json_outcome(
         digest = _bundle_digest(str(bundle_path).encode("utf-8"))
         return _json_failure(
             bundle_digest=digest,
+            taxonomy_version=None,
             reason=_reason_entry(
                 VERIFY_REASON_SCHEMA_INVALID,
                 "/",
@@ -510,11 +521,7 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
         )
     except json.JSONDecodeError as exc:
         return _json_failure(
@@ -538,6 +545,7 @@ def build_verify_json_outcome(
     if not isinstance(bundle, dict):
         return _json_failure(
             bundle_digest=bundle_digest,
+            taxonomy_version=None,
             reason=_reason_entry(
                 VERIFY_REASON_SCHEMA_INVALID,
                 "/",
@@ -560,11 +568,13 @@ def build_verify_json_outcome(
             ),
         )
 
+    taxonomy_version = _resolve_taxonomy_version(bundle)
     canonical_index, canonical_exc = _canonicalization_probe(bundle)
     if canonical_exc is not None:
         path = _canonicalization_path(canonical_exc, event_index=canonical_index)
         return _json_failure(
             bundle_digest=bundle_digest,
+            taxonomy_version=taxonomy_version,
             reason=_reason_entry(
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 path,
@@ -574,9 +584,7 @@ def build_verify_json_outcome(
             ),
             exit_code=1,
             explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))]
-                if explain
-                else None
+                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
             ),
         )
 
@@ -590,6 +598,7 @@ def build_verify_json_outcome(
         code, path = _schema_reason_for_bundle_error(exc)
         return _json_failure(
             bundle_digest=bundle_digest,
+            taxonomy_version=taxonomy_version,
             reason=_reason_entry(
                 code,
                 path,
@@ -599,16 +608,13 @@ def build_verify_json_outcome(
             ),
             exit_code=2,
             stderr_code=VERIFY_SCHEMA_ERROR,
-            explanation=(
-                [_explanation_entry(code, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
         )
     except CanonicalizationError as exc:
         path = "/events"
         return _json_failure(
             bundle_digest=bundle_digest,
+            taxonomy_version=taxonomy_version,
             reason=_reason_entry(
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 path,
@@ -617,16 +623,13 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=1,
-            explanation=(
-                [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))]
-                if explain
-                else None
-            ),
+            explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
 
     if result.ok:
         return _json_pass(
             bundle_digest=bundle_digest,
+            taxonomy_version=result.taxonomy_version,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
 
@@ -647,17 +650,13 @@ def build_verify_json_outcome(
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+            "taxonomy_version": result.taxonomy_version,
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
                 "digest": bundle_digest,
             },
-            **(
-                {"explanation": _verify_explanations(result, bundle=bundle, explain=explain)}
-                if explain
-                else {}
-            ),
+            **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,
         stderr_code=stderr_code,

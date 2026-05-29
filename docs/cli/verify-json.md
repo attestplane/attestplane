@@ -31,9 +31,12 @@ The payload is fixed at schema version 1:
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use.
+  `--json` and `--explain` use. The value is read from the bundle's
+  `chain_metadata.evidence_taxonomy_version` when present; legacy bundles that
+  omit the field surface `null` instead of failing.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
-  including successful `verify --json` results.
+  including successful `verify --json` results. For legacy bundles, the
+  contract keeps the key and sets it to `null`.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
@@ -67,8 +70,8 @@ attestplane verify --json --explain "$bundle"
 The flag is additive: it does not bump `schema_version`, it does not change
 the `verify --json` contract documented in #220, and it does not alter the
 bundle forward-compatibility rules documented in #217. It also does not alter
-`taxonomy_version`; the shared `att.verify.*` reason-code taxonomy lives in
-`docs/errors.md`.
+the resolved `taxonomy_version`; the shared `att.verify.*` reason-code
+taxonomy lives in `docs/errors.md`.
 
 Within that taxonomy, additive unknown fields remain accepted, while
 unsupported major versions and fail-closed critical/required fields surface
@@ -79,7 +82,8 @@ When the two flags are combined, stdout remains valid JSON and the rationale
 text is carried in `explanation[]` and `reasons[].explanation`.
 
 When `--explain` is used without `--json`, stdout prints a compact
-`OK|FAIL signer_subject=... schema_version=... anchor=...` summary and
+`OK|FAIL signer_subject=... schema_version=... taxonomy_version=... anchor=...`
+summary and
 stderr prints one rationale line per rejection reason in the same order as
 the structured payload.
 

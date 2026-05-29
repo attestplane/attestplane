@@ -42,8 +42,16 @@
       ]
     },
     "taxonomy_version": {
-      "type": "integer",
-      "const": 1
+      "anyOf": [
+        {
+          "type": "integer",
+          "const": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Bundle-declared verifier taxonomy version when available; null for legacy bundles that do not declare one."
     },
     "reasons": {
       "type": "array",

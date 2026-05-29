@@ -23,7 +23,9 @@ accompanies the structured JSON contract.
 - `schema_version` compatibility is independent from the verifier reason-code
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
-  `verify --json` and `verify --explain`.
+  `verify --json` and `verify --explain`. The resolver reads
+  `chain_metadata.evidence_taxonomy_version` when present and surfaces `null`
+  for legacy bundles that do not declare the field.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `explanation[]` is the additive operator-facing companion surface. Each
@@ -35,7 +37,8 @@ accompanies the structured JSON contract.
 - Consumers should keep branching on exit code first, then inspect `result`
   and `reasons[]` for diagnostics.
 - `verify --explain` stays aligned with the same JSON contract and does not
-  introduce a new schema or a new bundle policy.
+  introduce a new schema or a new bundle policy. Its plain-text summary uses
+  the same resolved `taxonomy_version` value as the structured JSON output.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.
