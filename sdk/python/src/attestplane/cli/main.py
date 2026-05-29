@@ -24,6 +24,7 @@ from typing import Any
 
 from attestplane import __version__
 from attestplane.cli.verify_json import (
+    _anchoring_payload,
     _verify_explanations,
     _verify_success_summary,
     build_verify_json_outcome,
@@ -589,6 +590,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "retention_proofs_reason": result.retention_proofs_reason,
         "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
         "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
+        **_anchoring_payload(bundle, exit_code=verify_result_exit_code(result)),
         **_verify_scope_metadata(),
     }
     explain = getattr(args, "explain", False)

@@ -1484,6 +1484,22 @@
     {
       "documented": false,
       "kind": "function",
+      "name": "formatVerifyTaxonomyVersion",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
+      "name": "resolveVerifyTaxonomyVersion",
+      "notes": "",
+      "source": "src/verify_reason_codes.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "function",
       "name": "loadAllRegistries",
       "notes": "",
       "source": "src/obligations.ts",

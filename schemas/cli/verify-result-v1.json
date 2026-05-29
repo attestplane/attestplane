@@ -12,7 +12,8 @@
     "reason_code",
     "taxonomy_version",
     "reasons",
-    "bundle"
+    "bundle",
+    "anchoring"
   ],
   "properties": {
     "schema_version": {
@@ -124,6 +125,27 @@
         "digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "quarantined"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "anchored",
+            "quarantined",
+            "unanchored"
+          ]
+        },
+        "quarantined": {
+          "type": "boolean"
         }
       }
     }
