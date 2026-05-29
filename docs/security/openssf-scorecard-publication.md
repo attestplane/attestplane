@@ -44,6 +44,44 @@ The `publish_results: true` flag is what allows the public
 all. Without it, the workflow would still run but the score would only
 be visible to maintainers via the SARIF artifact.
 
+## Scorecard monitoring posture
+
+Scorecard is a public security signal, not a release gate. The project
+keeps that distinction explicit:
+
+- A scheduled monitor run stores the latest normalized Scorecard
+  summary on disk and compares it against the previous baseline.
+- Meaningful regressions open or update a GitHub issue labeled
+  `type:security`, `scorecard-regression`, `monitor-only`, and
+  `priority:P2`.
+- The monitor records the drift for human follow-up, but it does not
+  block package publication, tag creation, or any existing release
+  workflow.
+- The first monitor run may bootstrap the baseline summary; later runs
+  compare the new summary against that stored baseline.
+
+The local helper script is
+[`scripts/security/scorecard_diff.py`](../../scripts/security/scorecard_diff.py)
+for deterministic comparisons and
+[`scripts/security/scorecard_monitor.py`](../../scripts/security/scorecard_monitor.py)
+for summary storage plus issue automation. A typical invocation looks
+like:
+
+```bash
+python scripts/security/scorecard_monitor.py \
+  --baseline .scorecard/scorecard-baseline.json \
+  --current .scorecard/scorecard-current.json \
+  --latest-summary .scorecard/scorecard-latest-summary.json
+```
+
+The comparison helper used by validation is:
+
+```bash
+python scripts/security/scorecard_diff.py \
+  --baseline <baseline.json> \
+  --current <current.json>
+```
+
 ## How to verify the score
 
 Three independent verification paths are available to any reader:
