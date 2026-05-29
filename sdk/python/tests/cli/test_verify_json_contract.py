@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -196,7 +195,10 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": (
+                "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
+                "schema_version=1 taxonomy_version=1 anchor=absent"
+            ),
         }
     ]
 
