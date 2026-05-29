@@ -128,6 +128,11 @@ def make_replay_transport(response_der: bytes) -> HttpTransport:
     return RecordedHttpTransport(response_der)
 
 
+def _resolve_freetsa_live_mode(live: bool) -> bool:
+    """Resolve the claim-safe FreeTSA mode from the explicit flag."""
+    return live
+
+
 def _build_request_der(digest: bytes, *, nonce: bytes | None = None) -> bytes:
     """Build a DER-encoded :class:`asn1crypto.tsp.TimeStampReq` payload."""
     body: dict[str, object] = {
@@ -268,6 +273,7 @@ class FreeTSAProvider(Rfc3161HttpProvider):
     def __init__(
         self,
         *,
+        live: bool = False,
         transport: HttpTransport | None = None,
         trust_roots_der: list[bytes] | None = None,
         ocsp_responses_der: list[bytes] | None = None,
@@ -275,10 +281,21 @@ class FreeTSAProvider(Rfc3161HttpProvider):
         provider_id: str | None = None,
         timeout_seconds: float = 30.0,
     ) -> None:
+        live_mode = _resolve_freetsa_live_mode(live)
+        if live_mode and transport is not None:
+            raise ValueError("FreeTSAProvider live mode does not accept a transport override")
+        if not live_mode and transport is None:
+            raise ValueError("FreeTSAProvider recorded-fixture mode requires a transport")
+        resolved_transport: HttpTransport
+        if live_mode:
+            resolved_transport = UrllibHttpTransport()
+        else:
+            assert transport is not None
+            resolved_transport = transport
         super().__init__(
             provider_id or self.DEFAULT_PROVIDER_ID,
             url=url or self.DEFAULT_URL,
-            transport=transport or UrllibHttpTransport(),
+            transport=resolved_transport,
             trust_roots_der=trust_roots_der,
             ocsp_responses_der=ocsp_responses_der,
             timeout_seconds=timeout_seconds,

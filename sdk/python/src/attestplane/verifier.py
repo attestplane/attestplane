@@ -38,6 +38,7 @@ from attestplane.types import ChainedEvent
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_CHAIN_RECOMPUTE_FAILED,
+    VERIFY_EXTENSION_FAILED,
     VERIFY_METADATA_CLOSURE_FAILED,
     VERIFY_OK,
     VERIFY_POLICY_TRACE_REFS_FAILED,
@@ -46,6 +47,7 @@ from attestplane.verify_errors import (
     VerifyErrorCode,
 )
 from attestplane.verify_reason_codes import (
+    VERIFY_REASON_ANCHOR_INVALID,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -164,10 +166,12 @@ _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
     "policy_trace_refs",
     "signatures",
     "retention_proofs",
+    "anchoring",
 }
 _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS = {"proof_type"}
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
+_ANCHORING_STATUS = {"anchored", "quarantined", "unanchored"}
 
 
 def _validate_shape(bundle: Any) -> None:
@@ -223,6 +227,28 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("policy_trace_refs must be an array when present")
     if "retention_proofs" in bundle and not isinstance(bundle["retention_proofs"], list):
         raise BundleSchemaError("retention_proofs must be an array when present")
+    if "anchoring" in bundle:
+        anchoring = bundle["anchoring"]
+        if not isinstance(anchoring, dict):
+            raise BundleSchemaError("anchoring must be a JSON object when present")
+        missing_anchoring = {"status", "quarantined"} - set(anchoring)
+        if missing_anchoring:
+            raise BundleSchemaError(f"anchoring missing required fields: {sorted(missing_anchoring)}")
+        if anchoring["status"] not in _ANCHORING_STATUS:
+            raise BundleSchemaError(f"anchoring.status must be one of {sorted(_ANCHORING_STATUS)}")
+        if not isinstance(anchoring["quarantined"], bool):
+            raise BundleSchemaError("anchoring.quarantined must be a boolean")
+
+
+def _bundle_anchoring_status(bundle: dict[str, Any]) -> str | None:
+    anchoring = bundle.get("anchoring")
+    if not isinstance(anchoring, dict):
+        return None
+    status = anchoring.get("status")
+    quarantined = anchoring.get("quarantined")
+    if status not in _ANCHORING_STATUS or not isinstance(quarantined, bool):
+        return None
+    return str(status)
 
 
 def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | None:
@@ -439,6 +465,7 @@ def _verification_reasons(
     metadata_reason: str | None,
     policy_ok: bool,
     retention_ok: bool,
+    explicit_anchoring_quarantine: bool,
 ) -> tuple[VerifyReasonCodeV1 | None, tuple[VerifyReasonCodeV1, ...]]:
     reasons: list[VerifyReasonCodeV1] = []
     if not chain_result.ok or not agreement:
@@ -457,6 +484,8 @@ def _verification_reasons(
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if not retention_ok:
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+    if explicit_anchoring_quarantine:
+        reasons.append(VERIFY_REASON_ANCHOR_INVALID)
     return _dedupe_reasons(reasons)
 
 
@@ -605,6 +634,8 @@ def verify_proof_bundle(
         bundle.get("retention_proofs"),
         {event.event_hash.hex() for event in events},
     )
+    bundle_anchoring_status = _bundle_anchoring_status(bundle)
+    explicit_quarantine = bundle_anchoring_status == "quarantined"
     error_code: VerifyErrorCode = VERIFY_OK
     if not chain_result.ok or not agreement:
         error_code = VERIFY_CHAIN_RECOMPUTE_FAILED
@@ -618,6 +649,8 @@ def verify_proof_bundle(
         error_code = VERIFY_POLICY_TRACE_REFS_FAILED
     elif not retention_result.ok:
         error_code = VERIFY_RETENTION_PROOF_FAILED
+    elif explicit_quarantine:
+        error_code = VERIFY_EXTENSION_FAILED
     primary_reason, secondary_reasons = _verification_reasons(
         chain_result=chain_result,
         agreement=agreement,
@@ -629,16 +662,35 @@ def verify_proof_bundle(
         metadata_reason=metadata_reason,
         policy_ok=policy_ok,
         retention_ok=retention_result.ok,
+        explicit_anchoring_quarantine=explicit_quarantine,
     )
-    anchoring_quarantined = _result_is_quarantined(error_code=error_code, primary_reason=primary_reason)
+    anchoring_quarantined = explicit_quarantine or _result_is_quarantined(
+        error_code=error_code,
+        primary_reason=primary_reason,
+    )
     if anchoring_quarantined:
         anchoring_status: Literal["anchored", "quarantined", "unanchored"] = "quarantined"
+    elif bundle_anchoring_status is not None:
+        if bundle_anchoring_status == "anchored":
+            anchoring_status = "anchored"
+        elif bundle_anchoring_status == "quarantined":
+            anchoring_status = "quarantined"
+        else:
+            anchoring_status = "unanchored"
     elif _bundle_anchor_ref_present(bundle):
         anchoring_status = "anchored"
     else:
         anchoring_status = "unanchored"
     return BundleVerificationResult(
-        ok=(chain_result.ok and agreement and metadata_ok and policy_ok and retention_result.ok and signed_schema_ok),
+        ok=(
+            chain_result.ok
+            and agreement
+            and metadata_ok
+            and policy_ok
+            and retention_result.ok
+            and signed_schema_ok
+            and not anchoring_quarantined
+        ),
         chain_result=chain_result,
         bundle_reported_ok=bundle_reported_ok,
         agreement=agreement,
