@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 import pytest
 
 pytest.importorskip("cryptography")
+pytest.importorskip("asn1crypto")
 
 from attestplane.anchoring import (
     AnchorVerificationError,
@@ -44,17 +45,17 @@ def _build_chain(n: int) -> list:
     head = genesis_head()
     for i in range(n):
         draft = EventDraft(
-            event_type="eval_event", actor=f"a{i}", payload={"i": i},
+            event_type="eval_event",
+            actor=f"a{i}",
+            payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
 
 
-def _make_authority_response(authority: TestRekorAuthority, digest: bytes,
-                              signing_key, now=None) -> bytes:
+def _make_authority_response(authority: TestRekorAuthority, digest: bytes, signing_key, now=None) -> bytes:
     """Replicate what SigstoreRekorAnchor builds, then have authority sign it."""
     import base64
 
@@ -99,7 +100,9 @@ def test_anchor_produces_rekor_record() -> None:
         transport=transport,
     )
     anchor = anchor_provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=0, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=0,
+        now=_NOW,
     )
 
     assert anchor.tsa_provider_id == f"{SIGSTORE_REKOR_PROVIDER_PREFIX}test.rekor"
@@ -159,8 +162,11 @@ def test_parse_rejects_missing_fields() -> None:
 
 def test_parse_extracts_fields() -> None:
     authority = TestRekorAuthority(log_id="test", now=_NOW)
-    body_bytes = json.dumps({"spec": {"content": {"hash": {"algorithm": "sha256", "value": "ff"*32}}}},
-                            sort_keys=True, separators=(",", ":")).encode("utf-8")
+    body_bytes = json.dumps(
+        {"spec": {"content": {"hash": {"algorithm": "sha256", "value": "ff" * 32}}}},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
     log_entry = authority.issue_log_entry(body_bytes, now=_NOW)
 
     parsed = parse_rekor_log_entry(log_entry)
@@ -262,8 +268,7 @@ def test_verify_rejects_tampered_body() -> None:
     new_body_bytes = json.dumps(original_body, sort_keys=True, separators=(",", ":")).encode("utf-8")
     log_entry["body"] = base64.standard_b64encode(new_body_bytes).decode("ascii")
 
-    parsed = parse_rekor_log_entry(json.dumps(log_entry, sort_keys=True,
-                                              separators=(",", ":")).encode("utf-8"))
+    parsed = parse_rekor_log_entry(json.dumps(log_entry, sort_keys=True, separators=(",", ":")).encode("utf-8"))
 
     # Two failure modes possible: digest mismatch OR SET signature
     # mismatch (since changing body changes SET payload). Either is
@@ -298,14 +303,17 @@ def test_e2e_verify_chain_with_rekor_anchor() -> None:
         transport=transport,
     )
     anchor = anchor_provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=1, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=1,
+        now=_NOW,
     )
 
     # Verify via the public verifier API. We pass the authority's
     # pubkey as the trust root; verify_chain_with_anchors's Sigstore
     # dispatch reads it from anchor.tsa_cert_chain[0].
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[authority.public_key_der],
         verification_time=_NOW,
     )
@@ -332,12 +340,15 @@ def test_e2e_detects_tampered_token() -> None:
         transport=transport,
     )
     anchor = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=0, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=0,
+        now=_NOW,
     )
 
     # Tamper: corrupt the SET bytes inside tsa_token.
     log_entry = json.loads(anchor.tsa_token)
     import base64
+
     bad_set = base64.standard_b64decode(log_entry["verification"]["signedEntryTimestamp"])
     bad_set_arr = bytearray(bad_set)
     bad_set_arr[0] ^= 0xFF
@@ -348,7 +359,8 @@ def test_e2e_detects_tampered_token() -> None:
     )
 
     result = verify_chain_with_anchors(
-        chain, [tampered],
+        chain,
+        [tampered],
         trust_roots_der=[authority.public_key_der],
         verification_time=_NOW,
     )

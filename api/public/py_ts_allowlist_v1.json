@@ -1271,6 +1271,14 @@
       "review_by": "v0.0.5-alpha",
       "symbol": "verify_retention_proofs",
       "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python exposes the verifier taxonomy pinning constant before the TypeScript surface is aligned.",
+      "review_by": "v1.8.4",
+      "symbol": "VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED",
+      "typescript": false
     }
   ],
   "baseline_release": "v0.0.2-alpha",

@@ -44,7 +44,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from scripts.observability.events import AUTODEV_TRAIN, emit_event as emit_observability_event
+from scripts.observability.events import (
+    AUTODEV_TRAIN,
+    emit_event as emit_observability_event,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -137,12 +140,16 @@ SLSA_WAIT_TIMEOUT_SECONDS = 600
 # chore(release): prepare vX.Y.Z noise. The limiter is a velocity gate:
 # the train keeps polling, but does not manufacture a new tag without
 # real human work in the range.
-RELEASE_PREP_SUBJECT_REGEX = re.compile(r"^chore\(release\): prepare v\d+\.\d+\.\d+(-\S+)?$")
+RELEASE_PREP_SUBJECT_REGEX = re.compile(
+    r"^chore\(release\): prepare v\d+\.\d+\.\d+(-\S+)?$"
+)
 # Operator override: cut the next tag even when the only commits in
 # range are release-prep commits. Documented in
 # docs/runbooks/autodev-train.md ("Cadence limiter").
 FORCE_CADENCE_ENV = "ATTESTPLANE_AUTODEV_TRAIN_FORCE_CADENCE"
-ABANDONED_STABLE_TAG_REQUIRED_FIELDS = frozenset({"commit", "reason", "abandoned_at", "evidence"})
+ABANDONED_STABLE_TAG_REQUIRED_FIELDS = frozenset(
+    {"commit", "reason", "abandoned_at", "evidence"}
+)
 ABANDONED_STABLE_TAG_ALLOWED_FIELDS = ABANDONED_STABLE_TAG_REQUIRED_FIELDS | frozenset(
     {"successor_candidate"}
 )
@@ -157,7 +164,10 @@ class StableVersion:
     @classmethod
     def parse(cls, value: str) -> "StableVersion":
         normalized = value.removeprefix("v")
-        match = re.fullmatch(r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)", normalized)
+        match = re.fullmatch(
+            r"(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)",
+            normalized,
+        )
         if match is None:
             raise ValueError(f"invalid stable version: {value}")
         return cls(*(int(match.group(name)) for name in ("major", "minor", "patch")))
@@ -208,7 +218,10 @@ class PublicationStatus:
     @property
     def complete(self) -> bool:
         registries_ok = bool(
-            self.python_visible and self.npm_visible and self.npm_latest and self.github_release
+            self.python_visible
+            and self.npm_visible
+            and self.npm_latest
+            and self.github_release
         )
         if not registries_ok:
             return False
@@ -228,7 +241,9 @@ class PublicationStatus:
         )
 
 
-def run(argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    argv: list[str], *, env: dict[str, str] | None = None, timeout: int | None = None
+) -> subprocess.CompletedProcess[str]:
     print("+ " + " ".join(argv), flush=True)
     return run_process(
         argv,
@@ -311,7 +326,9 @@ def run_process(
 
     result = subprocess.CompletedProcess(argv, process.returncode, out, err)
     if check and result.returncode:
-        raise subprocess.CalledProcessError(result.returncode, argv, output=out, stderr=err)
+        raise subprocess.CalledProcessError(
+            result.returncode, argv, output=out, stderr=err
+        )
     return result
 
 
@@ -334,11 +351,15 @@ def git_remote_env() -> dict[str, str] | None:
     if mode == "force":
         proxy_url = os.environ.get(GIT_PROXY_URL_ENV, "").strip()
         if not proxy_url:
-            raise RuntimeError(f"{GIT_PROXY_URL_ENV} must be set when {GIT_PROXY_MODE_ENV}=force")
+            raise RuntimeError(
+                f"{GIT_PROXY_URL_ENV} must be set when {GIT_PROXY_MODE_ENV}=force"
+            )
         for key in GIT_PROXY_ENV_KEYS:
             env[key] = proxy_url
         return env
-    raise RuntimeError(f"unsupported {GIT_PROXY_MODE_ENV}={mode!r}; expected inherit, bypass, or force")
+    raise RuntimeError(
+        f"unsupported {GIT_PROXY_MODE_ENV}={mode!r}; expected inherit, bypass, or force"
+    )
 
 
 def git_remote_proxy_label() -> str:
@@ -393,7 +414,10 @@ def run_git_push(argv: list[str]) -> subprocess.CompletedProcess[str]:
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             last_error = exc
             if git_push_remote_converged(argv):
-                print("git push remote state already converged; continuing after failed or timed-out local push", flush=True)
+                print(
+                    "git push remote state already converged; continuing after failed or timed-out local push",
+                    flush=True,
+                )
                 return subprocess.CompletedProcess(argv, 0, "", "")
             if attempt == REMOTE_PUSH_ATTEMPTS:
                 break
@@ -423,7 +447,9 @@ def attempt_git_push_once(argv: list[str]) -> subprocess.CompletedProcess[str]:
     echo_subprocess_output(result.stderr)
     if result.returncode == 0:
         return result
-    raise subprocess.CalledProcessError(result.returncode, argv, output=result.stdout, stderr=result.stderr)
+    raise subprocess.CalledProcessError(
+        result.returncode, argv, output=result.stdout, stderr=result.stderr
+    )
 
 
 def echo_subprocess_output(text: str | None) -> None:
@@ -449,13 +475,23 @@ def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
     ref = argv[len(canonical_prefix) + 1]
     try:
         if ref == "main":
-            local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
-            remote_head = capture_git_remote(["git", "ls-remote", "origin", "refs/heads/main"])
+            local_head = capture(
+                ["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS
+            )
+            remote_head = capture_git_remote(
+                ["git", "ls-remote", "origin", "refs/heads/main"]
+            )
             return bool(remote_head) and remote_head.split()[0] == local_head, None
         if STABLE_TAG_RE.fullmatch(ref):
-            remote_tag = capture_git_remote(["git", "ls-remote", "origin", f"refs/tags/{ref}"])
+            remote_tag = capture_git_remote(
+                ["git", "ls-remote", "origin", f"refs/tags/{ref}"]
+            )
             return bool(remote_tag), None
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ) as exc:
         return False, classify_git_push_failure(exc)
     return False, None
 
@@ -500,7 +536,15 @@ def classify_git_push_failure(exc: BaseException) -> str:
         )
     ):
         return "git_push_auth_or_repo_unavailable"
-    if any(phrase in text for phrase in ("non-fast-forward", "fetch first", "rejected", "failed to push some refs")):
+    if any(
+        phrase in text
+        for phrase in (
+            "non-fast-forward",
+            "fetch first",
+            "rejected",
+            "failed to push some refs",
+        )
+    ):
         return "git_push_rejected"
     return f"git_push_{type(exc).__name__.lower()}"
 
@@ -516,13 +560,17 @@ def sha256_file(path: Path) -> str:
 def assert_clean_tree() -> None:
     status = capture(["git", "status", "--short"])
     if status:
-        raise RuntimeError("working tree must be clean before stable autodev train execution")
+        raise RuntimeError(
+            "working tree must be clean before stable autodev train execution"
+        )
 
 
 def assert_on_main() -> None:
     branch = capture(["git", "branch", "--show-current"])
     if branch != "main":
-        raise RuntimeError(f"stable autodev train must run on main, currently on {branch!r}")
+        raise RuntimeError(
+            f"stable autodev train must run on main, currently on {branch!r}"
+        )
 
 
 def git_ref_exists(ref: str) -> bool:
@@ -571,7 +619,9 @@ def remote_tag_exists(tag: str) -> bool:
             return False
         if attempt == REMOTE_PROBE_ATTEMPTS:
             reason = classify_git_push_failure(
-                subprocess.CalledProcessError(result.returncode, argv, stderr=result.stderr)
+                subprocess.CalledProcessError(
+                    result.returncode, argv, stderr=result.stderr
+                )
             )
             print(
                 "autodev-train stable: warning: remote tag probe failed "
@@ -581,7 +631,9 @@ def remote_tag_exists(tag: str) -> bool:
             )
             return False
         delay = REMOTE_PROBE_BASE_RETRY_SECONDS * (2 ** (attempt - 1))
-        reason = classify_git_push_failure(subprocess.CalledProcessError(result.returncode, argv, stderr=result.stderr))
+        reason = classify_git_push_failure(
+            subprocess.CalledProcessError(result.returncode, argv, stderr=result.stderr)
+        )
         print(
             "autodev-train stable: warning: remote tag probe "
             f"attempt {attempt}/{REMOTE_PROBE_ATTEMPTS} failed for {tag} "
@@ -675,7 +727,9 @@ def sync_main_with_origin() -> None:
         local_head = capture(["git", "rev-parse", "HEAD"])
         origin_main = capture(["git", "rev-parse", "origin/main"])
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError("cannot inspect origin/main before stable release train cycle") from exc
+        raise RuntimeError(
+            "cannot inspect origin/main before stable release train cycle"
+        ) from exc
 
     if local_head == origin_main:
         return
@@ -684,7 +738,9 @@ def sync_main_with_origin() -> None:
         return
     if git_ref_is_ancestor("origin/main", "HEAD"):
         return
-    raise RuntimeError("local main and origin/main have diverged; rebase required before stable autodev train")
+    raise RuntimeError(
+        "local main and origin/main have diverged; rebase required before stable autodev train"
+    )
 
 
 def list_stable_tags() -> list[StableVersion]:
@@ -720,27 +776,43 @@ def abandoned_stable_tags(path: Path = DEFAULT_ABANDONED_STABLE_TAGS) -> set[str
             raise RuntimeError(f"abandoned stable tag entry must be an object: {tag}")
         missing = ABANDONED_STABLE_TAG_REQUIRED_FIELDS - set(details)
         if missing:
-            raise RuntimeError(f"abandoned stable tag {tag} missing required fields: {sorted(missing)}")
+            raise RuntimeError(
+                f"abandoned stable tag {tag} missing required fields: {sorted(missing)}"
+            )
         unknown = set(details) - ABANDONED_STABLE_TAG_ALLOWED_FIELDS
         if unknown:
-            raise RuntimeError(f"abandoned stable tag {tag} contains unknown fields: {sorted(unknown)}")
+            raise RuntimeError(
+                f"abandoned stable tag {tag} contains unknown fields: {sorted(unknown)}"
+            )
         successor = details.get("successor_candidate")
         if successor is not None:
             StableVersion.parse_tag(str(successor))
             if str(successor) == str(tag):
-                raise RuntimeError(f"abandoned stable tag {tag} successor_candidate must not reference itself")
+                raise RuntimeError(
+                    f"abandoned stable tag {tag} successor_candidate must not reference itself"
+                )
         if not isinstance(details["commit"], str) or not details["commit"]:
-            raise RuntimeError(f"abandoned stable tag {tag} commit must be a non-empty string")
+            raise RuntimeError(
+                f"abandoned stable tag {tag} commit must be a non-empty string"
+            )
         if not isinstance(details["reason"], str) or not details["reason"]:
-            raise RuntimeError(f"abandoned stable tag {tag} reason must be a non-empty string")
+            raise RuntimeError(
+                f"abandoned stable tag {tag} reason must be a non-empty string"
+            )
         if not isinstance(details["abandoned_at"], str) or not details["abandoned_at"]:
-            raise RuntimeError(f"abandoned stable tag {tag} abandoned_at must be a non-empty string")
+            raise RuntimeError(
+                f"abandoned stable tag {tag} abandoned_at must be a non-empty string"
+            )
         if not details["abandoned_at"].endswith("Z"):
-            raise RuntimeError(f"abandoned stable tag {tag} abandoned_at must be a UTC timestamp ending in Z")
+            raise RuntimeError(
+                f"abandoned stable tag {tag} abandoned_at must be a UTC timestamp ending in Z"
+            )
         try:
             datetime.fromisoformat(details["abandoned_at"].replace("Z", "+00:00"))
         except ValueError as exc:
-            raise RuntimeError(f"abandoned stable tag {tag} abandoned_at must be ISO 8601") from exc
+            raise RuntimeError(
+                f"abandoned stable tag {tag} abandoned_at must be ISO 8601"
+            ) from exc
         if not isinstance(details["evidence"], dict):
             raise RuntimeError(f"abandoned stable tag {tag} evidence must be an object")
         tags.add(str(tag))
@@ -753,7 +825,11 @@ def is_abandoned_stable_tag(tag: str) -> bool:
 
 def latest_stable_before(target: StableVersion) -> StableVersion:
     abandoned = abandoned_stable_tags()
-    candidates = [version for version in list_stable_tags() if version < target and version.tag not in abandoned]
+    candidates = [
+        version
+        for version in list_stable_tags()
+        if version < target and version.tag not in abandoned
+    ]
     if not candidates:
         raise RuntimeError(f"no stable release tag found before {target.tag}")
     return max(candidates)
@@ -779,9 +855,15 @@ def next_unabandoned_stable_after(version: StableVersion) -> StableVersion:
     candidate = next_stable_after(version)
     while candidate.tag in abandoned or git_ref_exists(f"refs/tags/{candidate.tag}"):
         if candidate.tag in abandoned:
-            print(f"autodev-train stable: generated target {candidate.tag} is abandoned; skipping", flush=True)
+            print(
+                f"autodev-train stable: generated target {candidate.tag} is abandoned; skipping",
+                flush=True,
+            )
         else:
-            print(f"autodev-train stable: generated target {candidate.tag} already has stable tag; skipping", flush=True)
+            print(
+                f"autodev-train stable: generated target {candidate.tag} already has stable tag; skipping",
+                flush=True,
+            )
         candidate = next_stable_after(candidate)
     return candidate
 
@@ -809,7 +891,11 @@ def commits_since_tag_have_real_work(tag: str) -> bool:
             ["git", "log", "--pretty=tformat:%s", f"{tag}..HEAD", "--no-merges"],
             timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as exc:
+    except (
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+    ) as exc:
         print(
             f"autodev-train stable: warning: cadence probe failed for {tag}: {exc}; "
             "falling through to normal cycle",
@@ -819,7 +905,9 @@ def commits_since_tag_have_real_work(tag: str) -> bool:
     subjects = [line for line in raw.splitlines() if line.strip()]
     if not subjects:
         return False
-    return any(RELEASE_PREP_SUBJECT_REGEX.fullmatch(subject) is None for subject in subjects)
+    return any(
+        RELEASE_PREP_SUBJECT_REGEX.fullmatch(subject) is None for subject in subjects
+    )
 
 
 def load_target_queue(path: Path) -> list[ReleaseTarget]:
@@ -850,9 +938,15 @@ def load_target_queue(path: Path) -> list[ReleaseTarget]:
             )
         min_soak_hours = int(raw.get("min_soak_hours", 0))
         if min_soak_hours < 0:
-            raise RuntimeError(f"target {version.tag} min_soak_hours must be non-negative")
+            raise RuntimeError(
+                f"target {version.tag} min_soak_hours must be non-negative"
+            )
         if status == "queued":
-            targets.append(ReleaseTarget(version=version, channel=channel, min_soak_hours=min_soak_hours))
+            targets.append(
+                ReleaseTarget(
+                    version=version, channel=channel, min_soak_hours=min_soak_hours
+                )
+            )
     return targets
 
 
@@ -862,18 +956,32 @@ def select_target(path: Path) -> ReleaseTarget:
     except RuntimeError:
         base = None
     if base is not None and is_abandoned_stable_tag(base.tag):
-        print(f"autodev-train stable: latest tag {base.tag} is abandoned; skipping recovery", flush=True)
+        print(
+            f"autodev-train stable: latest tag {base.tag} is abandoned; skipping recovery",
+            flush=True,
+        )
         base = latest_stable_before(base)
     if base is not None and not publication_status(base).complete:
-        print(f"autodev-train stable: latest tag {base.tag} is not fully published; recovering before advancing", flush=True)
+        print(
+            f"autodev-train stable: latest tag {base.tag} is not fully published; recovering before advancing",
+            flush=True,
+        )
         return ReleaseTarget(version=base, channel="latest", min_soak_hours=0)
 
     for target in load_target_queue(path):
         if is_abandoned_stable_tag(target.version.tag):
-            print(f"autodev-train stable: target {target.version.tag} is abandoned; skipping", flush=True)
+            print(
+                f"autodev-train stable: target {target.version.tag} is abandoned; skipping",
+                flush=True,
+            )
             continue
-        if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(target.version.tag):
-            print(f"autodev-train stable: target {target.version.tag} already has stable tag; skipping", flush=True)
+        if git_ref_exists(f"refs/tags/{target.version.tag}") or remote_tag_exists(
+            target.version.tag
+        ):
+            print(
+                f"autodev-train stable: target {target.version.tag} already has stable tag; skipping",
+                flush=True,
+            )
             continue
         return target
     if base is None:
@@ -909,7 +1017,9 @@ def assert_release_gate_allows_target(target: ReleaseTarget) -> None:
     )
     verification = release_gate.validate_audit_verification(
         decision,
-        audit_verified=release_gate.truthy(os.environ.get("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", "")),
+        audit_verified=release_gate.truthy(
+            os.environ.get("ATTESTPLANE_RELEASE_AUDIT_VERIFIED", "")
+        ),
         audit_plan_url=os.environ.get("ATTESTPLANE_RELEASE_AUDIT_PLAN_URL", ""),
     )
     if not verification.allowed:
@@ -928,7 +1038,9 @@ def product_delta_for_target(target: ReleaseTarget, previous: StableVersion) -> 
     )
 
 
-def assert_product_delta_allows_target(target: ReleaseTarget, previous: StableVersion) -> None:
+def assert_product_delta_allows_target(
+    target: ReleaseTarget, previous: StableVersion
+) -> None:
     product_delta = product_delta_for_target(target, previous)
     if not product_delta.allowed:
         raise RuntimeError(
@@ -944,7 +1056,11 @@ def read_python_version() -> str:
 
 
 def read_npm_version() -> str:
-    return str(json.loads((ROOT / "sdk/typescript/package.json").read_text(encoding="utf-8"))["version"])
+    return str(
+        json.loads((ROOT / "sdk/typescript/package.json").read_text(encoding="utf-8"))[
+            "version"
+        ]
+    )
 
 
 def replace_one(path: Path, pattern: str, replacement: str) -> None:
@@ -962,11 +1078,17 @@ def update_json_version(path: Path, version: str) -> None:
         packages = payload.get("packages")
         if isinstance(packages, dict) and isinstance(packages.get(""), dict):
             packages[""]["version"] = version
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8"
+    )
 
 
 def update_versions(version: StableVersion) -> None:
-    replace_one(ROOT / "sdk/python/pyproject.toml", r'^version = "[^"]+"$', f'version = "{version.python_version}"')
+    replace_one(
+        ROOT / "sdk/python/pyproject.toml",
+        r'^version = "[^"]+"$',
+        f'version = "{version.python_version}"',
+    )
     replace_one(
         ROOT / "sdk/python/src/attestplane/__init__.py",
         r'^__version__ = "[^"]+"$',
@@ -995,7 +1117,10 @@ def markdown_escape_release_subject(subject: str) -> str:
 def write_release_notes(previous: StableVersion, version: StableVersion) -> None:
     path = ROOT / "docs" / "release-notes" / f"{version.tag}.draft.md"
     commits = capture(["git", "log", "--format=%s", f"{previous.tag}..HEAD"])
-    changes = [f"- {markdown_escape_release_subject(line)}" for line in commits.splitlines()[:20]]
+    changes = [
+        f"- {markdown_escape_release_subject(line)}"
+        for line in commits.splitlines()[:20]
+    ]
     if not changes:
         changes = [f"- Queue advancement from `{previous.tag}` to `{version.tag}`."]
     path.write_text(
@@ -1071,7 +1196,9 @@ def build_artifacts(version: StableVersion) -> None:
             raise FileNotFoundError(f"expected release artifact missing: {artifact}")
 
 
-def artifact_entry(kind: str, name: str, package_version: str, path: str) -> dict[str, Any]:
+def artifact_entry(
+    kind: str, name: str, package_version: str, path: str
+) -> dict[str, Any]:
     artifact = ROOT / path
     return {
         "kind": kind,
@@ -1087,9 +1214,24 @@ def write_release_metadata(version: StableVersion) -> None:
     release_dir = ROOT / "release" / "artifacts" / version.tag
     release_dir.mkdir(parents=True, exist_ok=True)
     artifacts = [
-        artifact_entry("python-wheel", "attestplane", version.python_version, artifact_paths(version)[0]),
-        artifact_entry("python-sdist", "attestplane", version.python_version, artifact_paths(version)[1]),
-        artifact_entry("npm-tarball", "@attestplane/attestplane", version.npm_version, artifact_paths(version)[2]),
+        artifact_entry(
+            "python-wheel",
+            "attestplane",
+            version.python_version,
+            artifact_paths(version)[0],
+        ),
+        artifact_entry(
+            "python-sdist",
+            "attestplane",
+            version.python_version,
+            artifact_paths(version)[1],
+        ),
+        artifact_entry(
+            "npm-tarball",
+            "@attestplane/attestplane",
+            version.npm_version,
+            artifact_paths(version)[2],
+        ),
     ]
     manifest = {
         "artifacts": artifacts,
@@ -1117,10 +1259,13 @@ def write_release_metadata(version: StableVersion) -> None:
         "upload_plan_file": f"release/artifacts/{version.tag}/upload-plan.md",
     }
     manifest_path = release_dir / "artifact-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     checksums_path = release_dir / "checksums.sha256"
     checksums_path.write_text(
-        "\n".join(f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts) + "\n",
+        "\n".join(f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts)
+        + "\n",
         encoding="utf-8",
     )
     (release_dir / "upload-plan.md").write_text(
@@ -1141,7 +1286,7 @@ def write_release_metadata(version: StableVersion) -> None:
                 "## Release Commands",
                 "",
                 "```bash",
-                f"git tag -a {version.tag} -m \"{version.tag}\"",
+                f'git tag -a {version.tag} -m "{version.tag}"',
                 "git push origin main",
                 f"git push origin {version.tag}",
                 f"gh workflow run release-cd.yml -f release_tag={version.tag} -f channel=latest -f dry_run=false --ref main",
@@ -1256,8 +1401,13 @@ def resume_tagged_release_publish(version: StableVersion, *, wait: bool) -> None
     if not git_ref_exists(f"refs/tags/{version.tag}"):
         raise RuntimeError(f"cannot resume {version.tag}: local tag is missing")
     if not local_tag_points_to_head(version.tag):
-        raise RuntimeError(f"cannot resume {version.tag}: local tag does not point to HEAD")
-    print(f"autodev-train stable: resuming publish for locally tagged {version.tag}", flush=True)
+        raise RuntimeError(
+            f"cannot resume {version.tag}: local tag does not point to HEAD"
+        )
+    print(
+        f"autodev-train stable: resuming publish for locally tagged {version.tag}",
+        flush=True,
+    )
     push_and_dispatch(version, wait=wait)
 
 
@@ -1299,7 +1449,10 @@ def pypi_version_visible(version: StableVersion) -> bool | None:
             return False
         raise
     except (OSError, TimeoutError) as exc:
-        print(f"autodev-train stable: warning: PyPI probe failed for {version.tag}: {exc}", flush=True)
+        print(
+            f"autodev-train stable: warning: PyPI probe failed for {version.tag}: {exc}",
+            flush=True,
+        )
         return None
     return payload.get("info", {}).get("version") == version.python_version
 
@@ -1307,16 +1460,26 @@ def pypi_version_visible(version: StableVersion) -> bool | None:
 def npm_version_visible(version: StableVersion) -> bool | None:
     try:
         result = run_process(
-            ["npm", "view", f"@attestplane/attestplane@{version.npm_version}", "version"],
+            [
+                "npm",
+                "view",
+                f"@attestplane/attestplane@{version.npm_version}",
+                "version",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             check=False,
             timeout=30,
         )
     except subprocess.TimeoutExpired as exc:
-        print(f"autodev-train stable: warning: npm version probe timed out for {version.tag}: {exc}", flush=True)
+        print(
+            f"autodev-train stable: warning: npm version probe timed out for {version.tag}: {exc}",
+            flush=True,
+        )
         return None
-    return result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
+    return (
+        result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
+    )
 
 
 def npm_latest_points_to(version: StableVersion) -> bool | None:
@@ -1329,9 +1492,14 @@ def npm_latest_points_to(version: StableVersion) -> bool | None:
             timeout=30,
         )
     except subprocess.TimeoutExpired as exc:
-        print(f"autodev-train stable: warning: npm dist-tag probe timed out for {version.tag}: {exc}", flush=True)
+        print(
+            f"autodev-train stable: warning: npm dist-tag probe timed out for {version.tag}: {exc}",
+            flush=True,
+        )
         return None
-    return result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
+    return (
+        result.returncode == 0 and (result.stdout or "").strip() == version.npm_version
+    )
 
 
 def github_release_exists(version: StableVersion) -> bool | None:
@@ -1344,7 +1512,10 @@ def github_release_exists(version: StableVersion) -> bool | None:
             timeout=30,
         )
     except subprocess.TimeoutExpired as exc:
-        print(f"autodev-train stable: warning: GitHub Release probe timed out for {version.tag}: {exc}", flush=True)
+        print(
+            f"autodev-train stable: warning: GitHub Release probe timed out for {version.tag}: {exc}",
+            flush=True,
+        )
         return None
     return result.returncode == 0
 
@@ -1359,9 +1530,9 @@ def publication_status(version: StableVersion) -> PublicationStatus:
     emit_train_event(
         "publication_status",
         tag=version.tag,
-        python_visible=status.python_visible,
-        npm_visible=status.npm_visible,
-        npm_latest=status.npm_latest,
+        python_visible=bool(status.python_visible),
+        npm_visible=bool(status.npm_visible),
+        npm_latest=bool(status.npm_latest),
         github_release=status.github_release,
         complete=status.complete,
     )
@@ -1408,7 +1579,9 @@ def dispatch_publish_python(version: StableVersion) -> None:
 
 
 def wait_for_publish_python(version: StableVersion, caller: str) -> None:
-    print(f"waiting for delegated publish-python workflow for {version.tag}", flush=True)
+    print(
+        f"waiting for delegated publish-python workflow for {version.tag}", flush=True
+    )
     expected_title = f"publish-python {version.tag} pypi caller-{caller}"
     deadline = time.monotonic() + 1200
     while time.monotonic() < deadline:
@@ -1435,7 +1608,9 @@ def wait_for_publish_python(version: StableVersion, caller: str) -> None:
             continue
         run(["gh", "run", "watch", run_id, "--exit-status"])
         return
-    raise TimeoutError(f"timed out waiting for delegated publish-python workflow for {version.tag}")
+    raise TimeoutError(
+        f"timed out waiting for delegated publish-python workflow for {version.tag}"
+    )
 
 
 def ensure_github_release(version: StableVersion) -> None:
@@ -1457,15 +1632,30 @@ def ensure_github_release(version: StableVersion) -> None:
         run(["gh", "release", "edit", version.tag, *release_flags])
         run(["gh", "release", "upload", version.tag, "--clobber", *assets])
     else:
-        run(["gh", "release", "create", version.tag, "--verify-tag", *release_flags, *assets])
+        run(
+            [
+                "gh",
+                "release",
+                "create",
+                version.tag,
+                "--verify-tag",
+                *release_flags,
+                *assets,
+            ]
+        )
 
 
 def recover_existing_release(version: StableVersion) -> None:
     status = publication_status(version)
     if status.unknown:
-        raise RuntimeError(f"cannot auto-recover {version.tag}: publication status probe is incomplete; retry later")
+        raise RuntimeError(
+            f"cannot auto-recover {version.tag}: publication status probe is incomplete; retry later"
+        )
     if status.complete:
-        print(f"autodev-train stable: existing release {version.tag} is complete", flush=True)
+        print(
+            f"autodev-train stable: existing release {version.tag} is complete",
+            flush=True,
+        )
         return
     if not status.npm_visible or not status.npm_latest:
         raise RuntimeError(
@@ -1476,22 +1666,34 @@ def recover_existing_release(version: StableVersion) -> None:
         last_error: Exception | None = None
         for attempt in range(1, 4):
             try:
-                print(f"autodev-train stable: recovering PyPI publish for {version.tag} (attempt {attempt}/3)", flush=True)
+                print(
+                    f"autodev-train stable: recovering PyPI publish for {version.tag} (attempt {attempt}/3)",
+                    flush=True,
+                )
                 dispatch_publish_python(version)
                 wait_for_pypi(version)
                 break
             except Exception as exc:  # noqa: BLE001 - keep continuous train recoverable after transient publisher failures.
                 last_error = exc
-                print(f"autodev-train stable: PyPI recovery attempt failed for {version.tag}: {exc}", flush=True)
+                print(
+                    f"autodev-train stable: PyPI recovery attempt failed for {version.tag}: {exc}",
+                    flush=True,
+                )
                 time.sleep(30)
         else:
-            raise RuntimeError(f"cannot auto-recover PyPI publication for {version.tag}: {last_error}") from last_error
+            raise RuntimeError(
+                f"cannot auto-recover PyPI publication for {version.tag}: {last_error}"
+            ) from last_error
     ensure_github_release(version)
     final = publication_status(version)
     if final.unknown:
-        raise RuntimeError(f"release recovery status is incomplete for {version.tag}: {final}")
+        raise RuntimeError(
+            f"release recovery status is incomplete for {version.tag}: {final}"
+        )
     if not final.complete:
-        raise RuntimeError(f"release recovery did not complete for {version.tag}: {final}")
+        raise RuntimeError(
+            f"release recovery did not complete for {version.tag}: {final}"
+        )
 
 
 def wait_for_push_ci(head_sha: str) -> None:
@@ -1567,7 +1769,9 @@ def wait_for_push_ci(head_sha: str) -> None:
                 run(["gh", "workflow", "run", workflow_file, "--ref", "main"])
                 dispatched_missing.add(name)
 
-        summary = f"missing={','.join(missing) or '-'} pending={','.join(pending) or '-'}"
+        summary = (
+            f"missing={','.join(missing) or '-'} pending={','.join(pending) or '-'}"
+        )
         if summary != last_summary:
             print(f"push CI waiting for {head_sha}: {summary}", flush=True)
             emit_train_event("push_ci_waiting", head_sha=head_sha, summary=summary)
@@ -1599,7 +1803,9 @@ def parse_utc_timestamp(value: str) -> datetime | None:
         return None
 
 
-def select_new_signing_run_id(raw_runs: list[dict[str, Any]], dispatch_started_at: str) -> str | None:
+def select_new_signing_run_id(
+    raw_runs: list[dict[str, Any]], dispatch_started_at: str
+) -> str | None:
     """Choose the newest visible signing workflow run after dispatch started."""
     started_at = parse_utc_timestamp(dispatch_started_at)
     if started_at is None:
@@ -1686,7 +1892,10 @@ def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) ->
             continue
         if run_id:
             try:
-                run(["gh", "run", "watch", run_id, "--exit-status"], timeout=timeout_seconds)
+                run(
+                    ["gh", "run", "watch", run_id, "--exit-status"],
+                    timeout=timeout_seconds,
+                )
             except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
                 print(
                     f"autodev-train stable: {workflow} run {run_id} failed for {tag}: {exc}",
@@ -1704,11 +1913,15 @@ def _dispatch_signing_workflow(workflow: str, tag: str, timeout_seconds: int) ->
 
 
 def trigger_sign_release(tag: str) -> bool:
-    return _dispatch_signing_workflow(SIGN_RELEASE_WORKFLOW, tag, SIGN_WAIT_TIMEOUT_SECONDS)
+    return _dispatch_signing_workflow(
+        SIGN_RELEASE_WORKFLOW, tag, SIGN_WAIT_TIMEOUT_SECONDS
+    )
 
 
 def trigger_slsa_provenance(tag: str) -> bool:
-    return _dispatch_signing_workflow(SLSA_PROVENANCE_WORKFLOW, tag, SLSA_WAIT_TIMEOUT_SECONDS)
+    return _dispatch_signing_workflow(
+        SLSA_PROVENANCE_WORKFLOW, tag, SLSA_WAIT_TIMEOUT_SECONDS
+    )
 
 
 def wait_for_release_cd(version: StableVersion) -> None:
@@ -1744,8 +1957,13 @@ def wait_for_release_cd(version: StableVersion) -> None:
                 run(["gh", "run", "watch", run_id, "--exit-status"])
             except subprocess.CalledProcessError:
                 if publication_status(version).complete:
-                    print(f"release-cd reported failure but registries and GitHub Release are complete for {version.tag}", flush=True)
-                    emit_train_event("release_cd_failed_but_complete", target_tag=version.tag)
+                    print(
+                        f"release-cd reported failure but registries and GitHub Release are complete for {version.tag}",
+                        flush=True,
+                    )
+                    emit_train_event(
+                        "release_cd_failed_but_complete", target_tag=version.tag
+                    )
                     return
                 raise
             return
@@ -1804,7 +2022,9 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
         if publish:
             status = publication_status(version)
             if status.unknown:
-                raise RuntimeError(f"cannot auto-recover {version.tag}: publication status probe is incomplete; retry later")
+                raise RuntimeError(
+                    f"cannot auto-recover {version.tag}: publication status probe is incomplete; retry later"
+                )
             if not status.complete and local_tag_points_to_head(version.tag):
                 resume_tagged_release_publish(version, wait=wait)
             else:
@@ -1851,7 +2071,10 @@ def run_once(*, publish: bool, wait: bool, target_queue: Path, dry_run: bool) ->
     if publish:
         push_and_dispatch(version, wait=wait)
     else:
-        print(f"autodev-train stable: prepared local tag {version.tag}; publish disabled", flush=True)
+        print(
+            f"autodev-train stable: prepared local tag {version.tag}; publish disabled",
+            flush=True,
+        )
         emit_train_event("cycle_prepared_local", target_tag=version.tag, publish=False)
     return version.tag
 
@@ -1869,7 +2092,9 @@ def main(argv: list[str] | None = None) -> int:
 
     while True:
         if args.stop_file.exists():
-            print(f"autodev-train stable: STOP file exists: {args.stop_file}", flush=True)
+            print(
+                f"autodev-train stable: STOP file exists: {args.stop_file}", flush=True
+            )
             return 0
         try:
             result = run_once(
@@ -1881,7 +2106,9 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:
             if not args.continuous:
                 raise
-            emit_train_event("cycle_failed", error=str(exc), poll_seconds=args.poll_seconds)
+            emit_train_event(
+                "cycle_failed", error=str(exc), poll_seconds=args.poll_seconds
+            )
             print(
                 f"autodev-train stable: cycle failed; sleeping {args.poll_seconds}s before retry: {exc}",
                 flush=True,
@@ -1890,8 +2117,13 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if not args.continuous:
             return 0 if result else 1
-        emit_train_event("cycle_finished", result=result, poll_seconds=args.poll_seconds)
-        print(f"autodev-train stable: cycle finished for {result}; sleeping {args.poll_seconds}s", flush=True)
+        emit_train_event(
+            "cycle_finished", result=result, poll_seconds=args.poll_seconds
+        )
+        print(
+            f"autodev-train stable: cycle finished for {result}; sleeping {args.poll_seconds}s",
+            flush=True,
+        )
         time.sleep(args.poll_seconds)
 
 

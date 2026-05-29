@@ -25,6 +25,7 @@ VerifyErrorCode = Literal[
     "VERIFY_RETENTION_PROOF_FAILED",
     "VERIFY_ARTIFACT_HASH_FAILED",
     "VERIFY_REQUIRED_FIELDS_MISSING",
+    "VERIFY_TAXONOMY_VERSION_UNSUPPORTED",
     "VERIFY_EXTENSION_INVALID_INPUT",
     "VERIFY_EXTENSION_UNSUPPORTED",
     "VERIFY_EXTENSION_FAILED",
@@ -40,6 +41,7 @@ VERIFY_POLICY_TRACE_REFS_FAILED: Final[VerifyErrorCode] = "VERIFY_POLICY_TRACE_R
 VERIFY_RETENTION_PROOF_FAILED: Final[VerifyErrorCode] = "VERIFY_RETENTION_PROOF_FAILED"
 VERIFY_ARTIFACT_HASH_FAILED: Final[VerifyErrorCode] = "VERIFY_ARTIFACT_HASH_FAILED"
 VERIFY_REQUIRED_FIELDS_MISSING: Final[VerifyErrorCode] = "VERIFY_REQUIRED_FIELDS_MISSING"
+VERIFY_TAXONOMY_VERSION_UNSUPPORTED: Final[VerifyErrorCode] = "VERIFY_TAXONOMY_VERSION_UNSUPPORTED"
 VERIFY_EXTENSION_INVALID_INPUT: Final[VerifyErrorCode] = "VERIFY_EXTENSION_INVALID_INPUT"
 VERIFY_EXTENSION_UNSUPPORTED: Final[VerifyErrorCode] = "VERIFY_EXTENSION_UNSUPPORTED"
 VERIFY_EXTENSION_FAILED: Final[VerifyErrorCode] = "VERIFY_EXTENSION_FAILED"
@@ -55,6 +57,7 @@ ALL_VERIFY_ERROR_CODES_V1: Final[tuple[VerifyErrorCode, ...]] = (
     VERIFY_RETENTION_PROOF_FAILED,
     VERIFY_ARTIFACT_HASH_FAILED,
     VERIFY_REQUIRED_FIELDS_MISSING,
+    VERIFY_TAXONOMY_VERSION_UNSUPPORTED,
     VERIFY_EXTENSION_INVALID_INPUT,
     VERIFY_EXTENSION_UNSUPPORTED,
     VERIFY_EXTENSION_FAILED,
@@ -75,6 +78,9 @@ VERIFY_ERROR_DESCRIPTIONS: Final[dict[VerifyErrorCode, str]] = {
     ),
     VERIFY_ARTIFACT_HASH_FAILED: "The envelope artifact hash does not match the embedded proof bundle.",
     VERIFY_REQUIRED_FIELDS_MISSING: "A required verifier-envelope field is missing.",
+    VERIFY_TAXONOMY_VERSION_UNSUPPORTED: (
+        "The consumer-pinned verifier taxonomy version does not match the current output contract."
+    ),
     VERIFY_EXTENSION_INVALID_INPUT: "Requested signature or anchor extension input is malformed.",
     VERIFY_EXTENSION_UNSUPPORTED: "Requested signature or anchor extension input uses an unsupported mode.",
     VERIFY_EXTENSION_FAILED: "Requested signature or anchor extension verification failed.",
@@ -103,6 +109,7 @@ __all__ = [
     "VERIFY_REQUIRED_FIELDS_MISSING",
     "VERIFY_RETENTION_PROOF_FAILED",
     "VERIFY_SCHEMA_ERROR",
+    "VERIFY_TAXONOMY_VERSION_UNSUPPORTED",
     "VerifyErrorCode",
     "is_known_verify_error_code",
 ]

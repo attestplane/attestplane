@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "bundle": "fixtures/conformance/taxonomy_v1.att",
+      "case_id": "require-taxonomy-version-mismatch",
+      "description": "A valid bundle should be rejected when the consumer pins a different verifier taxonomy version.",
+      "expected_exit_code": 2,
+      "expected_reason_code": "att.verify.taxonomy_version_unsupported",
+      "expected_stderr_code": "VERIFY_TAXONOMY_VERSION_UNSUPPORTED",
+      "schema_version": "attestplane.verify.taxonomy_version.negative.v1",
+      "verify_options": {
+        "required_taxonomy_version": 2
+      }
+    }
+  ]
+}
