@@ -306,6 +306,13 @@ async def post_review_activity(
             "-f", "labels[]=review-passed",
         ])
         db.upsert_run(issue_number, stage="approved")
+    else:
+        # Close PR immediately so it doesn't block the auto-loop guard.
+        try:
+            _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG])
+        except RuntimeError:
+            pass
+        db.upsert_run(issue_number, stage="failed")
 
     db.log_event(issue_number, "post_review", "completed", f"decision={decision}")
     return {"posted": True}
@@ -315,35 +322,42 @@ async def post_review_activity(
 
 @activity.defn(name="merge_pr")
 async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
-    """Squash-merge the PR. Waits for CI, then rebases on main before merging."""
+    """Squash-merge the PR. Waits for CI (via mergeStateStatus), then rebases and merges."""
+    import time as _time
+
     branch = _gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG, "--json", "headRefName", "--jq", ".headRefName"]).strip()
 
-    # Wait for CI checks to complete (up to 10 minutes).
-    # Polls every 30 s; fails fast on any required-check failure.
-    activity.logger.info("Waiting for CI checks on PR #%d ...", pr_number)
-    import time as _time
+    # Poll mergeStateStatus — avoids the broken `gh pr checks --json required` field.
+    # CLEAN   → all checks passed, safe to merge.
+    # UNSTABLE → one or more checks failed → close PR and exit (no retry).
+    # BLOCKED  → branch protection pending → keep waiting.
+    # CONFLICTING → merge conflict → proceed to rebase below.
+    activity.logger.info("Waiting for CI on PR #%d ...", pr_number)
     ci_deadline = _time.monotonic() + 600
     while True:
-        checks_json = _gh([
-            "pr", "checks", str(pr_number), "--repo", REPO_SLUG,
-            "--json", "name,state,required",
-        ])
-        checks = __import__("json").loads(checks_json or "[]")
-        required = [c for c in checks if c.get("required")]
-        failed = [c for c in required if c.get("state") in ("FAILURE", "ERROR", "CANCELLED")]
-        pending = [c for c in required if c.get("state") in ("PENDING", "IN_PROGRESS", "QUEUED")]
-        if failed:
-            raise RuntimeError(
-                f"PR #{pr_number}: required CI checks failed: {[c['name'] for c in failed]}"
-            )
-        if not pending:
-            activity.logger.info("CI checks passed for PR #%d", pr_number)
+        info = json.loads(_gh(["pr", "view", str(pr_number), "--repo", REPO_SLUG,
+                               "--json", "mergeable,mergeStateStatus"]))
+        merge_state = info.get("mergeStateStatus", "UNKNOWN")
+        mergeable = info.get("mergeable", "UNKNOWN")
+
+        if merge_state == "CLEAN":
+            activity.logger.info("CI passed for PR #%d (CLEAN)", pr_number)
+            break
+        if merge_state == "UNSTABLE":
+            activity.logger.error("CI FAILED for PR #%d (UNSTABLE) — closing PR", pr_number)
+            try:
+                _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG,
+                     "--comment", "Closed by autodev-train: CI checks failed (UNSTABLE). Fix linting/tests and reopen."])
+            except RuntimeError:
+                pass
+            db.upsert_run(issue_number, stage="failed")
+            db.log_event(issue_number, "merge", "ci_failed", f"pr={pr_number}")
+            return {"merged": False, "reason": "ci_unstable"}
+        if mergeable == "CONFLICTING":
+            activity.logger.info("PR #%d has merge conflict — will attempt rebase", pr_number)
             break
         if _time.monotonic() > ci_deadline:
-            activity.logger.warning(
-                "CI timeout for PR #%d — still pending: %s; merging anyway",
-                pr_number, [c["name"] for c in pending],
-            )
+            activity.logger.warning("CI timeout for PR #%d (state=%s) — merging anyway", pr_number, merge_state)
             break
         await asyncio.sleep(30)
     worktree = str(MAIN_REPO.parent / f"attestplane-merge-{issue_number}")

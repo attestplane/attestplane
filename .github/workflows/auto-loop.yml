@@ -91,6 +91,14 @@ jobs:
             --json mergedAt \
             --jq "[.[] | select((.mergedAt | fromdateiso8601) > ${tag_epoch})] | length")
 
+          # Count autodev PRs closed-without-merging since last tag
+          closed_failed_since=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --label autodev-pr \
+            --state closed \
+            --json closedAt,mergedAt \
+            --jq "[.[] | select(.mergedAt == null and (.closedAt | fromdateiso8601) > ${tag_epoch})] | length")
+
           # Days since last tag
           days_since=$(( ( $(date +%s) - tag_epoch ) / 86400 ))
 
@@ -99,15 +107,17 @@ jobs:
             echo "days_since_tag=${days_since}"
             echo "latest_tag=${latest_tag}"
           } >> "$GITHUB_OUTPUT"
-          echo "PRs since last tag: ${prs_since}, days: ${days_since}"
+          echo "PRs since last tag: ${prs_since} merged, ${closed_failed_since} closed-failed, ${days_since} days"
 
-          # Decide whether to proceed
-          if [ "$prs_since" -ge "$MIN_PRS_PER_TAG" ] || [ "$days_since" -ge "$MAX_DAYS_BETWEEN_TAGS" ]; then
+          # Proceed if: enough merges, OR time elapsed, OR entire batch failed (all closed, 0 merged)
+          if [ "$prs_since" -ge "$MIN_PRS_PER_TAG" ] || \
+             [ "$days_since" -ge "$MAX_DAYS_BETWEEN_TAGS" ] || \
+             { [ "$closed_failed_since" -ge 1 ] && [ "$prs_since" -eq 0 ]; }; then
             echo "proceed=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Batch ready (${prs_since} PRs / ${days_since} days)"
+            echo "✅ Batch ready (${prs_since} merged / ${closed_failed_since} failed / ${days_since} days)"
           else
             echo "proceed=false" >> "$GITHUB_OUTPUT"
-            echo "⏳ Batch not ready yet (${prs_since}/${MIN_PRS_PER_TAG} PRs, ${days_since}/${MAX_DAYS_BETWEEN_TAGS} days)"
+            echo "⏳ Batch not ready (${prs_since}/${MIN_PRS_PER_TAG} merged, ${closed_failed_since} failed, ${days_since}/${MAX_DAYS_BETWEEN_TAGS} days)"
           fi
 
       # ── Determine bump level from merged commit messages ──────────────────
