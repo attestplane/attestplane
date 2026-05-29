@@ -23,6 +23,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from attestplane.anchoring import (
     ANCHOR_SCHEMA_VERSION,
+    AnchorQuarantineError,
     AnchorRecord,
     AnchorVerificationError,
     TimestampRequest,
@@ -51,8 +52,7 @@ def _build_chain(n: int) -> list:
             actor=f"agent://test/{i}",
             payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -90,7 +90,9 @@ def test_authority_with_nonce_round_trips() -> None:
     authority = TestTSAAuthority(now=_NOW)
     digest = hashlib.sha256(b"hello-nonce").digest()
     der = authority.sign_timestamp_response(
-        digest, gen_time=_NOW, nonce=b"\x01\x02\x03\x04",
+        digest,
+        gen_time=_NOW,
+        nonce=b"\x01\x02\x03\x04",
     )
     parsed = parse_timestamp_response(der)
     assert parsed.nonce == int.from_bytes(b"\x01\x02\x03\x04", "big")
@@ -121,7 +123,7 @@ def test_verify_rejects_unknown_trust_root() -> None:
     # The wrong root has the same CN as the real one ("Attestplane Test
     # Root CA"), so the chain walker finds it as a candidate by DN match
     # then fails the signature verification.
-    with pytest.raises(AnchorVerificationError, match="signature does not verify"):
+    with pytest.raises(AnchorQuarantineError, match="signature does not verify"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -138,7 +140,7 @@ def test_verify_rejects_expired_cert() -> None:
     materials = authority.materials()
     # Move verification_time past the leaf's not_after.
     future = _NOW + timedelta(days=30)
-    with pytest.raises(AnchorVerificationError, match="exceeds leaf cert not_after"):
+    with pytest.raises(AnchorQuarantineError, match="exceeds leaf cert not_after"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -154,7 +156,7 @@ def test_verify_rejects_premature_verification() -> None:
     parsed = parse_timestamp_response(der)
     materials = authority.materials()
     past = _NOW - timedelta(days=30)
-    with pytest.raises(AnchorVerificationError, match="precedes leaf cert not_before"):
+    with pytest.raises(AnchorQuarantineError, match="precedes leaf cert not_before"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -171,7 +173,9 @@ def test_provider_anchor_record_has_real_token() -> None:
     provider = TestTSAProvider(authority)
     digest = hashlib.sha256(b"chain-head").digest()
     record = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=3, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=3,
+        now=_NOW,
     )
     assert record.anchored_seq == 3
     assert record.anchored_event_hash == digest
@@ -201,6 +205,7 @@ def test_provider_serial_numbers_increment() -> None:
 
 def test_provider_fail_with_raises() -> None:
     from attestplane.anchoring import TSAUnavailableError
+
     authority = TestTSAAuthority(now=_NOW)
     provider = TestTSAProvider(authority, fail_with=TSAUnavailableError("oops"))
     with pytest.raises(TSAUnavailableError, match="oops"):
@@ -216,12 +221,14 @@ def test_verify_chain_with_anchors_uses_real_signature_check() -> None:
     provider = TestTSAProvider(authority)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[2].event_hash),
-        anchored_seq=2, now=_NOW,
+        anchored_seq=2,
+        now=_NOW,
     )
     materials = authority.materials()
 
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
@@ -236,7 +243,8 @@ def test_verify_chain_with_anchors_detects_token_tampering() -> None:
     provider = TestTSAProvider(authority)
     good = provider.request_timestamp(
         TimestampRequest(digest=chain[1].event_hash),
-        anchored_seq=1, now=_NOW,
+        anchored_seq=1,
+        now=_NOW,
     )
     # Flip a byte deep in the signed bytes — must fail signature check.
     tampered_token = bytearray(good.tsa_token)
@@ -257,7 +265,8 @@ def test_verify_chain_with_anchors_detects_token_tampering() -> None:
     )
     materials = authority.materials()
     result = verify_chain_with_anchors(
-        chain, [tampered],
+        chain,
+        [tampered],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
@@ -272,16 +281,19 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
     provider = TestTSAProvider(authority_a)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[0].event_hash),
-        anchored_seq=0, now=_NOW,
+        anchored_seq=0,
+        now=_NOW,
     )
     # Provide only the WRONG authority's root.
     materials = authority_b.materials()
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
     assert result.ok is False
+    assert result.anchor_results[0].cert_status == "QUARANTINED"
     # Both roots have the same CN, so the chain walker finds B's root
     # by DN match then fails the signature step.
     reason = result.anchor_results[0].reason or ""
@@ -296,7 +308,8 @@ def test_verify_chain_without_trust_roots_remains_unverified() -> None:
     provider = TestTSAProvider(authority)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[0].event_hash),
-        anchored_seq=0, now=_NOW,
+        anchored_seq=0,
+        now=_NOW,
     )
     result = verify_chain_with_anchors(chain, [anchor])
     assert result.ok is True
@@ -367,6 +380,7 @@ def test_ec_leaf_signature_tamper_fails_closed() -> None:
     bad_sig = bytearray(parsed.signature)
     bad_sig[-1] ^= 0x01
     from dataclasses import replace
+
     tampered = replace(parsed, signature=bytes(bad_sig))
     materials = authority.materials()
     with pytest.raises(AnchorVerificationError, match="ECDSA signature does not verify"):
@@ -402,7 +416,7 @@ def test_unsupported_leaf_key_type_fails_closed(monkeypatch: pytest.MonkeyPatch)
 
     Triggered by patching ``leaf.public_key()`` to return an Ed25519PublicKey,
     which neither ``RSAPublicKey`` nor ``EllipticCurvePublicKey``. The verifier
-    must raise ``AnchorVerificationError`` with the unsupported-key message.
+    must raise ``AnchorQuarantineError`` with the unsupported-key message.
     """
     authority = TestTSAAuthority(now=_NOW)
     digest = hashlib.sha256(b"unsupported-key-defensive").digest()
@@ -418,7 +432,7 @@ def test_unsupported_leaf_key_type_fails_closed(monkeypatch: pytest.MonkeyPatch)
         return ed_public
 
     monkeypatch.setattr(cx509.Certificate, "public_key", fake_public_key)
-    with pytest.raises(AnchorVerificationError, match="unsupported leaf key type"):
+    with pytest.raises(AnchorQuarantineError, match="unsupported leaf key type"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,

@@ -50,6 +50,7 @@ from datetime import UTC, datetime
 
 from attestplane.anchoring.base import (
     AnchorPolicy,
+    AnchorQuarantineError,
     AnchorRecord,
     AnchorStatus,
     AnchorVerificationError,
@@ -221,8 +222,18 @@ class Anchorer:
             # state outside the TSA's view. The kwarg is forwarded so the
             # mock can echo the correct seq into AnchorRecord for tests.
             record = self._provider.request_timestamp(
-                request, anchored_seq=pending.seq,  # type: ignore[call-arg]
+                request,
+                anchored_seq=pending.seq,  # type: ignore[call-arg]
             )
+        except AnchorQuarantineError as exc:
+            pending.attempts += 1
+            pending.status = "failed_permanent"
+            pending.last_error = f"AnchorQuarantineError: {exc}"
+            with self._lock:
+                self._stats.failed_permanent += 1
+                result = AnchorerResult(pending=pending, record=None, clock_skew_seconds=0.0)
+                self._results.append(result)
+            return result
         except TSAUnavailableError as exc:
             pending.attempts += 1
             backoff = min(2 ** (pending.attempts - 1), self._max_backoff)
@@ -267,6 +278,7 @@ class Anchorer:
 
     def _now_plus(self, seconds: float) -> datetime:
         from datetime import timedelta
+
         return self._now() + timedelta(seconds=seconds)
 
     @staticmethod

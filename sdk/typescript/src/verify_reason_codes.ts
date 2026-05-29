@@ -12,6 +12,7 @@ export const VERIFY_REASON_TAXONOMY_VERSION = 1 as const;
 export const VERIFY_REASON_CODE_SCHEMA_VERSION = VERIFY_REASON_TAXONOMY_VERSION;
 
 export const VERIFY_REASON_ANCHOR_INVALID = 'att.verify.anchor_invalid' as const;
+export const VERIFY_REASON_ANCHOR_QUARANTINED = 'att.verify.anchor_quarantined' as const;
 export const VERIFY_REASON_CANONICAL_MISMATCH = 'att.verify.canonical_mismatch' as const;
 export const VERIFY_REASON_REQUIRED_FIELD_MISSING = 'att.verify.required_field_missing' as const;
 export const VERIFY_REASON_SCHEMA_INVALID = 'att.verify.schema_invalid' as const;
@@ -25,6 +26,7 @@ export const VERIFY_REASON_STRUCTURE_INVALID = 'att.verify.structure_invalid' as
 
 export type VerifyReasonCodeV1 =
   | typeof VERIFY_REASON_ANCHOR_INVALID
+  | typeof VERIFY_REASON_ANCHOR_QUARANTINED
   | typeof VERIFY_REASON_CANONICAL_MISMATCH
   | typeof VERIFY_REASON_REQUIRED_FIELD_MISSING
   | typeof VERIFY_REASON_SCHEMA_INVALID
@@ -37,6 +39,7 @@ export type VerifyReasonCodeV1 =
 
 export const ALL_VERIFY_REASON_CODES_V1 = [
   VERIFY_REASON_ANCHOR_INVALID,
+  VERIFY_REASON_ANCHOR_QUARANTINED,
   VERIFY_REASON_CANONICAL_MISMATCH,
   VERIFY_REASON_REQUIRED_FIELD_MISSING,
   VERIFY_REASON_SCHEMA_INVALID,
@@ -51,6 +54,8 @@ export const ALL_VERIFY_REASON_CODES_V1 = [
 export const VERIFY_REASON_TAXONOMY: Readonly<Record<VerifyReasonCodeV1, string>> = {
   [VERIFY_REASON_ANCHOR_INVALID]:
     'Anchor material is missing, malformed, unsupported, or failed verification.',
+  [VERIFY_REASON_ANCHOR_QUARANTINED]:
+    'Anchor material could be fetched or validated, but the result is claim-safe quarantine rather than a hard anchoring claim.',
   [VERIFY_REASON_CANONICAL_MISMATCH]:
     'Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree.',
   [VERIFY_REASON_REQUIRED_FIELD_MISSING]:

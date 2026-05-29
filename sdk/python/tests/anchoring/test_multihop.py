@@ -13,7 +13,7 @@ pytest.importorskip("cryptography")
 pytest.importorskip("asn1crypto")
 
 from attestplane.anchoring import (
-    AnchorVerificationError,
+    AnchorQuarantineError,
     TimestampRequest,
     verify_chain_with_anchors,
 )
@@ -37,8 +37,7 @@ def _build_chain(n: int) -> list:
             actor=f"agent://test/{i}",
             payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -69,7 +68,7 @@ def test_three_tier_chain_with_one_intermediate() -> None:
     parsed = parse_timestamp_response(der)
 
     # WITHOUT intermediates, verification fails.
-    with pytest.raises(AnchorVerificationError, match="not in trust roots"):
+    with pytest.raises(AnchorQuarantineError, match="not in trust roots"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -114,7 +113,7 @@ def test_missing_intermediate_fails_with_helpful_error() -> None:
     der = authority.sign_timestamp_response(digest, gen_time=_NOW)
     parsed = parse_timestamp_response(der)
 
-    with pytest.raises(AnchorVerificationError, match="not in trust roots or intermediates"):
+    with pytest.raises(AnchorQuarantineError, match="not in trust roots or intermediates"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -133,7 +132,7 @@ def test_max_chain_depth_enforced() -> None:
     der = authority.sign_timestamp_response(digest, gen_time=_NOW)
     parsed = parse_timestamp_response(der)
 
-    with pytest.raises(AnchorVerificationError, match="depth exceeded"):
+    with pytest.raises(AnchorQuarantineError, match="depth exceeded"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -158,7 +157,7 @@ def test_intermediate_validity_window_checked() -> None:
 
     # Move past the intermediate's window (5 * cert_validity = 5 days).
     future = _NOW + timedelta(days=30)
-    with pytest.raises(AnchorVerificationError, match="not_after"):
+    with pytest.raises(AnchorQuarantineError, match="not_after"):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,
@@ -191,7 +190,7 @@ def test_non_ca_intermediate_rejected() -> None:
     # Replace the legitimate intermediate with B's leaf — chain walk
     # should fail because the issuer DN won't match anything.
     bad_intermediates = [materials_b.leaf_cert_der]
-    with pytest.raises(AnchorVerificationError):
+    with pytest.raises(AnchorQuarantineError):
         verify_timestamp_token(
             parsed_a,
             expected_digest=digest,
@@ -208,18 +207,21 @@ def test_verify_chain_with_anchors_walks_intermediates() -> None:
     provider = TestTSAProvider(authority)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[1].event_hash),
-        anchored_seq=1, now=_NOW,
+        anchored_seq=1,
+        now=_NOW,
     )
     # The TestTSAProvider only puts leaf + root in tsa_cert_chain; we
     # need to extend it with the intermediate for verification to succeed.
     materials = authority.materials()
     from dataclasses import replace
+
     anchor = replace(
         anchor,
         tsa_cert_chain=anchor.tsa_cert_chain + materials.intermediate_certs_der,
     )
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
@@ -239,7 +241,7 @@ def test_unknown_trust_root_fails_at_chain_head() -> None:
 
     # Use B's root as the configured trust root; the chain walks A's
     # intermediates but cannot reach A's root because it isn't trusted.
-    with pytest.raises(AnchorVerificationError):
+    with pytest.raises(AnchorQuarantineError):
         verify_timestamp_token(
             parsed,
             expected_digest=digest,

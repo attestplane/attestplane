@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -124,6 +123,10 @@ def _assert_matches_verify_result_v1(
         "reasons",
         "bundle",
     }
+    if "anchor_status" in payload:
+        expected_keys.add("anchor_status")
+    if "anchor_reason_code" in payload:
+        expected_keys.add("anchor_reason_code")
     if expect_explanation:
         expected_keys.add("explanation")
     assert set(payload) == expected_keys
@@ -136,6 +139,21 @@ def _assert_matches_verify_result_v1(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
     )
+    if "anchor_status" in payload:
+        assert payload["anchor_status"] in {
+            "skipped",
+            "passed",
+            "failed",
+            "quarantined",
+            "invalid_input",
+            "unsupported",
+            "not_implemented",
+        }
+    if "anchor_reason_code" in payload:
+        assert re.fullmatch(
+            r"att\.verify\.[a-z][a-z0-9_]*",
+            str(payload["anchor_reason_code"]),
+        )
     assert isinstance(payload["reasons"], list)
 
     bundle = payload["bundle"]
@@ -196,7 +214,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent",
         }
     ]
 

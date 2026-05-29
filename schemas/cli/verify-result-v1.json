@@ -75,6 +75,29 @@
         }
       }
     },
+    "anchor_status": {
+      "type": "string",
+      "enum": [
+        "skipped",
+        "passed",
+        "failed",
+        "quarantined",
+        "invalid_input",
+        "unsupported",
+        "not_implemented"
+      ]
+    },
+    "anchor_reason_code": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "explanation": {
       "type": "array",
       "items": {

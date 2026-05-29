@@ -27,6 +27,7 @@ from attestplane.anchoring import (
     ANCHOR_SCHEMA_VERSION,
     AnchorError,
     AnchorPolicy,
+    AnchorQuarantineError,
     AnchorRecord,
     AnchorVerificationError,
     AnchorVerificationResult,
@@ -196,6 +197,7 @@ from attestplane.verify_errors import (
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
     VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_ANCHOR_QUARANTINED,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_CODE_SCHEMA_VERSION,
@@ -256,6 +258,7 @@ __all__ = [
     "AnchorError",
     "AnchorPolicy",
     "AnchorRecord",
+    "AnchorQuarantineError",
     "AnchorVerificationError",
     "AnchorVerificationResult",
     "BundleSchemaError",
@@ -293,6 +296,7 @@ __all__ = [
     "VERIFY_ERROR_DESCRIPTIONS",
     "VERIFY_ERROR_SCHEMA_VERSION",
     "VERIFY_REASON_ANCHOR_INVALID",
+    "VERIFY_REASON_ANCHOR_QUARANTINED",
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",
@@ -367,20 +371,22 @@ __all__ = [
 ]
 
 if _SIGNING_AVAILABLE:
-    __all__.extend([
-        "SIGNATURE_SCHEMA_VERSION",
-        "EnvKeyProvider",
-        "FileKeyProvider",
-        "InMemoryKeyProvider",
-        "KeyBoundaryError",
-        "KeyProvider",
-        "KeyProviderError",
-        "MultiSignerProvider",
-        "SignatureMode",
-        "SignatureRecord",
-        "SignatureVerificationError",
-        "SignaturePolicy",
-        "SigningError",
-        "SigningMaterial",
-        "derive_key_id",
-    ])
+    __all__.extend(
+        [
+            "SIGNATURE_SCHEMA_VERSION",
+            "EnvKeyProvider",
+            "FileKeyProvider",
+            "InMemoryKeyProvider",
+            "KeyBoundaryError",
+            "KeyProvider",
+            "KeyProviderError",
+            "MultiSignerProvider",
+            "SignatureMode",
+            "SignatureRecord",
+            "SignatureVerificationError",
+            "SignaturePolicy",
+            "SigningError",
+            "SigningMaterial",
+            "derive_key_id",
+        ]
+    )

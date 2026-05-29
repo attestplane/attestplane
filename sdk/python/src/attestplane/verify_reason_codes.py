@@ -18,6 +18,7 @@ VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
 
 VerifyReasonCodeV1 = Literal[
     "att.verify.anchor_invalid",
+    "att.verify.anchor_quarantined",
     "att.verify.canonical_mismatch",
     "att.verify.required_field_missing",
     "att.verify.schema_invalid",
@@ -45,9 +46,11 @@ VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
 )
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
+VERIFY_REASON_ANCHOR_QUARANTINED: Final[VerifyReasonCodeV1] = "att.verify.anchor_quarantined"
 
 ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_ANCHOR_QUARANTINED,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -61,6 +64,7 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
 
 VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
     VERIFY_REASON_ANCHOR_INVALID: "Anchor material is missing, malformed, unsupported, or failed verification.",
+    VERIFY_REASON_ANCHOR_QUARANTINED: "Anchor material could be fetched or validated, but the result is claim-safe quarantine rather than a hard anchoring claim.",
     VERIFY_REASON_CANONICAL_MISMATCH: (
         "Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree."
     ),
@@ -107,6 +111,7 @@ def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
 __all__ = [
     "ALL_VERIFY_REASON_CODES_V1",
     "VERIFY_REASON_ANCHOR_INVALID",
+    "VERIFY_REASON_ANCHOR_QUARANTINED",
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",
