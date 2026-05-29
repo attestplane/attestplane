@@ -17,7 +17,11 @@ with workflow.unsafe.imports_passed_through():
         merge_pr_activity,
     )
 
+# implement + create_pr run on the main queue (Codex slots).
+# review + post_review + merge run on a separate queue so review never
+# blocks an implement slot (P0 decoupling).
 _TASK_QUEUE = "autodev"
+_REVIEW_QUEUE = "review"
 
 _retry_3 = RetryPolicy(
     maximum_attempts=3,
@@ -46,7 +50,6 @@ class AutodevPipeline:
     async def run(self, inp: PipelineInput) -> str:
         n = inp.issue_number
 
-        # ── Stage 1: Implement ─────────────────────────────────────────
         impl = await workflow.execute_activity(
             implement_activity,
             args=[n, inp.issue_title, inp.issue_body],
@@ -57,7 +60,6 @@ class AutodevPipeline:
         if not impl.get("has_changes"):
             return f"issue #{n}: no changes produced by Codex"
 
-        # ── Stage 2: Create PR ─────────────────────────────────────────
         pr = await workflow.execute_activity(
             create_pr_activity,
             args=[n, impl["branch"]],
@@ -66,20 +68,18 @@ class AutodevPipeline:
             retry_policy=_retry_5,
         )
 
-        # ── Stage 3: Review ────────────────────────────────────────────
         review = await workflow.execute_activity(
             review_pr_activity,
             args=[n, pr["pr_number"]],
-            task_queue=_TASK_QUEUE,
+            task_queue=_REVIEW_QUEUE,
             start_to_close_timeout=timedelta(minutes=20),
             retry_policy=_retry_3,
         )
 
-        # Post formal GitHub review
         await workflow.execute_activity(
             post_review_activity,
             args=[n, pr["pr_number"], review["decision"], review.get("output", "")],
-            task_queue=_TASK_QUEUE,
+            task_queue=_REVIEW_QUEUE,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=_retry_5,
         )
@@ -87,11 +87,10 @@ class AutodevPipeline:
         if review["decision"] != "APPROVE":
             return f"issue #{n}: PR #{pr['pr_number']} REQUEST_CHANGES – not merging"
 
-        # ── Stage 4: Merge ─────────────────────────────────────────────
         await workflow.execute_activity(
             merge_pr_activity,
             args=[n, pr["pr_number"]],
-            task_queue=_TASK_QUEUE,
+            task_queue=_REVIEW_QUEUE,
             start_to_close_timeout=timedelta(minutes=10),
             retry_policy=_retry_5,
         )
