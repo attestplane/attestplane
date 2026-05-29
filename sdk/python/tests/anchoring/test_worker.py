@@ -168,6 +168,23 @@ def test_verification_error_quarantines_immediately() -> None:
     assert anchorer.pending_count() == 0
 
 
+def test_claim_safe_unavailable_quarantines_immediately() -> None:
+    fixed = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
+    provider = MockTSAProvider(fail_with=TSAUnavailableError("simulated outage"))
+    anchorer = Anchorer(provider, now=lambda: fixed, claim_safe=True)
+
+    anchorer.enqueue(b"\x07" * 32, seq=0)
+    result = anchorer.step_once()
+
+    assert result is not None
+    assert result.record is None
+    assert result.pending.status == "quarantined"
+    assert "simulated outage" in (result.pending.last_error or "")
+    assert anchorer.stats().failed_permanent == 1
+    assert anchorer.stats().retries_after_unavailable == 0
+    assert anchorer.pending_count() == 0
+
+
 # --- Clock skew tracking ---
 
 

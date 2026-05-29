@@ -222,6 +222,10 @@
         "raw_audit_payloads"
       ]
     },
+    "anchor_status": {
+      "enum": ["unanchored", "pending", "anchored", "quarantined"],
+      "description": "Optional additive anchor lifecycle state for the bundle. Absent in legacy bundles; when present, it records whether anchoring was still pending, completed, or quarantined without changing schema_version."
+    },
     "signature": {
       "type": "object",
       "additionalProperties": false,

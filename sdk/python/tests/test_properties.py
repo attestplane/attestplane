@@ -20,14 +20,14 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import pytest
+
+pytest.importorskip("hypothesis")
+
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from attestplane import (
-    AttestSubstrate,
-    EventDraft,
-    SubjectRef,
-)
+from attestplane import AttestSubstrate, EventDraft, SubjectRef
 from attestplane.canonical import canonicalize
 from attestplane.hashchain import (
     chain_extend,

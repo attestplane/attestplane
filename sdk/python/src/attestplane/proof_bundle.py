@@ -212,6 +212,7 @@ class ProofBundleBuilder:
     framework_mappings: list[FrameworkMapping] = field(default_factory=list)
     forbidden_fields: tuple[str, ...] = DEFAULT_FORBIDDEN_FIELDS
     anchor_ref: str | None = None
+    anchor_status: Literal["unanchored", "pending", "anchored", "quarantined"] = "unanchored"
     signatures: list[Any] = field(default_factory=list)
     """Optional list of :class:`~attestplane.signing.SignatureRecord`
     instances accumulated via :meth:`extend_signatures`. Defaults to
@@ -363,9 +364,14 @@ class ProofBundleBuilder:
         policy_check_event rows are present.
         """
         actual_now = now if now is not None else datetime.now(UTC)
+        if self.anchor_status not in {"unanchored", "pending", "anchored", "quarantined"}:
+            raise IncompleteProofBundleError("anchor_status must be one of: unanchored, pending, anchored, quarantined")
         result = verify_chain(self.events)
         head = head_of(self.events)
         ts = actual_now.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+        verification_method = (
+            "canonical-bytes-walk+anchor" if self.anchor_status != "unanchored" else "canonical-bytes-walk"
+        )
 
         # ADR-0012 P1.2: auto-derive policy_trace_refs (chain-seq-ordered hex hashes
         # for every policy_check_event). Absent when empty per ADR-0012 § 1.
@@ -392,7 +398,7 @@ class ProofBundleBuilder:
                 "reason": result.reason,
                 "verified_at": ts,
                 "verifier_version": _sdk_version(),
-                "verification_method": "canonical-bytes-walk",
+                "verification_method": verification_method,
             },
             "framework_mappings": [
                 {
@@ -410,6 +416,7 @@ class ProofBundleBuilder:
             # otherwise to keep existing tests + consumers untouched.
             **({"signatures": [_serialize_signature_record(r) for r in self.signatures]} if self.signatures else {}),
             **({"retention_proofs": list(self.retention_proofs)} if self.retention_proofs else {}),
+            **({"anchor_status": self.anchor_status} if self.anchor_status != "unanchored" else {}),
         }
 
 

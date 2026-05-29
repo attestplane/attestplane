@@ -21,6 +21,9 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = REPO_ROOT / "scripts/release/stable_auto_train.py"
 
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 spec = importlib.util.spec_from_file_location("stable_auto_train", SCRIPT_PATH)
 assert spec is not None and spec.loader is not None
 stable_auto_train = importlib.util.module_from_spec(spec)
@@ -1325,11 +1328,19 @@ def test_run_once_soft_skips_support_only_delta(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(stable_auto_train, "assert_on_main", lambda: None)
     monkeypatch.setattr(stable_auto_train, "best_effort_fetch_tags", lambda: None)
     monkeypatch.setattr(stable_auto_train, "sync_main_with_origin", lambda: None)
+    monkeypatch.setattr(stable_auto_train, "latest_stable", lambda: previous)
     monkeypatch.setattr(stable_auto_train, "latest_stable_before", lambda target: previous)
     monkeypatch.setattr(stable_auto_train, "assert_release_gate_allows_target", lambda target: None)
     monkeypatch.setattr(stable_auto_train, "git_ref_exists", lambda ref: False)
     monkeypatch.setattr(stable_auto_train, "remote_tag_exists", lambda tag: False)
     monkeypatch.setattr(stable_auto_train, "commits_since_tag_have_real_work", lambda tag: True)
+    monkeypatch.setattr(
+        stable_auto_train,
+        "publication_status",
+        lambda target: stable_auto_train.PublicationStatus(
+            python_visible=True, npm_visible=True, npm_latest=True, github_release=True
+        ),
+    )
     monkeypatch.setattr(
         stable_auto_train,
         "product_delta_for_target",

@@ -105,6 +105,9 @@ class Anchorer:
         :class:`TSAUnavailableError`.
     :param clock_skew_warn_seconds: emit a clock-skew warning when
         ``|local - tsa_claimed_time| > this``.
+    :param claim_safe: when ``True``, a TSA network / timestamp failure
+        is quarantined immediately instead of being retried. This is
+        the fail-closed code path for claim-bearing bundle generation.
     :param now: callable returning the current UTC datetime. Injected
         for deterministic tests.
     :param sleep: callable that pauses execution. Injected for tests
@@ -118,6 +121,7 @@ class Anchorer:
         policy: AnchorPolicy | None = None,
         max_backoff_seconds: int = 16,
         clock_skew_warn_seconds: int = 60,
+        claim_safe: bool = False,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -125,6 +129,7 @@ class Anchorer:
         self._policy = policy or AnchorPolicy()
         self._max_backoff = max_backoff_seconds
         self._clock_skew_warn = clock_skew_warn_seconds
+        self._claim_safe = claim_safe
         self._now = now
         self._sleep = sleep
         self._queue: deque[PendingAnchor] = deque()
@@ -226,16 +231,23 @@ class Anchorer:
             )
         except TSAUnavailableError as exc:
             pending.attempts += 1
+            pending.last_error = f"TSAUnavailableError: {exc}"
+            if self._claim_safe:
+                pending.status = "quarantined"
+                with self._lock:
+                    self._stats.failed_permanent += 1
+                    result = AnchorerResult(pending=pending, record=None, clock_skew_seconds=0.0)
+                    self._results.append(result)
+                return result
             backoff = min(2 ** (pending.attempts - 1), self._max_backoff)
             pending.next_attempt_at = self._now_plus(backoff)
-            pending.last_error = f"TSAUnavailableError: {exc}"
             with self._lock:
                 self._queue.append(pending)
                 self._stats.retries_after_unavailable += 1
             return None
         except AnchorVerificationError as exc:
             pending.attempts += 1
-            pending.status = "failed_permanent"
+            pending.status = "quarantined" if self._claim_safe else "failed_permanent"
             pending.last_error = f"AnchorVerificationError: {exc}"
             with self._lock:
                 self._stats.failed_permanent += 1

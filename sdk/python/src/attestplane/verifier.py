@@ -153,6 +153,7 @@ _ALLOWED_TOP_LEVEL = _REQUIRED_TOP_LEVEL | {
     "policy_trace_refs",
     "signatures",
     "retention_proofs",
+    "anchor_status",
 }
 _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS = {"proof_type"}
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
@@ -212,6 +213,13 @@ def _validate_shape(bundle: Any) -> None:
         raise BundleSchemaError("policy_trace_refs must be an array when present")
     if "retention_proofs" in bundle and not isinstance(bundle["retention_proofs"], list):
         raise BundleSchemaError("retention_proofs must be an array when present")
+    if "anchor_status" in bundle and bundle["anchor_status"] not in {
+        "unanchored",
+        "pending",
+        "anchored",
+        "quarantined",
+    }:
+        raise BundleSchemaError("anchor_status must be one of: unanchored, pending, anchored, quarantined")
 
 
 def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | None:

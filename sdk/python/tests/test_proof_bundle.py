@@ -11,9 +11,9 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
-import jsonschema
 import pytest
 
+import jsonschema
 from attestplane.hashchain import chain_extend, genesis_head, hash_event
 from attestplane.obligations import load_eu_ai_act_article_12
 from attestplane.proof_bundle import (
@@ -123,6 +123,28 @@ def test_build_bundle_with_chain() -> None:
     assert len(bundle["events"]) == 3
     assert bundle["verification_report"]["ok"] is True
     assert bundle["chain_metadata"]["head_seq"] == 2
+
+
+def test_bundle_with_anchor_status_validates_against_proof_bundle_schema() -> None:
+    builder = ProofBundleBuilder(chain_id="anchored", producer_runtime="test")
+    builder.extend(_build_good_chain(1))
+    builder.anchor_status = "anchored"
+    bundle = builder.build()
+
+    assert bundle["anchor_status"] == "anchored"
+    assert bundle["verification_report"]["verification_method"] == "canonical-bytes-walk+anchor"
+    jsonschema.validate(bundle, _proof_bundle_schema())
+
+
+def test_bundle_with_quarantined_anchor_status_validates_against_proof_bundle_schema() -> None:
+    builder = ProofBundleBuilder(chain_id="quarantined", producer_runtime="test")
+    builder.extend(_build_good_chain(1))
+    builder.anchor_status = "quarantined"
+    bundle = builder.build()
+
+    assert bundle["anchor_status"] == "quarantined"
+    assert bundle["verification_report"]["verification_method"] == "canonical-bytes-walk+anchor"
+    jsonschema.validate(bundle, _proof_bundle_schema())
 
 
 def test_bundle_validates_against_proof_bundle_schema() -> None:

@@ -34,7 +34,7 @@ ANCHOR_SCHEMA_VERSION: Final[int] = 1
 """Anchor schema version. Independent of ``chain.schema_version`` per ADR-0003 § 7."""
 
 
-AnchorStatus = Literal["unanchored", "pending", "anchored", "failed_permanent"]
+AnchorStatus = Literal["unanchored", "pending", "anchored", "failed_permanent", "quarantined"]
 
 
 class AnchorError(Exception):
