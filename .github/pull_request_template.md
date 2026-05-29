@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
 <!--
 Thanks for your contribution to Attestplane.
 
@@ -86,3 +88,15 @@ accepted.
 - [ ] No AI tool was used.
 - [ ] AI tool was used. Tool / model: `<fill in, e.g. "Claude Sonnet 4.6" or "GitHub Copilot">`
 - [ ] I have read every line I am submitting and stand behind it as my own.
+
+## Release Impact
+<!-- Check exactly one. Required — CI will block merge if none is selected. -->
+- [ ] `release:major` — breaking change to public API or existing behaviour
+- [ ] `release:minor` — new backwards-compatible public API, field, exit-code, or schema field
+- [ ] `release:patch` — bug fix, internal refactor, test, or docs with no public API change
+- [ ] `release:none` — no release needed (CI/tooling/infra only)
+
+- Use `release:major` for changes described by ADR-VERSIONING-001 as breaking or requiring a migration.
+- Use `release:minor` for additive, backwards-compatible surface changes under ADR-VERSIONING-001.
+- Use `release:patch` for fixes, refactors, tests, and docs that do not change the public API under ADR-VERSIONING-001.
+- Use `release:none` for CI, tooling, or infrastructure-only changes with no release impact under ADR-VERSIONING-001.
