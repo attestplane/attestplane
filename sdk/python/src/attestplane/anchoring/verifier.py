@@ -14,6 +14,12 @@ PR alongside ``anchor_vectors.json``; until then,
 ``"VALID_UNVERIFIED"`` for anchors with non-empty cert chains and
 ``"MISSING_LTV_ARTIFACTS"`` otherwise.
 
+Claim-safety note: live TSA providers are only counted as anchored
+when the RFC-3161 token is cryptographically verified. Test-only
+providers keep the historical ``VALID_UNVERIFIED`` fixture behavior so
+offline regression vectors remain stable, but those results are not
+allowed to green-light a real anchor claim.
+
 What this v1 implementation DOES check:
 
 1. Every :class:`AnchorRecord.anchored_event_hash` matches the
@@ -50,6 +56,13 @@ from attestplane.anchoring.base import (
 from attestplane.hashchain import verify_chain
 from attestplane.types import ChainedEvent
 
+_LIVE_TSA_PROVIDER_PREFIXES = ("freetsa.org", "digicert.")
+
+
+def _is_live_tsa_provider(provider_id: str) -> bool:
+    """Return True for public TSA providers that must fail closed."""
+    return provider_id.startswith(_LIVE_TSA_PROVIDER_PREFIXES)
+
 CertStatus = Literal[
     "VALID",
     "VALID_UNVERIFIED",
@@ -57,7 +70,7 @@ CertStatus = Literal[
     "EXPIRED_VALID_AT_ISSUANCE",
     "REVOKED",
 ]
-AnchorVerificationStatus = Literal["verified", "failed", "not_performed"]
+AnchorVerificationStatus = Literal["verified", "failed", "quarantined", "not_performed"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,8 +147,10 @@ def verify_chain_with_anchors(
 
     When ``trust_roots_der`` is ``None``, cross-reference-correct
     anchors are reported with ``cert_status="VALID_UNVERIFIED"`` —
-    this is the v1 substrate-only behaviour preserved for callers who
-    have not installed the anchor extras.
+    this is the v1 substrate-only behaviour preserved for test and
+    fixture callers who have not installed the anchor extras. Live TSA
+    provider ids (for example FreeTSA / DigiCert) are quarantined in
+    that case and do not count toward ``anchored_seqs``.
     """
     chain_result = verify_chain(events)
     seqs_in_chain = {ev.seq for ev in events}
@@ -399,11 +414,19 @@ def verify_chain_with_anchors(
                 ltv_artifacts_present=True,
                 reason=None,
             ))
-        anchored_seqs.add(anchor.anchored_seq)
+        if not _is_live_tsa_provider(provider):
+            anchored_seqs.add(anchor.anchored_seq)
 
     unanchored_seqs = seqs_in_chain - anchored_seqs
     if not anchor_results:
         verification_status: AnchorVerificationStatus = "not_performed"
+    elif any(not a.valid for a in anchor_results):
+        verification_status = "failed"
+    elif any(
+        a.cert_status == "VALID_UNVERIFIED" and _is_live_tsa_provider(a.provider)
+        for a in anchor_results
+    ):
+        verification_status = "quarantined"
     elif all(a.valid for a in anchor_results):
         verification_status = "verified"
     else:

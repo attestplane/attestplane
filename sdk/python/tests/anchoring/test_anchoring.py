@@ -323,6 +323,25 @@ def test_verify_chain_with_one_good_anchor() -> None:
     assert result.unanchored_seqs == frozenset({0, 1})
 
 
+def test_freetsa_live_tsa_without_trust_roots_quarantines_claim() -> None:
+    """Live TSA providers must not green-light an unverified anchor."""
+    fixed = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
+    chain = _build_chain(1)
+    provider = MockTSAProvider(provider_id="freetsa.org", fixed_time=fixed)
+    anchor = provider.request_timestamp(
+        TimestampRequest(digest=chain[0].event_hash), anchored_seq=0,
+    )
+
+    result = verify_chain_with_anchors(chain, [anchor])
+
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert result.anchor_results[0].valid is True
+    assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+    assert result.anchored_seqs == frozenset()
+    assert result.unanchored_seqs == frozenset({0})
+
+
 def test_verify_chain_with_multi_anchor_per_seq() -> None:
     """Plurality: two TSAs anchor the same tip."""
     chain = _build_chain(2)

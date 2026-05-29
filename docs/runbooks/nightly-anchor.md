@@ -29,6 +29,12 @@ The workflow has two distinct failure exit codes:
 | 78 | TSA unavailable (timeout / 5xx / network) | neutral | **no** (per ADR-0003 § 4) |
 | 1 | Anything else (signature failure, chain failure, malformed response) | red | yes (P0 + `gate-failure` + `claim-safety` labels) |
 
+For claim safety, a live FreeTSA run that cannot be cryptographically
+verified is treated as quarantine, not as an anchored claim. Only
+cryptographically verified live anchors may populate anchored-seq
+evidence; test-only fixtures may still emit ``VALID_UNVERIFIED`` for
+offline regression coverage, but those results are not release claims.
+
 ADR-0003 § 4 explicitly accepts TSA unavailability as a known outcome:
 anchoring is off the substrate's critical path. The neutral exit is the
 discipline that keeps "TSA flake" from polluting the alert backlog.
