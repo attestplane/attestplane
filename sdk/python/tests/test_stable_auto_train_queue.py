@@ -1205,6 +1205,24 @@ def test_cadence_limiter_proceeds_for_mixed_real_release_prep_range(
     assert stable_auto_train.commits_since_tag_have_real_work("v1.7.4") is True
 
 
+def test_cadence_limiter_proceeds_for_v1_8_4_mixed_real_release_prep_range(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    subjects = (
+        "chore(release): prepare v1.8.4\n"
+        "Fix release gate tests and stabilize README link\n"
+        "chore(release): prepare v1.8.4\n"
+        "Relax product support gating in release training\n"
+        "Relax product support gating in release training\n"
+        "local runner: remove recovery gating from live queue\n"
+        "local runner: consume open issues directly"
+    )
+
+    monkeypatch.setattr(stable_auto_train, "capture", lambda argv, *, timeout=None: subjects)
+
+    assert stable_auto_train.commits_since_tag_have_real_work("v1.8.3") is True
+
+
 def test_cadence_limiter_returns_false_on_empty_range(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

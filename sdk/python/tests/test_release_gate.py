@@ -14,34 +14,37 @@ sys.modules["release_gate"] = release_gate
 spec.loader.exec_module(release_gate)
 
 REAL_RELEASE_PREP_RANGE_FILES = [
-    "api/public/python_v1.json",
-    "api/public/typescript_v1.json",
-    "docs/release-notes/v1.7.5.draft.md",
-    "docs/validation/local_codex_runner/issue-172/code.md",
-    "release/artifacts/v1.7.5/artifact-manifest.json",
-    "release/artifacts/v1.7.5/checksums.sha256",
+    ".local/codex-runner-p0.yml",
+    ".local/codex-runner-p1-1.yml",
+    ".local/codex-runner-p1-2.yml",
+    ".local/codex-runner-p2-docs.yml",
+    ".local/codex-runner.yml",
+    "README.md",
+    "docs/release-notes/v1.8.4.draft.md",
+    "release/artifacts/v1.8.4/artifact-manifest.json",
+    "release/artifacts/v1.8.4/checksums.sha256",
+    "release/artifacts/v1.8.4/upload-plan.md",
+    "scripts/local_codex_runner/README.md",
+    "scripts/local_codex_runner/git_ops.py",
+    "scripts/local_codex_runner/github_cli.py",
+    "scripts/local_codex_runner/models.py",
+    "scripts/local_codex_runner/poll_issues.py",
+    "scripts/local_codex_runner/run_issue.py",
     "scripts/local_codex_runner/run_once.py",
+    "scripts/release/release_gate.py",
     "sdk/python/pyproject.toml",
     "sdk/python/src/attestplane/__init__.py",
-    "sdk/python/src/attestplane/cli/main.py",
-    "sdk/python/src/attestplane/verifier.py",
-    "sdk/python/src/attestplane/verify_reason_codes.py",
-    "sdk/python/tests/cli/test_verify_errors.py",
-    "sdk/python/tests/test_local_codex_runner_queue.py",
+    "sdk/python/tests/test_import_surface.py",
     "sdk/python/tests/test_release_gate.py",
-    "sdk/python/tests/test_stable_auto_train_queue.py",
     "sdk/python/uv.lock",
     "sdk/typescript/package-lock.json",
     "sdk/typescript/package.json",
-    "sdk/typescript/src/index.ts",
     "sdk/typescript/src/index_version.ts",
-    "sdk/typescript/src/verifier.ts",
-    "sdk/typescript/src/verify_reason_codes.ts",
-    "sdk/typescript/test/verifier.test.ts",
-    "sdk/typescript/test/verify_reason_codes.test.ts",
-    "tests/canonicalization/test_canonicalization_properties.py",
+    "tests/local_codex_runner/test_github_cli.py",
+    "tests/local_codex_runner/test_models.py",
+    "tests/local_codex_runner/test_run_issue_flow.py",
     "tests/local_codex_runner/test_run_once.py",
-    "tests/verifier/test_verify_reason_codes.py",
+    "tests/release/test_release_gate.py",
 ]
 
 
@@ -241,38 +244,40 @@ def test_product_delta_allows_product_implementation_change() -> None:
     assert result.ignored_files == ["sdk/python/src/attestplane/__init__.py"]
 
 
-def test_product_delta_allows_real_sdk_changes_in_release_prep_range() -> None:
+def test_product_delta_allows_real_release_prep_support_change() -> None:
     result = release_gate.classify_product_delta(REAL_RELEASE_PREP_RANGE_FILES, labels=[], env={})
 
     assert result.allowed is True
-    assert result.reason == "product_implementation_delta"
-    assert result.product_files == [
-        "sdk/python/src/attestplane/cli/main.py",
-        "sdk/python/src/attestplane/verifier.py",
-        "sdk/python/src/attestplane/verify_reason_codes.py",
-        "sdk/typescript/src/index.ts",
-        "sdk/typescript/src/verifier.ts",
-        "sdk/typescript/src/verify_reason_codes.ts",
-    ]
+    assert result.reason == "product_support_delta"
+    assert result.product_files == []
     assert result.product_support_files == [
-        "sdk/python/tests/cli/test_verify_errors.py",
-        "sdk/python/tests/test_local_codex_runner_queue.py",
+        "sdk/python/tests/test_import_surface.py",
         "sdk/python/tests/test_release_gate.py",
-        "sdk/python/tests/test_stable_auto_train_queue.py",
     ]
     assert result.support_only_files == [
-        "api/public/python_v1.json",
-        "api/public/typescript_v1.json",
-        "docs/release-notes/v1.7.5.draft.md",
-        "docs/validation/local_codex_runner/issue-172/code.md",
-        "release/artifacts/v1.7.5/artifact-manifest.json",
-        "release/artifacts/v1.7.5/checksums.sha256",
+        ".local/codex-runner-p0.yml",
+        ".local/codex-runner-p1-1.yml",
+        ".local/codex-runner-p1-2.yml",
+        ".local/codex-runner-p2-docs.yml",
+        ".local/codex-runner.yml",
+        "README.md",
+        "docs/release-notes/v1.8.4.draft.md",
+        "release/artifacts/v1.8.4/artifact-manifest.json",
+        "release/artifacts/v1.8.4/checksums.sha256",
+        "release/artifacts/v1.8.4/upload-plan.md",
+        "scripts/local_codex_runner/README.md",
+        "scripts/local_codex_runner/git_ops.py",
+        "scripts/local_codex_runner/github_cli.py",
+        "scripts/local_codex_runner/models.py",
+        "scripts/local_codex_runner/poll_issues.py",
+        "scripts/local_codex_runner/run_issue.py",
         "scripts/local_codex_runner/run_once.py",
-        "sdk/typescript/test/verifier.test.ts",
-        "sdk/typescript/test/verify_reason_codes.test.ts",
-        "tests/canonicalization/test_canonicalization_properties.py",
+        "scripts/release/release_gate.py",
+        "tests/local_codex_runner/test_github_cli.py",
+        "tests/local_codex_runner/test_models.py",
+        "tests/local_codex_runner/test_run_issue_flow.py",
         "tests/local_codex_runner/test_run_once.py",
-        "tests/verifier/test_verify_reason_codes.py",
+        "tests/release/test_release_gate.py",
     ]
     assert result.ignored_files == [
         "sdk/python/pyproject.toml",

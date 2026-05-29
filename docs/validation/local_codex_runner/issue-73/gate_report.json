@@ -1,0 +1,30 @@
+{
+  "commands": [
+    {
+      "command": "sdk/python/.venv/bin/python -m pytest sdk/python/tests -k 'release_gate or stable_auto_train' -x",
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "/opt/homebrew/opt/python@3.14/bin/python3.14: No module named pytest"
+    },
+    {
+      "command": "UV_CACHE_DIR=/private/tmp/uv-cache uv run --directory sdk/python pytest tests -k 'release_gate or stable_auto_train' -x",
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "Failed to download uuid-utils==0.16.0; dependency fetch blocked by restricted network/cache access"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "python3 direct assertion script for release_gate.classify_product_delta and stable_auto_train.commits_since_tag_have_real_work",
+      "exit_code": 0,
+      "stdout": "{\\n  \"release_gate_product_support_files\": [\\n    \"sdk/python/tests/test_import_surface.py\",\\n    \"sdk/python/tests/test_release_gate.py\"\\n  ],\\n  \"release_gate_reason\": \"product_support_delta\",\\n  \"release_gate_support_only_count\": 23,\\n  \"stable_auto_train_subject_count\": 7\\n}",
+      "stderr": ""
+    }
+  ],
+  "selected_gate": "local-direct-verification",
+  "status": "PARTIAL"
+}
