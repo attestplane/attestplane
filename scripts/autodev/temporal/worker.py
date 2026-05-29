@@ -51,9 +51,13 @@ async def _main() -> None:
     log.info("Connecting to Temporal at %s ...", TEMPORAL_ADDRESS)
     client = await Client.connect(TEMPORAL_ADDRESS)
 
-    thread_pool = concurrent.futures.ThreadPoolExecutor(
-        max_workers=MAX_IMPLEMENT + MAX_REVIEW,
-        thread_name_prefix="autodev",
+    implement_pool = concurrent.futures.ThreadPoolExecutor(
+        max_workers=MAX_IMPLEMENT,
+        thread_name_prefix="autodev-impl",
+    )
+    review_pool = concurrent.futures.ThreadPoolExecutor(
+        max_workers=MAX_REVIEW,
+        thread_name_prefix="autodev-review",
     )
 
     # Main queue: implement + create_pr (Codex slots, P1 = 10 concurrent).
@@ -71,7 +75,7 @@ async def _main() -> None:
             post_review_activity,
             merge_pr_activity,
         ],
-        activity_executor=thread_pool,
+        activity_executor=implement_pool,
         max_concurrent_activities=MAX_IMPLEMENT,
         max_concurrent_workflow_tasks=MAX_IMPLEMENT * 2,
     )
@@ -82,7 +86,7 @@ async def _main() -> None:
         client,
         task_queue=REVIEW_QUEUE,
         activities=[review_pr_activity, post_review_activity, merge_pr_activity],
-        activity_executor=thread_pool,
+        activity_executor=review_pool,
         max_concurrent_activities=MAX_REVIEW,
         max_concurrent_workflow_tasks=MAX_REVIEW,
     )
@@ -106,6 +110,8 @@ async def _main() -> None:
     async with implement_worker, review_worker:
         await stop_event.wait()
 
+    implement_pool.shutdown(wait=False)
+    review_pool.shutdown(wait=False)
     log.info("Worker stopped.")
 
 
