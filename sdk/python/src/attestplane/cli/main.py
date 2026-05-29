@@ -24,6 +24,8 @@ from typing import Any
 
 from attestplane import __version__
 from attestplane.cli.verify_json import (
+    _taxonomy_version_matches,
+    _taxonomy_version_requirement_failure,
     _verify_explanations,
     _verify_success_summary,
     build_verify_json_outcome,
@@ -38,6 +40,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_TAXONOMY_VERSION,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -134,6 +137,14 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        help=(
+            "fail closed unless the emitted verify taxonomy_version matches "
+            "the supplied value"
+        ),
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -435,6 +446,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -560,6 +572,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
@@ -575,6 +588,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "strict_proof_bundle_schema": strict_bundle_mode,
         "head_hash_hex": result.head_hash_hex,
         "bundle_version": result.bundle_version,
+        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
         "agreement": result.agreement,
         "chain_result": {
             "ok": result.chain_result.ok,
@@ -593,6 +607,39 @@ def cmd_verify(args: argparse.Namespace) -> int:
         **_verify_scope_metadata(),
     }
     explain = getattr(args, "explain", False)
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
+    if not _taxonomy_version_matches(payload["taxonomy_version"], require_taxonomy_version):
+        bundle_digest = payload["bundle"]["digest"]
+        taxonomy_version = payload["taxonomy_version"]
+        reason, explanation = _taxonomy_version_requirement_failure(
+            actual_taxonomy_version=taxonomy_version,
+            required_taxonomy_version=str(require_taxonomy_version),
+            explain=explain,
+        )
+        payload = {
+            "schema_version": 1,
+            "result": "fail",
+            "exit_code": 1,
+            "reason_code": reason["code"],
+            "taxonomy_version": taxonomy_version,
+            "reasons": [reason],
+            "bundle": {
+                "schema_version": 1,
+                "digest": bundle_digest,
+            },
+        }
+        if explanation is not None:
+            payload["explanation"] = explanation
+        human = (
+            "FAIL taxonomy_version gate mismatch: "
+            f"required={require_taxonomy_version!r} actual={taxonomy_version!r}"
+        )
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+        _emit(payload, args.json_output, human=human)
+        if explain and not args.json_output and explanation is not None:
+            _write_verify_explanations(explanation)
+        return 1
     if not result.ok and result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
         VERIFY_REQUIRED_FIELDS_MISSING,

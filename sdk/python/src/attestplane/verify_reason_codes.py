@@ -24,6 +24,7 @@ VerifyReasonCodeV1 = Literal[
     "att.verify.schema_unknown",
     "att.verify.schema_version_missing",
     "att.verify.schema_version_unsupported",
+    "att.verify.taxonomy_version_mismatch",
     "att.verify.signature_invalid",
     "att.verify.signature_missing",
     "att.verify.structure_invalid",
@@ -40,6 +41,9 @@ VERIFY_REASON_SCHEMA_VERSION_MISSING: Final[VerifyReasonCodeV1] = (
 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = (
     "att.verify.schema_version_unsupported"
 )
+VERIFY_REASON_TAXONOMY_VERSION_MISMATCH: Final[VerifyReasonCodeV1] = (
+    "att.verify.taxonomy_version_mismatch"
+)
 VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = (
     "att.verify.required_field_missing"
 )
@@ -54,6 +58,7 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
@@ -77,6 +82,9 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
     ),
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: (
         "A known bundle, payload, signature, or verifier schema version is unsupported."
+    ),
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH: (
+        "The emitted verify taxonomy_version does not match the caller's required version."
     ),
     VERIFY_REASON_SIGNATURE_INVALID: "Signature material is present but malformed or fails verifier checks.",
     VERIFY_REASON_SIGNATURE_MISSING: "Strict verification requires signature material but none is present.",
@@ -117,6 +125,7 @@ __all__ = [
     "VERIFY_REASON_SCHEMA_UNKNOWN",
     "VERIFY_REASON_SCHEMA_VERSION_MISSING",
     "VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED",
+    "VERIFY_REASON_TAXONOMY_VERSION_MISMATCH",
     "VERIFY_REASON_SIGNATURE_INVALID",
     "VERIFY_REASON_SIGNATURE_MISSING",
     "VERIFY_REASON_STRUCTURE_INVALID",

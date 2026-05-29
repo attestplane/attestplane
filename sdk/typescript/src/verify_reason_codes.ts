@@ -19,6 +19,8 @@ export const VERIFY_REASON_SCHEMA_UNKNOWN = 'att.verify.schema_unknown' as const
 export const VERIFY_REASON_SCHEMA_VERSION_MISSING = 'att.verify.schema_version_missing' as const;
 export const VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED =
   'att.verify.schema_version_unsupported' as const;
+export const VERIFY_REASON_TAXONOMY_VERSION_MISMATCH =
+  'att.verify.taxonomy_version_mismatch' as const;
 export const VERIFY_REASON_SIGNATURE_INVALID = 'att.verify.signature_invalid' as const;
 export const VERIFY_REASON_SIGNATURE_MISSING = 'att.verify.signature_missing' as const;
 export const VERIFY_REASON_STRUCTURE_INVALID = 'att.verify.structure_invalid' as const;
@@ -31,6 +33,7 @@ export type VerifyReasonCodeV1 =
   | typeof VERIFY_REASON_SCHEMA_UNKNOWN
   | typeof VERIFY_REASON_SCHEMA_VERSION_MISSING
   | typeof VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+  | typeof VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
   | typeof VERIFY_REASON_SIGNATURE_INVALID
   | typeof VERIFY_REASON_SIGNATURE_MISSING
   | typeof VERIFY_REASON_STRUCTURE_INVALID;
@@ -43,6 +46,7 @@ export const ALL_VERIFY_REASON_CODES_V1 = [
   VERIFY_REASON_SCHEMA_UNKNOWN,
   VERIFY_REASON_SCHEMA_VERSION_MISSING,
   VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+  VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
@@ -62,6 +66,8 @@ export const VERIFY_REASON_TAXONOMY: Readonly<Record<VerifyReasonCodeV1, string>
     'A known bundle, payload, signature, or verifier schema version is missing.',
   [VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED]:
     'A known bundle, payload, signature, or verifier schema version is unsupported.',
+  [VERIFY_REASON_TAXONOMY_VERSION_MISMATCH]:
+    "The emitted verify taxonomy_version does not match the caller's required version.",
   [VERIFY_REASON_SIGNATURE_INVALID]:
     'Signature material is present but malformed or fails verifier checks.',
   [VERIFY_REASON_SIGNATURE_MISSING]:

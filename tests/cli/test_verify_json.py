@@ -13,6 +13,7 @@ from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +25,12 @@ def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[in
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out)
+
+
+def _run_verify_raw(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
+    rc = main(argv)
+    captured = capsys.readouterr()
+    return rc, captured.out, captured.err
 
 
 def test_verify_json_pass_fixture_emits_fixed_schema(
@@ -104,3 +111,73 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "signer_subject=" in summary["message"]
     assert "schema_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
+
+
+def test_verify_json_taxonomy_version_requirement_matches_no_flag_output(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc_base, out_base, err_base = _run_verify_raw(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc_flag, out_flag, err_flag = _run_verify_raw(
+        ["verify", "--json", "--require-taxonomy-version", "1", str(PASS_FIXTURE)],
+        capsys,
+    )
+    rc_explain_base, explain_out_base, explain_err_base = _run_verify_raw(
+        ["verify", "--json", "--explain", str(PASS_FIXTURE)],
+        capsys,
+    )
+    rc_explain_flag, explain_out_flag, explain_err_flag = _run_verify_raw(
+        [
+            "verify",
+            "--json",
+            "--explain",
+            "--require-taxonomy-version",
+            "1",
+            str(PASS_FIXTURE),
+        ],
+        capsys,
+    )
+
+    assert rc_base == 0
+    assert rc_flag == 0
+    assert rc_explain_base == 0
+    assert rc_explain_flag == 0
+    assert err_base == ""
+    assert err_flag == ""
+    assert explain_err_base == ""
+    assert explain_err_flag == ""
+    assert out_flag == out_base
+    assert explain_out_flag == explain_out_base
+
+
+def test_verify_json_taxonomy_version_requirement_mismatch_reports_reason_code(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, out, err = _run_verify_raw(
+        [
+            "verify",
+            "--json",
+            "--explain",
+            "--require-taxonomy-version",
+            "0.0.0",
+            str(PASS_FIXTURE),
+        ],
+        capsys,
+    )
+    payload = json.loads(out)
+
+    assert rc == 1
+    assert err == ""
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 1
+    assert payload["reason_code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert payload["taxonomy_version"] == 1
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert payload["reasons"][0]["path"] == "/taxonomy_version"
+    assert "0.0.0" in payload["reasons"][0]["message"]
+    assert payload["reasons"][0]["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[
+        payload["reasons"][0]["code"]
+    ]
+    explanation = payload["explanation"][0]
+    assert explanation["primary_reason"] == VERIFY_REASON_TAXONOMY_VERSION_MISMATCH
+    assert explanation["pointer"] == "/taxonomy_version"
+    assert "0.0.0" in explanation["message"]
