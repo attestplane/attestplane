@@ -63,7 +63,8 @@ by `verify` paths. Issue #236 threads that same taxonomy through both
 - Result shape: `primary_reason` is exactly one code for rejected verifier
   results, and `secondary_reasons` is an ordered list of additional failed
   checks. Successful verifier results use `primary_reason: null` and
-  `secondary_reasons: []`.
+  `secondary_reasons: []`. The SDK result object also exposes
+  `taxonomy_version`, which must match the CLI surfaces below.
 - CLI JSON surfaces the same taxonomy with `reason_code` and
   `taxonomy_version`, while `--explain` renders the same code set in human
   form and adds a top-level `explanation[]` array with

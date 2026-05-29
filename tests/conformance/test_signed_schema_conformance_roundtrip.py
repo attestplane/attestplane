@@ -19,7 +19,9 @@ from attestplane.verify_errors import VERIFY_OK
 from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION
 
 ROOT = Path(__file__).resolve().parents[2]
-SIGNED_SCHEMA_FIXTURE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+SIGNED_SCHEMA_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+)
 SIGNED_SCHEMA_HELPER = ROOT / "tests" / "verifier" / "test_signed_schema_roundtrip.py"
 
 
@@ -27,7 +29,9 @@ def _load_rebuild_signed_schema_fixture() -> Callable[[dict[str, Any]], dict[str
     module_name = "signed_schema_roundtrip_helper"
     spec = importlib.util.spec_from_file_location(module_name, SIGNED_SCHEMA_HELPER)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load signed-schema helper from {SIGNED_SCHEMA_HELPER}")
+        raise RuntimeError(
+            f"could not load signed-schema helper from {SIGNED_SCHEMA_HELPER}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -37,7 +41,9 @@ def _load_rebuild_signed_schema_fixture() -> Callable[[dict[str, Any]], dict[str
 rebuild_signed_schema_fixture = _load_rebuild_signed_schema_fixture()
 
 
-def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
+def _run_verify(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> tuple[int, str, str]:
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, captured.out, captured.err
@@ -62,8 +68,14 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     bundle_path = str(SIGNED_SCHEMA_FIXTURE)
+    bundle = json.loads(SIGNED_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
+    result = verify_proof_bundle(
+        bundle, require_non_empty=True, require_signed_attestation=True
+    )
 
-    json_rc, json_stdout, json_stderr = _run_verify(["verify", "--json", bundle_path], capsys)
+    json_rc, json_stdout, json_stderr = _run_verify(
+        ["verify", "--json", bundle_path], capsys
+    )
     explain_rc, explain_stdout, explain_stderr = _run_verify(
         ["verify", "--json", "--explain", bundle_path],
         capsys,
@@ -80,5 +92,7 @@ def test_signed_schema_taxonomy_version_is_stable_across_verify_json_and_explain
     assert explain_payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert "taxonomy_version=1" in explain_payload["explanation"][0]["message"]
     assert json_payload["taxonomy_version"] == explain_payload["taxonomy_version"]
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
+    assert result.taxonomy_version == json_payload["taxonomy_version"]
     assert json_payload["result"] == explain_payload["result"] == "pass"
     assert json_payload["exit_code"] == explain_payload["exit_code"] == 0

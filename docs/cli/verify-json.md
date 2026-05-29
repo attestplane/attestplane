@@ -31,7 +31,8 @@ The payload is fixed at schema version 1:
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use.
+  `--json` and `--explain` use, and it matches the SDK result object's
+  `taxonomy_version` field.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
