@@ -226,6 +226,7 @@ export {
   type Registry,
 } from './obligations.js';
 export {
+  type AnchoringResult,
   BundleSchemaError,
   BundleVerificationError,
   shortSummary,

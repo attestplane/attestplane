@@ -15,6 +15,10 @@ The payload is fixed at schema version 1:
   "exit_code": 0,
   "reason_code": null,
   "taxonomy_version": 1,
+  "anchoring": {
+    "status": "unanchored",
+    "quarantined": false
+  },
   "reasons": [],
   "bundle": {
     "schema_version": 1,
@@ -26,12 +30,19 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
-  `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  `0` means accept, `1` means the verifier rejected the bundle, `2`
+  means a usage, I/O, or schema/shape problem prevented verification, and
+  `3` means the bundle verified but was quarantined by anchoring policy.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
+- `anchoring.status` is the stable anchoring state enum:
+  `anchored | quarantined | unanchored`.
+- `anchoring.quarantined` is the boolean convenience flag for
+  `anchoring.status == quarantined`.
+- Quarantine is orthogonal to pass/fail: quarantined bundles still report
+  `result: "pass"` and `reason_code: null`, but they use exit code `3`.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
@@ -79,9 +90,9 @@ When the two flags are combined, stdout remains valid JSON and the rationale
 text is carried in `explanation[]` and `reasons[].explanation`.
 
 When `--explain` is used without `--json`, stdout prints a compact
-`OK|FAIL signer_subject=... schema_version=... anchor=...` summary and
-stderr prints one rationale line per rejection reason in the same order as
-the structured payload.
+`OK|FAIL|QUARANTINED signer_subject=... schema_version=... anchor=...`
+summary and stderr prints one rationale line per rejection reason in the
+same order as the structured payload.
 
 ### Pass Example
 
@@ -91,13 +102,38 @@ the structured payload.
   "result": "pass",
   "exit_code": 0,
   "reasons": [],
+  "anchoring": {
+    "status": "unanchored",
+    "quarantined": false
+  },
   "explanation": [
     {
       "primary_reason": null,
       "pointer": "/",
-      "message": "signer_subject=key_id:... schema_version=1 anchor=absent"
+      "message": "signer_subject=key_id:... schema_version=1 taxonomy_version=1 anchor=unanchored"
     }
   ],
+  "bundle": {
+    "schema_version": 1,
+    "digest": "..."
+  }
+}
+```
+
+### Quarantine Example
+
+```json
+{
+  "schema_version": 1,
+  "result": "pass",
+  "exit_code": 3,
+  "reason_code": null,
+  "taxonomy_version": 1,
+  "reasons": [],
+  "anchoring": {
+    "status": "quarantined",
+    "quarantined": true
+  },
   "bundle": {
     "schema_version": 1,
     "digest": "..."

@@ -26,6 +26,12 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `anchoring.status` is a stable additive enum exposed on all results:
+  `anchored | quarantined | unanchored`.
+- `anchoring.quarantined` is the boolean convenience flag for
+  `anchoring.status == quarantined`.
+- Quarantined bundles remain structurally valid but return exit code `3`
+  so callers can branch separately from hard-fail verification errors.
 - `explanation[]` is the additive operator-facing companion surface. Each
   item carries `primary_reason`, `pointer`, and `message`; successful results
   use a single compact summary item, while rejected results mirror the

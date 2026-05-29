@@ -73,6 +73,11 @@ export class BundleSchemaError extends BundleVerificationError {
   }
 }
 
+export interface AnchoringResult {
+  readonly status: 'anchored' | 'quarantined' | 'unanchored';
+  readonly quarantined: boolean;
+}
+
 export interface BundleVerificationResult {
   readonly ok: boolean;
   readonly chain_result: VerificationResult;
@@ -91,6 +96,7 @@ export interface BundleVerificationResult {
   readonly retention_proofs_reason: string | null;
   readonly signed_attestation_schema_ok: boolean;
   readonly signed_attestation_schema_reason: string | null;
+  readonly anchoring: AnchoringResult;
   readonly error_code: VerifyErrorCode;
   readonly primary_reason: VerifyReasonCodeV1 | null;
   readonly secondary_reasons: readonly VerifyReasonCodeV1[];
@@ -102,20 +108,26 @@ export interface VerifyProofBundleOptions {
 }
 
 export function shortSummary(result: BundleVerificationResult): string {
+  const prefix = result.ok
+    ? result.anchoring.quarantined
+      ? 'QUARANTINED'
+      : 'OK'
+    : 'FAIL';
   if (result.ok) {
     return (
-      `OK chain_id='${result.chain_id}' events=${result.event_count} ` +
-      `head=${result.head_hash_hex.slice(0, 16)}…`
+      `${prefix} chain_id='${result.chain_id}' events=${result.event_count} ` +
+      `head=${result.head_hash_hex.slice(0, 16)}… anchoring=${result.anchoring.status}`
     );
   }
   const bad = result.chain_result.first_bad_index;
   return (
-    `FAIL chain_id='${result.chain_id}' events=${result.event_count} ` +
+    `${prefix} chain_id='${result.chain_id}' events=${result.event_count} ` +
     `first_bad_index=${bad} reason=${JSON.stringify(result.chain_result.reason)} ` +
     `agreement=${result.agreement} metadata_reason=${JSON.stringify(result.metadata_reason)} ` +
     `policy_trace_refs_reason=${JSON.stringify(result.policy_trace_refs_reason)} ` +
     `retention_proofs_reason=${JSON.stringify(result.retention_proofs_reason)} ` +
     `signed_attestation_schema_reason=${JSON.stringify(result.signed_attestation_schema_reason)} ` +
+    `anchoring=${result.anchoring.status} ` +
     `error_code=${result.error_code} primary_reason=${result.primary_reason}`
   );
 }
@@ -668,6 +680,21 @@ function verifyPolicyTraceRefs(
   return { ok: true, reason: null };
 }
 
+function bundleAnchoringStatus(bundle: ProofBundle): {
+  readonly status: AnchoringResult['status'];
+  readonly quarantined: boolean;
+} {
+  const anchorRef = bundle.chain_metadata.anchor_ref;
+  if (anchorRef === undefined || anchorRef.length === 0) {
+    return { status: 'unanchored', quarantined: false };
+  }
+  const lowered = anchorRef.toLowerCase();
+  if (lowered.startsWith('quarantine:') || lowered.startsWith('quarantined:')) {
+    return { status: 'quarantined', quarantined: true };
+  }
+  return { status: 'anchored', quarantined: false };
+}
+
 export function verifyProofBundle(
   raw: unknown,
   options: VerifyProofBundleOptions = {},
@@ -688,6 +715,7 @@ export function verifyProofBundle(
     bundle.retention_proofs,
     new Set(events.map((event) => bytesToHex(event.event_hash))),
   );
+  const anchoring = bundleAnchoringStatus(bundle);
   let errorCode: VerifyErrorCode = VERIFY_OK;
   if (!chainResult.ok || !agreement) {
     errorCode = VERIFY_CHAIN_RECOMPUTE_FAILED;
@@ -739,6 +767,7 @@ export function verifyProofBundle(
     retention_proofs_reason: retentionProofs.reason,
     signed_attestation_schema_ok: signedAttestationSchema.ok,
     signed_attestation_schema_reason: signedAttestationSchema.reason,
+    anchoring,
     error_code: errorCode,
     primary_reason: reasons.primary,
     secondary_reasons: reasons.secondary,

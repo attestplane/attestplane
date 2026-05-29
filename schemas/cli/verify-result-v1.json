@@ -11,6 +11,7 @@
     "exit_code",
     "reason_code",
     "taxonomy_version",
+    "anchoring",
     "reasons",
     "bundle"
   ],
@@ -44,6 +45,27 @@
     "taxonomy_version": {
       "type": "integer",
       "const": 1
+    },
+    "anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "quarantined"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "anchored",
+            "quarantined",
+            "unanchored"
+          ]
+        },
+        "quarantined": {
+          "type": "boolean"
+        }
+      }
     },
     "reasons": {
       "type": "array",
