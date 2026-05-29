@@ -3,6 +3,7 @@
 """SQLite audit log and pipeline-state store for autodev-train."""
 
 import sqlite3
+import threading
 import os
 from pathlib import Path
 from datetime import datetime, timezone
@@ -38,13 +39,17 @@ CREATE TABLE IF NOT EXISTS stage_events (
 """
 
 
+_local = threading.local()
+
+
 def _conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    c = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=10)
-    c.row_factory = sqlite3.Row
-    c.execute("PRAGMA journal_mode=WAL")
-    c.executescript(_DDL)
-    return c
+    if not hasattr(_local, "conn") or _local.conn is None:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _local.conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        _local.conn.row_factory = sqlite3.Row
+        _local.conn.execute("PRAGMA journal_mode=WAL")
+        _local.conn.executescript(_DDL)
+    return _local.conn
 
 
 def upsert_run(issue_number: int, **kwargs) -> None:
