@@ -605,6 +605,11 @@ function verifyMetadataClosure(
   return { ok: true, reason: null };
 }
 
+function taxonomyVersionFromBundle(bundle: ProofBundle): typeof VERIFY_REASON_TAXONOMY_VERSION {
+  const taxonomyVersion = bundle.chain_metadata.evidence_taxonomy_version;
+  return typeof taxonomyVersion === 'number' ? taxonomyVersion : VERIFY_REASON_TAXONOMY_VERSION;
+}
+
 function verifyPolicyTraceRefs(
   bundle: ProofBundle,
   events: readonly ChainedEvent[],
@@ -674,6 +679,7 @@ export function verifyProofBundle(
 ): BundleVerificationResult {
   validateShape(raw);
   const bundle = raw;
+  const taxonomyVersion = taxonomyVersionFromBundle(bundle);
   const events = rehydrateEvents(bundle.events);
   const chainResult = verifyChain(events);
   const bundleReportedOk = Boolean(bundle.verification_report.ok);
@@ -728,7 +734,7 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
-    taxonomy_version: VERIFY_REASON_TAXONOMY_VERSION,
+    taxonomy_version: taxonomyVersion,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,
