@@ -16,6 +16,21 @@
       "ok": true
     },
     {
+      "bundle_overrides": {
+        "verification_report": {
+          "future_report_field": "ignored"
+        }
+      },
+      "case_id": "additive_optional_unknown_field_ok",
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "fixture_case_id": "additive_minor_ok",
+      "ok": true,
+      "verification_report_fields": [
+        "future_report_field"
+      ]
+    },
+    {
       "case_id": "missing",
       "expected_reason_code": "att.verify.schema_version_missing",
       "expected_secondary_reasons": [],

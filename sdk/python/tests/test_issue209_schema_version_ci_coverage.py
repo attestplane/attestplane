@@ -59,6 +59,23 @@ def _schema_case(name: str) -> dict:
     return json.loads((SCHEMA_VERSION_DIR / name / "bundle.json").read_text(encoding="utf-8"))
 
 
+def _schema_case_for_vector(vector: dict[str, object]) -> dict:
+    fixture_case = str(vector.get("fixture_case_id", vector["case_id"]))
+    bundle = _schema_case(fixture_case)
+    overrides = vector.get("bundle_overrides")
+    if isinstance(overrides, dict):
+        _apply_overrides(bundle, overrides)
+    return bundle
+
+
+def _apply_overrides(target: dict[str, object], overrides: dict[str, object]) -> None:
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(target.get(key), dict):
+            _apply_overrides(target[key], value)
+        else:
+            target[key] = copy.deepcopy(value)
+
+
 def _unsigned_bundle() -> dict:
     substrate = AttestSubstrate()
     event = substrate.append(
@@ -91,7 +108,7 @@ def _signed_bundle() -> dict:
 
 def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
     for vector in SCHEMA_VERSION_VECTORS:
-        bundle = _schema_case(str(vector["case_id"]))
+        bundle = _schema_case_for_vector(vector)
         result = verify_proof_bundle(bundle, require_signed_attestation=True)
         assert result.ok is vector["ok"]
         assert result.primary_reason == vector["expected_reason_code"]
@@ -100,6 +117,8 @@ def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
             assert field in bundle
         for field in vector.get("chain_metadata_fields", ()):
             assert field in bundle["chain_metadata"]
+        for field in vector.get("verification_report_fields", ()):
+            assert field in bundle["verification_report"]
 
 
 def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
