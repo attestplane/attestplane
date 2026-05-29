@@ -55,16 +55,27 @@ async def _main() -> None:
         thread_name_prefix="autodev",
     )
 
+    # Main queue: implement + create_pr (Codex slots, P1 = 10 concurrent).
+    # Also registers review activities here for backwards-compat with any
+    # tasks that were dispatched to "autodev" before P0 queue split.
     implement_worker = Worker(
         client,
         task_queue=TASK_QUEUE,
         workflows=[AutodevPipeline],
-        activities=[implement_activity, create_pr_activity],
+        activities=[
+            implement_activity,
+            create_pr_activity,
+            review_pr_activity,
+            post_review_activity,
+            merge_pr_activity,
+        ],
         activity_executor=thread_pool,
         max_concurrent_activities=MAX_IMPLEMENT,
         max_concurrent_workflow_tasks=MAX_IMPLEMENT * 2,
     )
 
+    # Review queue: new workflows dispatch here (P0 decoupling).
+    # review slots never block implement slots.
     review_worker = Worker(
         client,
         task_queue=REVIEW_QUEUE,
