@@ -19,7 +19,17 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
-SIGNED_BUNDLE = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+SIGNED_BUNDLE = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+)
+TAXONOMY_PINNED_BUNDLE = (
+    ROOT
+    / "tests"
+    / "conformance"
+    / "schema_version"
+    / "additive_minor_ok"
+    / "bundle.json"
+)
 
 
 @pytest.mark.parametrize(
@@ -79,11 +89,52 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "2 proof-bundle contract schema/non-empty violation" in out
     assert "1 cryptographic" in out
+
+
+@pytest.mark.parametrize(
+    ("pin", "expected_rc", "expected_reason", "expected_stderr"),
+    [
+        ("v1", 0, None, ""),
+        (
+            "v0",
+            1,
+            "att.verify.schema_version_unsupported",
+            "",
+        ),
+    ],
+)
+def test_verify_require_taxonomy_version_pins_bundle_taxonomy(
+    pin: str,
+    expected_rc: int,
+    expected_reason: str | None,
+    expected_stderr: str,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(
+        [
+            "verify",
+            "--require-taxonomy-version",
+            pin,
+            str(TAXONOMY_PINNED_BUNDLE),
+            "--json",
+        ]
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == expected_rc
+    assert payload["schema_version"] == 1
+    assert payload["taxonomy_version"] == 1
+    assert payload["exit_code"] == expected_rc
+    assert payload["result"] == ("pass" if expected_rc == 0 else "fail")
+    assert payload["reason_code"] == expected_reason
+    assert captured.err == expected_stderr
 
 
 def test_verify_explain_surfaces_reserved_reason_for_additive_fields(

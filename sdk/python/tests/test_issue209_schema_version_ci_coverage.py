@@ -46,9 +46,7 @@ from attestplane.verify_reason_codes import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = REPO_ROOT / "tests" / "fixtures" / "bundles"
 SCHEMA_VERSION_DIR = REPO_ROOT / "tests" / "conformance" / "schema_version"
-SCHEMA_VERSION_VECTORS = json.loads(
-    (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
-)["cases"]
+SCHEMA_VERSION_VECTORS = json.loads((SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8"))["cases"]
 
 
 def _fixture(name: str) -> dict:
@@ -91,8 +89,13 @@ def _signed_bundle() -> dict:
 
 def test_schema_version_conformance_vectors_are_covered_by_sdk_gate() -> None:
     for vector in SCHEMA_VERSION_VECTORS:
-        bundle = _schema_case(str(vector["case_id"]))
-        result = verify_proof_bundle(bundle, require_signed_attestation=True)
+        case_name = str(vector.get("bundle_case", vector["case_id"]))
+        bundle = _schema_case(case_name)
+        result = verify_proof_bundle(
+            bundle,
+            require_signed_attestation=True,
+            **dict(vector.get("verify_options", {})),
+        )
         assert result.ok is vector["ok"]
         assert result.primary_reason == vector["expected_reason_code"]
         assert result.secondary_reasons == tuple(vector["expected_secondary_reasons"])
@@ -114,9 +117,7 @@ def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
 
 
 def test_unknown_required_field_maps_to_schema_unknown() -> None:
-    vector = next(
-        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field"
-    )
+    vector = next(item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field")
     bundle = _schema_case("unknown_required_field")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
@@ -205,9 +206,13 @@ def test_metadata_and_report_closure_failure_branches() -> None:
 
     bundle = _signed_bundle()
     bundle["chain_metadata"]["evidence_taxonomy_version"] = 2
-    assert verify_proof_bundle(bundle, require_signed_attestation=True).metadata_reason == (
-        "chain_metadata.evidence_taxonomy_version must be 1 when present"
-    )
+    assert verify_proof_bundle(bundle, require_signed_attestation=True).metadata_reason is None
+
+    assert verify_proof_bundle(
+        _signed_bundle(),
+        require_signed_attestation=True,
+        require_taxonomy_version="v0",
+    ).metadata_reason == ("chain_metadata.evidence_taxonomy_version=1 does not match required taxonomy version 'v0'")
 
     bundle = _signed_bundle()
     bundle["verification_report"]["reason"] = "unexpected"

@@ -16,6 +16,16 @@
       "ok": true
     },
     {
+      "bundle_case": "additive_minor_ok",
+      "case_id": "taxonomy_version_pinned_mismatch",
+      "expected_reason_code": "att.verify.schema_version_unsupported",
+      "expected_secondary_reasons": [],
+      "ok": false,
+      "verify_options": {
+        "require_taxonomy_version": "v0"
+      }
+    },
+    {
       "case_id": "missing",
       "expected_reason_code": "att.verify.schema_version_missing",
       "expected_secondary_reasons": [],
