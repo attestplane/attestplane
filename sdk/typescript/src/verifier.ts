@@ -79,7 +79,7 @@ export interface BundleVerificationResult {
   readonly bundle_reported_ok: boolean;
   readonly agreement: boolean;
   readonly event_count: number;
-  readonly bundle_version: number;
+  readonly bundle_version: 1;
   readonly taxonomy_version: typeof VERIFY_REASON_TAXONOMY_VERSION;
   readonly chain_id: string;
   readonly head_hash_hex: string;
@@ -727,7 +727,7 @@ export function verifyProofBundle(
     bundle_reported_ok: bundleReportedOk,
     agreement,
     event_count: events.length,
-    bundle_version: bundle.bundle_version,
+    bundle_version: 1,
     taxonomy_version: VERIFY_REASON_TAXONOMY_VERSION,
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
