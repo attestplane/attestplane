@@ -1,0 +1,10 @@
+{
+  "contract_version": 1,
+  "exit_codes": {
+    "pinning_gate_failure": 3,
+    "usage_or_io_error": 2,
+    "verification_failure": 1,
+    "verified": 0
+  },
+  "output_ordering": "json.dumps(indent=2, sort_keys=True)"
+}
