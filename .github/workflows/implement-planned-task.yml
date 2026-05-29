@@ -1,12 +1,12 @@
 name: implement-planned-task
 
-# autodev-train Stage 1: Implement a planned-task issue using Codex CLI.
-# Triggers when 'planned-task' label is added to any issue.
+# autodev-train Stage 1: Implement any new issue using Codex CLI.
+# Triggers when an issue is opened or reopened in this repository.
 # Creates a branch, runs Codex, commits with DCO sign-off, opens PR.
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, reopened]
 
 permissions:
   contents: write
@@ -26,8 +26,7 @@ env:
 
 jobs:
   implement:
-    name: Implement planned-task #${{ github.event.issue.number }}
-    if: github.event.label.name == 'planned-task'
+    name: Implement issue #${{ github.event.issue.number }}
     runs-on: [self-hosted, macOS, ARM64, opus-plan]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -180,7 +179,6 @@ jobs:
             "- The task description lacks sufficient implementation detail" \
             "- The task requires information not available in AGENTS.md or the codebase" \
             "- The task is already implemented" \
-            "Please refine the issue description and re-add the planned-task label to retry." \
+            "To retry: close and reopen this issue (triggers the pipeline again)." \
             > /tmp/no_changes_comment.txt
           gh issue comment "${ISSUE_NUMBER}" --body-file /tmp/no_changes_comment.txt
-          gh issue edit "${ISSUE_NUMBER}" --remove-label "planned-task"
