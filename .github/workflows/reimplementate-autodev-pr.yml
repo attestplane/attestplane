@@ -169,7 +169,7 @@ jobs:
             printf '%s\n' "4. 不得执行 git push、git tag、git merge、npm publish、twine upload"
             printf '%s\n' "5. 只修改解决审查意见所需的最小文件集"
           } > /tmp/autodev_reimplement_prompt.txt
-          codex exec --sandbox workspace-write --model o4-mini "$(cat /tmp/autodev_reimplement_prompt.txt)"
+          codex exec --sandbox workspace-write "$(cat /tmp/autodev_reimplement_prompt.txt)"
 
       - name: Commit and push fix
         if: steps.retries.outputs.exceeded == 'false'
