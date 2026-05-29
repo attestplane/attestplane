@@ -301,6 +301,28 @@ def _json_pass(
     )
 
 
+def _verify_exit_code(
+    result: Any | None,
+    *,
+    require_taxonomy_version: int | None,
+) -> int:
+    if result is None:
+        return 1
+    if result.ok:
+        return 0
+    if result.error_code in {
+        VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+        VERIFY_REQUIRED_FIELDS_MISSING,
+    }:
+        return 2
+    if require_taxonomy_version is not None and result.primary_reason in {
+        VERIFY_REASON_SCHEMA_VERSION_MISSING,
+        VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+    }:
+        return 2
+    return 1
+
+
 def _bundle_digest(raw_bytes: bytes) -> str:
     return _sha256_hex(raw_bytes)
 
@@ -369,15 +391,27 @@ def _bundle_failure_reason(
         path = "/verification_report"
         detail = result.metadata_reason
         if detail is not None:
-            if "schema_version is missing" in detail:
+            if "schema_version is missing" in detail or "evidence_taxonomy_version is missing" in detail:
                 code = VERIFY_REASON_SCHEMA_VERSION_MISSING
-                path = "/chain_metadata/schema_version"
-            elif "schema_version must be an integer" in detail:
+                path = (
+                    "/chain_metadata/evidence_taxonomy_version"
+                    if "evidence_taxonomy_version" in detail
+                    else "/chain_metadata/schema_version"
+                )
+            elif "schema_version must be an integer" in detail or "evidence_taxonomy_version must be an integer" in detail:
                 code = VERIFY_REASON_SCHEMA_INVALID
-                path = "/chain_metadata/schema_version"
-            elif detail.startswith("chain_metadata.schema_version="):
+                path = (
+                    "/chain_metadata/evidence_taxonomy_version"
+                    if "evidence_taxonomy_version" in detail
+                    else "/chain_metadata/schema_version"
+                )
+            elif detail.startswith("chain_metadata.schema_version=") or detail.startswith("chain_metadata.evidence_taxonomy_version="):
                 code = VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
-                path = "/chain_metadata/schema_version"
+                path = (
+                    "/chain_metadata/evidence_taxonomy_version"
+                    if detail.startswith("chain_metadata.evidence_taxonomy_version=")
+                    else "/chain_metadata/schema_version"
+                )
             elif "unknown required field" in detail:
                 code = VERIFY_REASON_SCHEMA_UNKNOWN
                 match = re.match(
@@ -444,6 +478,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None = None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -585,6 +620,7 @@ def build_verify_json_outcome(
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=require_signed_attestation,
+            require_taxonomy_version=require_taxonomy_version,
         )
     except BundleSchemaError as exc:
         code, path = _schema_reason_for_bundle_error(exc)
@@ -631,15 +667,15 @@ def build_verify_json_outcome(
         )
 
     reasons = _bundle_failure_reason(result, explain=explain)
-    if result.error_code in {
-        VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
-        VERIFY_REQUIRED_FIELDS_MISSING,
-    }:
-        exit_code = 2
-        stderr_code = result.error_code
-    else:
-        exit_code = 1
-        stderr_code = None
+    exit_code = _verify_exit_code(result, require_taxonomy_version=require_taxonomy_version)
+    stderr_code = (
+        result.error_code
+        if result.error_code in {
+            VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+            VERIFY_REQUIRED_FIELDS_MISSING,
+        }
+        else None
+    )
 
     return VerifyJsonOutcome(
         payload={
