@@ -21,8 +21,7 @@ from attestplane.cli.verify_json import (
     _schema_path_from_bundle_error,
 )
 from attestplane.proof_bundle import ProofBundleBuilder
-from attestplane.verify_errors import VERIFY_SCHEMA_ERROR
-from attestplane.verify_errors import VERIFY_IO_ERROR
+from attestplane.verify_errors import VERIFY_IO_ERROR, VERIFY_SCHEMA_ERROR
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -126,6 +125,8 @@ def _assert_matches_verify_result_v1(
     }
     if expect_explanation:
         expected_keys.add("explanation")
+    if "anchor" in payload:
+        expected_keys.add("anchor")
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
@@ -143,6 +144,14 @@ def _assert_matches_verify_result_v1(
     assert set(bundle) == {"schema_version", "digest"}
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+
+    if "anchor" in payload:
+        anchor = payload["anchor"]
+        assert isinstance(anchor, dict)
+        assert set(anchor) <= {"status", "reason"}
+        assert anchor["status"] in {"valid", "quarantined"}
+        if "reason" in anchor:
+            assert anchor["reason"]
 
     if expect_explanation:
         explanation = payload["explanation"]
@@ -196,9 +205,30 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 anchor=absent",
+            "message": "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 schema_version=1 taxonomy_version=1 anchor=absent",
         }
     ]
+
+
+@pytest.mark.parametrize("anchor_status", ["valid", "quarantined"])
+def test_verify_json_surfaces_anchor_status_when_bundle_carries_it(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    anchor_status: str,
+) -> None:
+    bundle = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
+    bundle["chain_metadata"]["anchor_ref"] = "freetsa://nightly"
+    bundle["verification_report"]["verification_method"] = "canonical-bytes-walk+anchor"
+    bundle["verification_report"]["anchor_status"] = anchor_status
+    path = tmp_path / "anchored.json"
+    path.write_text(json.dumps(bundle, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    rc, payload, stderr = _run_verify(["verify", "--json", str(path)], capsys)
+
+    assert rc == 0
+    assert stderr == ""
+    _assert_matches_verify_result_v1(payload)
+    assert payload["anchor"] == {"status": anchor_status}
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(

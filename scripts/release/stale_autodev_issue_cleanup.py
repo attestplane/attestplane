@@ -125,8 +125,12 @@ def fetch_open_issues(limit: int) -> list[Issue]:
     )
     issues: list[Issue] = []
     for item in json.loads(raw):
-        labels = [label["name"] for label in item.get("labels", []) if label.get("name")]
-        body = run_gh(["issue", "view", str(item["number"]), "--json", "body", "--jq", ".body"])
+        labels = [
+            label["name"] for label in item.get("labels", []) if label.get("name")
+        ]
+        body = run_gh(
+            ["issue", "view", str(item["number"]), "--json", "body", "--jq", ".body"]
+        )
         issues.append(
             Issue(
                 number=int(item["number"]),
@@ -183,9 +187,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.execute:
         for issue in candidates:
             close_candidate(issue)
-        print(f"closed {len(candidates)} stale support-only autodev issue(s)", file=sys.stderr)
+        print(
+            f"closed {len(candidates)} stale support-only autodev issue(s)",
+            file=sys.stderr,
+        )
     else:
-        print(f"dry-run: {len(candidates)} stale support-only autodev candidate(s)", file=sys.stderr)
+        print(
+            f"dry-run: {len(candidates)} stale support-only autodev candidate(s)",
+            file=sys.stderr,
+        )
     return 0
 
 

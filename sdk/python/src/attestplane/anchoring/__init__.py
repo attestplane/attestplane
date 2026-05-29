@@ -40,6 +40,7 @@ from attestplane.anchoring.verifier import (
     AnchorVerificationResult,
     CertStatus,
     SingleAnchorResult,
+    verify_chain_with_anchor_provider,
     verify_chain_with_anchors,
 )
 from attestplane.anchoring.worker import (
@@ -121,28 +122,33 @@ __all__ = [
     "WorkerStats",
     "load_qualified_tsa_trust_roots",
     "parse_trusted_list",
+    "verify_chain_with_anchor_provider",
     "verify_chain_with_anchors",
 ]
 
 if _HTTP_AVAILABLE:
-    __all__.extend([
-        "DigiCertProvider",
-        "FreeTSAProvider",
-        "HttpTransport",
-        "RecordedHttpTransport",
-        "Rfc3161HttpProvider",
-        "UrllibHttpTransport",
-        "make_replay_transport",
-    ])
+    __all__.extend(
+        [
+            "DigiCertProvider",
+            "FreeTSAProvider",
+            "HttpTransport",
+            "RecordedHttpTransport",
+            "Rfc3161HttpProvider",
+            "UrllibHttpTransport",
+            "make_replay_transport",
+        ]
+    )
 
 if _SIGSTORE_AVAILABLE:
-    __all__.extend([
-        "PUBLIC_REKOR_URL",
-        "SIGSTORE_REKOR_OCSP_MARKER",
-        "SIGSTORE_REKOR_PROVIDER_PREFIX",
-        "ParsedRekorEntry",
-        "SigstoreRekorAnchor",
-        "is_sigstore_rekor_anchor",
-        "parse_rekor_log_entry",
-        "verify_rekor_signed_entry_timestamp",
-    ])
+    __all__.extend(
+        [
+            "PUBLIC_REKOR_URL",
+            "SIGSTORE_REKOR_OCSP_MARKER",
+            "SIGSTORE_REKOR_PROVIDER_PREFIX",
+            "ParsedRekorEntry",
+            "SigstoreRekorAnchor",
+            "is_sigstore_rekor_anchor",
+            "parse_rekor_log_entry",
+            "verify_rekor_signed_entry_timestamp",
+        ]
+    )

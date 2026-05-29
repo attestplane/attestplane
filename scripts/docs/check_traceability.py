@@ -19,18 +19,44 @@ SOURCE_DOCS = [
     REPO_ROOT / "docs" / "security" / "threat-model-v1.md",
 ]
 MATRIX_LINK_TARGETS = {
-    REPO_ROOT / "docs" / "spec" / "nist-ai-rmf-1.0-mapping.md": "compliance-traceability-matrix.md",
-    REPO_ROOT / "docs" / "spec" / "gdpr-articles-5-22-30-mapping.md": "compliance-traceability-matrix.md",
-    REPO_ROOT / "docs" / "spec" / "iso-iec-42001-aims-mapping.md": "compliance-traceability-matrix.md",
-    REPO_ROOT / "docs" / "security" / "threat-model-v1.md": "../spec/compliance-traceability-matrix.md",
+    REPO_ROOT
+    / "docs"
+    / "spec"
+    / "nist-ai-rmf-1.0-mapping.md": "compliance-traceability-matrix.md",
+    REPO_ROOT
+    / "docs"
+    / "spec"
+    / "gdpr-articles-5-22-30-mapping.md": "compliance-traceability-matrix.md",
+    REPO_ROOT
+    / "docs"
+    / "spec"
+    / "iso-iec-42001-aims-mapping.md": "compliance-traceability-matrix.md",
+    REPO_ROOT
+    / "docs"
+    / "security"
+    / "threat-model-v1.md": "../spec/compliance-traceability-matrix.md",
 }
 MATRIX_SOURCE_TARGETS = {
-    REPO_ROOT / "docs" / "spec" / "nist-ai-rmf-1.0-mapping.md": "./nist-ai-rmf-1.0-mapping.md",
-    REPO_ROOT / "docs" / "spec" / "gdpr-articles-5-22-30-mapping.md": "./gdpr-articles-5-22-30-mapping.md",
-    REPO_ROOT / "docs" / "spec" / "iso-iec-42001-aims-mapping.md": "./iso-iec-42001-aims-mapping.md",
-    REPO_ROOT / "docs" / "security" / "threat-model-v1.md": "../security/threat-model-v1.md",
+    REPO_ROOT
+    / "docs"
+    / "spec"
+    / "nist-ai-rmf-1.0-mapping.md": "./nist-ai-rmf-1.0-mapping.md",
+    REPO_ROOT
+    / "docs"
+    / "spec"
+    / "gdpr-articles-5-22-30-mapping.md": "./gdpr-articles-5-22-30-mapping.md",
+    REPO_ROOT
+    / "docs"
+    / "spec"
+    / "iso-iec-42001-aims-mapping.md": "./iso-iec-42001-aims-mapping.md",
+    REPO_ROOT
+    / "docs"
+    / "security"
+    / "threat-model-v1.md": "../security/threat-model-v1.md",
 }
-DISCLAIMER = "Alpha — evidence-supporting alignment mapping, NOT compliance certification."
+DISCLAIMER = (
+    "Alpha — evidence-supporting alignment mapping, NOT compliance certification."
+)
 SOURCE_ISSUE = "https://github.com/attestplane/attestplane/issues/61"
 
 
@@ -44,7 +70,9 @@ def find_link(text: str, target: str) -> bool:
 
 
 def count_gap_rows(text: str) -> int:
-    return sum(1 for line in text.splitlines() if line.startswith("|") and "gap:" in line)
+    return sum(
+        1 for line in text.splitlines() if line.startswith("|") and "gap:" in line
+    )
 
 
 def report(errors: list[str]) -> int:
@@ -98,7 +126,11 @@ def validate(strict: bool) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--strict", action="store_true", help="fail if the matrix has no explicit gap rows")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="fail if the matrix has no explicit gap rows",
+    )
     args = parser.parse_args()
     return validate(args.strict)
 

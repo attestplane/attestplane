@@ -28,7 +28,7 @@ export type CertStatus =
   | 'MISSING_LTV_ARTIFACTS'
   | 'EXPIRED_VALID_AT_ISSUANCE'
   | 'REVOKED';
-export type AnchorVerificationStatus = 'verified' | 'failed' | 'not_performed';
+export type AnchorVerificationStatus = 'verified' | 'failed' | 'not_performed' | 'quarantined';
 
 // ----- Error hierarchy -----
 
@@ -307,6 +307,7 @@ export interface AnchorVerificationResult {
   readonly unanchored_seqs: ReadonlySet<number>;
   readonly anchor_results: readonly SingleAnchorResult[];
   readonly verification_status: AnchorVerificationStatus;
+  readonly quarantine_reason: string | null;
   readonly ok: boolean;
 }
 
@@ -465,6 +466,7 @@ export function verifyChainWithAnchors(
     unanchored_seqs: unanchoredSeqs,
     anchor_results: anchorResults,
     verification_status: verificationStatus,
+    quarantine_reason: null,
     ok: chainResult.ok && verificationStatus === 'verified',
   };
 }

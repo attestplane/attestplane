@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -130,7 +129,11 @@ def _check_score(raw: dict[str, object]) -> float:
         value = _coerce_float(raw.get(key))
         if value is not None:
             return value
-    result = str(raw.get("result") or raw.get("status") or raw.get("state") or "").strip().lower()
+    result = (
+        str(raw.get("result") or raw.get("status") or raw.get("state") or "")
+        .strip()
+        .lower()
+    )
     if result in {"pass", "passed", "success", "succeeded"}:
         return 10.0
     if result in {"fail", "failed", "failure", "error"}:
@@ -180,7 +183,9 @@ def load_summary(path: Path) -> ScorecardSummary:
 
     schema = str(raw.get("schema") or SCHEMA)
     if schema != SCHEMA:
-        raise ValueError(f"scorecard summary schema mismatch: expected {SCHEMA!r}, got {schema!r}")
+        raise ValueError(
+            f"scorecard summary schema mismatch: expected {SCHEMA!r}, got {schema!r}"
+        )
 
     checks = _normalize_checks(raw.get("checks", []))
     repo_value = raw.get("repo")
@@ -231,13 +236,18 @@ def compare_summaries(
         meaningful = True
     if any(regression.drop >= meaningful_drop for regression in regressions):
         meaningful = True
-    if any(regression.baseline_score > 0 and regression.current_score <= 0 for regression in regressions):
+    if any(
+        regression.baseline_score > 0 and regression.current_score <= 0
+        for regression in regressions
+    ):
         meaningful = True
 
     return ScorecardDiff(
         baseline=baseline,
         current=current,
-        regressions=tuple(sorted(regressions, key=lambda item: (-item.drop, item.name))),
+        regressions=tuple(
+            sorted(regressions, key=lambda item: (-item.drop, item.name))
+        ),
         missing_checks=tuple(sorted(missing_checks)),
         new_checks=tuple(new_checks),
         score_drop=round(score_drop, 2),
@@ -245,7 +255,9 @@ def compare_summaries(
     )
 
 
-def _build_report(baseline_path: Path, current_path: Path, meaningful_drop: float) -> ScorecardDiff:
+def _build_report(
+    baseline_path: Path, current_path: Path, meaningful_drop: float
+) -> ScorecardDiff:
     baseline = load_summary(baseline_path)
     current = load_summary(current_path)
     return compare_summaries(baseline, current, meaningful_drop=meaningful_drop)

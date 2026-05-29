@@ -22,7 +22,6 @@ from __future__ import annotations
 import datetime as dt
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -51,7 +50,9 @@ def git_output(*args: str) -> str:
     )
     if proc.returncode != 0:
         cmd = "git " + " ".join(args)
-        raise RuntimeError(f"{cmd} failed: {proc.stderr.strip() or proc.stdout.strip()}")
+        raise RuntimeError(
+            f"{cmd} failed: {proc.stderr.strip() or proc.stdout.strip()}"
+        )
     return proc.stdout.strip()
 
 
@@ -110,7 +111,9 @@ def collect_checks() -> list[TranslationCheck]:
         translation_path = REPO_ROOT / file_name
         meta = parse_front_matter(translation_path)
         source_ref = extract_source_path(meta)
-        recorded_commit = (meta.get("source_commit") or meta.get("source_sha") or "").strip()
+        recorded_commit = (
+            meta.get("source_commit") or meta.get("source_sha") or ""
+        ).strip()
         grace_days_raw = meta.get("drift_grace_days", str(DEFAULT_GRACE_DAYS)).strip()
 
         if not source_ref or not recorded_commit:
@@ -126,7 +129,9 @@ def collect_checks() -> list[TranslationCheck]:
         try:
             grace_days = int(grace_days_raw)
         except ValueError as exc:
-            raise RuntimeError(f"{file_name}: drift_grace_days must be an integer") from exc
+            raise RuntimeError(
+                f"{file_name}: drift_grace_days must be an integer"
+            ) from exc
         if grace_days <= 0:
             raise RuntimeError(f"{file_name}: drift_grace_days must be positive")
 
@@ -134,7 +139,9 @@ def collect_checks() -> list[TranslationCheck]:
         if current_commit == recorded_commit:
             continue
 
-        drift_age = dt.datetime.now(tz=dt.timezone.utc) - commit_timestamp(current_commit)
+        drift_age = dt.datetime.now(tz=dt.timezone.utc) - commit_timestamp(
+            current_commit
+        )
         checks.append(
             TranslationCheck(
                 translation_path=translation_path,

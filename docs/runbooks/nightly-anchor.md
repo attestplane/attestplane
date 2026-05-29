@@ -26,12 +26,13 @@ The workflow has two distinct failure exit codes:
 | Exit | Meaning | Workflow status | Issue opened? |
 |------|---------|-----------------|---------------|
 | 0 | Success | green | no |
-| 78 | TSA unavailable (timeout / 5xx / network) | neutral | **no** (per ADR-0003 § 4) |
+| 78 | TSA unavailable (timeout / 5xx / network) | neutral, bundle routed to `quarantined` | **no** (per ADR-0003 § 4) |
 | 1 | Anything else (signature failure, chain failure, malformed response) | red | yes (P0 + `gate-failure` + `claim-safety` labels) |
 
 ADR-0003 § 4 explicitly accepts TSA unavailability as a known outcome:
 anchoring is off the substrate's critical path. The neutral exit is the
-discipline that keeps "TSA flake" from polluting the alert backlog.
+discipline that keeps "TSA flake" from polluting the alert backlog while
+the bundle is marked `quarantined` instead of `valid`.
 
 ## Triage
 

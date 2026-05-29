@@ -36,6 +36,7 @@ from attestplane.anchoring import (
     TimestampRequest,
     TSAProvider,
     TSAUnavailableError,
+    verify_chain_with_anchor_provider,
     verify_chain_with_anchors,
 )
 from attestplane.canonical import CanonicalizationError, canonicalize
@@ -359,6 +360,7 @@ __all__ = [
     "check_settlement_precondition",
     "replay_fixture",
     "verify_chain",
+    "verify_chain_with_anchor_provider",
     "verify_chain_with_anchors",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
@@ -367,20 +369,22 @@ __all__ = [
 ]
 
 if _SIGNING_AVAILABLE:
-    __all__.extend([
-        "SIGNATURE_SCHEMA_VERSION",
-        "EnvKeyProvider",
-        "FileKeyProvider",
-        "InMemoryKeyProvider",
-        "KeyBoundaryError",
-        "KeyProvider",
-        "KeyProviderError",
-        "MultiSignerProvider",
-        "SignatureMode",
-        "SignatureRecord",
-        "SignatureVerificationError",
-        "SignaturePolicy",
-        "SigningError",
-        "SigningMaterial",
-        "derive_key_id",
-    ])
+    __all__.extend(
+        [
+            "SIGNATURE_SCHEMA_VERSION",
+            "EnvKeyProvider",
+            "FileKeyProvider",
+            "InMemoryKeyProvider",
+            "KeyBoundaryError",
+            "KeyProvider",
+            "KeyProviderError",
+            "MultiSignerProvider",
+            "SignatureMode",
+            "SignatureRecord",
+            "SignatureVerificationError",
+            "SignaturePolicy",
+            "SigningError",
+            "SigningMaterial",
+            "derive_key_id",
+        ]
+    )

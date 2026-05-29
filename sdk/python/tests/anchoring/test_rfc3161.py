@@ -26,6 +26,8 @@ from attestplane.anchoring import (
     AnchorRecord,
     AnchorVerificationError,
     TimestampRequest,
+    TSAUnavailableError,
+    verify_chain_with_anchor_provider,
     verify_chain_with_anchors,
 )
 from attestplane.anchoring.rfc3161 import (
@@ -51,8 +53,7 @@ def _build_chain(n: int) -> list:
             actor=f"agent://test/{i}",
             payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -90,7 +91,9 @@ def test_authority_with_nonce_round_trips() -> None:
     authority = TestTSAAuthority(now=_NOW)
     digest = hashlib.sha256(b"hello-nonce").digest()
     der = authority.sign_timestamp_response(
-        digest, gen_time=_NOW, nonce=b"\x01\x02\x03\x04",
+        digest,
+        gen_time=_NOW,
+        nonce=b"\x01\x02\x03\x04",
     )
     parsed = parse_timestamp_response(der)
     assert parsed.nonce == int.from_bytes(b"\x01\x02\x03\x04", "big")
@@ -171,7 +174,9 @@ def test_provider_anchor_record_has_real_token() -> None:
     provider = TestTSAProvider(authority)
     digest = hashlib.sha256(b"chain-head").digest()
     record = provider.request_timestamp(
-        TimestampRequest(digest=digest), anchored_seq=3, now=_NOW,
+        TimestampRequest(digest=digest),
+        anchored_seq=3,
+        now=_NOW,
     )
     assert record.anchored_seq == 3
     assert record.anchored_event_hash == digest
@@ -200,11 +205,31 @@ def test_provider_serial_numbers_increment() -> None:
 
 
 def test_provider_fail_with_raises() -> None:
-    from attestplane.anchoring import TSAUnavailableError
     authority = TestTSAAuthority(now=_NOW)
     provider = TestTSAProvider(authority, fail_with=TSAUnavailableError("oops"))
     with pytest.raises(TSAUnavailableError, match="oops"):
         provider.request_timestamp(TimestampRequest(digest=b"\x00" * 32))
+
+
+def test_live_anchor_provider_outage_quarantines() -> None:
+    authority = TestTSAAuthority(now=_NOW)
+    provider = TestTSAProvider(
+        authority,
+        fail_with=TSAUnavailableError("FreeTSA unreachable"),
+    )
+    chain = _build_chain(1)
+
+    result = verify_chain_with_anchor_provider(
+        chain,
+        provider,
+        trust_roots_der=[authority.materials().root_cert_der],
+        verification_time=_NOW,
+    )
+
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert "FreeTSA unreachable" in (result.quarantine_reason or "")
+    assert result.anchor_results == ()
 
 
 # --- verify_chain_with_anchors with REAL trust_roots ---------------------
@@ -216,12 +241,14 @@ def test_verify_chain_with_anchors_uses_real_signature_check() -> None:
     provider = TestTSAProvider(authority)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[2].event_hash),
-        anchored_seq=2, now=_NOW,
+        anchored_seq=2,
+        now=_NOW,
     )
     materials = authority.materials()
 
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
@@ -236,7 +263,8 @@ def test_verify_chain_with_anchors_detects_token_tampering() -> None:
     provider = TestTSAProvider(authority)
     good = provider.request_timestamp(
         TimestampRequest(digest=chain[1].event_hash),
-        anchored_seq=1, now=_NOW,
+        anchored_seq=1,
+        now=_NOW,
     )
     # Flip a byte deep in the signed bytes — must fail signature check.
     tampered_token = bytearray(good.tsa_token)
@@ -257,7 +285,8 @@ def test_verify_chain_with_anchors_detects_token_tampering() -> None:
     )
     materials = authority.materials()
     result = verify_chain_with_anchors(
-        chain, [tampered],
+        chain,
+        [tampered],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
@@ -272,12 +301,14 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
     provider = TestTSAProvider(authority_a)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[0].event_hash),
-        anchored_seq=0, now=_NOW,
+        anchored_seq=0,
+        now=_NOW,
     )
     # Provide only the WRONG authority's root.
     materials = authority_b.materials()
     result = verify_chain_with_anchors(
-        chain, [anchor],
+        chain,
+        [anchor],
         trust_roots_der=[materials.root_cert_der],
         verification_time=_NOW,
     )
@@ -296,7 +327,8 @@ def test_verify_chain_without_trust_roots_remains_unverified() -> None:
     provider = TestTSAProvider(authority)
     anchor = provider.request_timestamp(
         TimestampRequest(digest=chain[0].event_hash),
-        anchored_seq=0, now=_NOW,
+        anchored_seq=0,
+        now=_NOW,
     )
     result = verify_chain_with_anchors(chain, [anchor])
     assert result.ok is True
@@ -367,6 +399,7 @@ def test_ec_leaf_signature_tamper_fails_closed() -> None:
     bad_sig = bytearray(parsed.signature)
     bad_sig[-1] ^= 0x01
     from dataclasses import replace
+
     tampered = replace(parsed, signature=bytes(bad_sig))
     materials = authority.materials()
     with pytest.raises(AnchorVerificationError, match="ECDSA signature does not verify"):

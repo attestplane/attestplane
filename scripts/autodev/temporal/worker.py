@@ -89,8 +89,10 @@ async def _main() -> None:
 
     log.info(
         "autodev-train workers ready -- implement=%s (%d slots)  review=%s (%d slots)",
-        TASK_QUEUE, MAX_IMPLEMENT,
-        REVIEW_QUEUE, MAX_REVIEW,
+        TASK_QUEUE,
+        MAX_IMPLEMENT,
+        REVIEW_QUEUE,
+        MAX_REVIEW,
     )
 
     loop = asyncio.get_event_loop()

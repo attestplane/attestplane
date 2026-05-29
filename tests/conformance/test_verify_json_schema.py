@@ -54,6 +54,8 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     }
     if "explanation" in payload:
         expected_keys.add("explanation")
+    if "anchor" in payload:
+        expected_keys.add("anchor")
 
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
@@ -80,6 +82,14 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert set(bundle) == {"schema_version", "digest"}
     assert bundle["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
+
+    if "anchor" in payload:
+        anchor = payload["anchor"]
+        assert isinstance(anchor, dict)
+        assert set(anchor) <= {"status", "reason"}
+        assert anchor["status"] in {"valid", "quarantined"}
+        if "reason" in anchor:
+            assert anchor["reason"]
 
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
@@ -134,4 +144,6 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(f"{reason_code} {first_reason['path']}: ")
+    assert captured.err.splitlines()[0].startswith(
+        f"{reason_code} {first_reason['path']}: "
+    )
