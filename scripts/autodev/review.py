@@ -41,7 +41,7 @@ prompt = (
 payload = json.dumps({
     "model": "deepseek-v4-pro",
     "messages": [{"role": "user", "content": prompt}],
-    "max_tokens": 2048,
+    "max_tokens": 4096,
 }).encode()
 
 req = urllib.request.Request(
