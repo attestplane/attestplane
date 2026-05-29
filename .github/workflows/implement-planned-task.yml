@@ -21,7 +21,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: autodev-trigger-${{ github.event.issue.number }}
+  group: autodev-trigger-${{ github.event.inputs.issue_number || github.event.issue.number }}
   cancel-in-progress: true
 
 env:
