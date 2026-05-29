@@ -97,10 +97,9 @@ jobs:
             printf '%s\n' "   - SPDX-License-Identifier: Apache-2.0"
             printf '%s\n' "   - SPDX-FileCopyrightText: 当前年份 Attestplane Contributors"
             printf '%s\n' "3. 不得修改 .github/workflows/ 目录下的任何文件"
-            printf '%s\n' "4. 不得修改 scripts/release/ 目录下的任何文件"
-            printf '%s\n' "5. 不得执行 git push、git tag、git merge、npm publish、twine upload"
-            printf '%s\n' "6. 不得修改 CHANGELOG.md（由发布流水线管理）"
-            printf '%s\n' "7. 只修改实现任务所需的最小文件集"
+            printf '%s\n' "4. 不得执行 git push、git tag、git merge、npm publish、twine upload"
+            printf '%s\n' "5. 不得修改 CHANGELOG.md（由发布流水线管理）"
+            printf '%s\n' "6. 只修改实现任务所需的最小文件集"
           } > /tmp/autodev_prompt.txt
           codex exec --sandbox workspace-write "$(cat /tmp/autodev_prompt.txt)"
 
