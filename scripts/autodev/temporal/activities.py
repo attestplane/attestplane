@@ -278,15 +278,26 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
         diff = _gh(["pr", "diff", str(pr_number), "--repo", REPO_SLUG])
     except RuntimeError as _e:
         if "too_large" in str(_e) or "diff exceeded" in str(_e):
-            # Diff too big for GH API — fall back to per-file patches (first page = 30 files)
+            # Diff too big for GH API — fall back to per-file patches, sorted by importance
             import json as _json
-            files_raw = _gh(["api", f"repos/{REPO_SLUG}/pulls/{pr_number}/files?per_page=30"])
+            files_raw = _gh(["api", f"repos/{REPO_SLUG}/pulls/{pr_number}/files?per_page=100"])
             files = _json.loads(files_raw)
-            parts = [f"[DIFF TRUNCATED — PR has >{len(files)} files; showing first 30]\n"]
-            for file in files:
-                fname = file.get("filename", "?")
-                patch = file.get("patch") or "(binary or too large)"
-                parts.append(f"--- {fname}\n{patch[:2000]}\n")
+            changed_files = [f.get("filename", "?") for f in files]
+            file_patch = {f.get("filename", "?"): f.get("patch") or "(binary or too large)" for f in files}
+
+            def _file_priority(fname: str) -> int:
+                if fname.endswith(".py") and not any(k in fname for k in ("test_", "conftest")):
+                    return 0
+                if fname.endswith(".py"):
+                    return 1
+                return 2
+
+            changed_files_sorted = sorted(changed_files, key=_file_priority)
+            files_to_review = changed_files_sorted[:20]
+            parts = [f"[DIFF TRUNCATED — PR has {len(files)} files; showing {len(files_to_review)} by importance]\n"]
+            for fname in files_to_review:
+                patch = file_patch.get(fname, "(binary or too large)")
+                parts.append(f"--- {fname}\n{patch[:3000]}\n")
             diff = "\n".join(parts)[:50000]
         else:
             raise
@@ -309,6 +320,7 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
     )
 
     deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "")
+    _review_model = os.environ.get("DEEPSEEK_REVIEW_MODEL", "deepseek-chat")
     try:
         # Qwen/DeepSeek review can take several minutes; run in thread.
         output = await asyncio.to_thread(
@@ -318,7 +330,7 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
                 "--openai-api-key", deepseek_key,
                 "--openai-base-url", "https://api.deepseek.com/v1",
                 "--auth-type", "openai",
-                "--model", "deepseek-v4-pro",
+                "--model", _review_model,
                 "-y",
                 "--output-format", "text",
                 "--max-session-turns", "5",
@@ -386,6 +398,16 @@ async def post_review_activity(
             _gh(["pr", "close", str(pr_number), "--repo", REPO_SLUG])
         except RuntimeError:
             pass
+        # Sync-close the corresponding issue and label it to prevent duplicate audit picks.
+        try:
+            _gh(["issue", "close", str(issue_number), "--repo", REPO_SLUG,
+                 "--comment",
+                 f"Closed: autodev-train PR #{pr_number} received REQUEST_CHANGES and was not merged. "
+                 "Re-open this issue to retry implementation."])
+            _gh(["issue", "edit", str(issue_number), "--repo", REPO_SLUG,
+                 "--add-label", "autodev-failed"])
+        except RuntimeError as _e:
+            activity.logger.warning("Failed to close issue #%d: %s", issue_number, str(_e)[:200])
         db.upsert_run(issue_number, stage="failed")
         # Kick auto-loop so it can advance even if no [autodev] merge commit was produced
         try:
