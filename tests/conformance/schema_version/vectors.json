@@ -28,6 +28,15 @@
       "ok": false
     },
     {
+      "case_id": "taxonomy_version_mismatch",
+      "expected_reason_code": "att.verify.taxonomy_version_mismatch",
+      "expected_secondary_reasons": [],
+      "ok": false,
+      "verify_options": {
+        "require_taxonomy_version": 2
+      }
+    },
+    {
       "case_id": "unknown_required_field",
       "chain_metadata_fields": [
         "critical_future_field"
