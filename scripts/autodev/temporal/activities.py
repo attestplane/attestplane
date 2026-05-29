@@ -227,7 +227,22 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
 
     db.log_event(issue_number, "review", "started", f"pr={pr_number}")
 
-    diff = _gh(["pr", "diff", str(pr_number), "--repo", REPO_SLUG])
+    try:
+        diff = _gh(["pr", "diff", str(pr_number), "--repo", REPO_SLUG])
+    except RuntimeError as _e:
+        if "too_large" in str(_e) or "diff exceeded" in str(_e):
+            # Diff too big for GH API — fall back to per-file patches (first page = 30 files)
+            import json as _json
+            files_raw = _gh(["api", f"repos/{REPO_SLUG}/pulls/{pr_number}/files?per_page=30"])
+            files = _json.loads(files_raw)
+            parts = [f"[DIFF TRUNCATED — PR has >{len(files)} files; showing first 30]\n"]
+            for file in files:
+                fname = file.get("filename", "?")
+                patch = file.get("patch") or "(binary or too large)"
+                parts.append(f"--- {fname}\n{patch[:2000]}\n")
+            diff = "\n".join(parts)[:50000]
+        else:
+            raise
     issue_body = _gh(["issue", "view", str(issue_number), "--repo", REPO_SLUG, "--json", "body", "--jq", ".body"])
 
     prompt = (
