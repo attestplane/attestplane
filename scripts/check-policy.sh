@@ -109,6 +109,12 @@ if [ -f CONTRIBUTING.md ]; then
 fi
 
 echo ""
+echo "=== check: translated SECURITY.md drift ==="
+if ! python3 scripts/docs/check_translation_drift.py; then
+  fail=1
+fi
+
+echo ""
 echo "=== check: INV-NEW-1 (ADR-0009) — schemas/v1 \$id discipline ==="
 # Every JSON Schema under schemas/v1/ MUST have $id starting with
 # https://attestplane.io/schemas/v1/ — never https://aios.dev/.
