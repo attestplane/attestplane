@@ -97,8 +97,9 @@ jobs:
           gh api -X POST "repos/${REPO}/pulls/${PR}/reviews" \
             --field commit_id="${PR_HEAD_SHA}" \
             --field event=APPROVE \
-            --field body="$(cat /tmp/approve_body.txt)"
-          gh pr edit "${PR}" --add-label "review-passed"
+            --field body="$(cat /tmp/approve_body.txt)" > /dev/null
+          gh api -X POST "repos/${REPO}/issues/${PR}/labels" \
+            -f 'labels[]=review-passed'
 
       - name: Post request-changes review
         if: steps.ai_review.outputs.decision == 'REQUEST_CHANGES'
