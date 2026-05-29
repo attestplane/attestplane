@@ -106,7 +106,10 @@ async def implement_activity(
             "6. 只修改实现任务所需的最小文件集"
         )
 
-        _run(
+        # Codex blocks for up to 45 min; run in thread so the asyncio event
+        # loop stays free for Temporal heartbeats and other workflow tasks.
+        await asyncio.to_thread(
+            _run,
             ["codex", "exec", "--sandbox", "workspace-write", prompt],
             cwd=worktree,
             env={
@@ -233,7 +236,9 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
 
     deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "")
     try:
-        output = _run(
+        # Qwen/DeepSeek review can take several minutes; run in thread.
+        output = await asyncio.to_thread(
+            _run,
             [
                 "qwen", prompt,
                 "--openai-api-key", deepseek_key,
