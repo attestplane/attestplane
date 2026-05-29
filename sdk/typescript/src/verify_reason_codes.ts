@@ -86,3 +86,14 @@ export function verifyReasonCodeMatchesFormat(value: string): boolean {
 export function verifyReasonCodeExplanation(value: VerifyReasonCodeV1): string {
   return VERIFY_REASON_TAXONOMY[value];
 }
+
+export function resolveVerifyTaxonomyVersion(): number {
+  return VERIFY_REASON_TAXONOMY_VERSION;
+}
+
+export function formatVerifyTaxonomyVersion(value: number | null | undefined = undefined): string {
+  if (value === null || value === undefined) {
+    return 'unknown';
+  }
+  return String(value);
+}

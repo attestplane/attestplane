@@ -31,8 +31,9 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
-    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
+    format_verify_taxonomy_version,
+    resolve_verify_taxonomy_version,
     verify_reason_code_explanation,
 )
 
@@ -188,7 +189,7 @@ def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
-        f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} "
+        f"taxonomy_version={format_verify_taxonomy_version(resolve_verify_taxonomy_version())} "
         f"anchor={_bundle_anchor_state(bundle)}"
     )
 
@@ -208,7 +209,7 @@ def _verify_explanations(
                     None,
                     "/",
                     f"signer_subject=unknown schema_version=unknown "
-                    f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION} anchor=unknown",
+                    f"taxonomy_version={format_verify_taxonomy_version()} anchor=unknown",
                 )
             ]
         return [_explanation_entry(None, "/", _verify_success_summary(bundle))]
@@ -269,7 +270,7 @@ def _json_failure(
         "result": "fail",
         "exit_code": exit_code,
         "reason_code": reason["code"],
-        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "taxonomy_version": resolve_verify_taxonomy_version(),
         "reasons": [reason],
         "bundle": {
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -295,7 +296,7 @@ def _json_pass(
         "result": "pass",
         "exit_code": 0,
         "reason_code": None,
-        "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+        "taxonomy_version": resolve_verify_taxonomy_version(),
         "reasons": [],
         "bundle": {
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -661,7 +662,7 @@ def build_verify_json_outcome(
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
-            "taxonomy_version": VERIFY_REASON_TAXONOMY_VERSION,
+            "taxonomy_version": resolve_verify_taxonomy_version(),
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
