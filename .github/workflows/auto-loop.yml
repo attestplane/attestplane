@@ -4,14 +4,19 @@ name: auto-loop
 #   autodev merge → semver bump → architecture-audit → Opus plan
 #   → planned-task issues → autodev-train → merge → (repeat)
 #
-# Version bump logic (Conventional Commits, Opus recommendation):
-#   fix:/docs:/chore:  → patch  (0.0.x)
-#   feat:/refactor:    → minor  (0.x.0)
-#   feat!:/BREAKING    → major  → HUMAN GATE (opens RFC Discussion, no auto-tag)
+# Version bump logic (Conventional Commits — Opus architecture review 2026-05-29):
+#   chore:/fix:/docs:  → patch  (0.0.x)  ← most autodev tasks land here
+#   feat:              → minor  (0.x.0)  ← genuine new user-visible capability
+#   feat!:/BREAKING    → major  → HUMAN GATE (opens RFC issue, no auto-tag)
 #
-# Batch gate: only fires when ALL open autodev-pr PRs have merged.
-# Tag gate:   only creates a new tag every MIN_PRS_PER_TAG merged PRs
-#             or after MAX_DAYS_BETWEEN_TAGS days, whichever comes first.
+#   commit prefix is inferred from issue title in activities.py (not hardcoded feat:).
+#   minor bump signals "API surface changed, re-audit needed" to compliance clients;
+#   keeping it rare during 0.x phase aligns with "build trust before visibility".
+#
+# Batch gate: only fires when ALL open autodev-pr PRs have settled.
+# Tag gate:   batches MIN_PRS_PER_TAG=10 merged PRs before tagging
+#             (10 patch → 1 tag; prevents version number inflation from rapid Codex loops)
+#             or after MAX_DAYS_BETWEEN_TAGS days as a safety net.
 
 on:
   push:
@@ -31,7 +36,7 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  MIN_PRS_PER_TAG: "3"        # batch at least N autodev PRs before tagging
+  MIN_PRS_PER_TAG: "10"       # batch 10 autodev PRs before tagging (Opus: 10 patch = 1 tag)
   MAX_DAYS_BETWEEN_TAGS: "7"  # …or tag anyway after 7 days
 
 jobs:

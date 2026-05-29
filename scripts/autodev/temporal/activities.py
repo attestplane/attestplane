@@ -165,11 +165,21 @@ async def implement_activity(
         has_changes = bool(porcelain.strip())
 
         if has_changes:
+            # Infer Conventional Commits prefix from issue title so bump level
+            # reflects semantic reality (most autodev tasks are internal improvements,
+            # not user-visible features; hardcoding feat: inflates minor version).
+            _title_lower = issue_title.lower()
+            if any(k in _title_lower for k in ("fix", "bug", "patch", "repair", "correct")):
+                _cc_prefix = "fix"
+            elif any(k in _title_lower for k in ("add ", "implement ", "support ", "introduce ", "expose ")):
+                _cc_prefix = "feat"
+            else:
+                _cc_prefix = "chore"
             _run(["git", "add", "-A"], cwd=worktree)
             _run(
                 [
                     "git", "commit", "--signoff", "-m",
-                    f"feat: implement issue #{issue_number}\n\n"
+                    f"{_cc_prefix}: implement issue #{issue_number}\n\n"
                     "Automated implementation by autodev-train Temporal worker.",
                 ],
                 cwd=worktree,
