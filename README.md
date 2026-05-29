@@ -67,7 +67,7 @@ The architectural inspiration is [SLSA](https://slsa.dev/) — the OpenSSF suppl
 
 ### Release status
 
-> 🚀 New here? See [docs/quickstart.md](docs/quickstart.md) for a 5-minute walkthrough.
+> 🚀 New here? See [docs/README.md](docs/README.md) for the docs index and [docs/quickstart.md](docs/quickstart.md) for a 5-minute walkthrough.
 >
 > A user-facing roadmap covering current capabilities (v1.0.x pre-GA), the v1.0 GA target (2026-08-15), and stability gates is published at [`docs/roadmap/USER_ROADMAP.md`](docs/roadmap/USER_ROADMAP.md). It complements the engineering-internal [`docs/roadmap/p3_release_roadmap.md`](docs/roadmap/p3_release_roadmap.md).
 
@@ -413,6 +413,7 @@ If you are an EU-regulated entity (DORA, BaFin, NIS2 scope) evaluating Attestpla
 
 | Document | Purpose |
 |---|---|
+| [docs/README.md](docs/README.md) | Stable documentation index |
 | [LICENSE](LICENSE) | Apache License 2.0 |
 | [GOVERNANCE.md](GOVERNANCE.md) | Decision-making process, maintainer roles, succession plan |
 | [TRADEMARK.md](TRADEMARK.md) | Attestplane™ trademark policy and permitted use |
