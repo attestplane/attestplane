@@ -226,7 +226,34 @@ jobs:
           echo "tag=${next}" >> "$GITHUB_OUTPUT"
           echo "Loop: ${base} → ${next} (${LEVEL})"
 
-      # ── Create and push tag ───────────────────────────────────────────────
+      # ── Bump package versions before tagging (release-cd reads from tag commit)
+      - name: Bump package versions to match new tag
+        if: >-
+          steps.guard.outputs.open_autodev_prs == '0' &&
+          steps.batch.outputs.proceed == 'true' &&
+          steps.bump.outputs.level != 'major'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          semver="${TAG#v}"
+          git config user.name  "autodev-bot"
+          git config user.email "258170091+merchloubna70-dot@users.noreply.github.com"
+          # Python SDK
+          sed -i "s/^version = \"[^\"]*\"/version = \"${semver}\"/" sdk/python/pyproject.toml
+          # TypeScript SDK
+          node -e "
+          const fs = require('fs');
+          const p = JSON.parse(fs.readFileSync('sdk/typescript/package.json','utf8'));
+          p.version = '${semver}';
+          fs.writeFileSync('sdk/typescript/package.json', JSON.stringify(p,null,2)+'\n');
+          "
+          git add sdk/python/pyproject.toml sdk/typescript/package.json
+          git diff --cached --quiet || git commit -m "chore(release): bump version to ${semver} [skip ci]"
+          git push origin HEAD:main
+          echo "✅ Bumped package versions to ${semver}"
+
+      # ── Create and push tag (after version bump commit) ───────────────────
       - name: Create and push semver tag
         if: >-
           steps.guard.outputs.open_autodev_prs == '0' &&
@@ -237,8 +264,6 @@ jobs:
           LEVEL: ${{ steps.bump.outputs.level }}
         run: |
           set -euo pipefail
-          git config user.name  "autodev-bot"
-          git config user.email "258170091+merchloubna70-dot@users.noreply.github.com"
           git tag "$TAG" -m "auto-loop ${LEVEL} bump"
           git push origin "$TAG"
           echo "✅ Tagged ${TAG} (${LEVEL})"
