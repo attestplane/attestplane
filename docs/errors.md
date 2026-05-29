@@ -68,6 +68,10 @@ by `verify` paths. Issue #236 threads that same taxonomy through both
   `taxonomy_version`, while `--explain` renders the same code set in human
   form and adds a top-level `explanation[]` array with
   `{primary_reason, pointer, message}` entries.
+- `--require-taxonomy-version` is an opt-in consumer pinning gate. When the
+  requested version does not match the supported taxonomy version, the CLI
+  returns exit code `1` and surfaces
+  `att.verify.taxonomy_version_unsupported` in `--json`.
 
 These codes are namespaced under `att.verify.*`. The taxonomy is pinned by
 `taxonomy_version = 1` and is additive-only: adding a new code is allowed with
@@ -87,6 +91,7 @@ The v1.7.x release-note delta names the same stability knob
 | `att.verify.schema_unknown` | The input declares an unknown schema family, verification method namespace, or fail-closed critical/required field. |
 | `att.verify.schema_version_missing` | A known bundle, payload, signature, or verifier schema version is missing. |
 | `att.verify.schema_version_unsupported` | A known bundle, payload, signature, or verifier schema version is unsupported. |
+| `att.verify.taxonomy_version_unsupported` | The caller requested a supported verifier taxonomy version that this CLI does not expose. |
 | `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |
 | `att.verify.signature_missing` | Strict verification requires signature material but none is present. |
 | `att.verify.structure_invalid` | Known bundle relationships are malformed, duplicated, dangling, or out of order. |

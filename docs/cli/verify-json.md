@@ -26,14 +26,19 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
-  `0` means accept, `1` means the verifier rejected the bundle, and `2`
-  means a usage, I/O, or schema/shape problem prevented verification.
+  `0` means accept, `1` means the verifier rejected the bundle or an
+  opt-in consumer taxonomy pin mismatched, and `2` means a usage, I/O, or
+  schema/shape problem prevented verification.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- The opt-in `--require-taxonomy-version` gate compares a requested pin such
+  as `v1` against the supported verifier taxonomy version. On mismatch, the
+  CLI returns exit code `1` and emits
+  `att.verify.taxonomy_version_unsupported` in `reason_code`/`reasons[]`.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
