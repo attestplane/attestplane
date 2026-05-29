@@ -8,6 +8,7 @@ hash of every test case. The TypeScript step then loads this file and must
 reproduce byte-for-byte identical output, proving the two SDKs do not
 silently diverge.
 """
+
 from __future__ import annotations
 
 import base64
@@ -25,7 +26,10 @@ def sha256_hex(b: bytes) -> str:
 
 def main(corpus_path: Path, out_path: Path) -> None:
     corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
-    result: dict[str, list[dict[str, str]]] = {"canonical_text": [], "canonical_json": []}
+    result: dict[str, list[dict[str, str]]] = {
+        "canonical_text": [],
+        "canonical_json": [],
+    }
 
     for case in corpus["canonical_text"]:
         bytes_out = canonicalize_text(case["text"])
@@ -47,9 +51,13 @@ def main(corpus_path: Path, out_path: Path) -> None:
             }
         )
 
-    out_path.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"Python SDK emitted {len(result['canonical_text'])} text + "
-          f"{len(result['canonical_json'])} JSON canonical outputs to {out_path}")
+    out_path.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    print(
+        f"Python SDK emitted {len(result['canonical_text'])} text + "
+        f"{len(result['canonical_json'])} JSON canonical outputs to {out_path}"
+    )
 
 
 if __name__ == "__main__":

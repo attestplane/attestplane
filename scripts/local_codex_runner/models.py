@@ -83,7 +83,11 @@ class IssueTask:
 
     @classmethod
     def from_gh_json(cls, data: dict[str, Any]) -> "IssueTask":
-        labels = [str(label.get("name", label)) for label in data.get("labels", []) if label.get("name", label)]
+        labels = [
+            str(label.get("name", label))
+            for label in data.get("labels", [])
+            if label.get("name", label)
+        ]
         return cls(
             number=int(data["number"]),
             title=str(data.get("title", "")),
@@ -134,10 +138,20 @@ class State:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "State":
         return cls(
-            processed_issue_ids=sorted(int(item) for item in data.get("processed_issue_ids", [])),
-            active_issue_ids=sorted(int(item) for item in data.get("active_issue_ids", [])),
-            branch_mappings={str(key): str(value) for key, value in sorted(data.get("branch_mappings", {}).items())},
-            retry_counts={str(key): int(value) for key, value in sorted(data.get("retry_counts", {}).items())},
+            processed_issue_ids=sorted(
+                int(item) for item in data.get("processed_issue_ids", [])
+            ),
+            active_issue_ids=sorted(
+                int(item) for item in data.get("active_issue_ids", [])
+            ),
+            branch_mappings={
+                str(key): str(value)
+                for key, value in sorted(data.get("branch_mappings", {}).items())
+            },
+            retry_counts={
+                str(key): int(value)
+                for key, value in sorted(data.get("retry_counts", {}).items())
+            },
             last_result=data.get("last_result"),
         )
 
@@ -156,7 +170,9 @@ class State:
         self.branch_mappings[str(issue_number)] = branch
 
     def mark_finished(self, issue_number: int, result: RunnerResult) -> None:
-        self.active_issue_ids = [item for item in self.active_issue_ids if item != issue_number]
+        self.active_issue_ids = [
+            item for item in self.active_issue_ids if item != issue_number
+        ]
         if issue_number not in self.processed_issue_ids:
             self.processed_issue_ids.append(issue_number)
         self.last_result = result.to_dict()
@@ -165,9 +181,14 @@ class State:
         """Remove stale active/branch state for an issue that no longer needs work."""
         before_active = list(self.active_issue_ids)
         before_branch = dict(self.branch_mappings)
-        self.active_issue_ids = [item for item in self.active_issue_ids if item != issue_number]
+        self.active_issue_ids = [
+            item for item in self.active_issue_ids if item != issue_number
+        ]
         self.branch_mappings.pop(str(issue_number), None)
-        return before_active != self.active_issue_ids or before_branch != self.branch_mappings
+        return (
+            before_active != self.active_issue_ids
+            or before_branch != self.branch_mappings
+        )
 
     def increment_retry(self, key: str) -> int:
         self.retry_counts[key] = self.retry_counts.get(key, 0) + 1
@@ -200,7 +221,14 @@ def issue_priority_rank(task: IssueTask) -> int:
 
 
 def infer_category(labels: list[str]) -> str | None:
-    known = ("claim-safety", "verifier", "test-gap", "docs", "release-blocker", "feature-gap")
+    known = (
+        "claim-safety",
+        "verifier",
+        "test-gap",
+        "docs",
+        "release-blocker",
+        "feature-gap",
+    )
     for label in labels:
         if label in known:
             return label
@@ -234,7 +262,11 @@ def task_has_product_delta(task: IssueTask) -> bool:
 
     title = task.title.lower()
     labels = {label.lower() for label in task.labels}
-    if labels.intersection(SUPPORT_ONLY_TASK_LABELS) or "[docs]" in title or "[release]" in title:
+    if (
+        labels.intersection(SUPPORT_ONLY_TASK_LABELS)
+        or "[docs]" in title
+        or "[release]" in title
+    ):
         return False
     text = " ".join([task.title, task.body, *task.labels]).lower().replace("_", " ")
     product_hit = any(keyword in text for keyword in PRODUCT_DELTA_TASK_KEYWORDS)
@@ -255,7 +287,10 @@ def candidate_fetch_limit(max_issues_per_run: int) -> int:
         return DEFAULT_CANDIDATE_FETCH_FLOOR
     return min(
         DEFAULT_CANDIDATE_FETCH_CEILING,
-        max(DEFAULT_CANDIDATE_FETCH_FLOOR, max_issues_per_run * DEFAULT_CANDIDATE_FETCH_MULTIPLIER),
+        max(
+            DEFAULT_CANDIDATE_FETCH_FLOOR,
+            max_issues_per_run * DEFAULT_CANDIDATE_FETCH_MULTIPLIER,
+        ),
     )
 
 

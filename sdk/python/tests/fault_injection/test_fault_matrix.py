@@ -90,9 +90,7 @@ def test_fault_matrix_python_canonical_fail_closed(fault_id: str, mutated: objec
 
 
 def test_fault_matrix_python_canonical_key_ordering_and_negative_zero() -> None:
-    assert canonicalize({"z": 1, "a": 2, "m": {"b": 1, "a": 2}}) == (
-        b'{"a":2,"m":{"a":2,"b":1},"z":1}'
-    )
+    assert canonicalize({"z": 1, "a": 2, "m": {"b": 1, "a": 2}}) == (b'{"a":2,"m":{"a":2,"b":1},"z":1}')
     assert canonicalize(0) == b"0"
 
 
@@ -178,9 +176,7 @@ def test_fault_matrix_python_hashchain_fail_closed(fault_id: str) -> None:
         ),
     ],
 )
-def test_fault_matrix_python_payload_fail_closed(
-    fault_id: str, payload: dict[str, object]
-) -> None:
+def test_fault_matrix_python_payload_fail_closed(fault_id: str, payload: dict[str, object]) -> None:
     assert fault_id.startswith("payload.")
     with pytest.raises(ValueError):
         validate_lease_lifecycle_event_payload(payload)
@@ -246,9 +242,7 @@ def test_fault_matrix_python_proof_bundle_fail_closed(fault_id: str) -> None:
         ("settlement.amount_hash_mismatch", "b" * 64),
     ],
 )
-def test_fault_matrix_python_settlement_amount_hash_fail_closed(
-    fault_id: str, amount_hash: str | None
-) -> None:
+def test_fault_matrix_python_settlement_amount_hash_fail_closed(fault_id: str, amount_hash: str | None) -> None:
     payload: dict[str, object] = {"settlement_run_id": "s"}
     if amount_hash is not None:
         payload["amount_hash"] = amount_hash
@@ -337,9 +331,7 @@ def test_fault_matrix_python_valid_anchor_still_passes() -> None:
         ("jsonl.non_object_row", b"[]\n"),
     ],
 )
-def test_fault_matrix_python_jsonl_scan_fail_closed(
-    tmp_path: Path, fault_id: str, raw: bytes
-) -> None:
+def test_fault_matrix_python_jsonl_scan_fail_closed(tmp_path: Path, fault_id: str, raw: bytes) -> None:
     path = tmp_path / "chain.jsonl"
     path.write_bytes(raw)
     scan = JsonlStorageBackend(path).scan()

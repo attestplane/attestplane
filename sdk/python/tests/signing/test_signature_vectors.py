@@ -30,9 +30,7 @@ from attestplane.signing import (
 from attestplane.signing.signer import _build_segment_head_payload
 from attestplane.types import ChainHead, EventDraft
 
-_VECTORS_PATH = (
-    Path(__file__).resolve().parents[1] / "conformance" / "signature_vectors.json"
-)
+_VECTORS_PATH = Path(__file__).resolve().parents[1] / "conformance" / "signature_vectors.json"
 
 
 def _load_vectors() -> dict:
@@ -59,14 +57,16 @@ def _rebuild_chain() -> list:
 def _trust_roots_from_vector(vec_entry: dict) -> TrustRoots:
     entries = []
     for tr in vec_entry["trust_roots"]:
-        entries.append(TrustRootEntry(
-            key_id=tr["key_id"],
-            public_key_der=base64.standard_b64decode(tr["public_key_der_b64"]),
-            valid_from=datetime.fromisoformat(tr["valid_from"].replace("Z", "+00:00")),
-            valid_until=datetime.fromisoformat(tr["valid_until"].replace("Z", "+00:00")),
-            provider_id=None,
-            label=None,
-        ))
+        entries.append(
+            TrustRootEntry(
+                key_id=tr["key_id"],
+                public_key_der=base64.standard_b64decode(tr["public_key_der_b64"]),
+                valid_from=datetime.fromisoformat(tr["valid_from"].replace("Z", "+00:00")),
+                valid_until=datetime.fromisoformat(tr["valid_until"].replace("Z", "+00:00")),
+                provider_id=None,
+                label=None,
+            )
+        )
     return TrustRoots(version=1, entries=tuple(entries))
 
 
@@ -128,7 +128,8 @@ def test_vector_verifier_status(vector_index: int) -> None:
     chain_id = vec["input"]["chain_id"]
 
     status, results, signed_count, _first_bad = verify_chain_with_signatures(
-        chain, records,
+        chain,
+        records,
         chain_id=chain_id,
         trust_roots=trust_roots,
         verification_time=NOW,
@@ -136,8 +137,7 @@ def test_vector_verifier_status(vector_index: int) -> None:
 
     expected: SignatureStatus = vec["expected_verifier_status"]
     assert status == expected, (
-        f"vector {vec['name']!r}: expected {expected!r}, got {status!r}; "
-        f"reasons={[r.reason for r in results]}"
+        f"vector {vec['name']!r}: expected {expected!r}, got {status!r}; reasons={[r.reason for r in results]}"
     )
 
 
@@ -150,8 +150,11 @@ def test_v1_signed_segment_count_covers_full_segment() -> None:
     records = [deserialize_signature_record(vec["record"])]
     trust_roots = _trust_roots_from_vector(vec)
     _, _, signed_count, _ = verify_chain_with_signatures(
-        chain, records, chain_id=vec["input"]["chain_id"],
-        trust_roots=trust_roots, verification_time=NOW,
+        chain,
+        records,
+        chain_id=vec["input"]["chain_id"],
+        trust_roots=trust_roots,
+        verification_time=NOW,
     )
     assert signed_count == 5
 
@@ -165,8 +168,11 @@ def test_v2_per_event_signed_segment_count_is_one() -> None:
     records = [deserialize_signature_record(vec["record"])]
     trust_roots = _trust_roots_from_vector(vec)
     _, _, signed_count, _ = verify_chain_with_signatures(
-        chain, records, chain_id=vec["input"]["chain_id"],
-        trust_roots=trust_roots, verification_time=NOW,
+        chain,
+        records,
+        chain_id=vec["input"]["chain_id"],
+        trust_roots=trust_roots,
+        verification_time=NOW,
     )
     assert signed_count == 1
 
@@ -185,8 +191,11 @@ def test_v3_multi_signer_two_records_one_seq() -> None:
     assert records[0].signature != records[1].signature
     trust_roots = _trust_roots_from_vector(vec)
     status, results, signed_count, _ = verify_chain_with_signatures(
-        chain, records, chain_id="vec-3",
-        trust_roots=trust_roots, verification_time=NOW,
+        chain,
+        records,
+        chain_id="vec-3",
+        trust_roots=trust_roots,
+        verification_time=NOW,
     )
     assert status == "valid"
     assert all(r.status == "valid" for r in results)
@@ -201,8 +210,11 @@ def test_v4_unknown_key_count_zero() -> None:
     records = [deserialize_signature_record(vec["record"])]
     trust_roots = _trust_roots_from_vector(vec)
     status, _, signed_count, _ = verify_chain_with_signatures(
-        chain, records, chain_id="vec-4",
-        trust_roots=trust_roots, verification_time=NOW,
+        chain,
+        records,
+        chain_id="vec-4",
+        trust_roots=trust_roots,
+        verification_time=NOW,
     )
     assert status == "unknown_key"
     assert signed_count == 0
@@ -216,8 +228,11 @@ def test_v5_tampered_status_invalid_with_ed25519_reason() -> None:
     records = [deserialize_signature_record(vec["record"])]
     trust_roots = _trust_roots_from_vector(vec)
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, records, chain_id="vec-5",
-        trust_roots=trust_roots, verification_time=NOW,
+        chain,
+        records,
+        chain_id="vec-5",
+        trust_roots=trust_roots,
+        verification_time=NOW,
     )
     assert status == "invalid"
     assert first_bad == 0
@@ -229,6 +244,7 @@ def test_key_id_format_locked_for_all_vectors() -> None:
     """All vectors must use the 32-hex-char key_id format."""
     vectors = _load_vectors()
     import re
+
     pattern = re.compile(r"^[0-9a-f]{32}$")
     for vec in vectors["vectors"]:
         records = vec["records"] if "records" in vec else [vec["record"]]

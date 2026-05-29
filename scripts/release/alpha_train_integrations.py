@@ -97,9 +97,16 @@ def collect_git_facts(release: str) -> dict[str, Any]:
 def collect_sqlite_stage_facts(release: str, state_path: Path) -> dict[str, Any]:
     db_path = state_db_path(state_path)
     if not db_path.exists():
-        return {"available": False, "state_db": str(db_path), "stages": {}, "status": None}
+        return {
+            "available": False,
+            "state_db": str(db_path),
+            "stages": {},
+            "status": None,
+        }
     with sqlite3.connect(db_path) as db:
-        state = db.execute("SELECT status FROM release_state WHERE release = ?", (release,)).fetchone()
+        state = db.execute(
+            "SELECT status FROM release_state WHERE release = ?", (release,)
+        ).fetchone()
         try:
             stages = db.execute(
                 "SELECT stage, status, detail FROM release_stages WHERE release = ? ORDER BY stage",
@@ -112,7 +119,10 @@ def collect_sqlite_stage_facts(release: str, state_path: Path) -> dict[str, Any]
         "state_db": str(db_path),
         "status": str(state[0]) if state else None,
         "stages": {
-            str(stage): {"status": str(status), "detail": parse_json_output(str(detail)) or {}}
+            str(stage): {
+                "status": str(status),
+                "detail": parse_json_output(str(detail)) or {},
+            }
             for stage, status, detail in stages
         },
     }
@@ -122,7 +132,14 @@ def collect_github_facts(release: str) -> dict[str, Any]:
     if shutil.which("gh") is None:
         return {"available": False, "limitation": "gh_cli_not_found"}
     ok, release_json = run_capture(
-        ["gh", "release", "view", release, "--json", "tagName,isPrerelease,url,assets,publishedAt,targetCommitish"],
+        [
+            "gh",
+            "release",
+            "view",
+            release,
+            "--json",
+            "tagName,isPrerelease,url,assets,publishedAt,targetCommitish",
+        ],
         timeout=30,
     )
     release_payload = parse_json_output(release_json) if ok else None
@@ -160,17 +177,30 @@ def pypi_version_exists(version: str) -> bool:
 def collect_registry_facts(release: str) -> dict[str, Any]:
     python_version = alpha_python_version(release)
     npm_version = alpha_npm_version(release)
-    npm_version_ok, npm_version_text = run_capture(["npm", "view", f"{PACKAGE_NPM}@{npm_version}", "version", "--json"])
-    npm_tags_ok, npm_tags_text = run_capture(["npm", "view", PACKAGE_NPM, "dist-tags", "--json"])
+    npm_version_ok, npm_version_text = run_capture(
+        ["npm", "view", f"{PACKAGE_NPM}@{npm_version}", "version", "--json"]
+    )
+    npm_tags_ok, npm_tags_text = run_capture(
+        ["npm", "view", PACKAGE_NPM, "dist-tags", "--json"]
+    )
     npm_tags = parse_json_output(npm_tags_text) if npm_tags_ok else None
     return {
-        "pypi": {"version": python_version, "published": pypi_version_exists(python_version)},
+        "pypi": {
+            "version": python_version,
+            "published": pypi_version_exists(python_version),
+        },
         "npm": {
             "version": npm_version,
-            "published": bool(npm_version_ok and parse_json_output(npm_version_text) == npm_version),
+            "published": bool(
+                npm_version_ok and parse_json_output(npm_version_text) == npm_version
+            ),
             "dist_tags": npm_tags if isinstance(npm_tags, dict) else {},
-            "latest_points_to_version": bool(isinstance(npm_tags, dict) and npm_tags.get("latest") == npm_version),
-            "alpha_points_to_version": bool(isinstance(npm_tags, dict) and npm_tags.get("alpha") == npm_version),
+            "latest_points_to_version": bool(
+                isinstance(npm_tags, dict) and npm_tags.get("latest") == npm_version
+            ),
+            "alpha_points_to_version": bool(
+                isinstance(npm_tags, dict) and npm_tags.get("alpha") == npm_version
+            ),
         },
     }
 
@@ -188,7 +218,9 @@ def collect_coderabbit_facts() -> dict[str, Any]:
         "available": True,
         "version": version if version_ok else None,
         "auth_status_available": auth_ok,
-        "auth_status_summary": "authenticated" if auth_ok else "unavailable_or_unauthenticated",
+        "auth_status_summary": "authenticated"
+        if auth_ok
+        else "unavailable_or_unauthenticated",
         "advisory_only": True,
         "permission_granted": False,
         "limitations": [] if version_ok and auth_ok else ["coderabbit_review_not_run"],
@@ -213,7 +245,9 @@ def collect_linear_facts() -> dict[str, Any]:
             "limitations": ["linear_api_token_missing"],
         }
 
-    body = json.dumps({"query": "query { viewer { id name } organization { id name } }"}).encode("utf-8")
+    body = json.dumps(
+        {"query": "query { viewer { id name } organization { id name } }"}
+    ).encode("utf-8")
     request = urllib.request.Request(
         LINEAR_GRAPHQL_URL,
         data=body,
@@ -226,7 +260,12 @@ def collect_linear_facts() -> dict[str, Any]:
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             payload = parse_json_output(response.read().decode("utf-8"))
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+    ) as exc:
         return {
             "available": True,
             "configured": True,
@@ -247,9 +286,13 @@ def collect_linear_facts() -> dict[str, Any]:
         "advisory_only": True,
         "permission_granted": False,
         "workspace_observed": bool(isinstance(organization, dict)),
-        "workspace_name": organization.get("name") if isinstance(organization, dict) else None,
+        "workspace_name": organization.get("name")
+        if isinstance(organization, dict)
+        else None,
         "viewer_observed": bool(isinstance(viewer, dict)),
-        "limitations": [] if isinstance(data, dict) else ["linear_api_response_unavailable"],
+        "limitations": []
+        if isinstance(data, dict)
+        else ["linear_api_response_unavailable"],
     }
 
 
@@ -291,7 +334,12 @@ def collect_sentry_facts() -> dict[str, Any]:
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             payload = parse_json_output(response.read().decode("utf-8"))
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+    ) as exc:
         return {
             "available": True,
             "configured": True,
@@ -312,7 +360,9 @@ def collect_sentry_facts() -> dict[str, Any]:
         "organization_observed": True,
         "project_observed": bool(project),
         "unresolved_issue_count": len(issues),
-        "limitations": [] if isinstance(payload, list) else ["sentry_issue_feed_unavailable"],
+        "limitations": []
+        if isinstance(payload, list)
+        else ["sentry_issue_feed_unavailable"],
     }
 
 
@@ -381,7 +431,9 @@ def build_status_payload(release: str, *, state_path: Path) -> dict[str, Any]:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 def markdown_report(payload: dict[str, Any]) -> str:
@@ -418,22 +470,22 @@ def markdown_report(payload: dict[str, Any]) -> str:
         lines.append("- No SQLite stage rows observed.")
     lines.extend(
         [
-        "",
-        "## Workflow Surfaces",
-        "",
-        f"- Linear available: `{payload['linear'].get('available')}`",
-        f"- Linear configured: `{payload['linear'].get('configured')}`",
-        f"- Linear workspace observed: `{payload['linear'].get('workspace_observed')}`",
-        f"- Linear viewer observed: `{payload['linear'].get('viewer_observed')}`",
-        f"- Sentry available: `{payload['sentry'].get('available')}`",
-        f"- Sentry configured: `{payload['sentry'].get('configured')}`",
-        f"- Sentry organization observed: `{payload['sentry'].get('organization_observed')}`",
-        f"- Sentry unresolved issues observed: `{payload['sentry'].get('unresolved_issue_count')}`",
-        "",
-        "## Advisory Surfaces",
-        "",
-        f"- CodeRabbit available: `{payload['coderabbit'].get('available')}`",
-        f"- CodeRabbit advisory-only: `{payload['coderabbit'].get('advisory_only')}`",
+            "",
+            "## Workflow Surfaces",
+            "",
+            f"- Linear available: `{payload['linear'].get('available')}`",
+            f"- Linear configured: `{payload['linear'].get('configured')}`",
+            f"- Linear workspace observed: `{payload['linear'].get('workspace_observed')}`",
+            f"- Linear viewer observed: `{payload['linear'].get('viewer_observed')}`",
+            f"- Sentry available: `{payload['sentry'].get('available')}`",
+            f"- Sentry configured: `{payload['sentry'].get('configured')}`",
+            f"- Sentry organization observed: `{payload['sentry'].get('organization_observed')}`",
+            f"- Sentry unresolved issues observed: `{payload['sentry'].get('unresolved_issue_count')}`",
+            "",
+            "## Advisory Surfaces",
+            "",
+            f"- CodeRabbit available: `{payload['coderabbit'].get('available')}`",
+            f"- CodeRabbit advisory-only: `{payload['coderabbit'].get('advisory_only')}`",
             f"- Codex Security advisory-only: `{payload['codex_security'].get('advisory_only')}`",
             "",
             "## Explicit Non-Actions",
@@ -450,7 +502,9 @@ def markdown_report(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def write_alpha_integration_reports(release: str, *, reports_dir: Path, state_path: Path) -> tuple[Path, Path]:
+def write_alpha_integration_reports(
+    release: str, *, reports_dir: Path, state_path: Path
+) -> tuple[Path, Path]:
     payload = build_status_payload(release, state_path=state_path)
     safe_release = release.replace("/", "_")
     json_path = reports_dir / f"integration-status-{safe_release}.json"
@@ -462,10 +516,14 @@ def write_alpha_integration_reports(release: str, *, reports_dir: Path, state_pa
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--release", required=True, help="Alpha release tag, e.g. v0.1.5-alpha.")
+    parser.add_argument(
+        "--release", required=True, help="Alpha release tag, e.g. v0.1.5-alpha."
+    )
     parser.add_argument("--state-file", type=Path, default=DEFAULT_STATE_FILE)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
-    parser.add_argument("--json", action="store_true", help="Print the JSON payload to stdout.")
+    parser.add_argument(
+        "--json", action="store_true", help="Print the JSON payload to stdout."
+    )
     return parser.parse_args(argv)
 
 

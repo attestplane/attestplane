@@ -176,14 +176,13 @@ def test_duplicate_obligation_id_raises(tmp_path) -> None:
     # Bypass the file-loading path; call the inner duplicate check via a
     # synthetic load. We import the private helpers for this test only.
     from attestplane.obligations.registry import _validate_entry
+
     seen: set[str] = set()
     with pytest.raises(DuplicateObligationIdError):
         for entry_dict in bad_data["entries"]:
             entry = _validate_entry(entry_dict)
             if entry.obligation_id in seen:
-                raise DuplicateObligationIdError(
-                    f"duplicate obligation_id {entry.obligation_id!r}"
-                )
+                raise DuplicateObligationIdError(f"duplicate obligation_id {entry.obligation_id!r}")
             seen.add(entry.obligation_id)
 
 

@@ -31,16 +31,22 @@ from attestplane.conformance.negative_vectors import (
 from attestplane.types import SubjectRef
 
 ROOT = Path(__file__).resolve().parents[2]
-CANONICALIZATION_VECTOR_HELPER = ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+CANONICALIZATION_VECTOR_HELPER = (
+    ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+)
 
 
 def _load_vector_manifest() -> Any:
     module_name = "attestplane_canonicalization_vectors"
     if module_name in sys.modules:
         return sys.modules[module_name]
-    spec = importlib.util.spec_from_file_location(module_name, CANONICALIZATION_VECTOR_HELPER)
+    spec = importlib.util.spec_from_file_location(
+        module_name, CANONICALIZATION_VECTOR_HELPER
+    )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}")
+        raise RuntimeError(
+            f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -165,7 +171,7 @@ TABLE_VALUES: tuple[Any, ...] = (
     False,
     INT64_MIN,
     INT64_MAX,
-    "line\\break\tand escaped quote \"",
+    'line\\break\tand escaped quote "',
     b"\x00attestplane\xff",
     datetime(2026, 5, 22, 10, 11, 12, 123456, tzinfo=UTC),
     ["\u00e9", 0, {"z": b"payload", "a": None}],
@@ -178,7 +184,9 @@ TABLE_VALUES: tuple[Any, ...] = (
 )
 
 
-@pytest.mark.parametrize("vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"])
+@pytest.mark.parametrize(
+    "vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"]
+)
 def test_canonicalization_property_positive_vectors_are_reparse_idempotent(
     vector: dict[str, Any],
 ) -> None:
@@ -186,7 +194,9 @@ def test_canonicalization_property_positive_vectors_are_reparse_idempotent(
     _assert_canonical_reparse_idempotent(bundle)
 
 
-@pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
+@pytest.mark.parametrize(
+    "vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"]
+)
 def test_canonicalization_property_negative_vectors_are_named_and_classified(
     vector: dict[str, Any],
 ) -> None:
@@ -194,12 +204,16 @@ def test_canonicalization_property_negative_vectors_are_named_and_classified(
 
 
 @pytest.mark.parametrize("value", TABLE_VALUES)
-def test_canonicalization_property_table_values_are_reparse_idempotent(value: Any) -> None:
+def test_canonicalization_property_table_values_are_reparse_idempotent(
+    value: Any,
+) -> None:
     _assert_canonical_reparse_idempotent(value)
 
 
 @pytest.mark.parametrize("value", _generated_values())
-def test_canonicalization_property_generated_values_are_reparse_idempotent(value: Any) -> None:
+def test_canonicalization_property_generated_values_are_reparse_idempotent(
+    value: Any,
+) -> None:
     _assert_canonical_reparse_idempotent(value)
 
 

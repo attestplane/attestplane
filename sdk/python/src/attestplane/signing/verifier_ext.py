@@ -40,8 +40,7 @@ try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "attestplane.signing.verifier_ext requires the 'signing' extras. "
-        "Install with: pip install attestplane[signing]"
+        "attestplane.signing.verifier_ext requires the 'signing' extras. Install with: pip install attestplane[signing]"
     ) from exc
 
 from attestplane.anchoring.base import AnchorRecord
@@ -64,7 +63,11 @@ from attestplane.signing.trust_roots import TrustRootEntry, TrustRoots
 from attestplane.types import ChainedEvent, ChainHead
 
 SignatureStatus = Literal[
-    "unsigned", "valid", "invalid", "unknown_key", "expired_key",
+    "unsigned",
+    "valid",
+    "invalid",
+    "unknown_key",
+    "expired_key",
 ]
 """Per architect review § 1 decision 10 — the locked 5-value enum."""
 
@@ -156,10 +159,7 @@ def _verify_single_signature(
             signed_seq=record.signed_seq,
             key_id=record.key_id,
             status="invalid",
-            reason=(
-                f"record.key_id ({record.key_id}) does not derive from "
-                f"public_key_der (got {derived})"
-            ),
+            reason=(f"record.key_id ({record.key_id}) does not derive from public_key_der (got {derived})"),
         )
 
     # 3. TrustRoots lookup.
@@ -181,8 +181,7 @@ def _verify_single_signature(
             key_id=record.key_id,
             status="expired_key",
             reason=(
-                f"verification_time {verification_time.isoformat()} "
-                f"precedes valid_from {entry.valid_from.isoformat()}"
+                f"verification_time {verification_time.isoformat()} precedes valid_from {entry.valid_from.isoformat()}"
             ),
         )
     if verification_time > entry.valid_until:
@@ -192,8 +191,7 @@ def _verify_single_signature(
             key_id=record.key_id,
             status="expired_key",
             reason=(
-                f"verification_time {verification_time.isoformat()} "
-                f"exceeds valid_until {entry.valid_until.isoformat()}"
+                f"verification_time {verification_time.isoformat()} exceeds valid_until {entry.valid_until.isoformat()}"
             ),
         )
 
@@ -214,9 +212,7 @@ def _verify_single_signature(
             signed_seq=record.signed_seq,
             key_id=record.key_id,
             status="invalid",
-            reason=(
-                f"v1 supports Ed25519 keys only; got {type(pubkey).__name__}"
-            ),
+            reason=(f"v1 supports Ed25519 keys only; got {type(pubkey).__name__}"),
         )
     # Also cross-check that the trust-root pubkey matches what's stored.
     if entry.public_key_der != record.public_key_der:
@@ -258,20 +254,20 @@ def _verify_single_signature(
             signed_seq=record.signed_seq,
             key_id=record.key_id,
             status="invalid",
-            reason=(
-                f"signed_event_hash mismatch at seq={record.signed_seq}"
-            ),
+            reason=(f"signed_event_hash mismatch at seq={record.signed_seq}"),
         )
 
     # Reconstruct the expected canonical bytes for this mode.
     if record.signature_mode == "segment_head":
         expected = _build_segment_head_payload(
-            chain_id, ChainHead(seq=target.seq, event_hash=target.event_hash),
+            chain_id,
+            ChainHead(seq=target.seq, event_hash=target.event_hash),
         )
         if expected != record.signed_payload:
             # Surface the chain_id mismatch case (R2 footgun).
             try:
                 import json
+
                 payload_obj = json.loads(record.signed_payload)
                 payload_chain_id = payload_obj.get("chain_id")
             except Exception:
@@ -296,10 +292,7 @@ def _verify_single_signature(
                 signed_seq=record.signed_seq,
                 key_id=record.key_id,
                 status="invalid",
-                reason=(
-                    f"signed_payload does not match canonicalize(event) for "
-                    f"per_event at seq={record.signed_seq}"
-                ),
+                reason=(f"signed_payload does not match canonicalize(event) for per_event at seq={record.signed_seq}"),
             )
     # signature_mode is a Literal type validated at post_init; the
     # else branch above is unreachable in practice. Type-checker
@@ -336,11 +329,13 @@ def _compute_signed_segment_count(
     """
     # Sort valid segment-head seqs ascending.
     valid_segment_heads = sorted(
-        seq for seq, status in per_seq_status.items()
+        seq
+        for seq, status in per_seq_status.items()
         if status == "valid" and "segment_head" in per_seq_modes.get(seq, set())
     )
     valid_per_events = {
-        seq for seq, status in per_seq_status.items()
+        seq
+        for seq, status in per_seq_status.items()
         if status == "valid" and "per_event" in per_seq_modes.get(seq, set())
     }
 
@@ -382,14 +377,10 @@ def verify_chain_with_signatures(
     :param verification_time: defaults to "now" (UTC).
     """
     if not chain_id:
-        raise SigningError(
-            "verify_chain_with_signatures requires non-empty chain_id"
-        )
+        raise SigningError("verify_chain_with_signatures requires non-empty chain_id")
     actual_when = verification_time if verification_time is not None else datetime.now(UTC)
     if actual_when.tzinfo is None:
-        raise SigningError(
-            "verify_chain_with_signatures requires UTC-aware verification_time"
-        )
+        raise SigningError("verify_chain_with_signatures requires UTC-aware verification_time")
 
     events_by_seq = {ev.seq: ev for ev in events}
 
@@ -418,7 +409,9 @@ def verify_chain_with_signatures(
         signature_status = max(per_seq_status.values(), key=lambda s: _STATUS_RANK[s])
 
     signed_segment_count = _compute_signed_segment_count(
-        events, per_seq_status, per_seq_modes,
+        events,
+        per_seq_status,
+        per_seq_modes,
     )
 
     first_bad_idx: int | None = None
@@ -475,17 +468,13 @@ def verify_chain_full(
     # Signature verification.
     if signatures:
         if chain_id is None or trust_roots is None:
-            raise SigningError(
-                "verify_chain_full: signatures provided but chain_id or "
-                "trust_roots is None"
-            )
-        sig_status, sig_results, signed_count, first_bad = (
-            verify_chain_with_signatures(
-                events, signatures,
-                chain_id=chain_id,
-                trust_roots=trust_roots,
-                verification_time=verification_time,
-            )
+            raise SigningError("verify_chain_full: signatures provided but chain_id or trust_roots is None")
+        sig_status, sig_results, signed_count, first_bad = verify_chain_with_signatures(
+            events,
+            signatures,
+            chain_id=chain_id,
+            trust_roots=trust_roots,
+            verification_time=verification_time,
         )
     else:
         sig_status = "unsigned"

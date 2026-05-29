@@ -72,9 +72,7 @@ def _emit(value: object, out: list[str], *, path: str) -> None:  # noqa: PLR0911
         return
     if isinstance(value, int):
         if not (INT64_MIN <= value <= INT64_MAX):
-            raise CanonicalizationError(
-                f"{path}: integer {value} outside signed 64-bit range"
-            )
+            raise CanonicalizationError(f"{path}: integer {value} outside signed 64-bit range")
         out.append(str(value))
         return
     if isinstance(value, float):
@@ -101,24 +99,19 @@ def _emit(value: object, out: list[str], *, path: str) -> None:  # noqa: PLR0911
     if is_dataclass(value) and not isinstance(value, type):
         _emit_object(_dataclass_to_dict(value), out, path=path)
         return
-    raise CanonicalizationError(
-        f"{path}: unsupported type {type(value).__name__!r} in canonical payload"
-    )
+    raise CanonicalizationError(f"{path}: unsupported type {type(value).__name__!r} in canonical payload")
 
 
 def _emit_string(value: str, out: list[str], *, path: str) -> None:
     if unicodedata.normalize("NFC", value) != value:
         raise CanonicalizationError(
-            f"{path}: string is not Unicode-NFC normalized; "
-            "normalize before passing to the substrate"
+            f"{path}: string is not Unicode-NFC normalized; normalize before passing to the substrate"
         )
     out.append('"')
     for ch in value:
         code = ord(ch)
         if _SURROGATE_MIN <= code <= _SURROGATE_MAX:
-            raise CanonicalizationError(
-                f"{path}: string contains lone surrogate code point"
-            )
+            raise CanonicalizationError(f"{path}: string contains lone surrogate code point")
         escape = _ESCAPES.get(code)
         if escape is not None:
             out.append(escape)
@@ -133,9 +126,7 @@ def _emit_datetime(value: datetime, out: list[str], *, path: str) -> None:
     if value.tzinfo is None:
         raise CanonicalizationError(f"{path}: datetime must be timezone-aware")
     if value.utcoffset() != UTC.utcoffset(None):
-        raise CanonicalizationError(
-            f"{path}: datetime must be in UTC (got offset {value.utcoffset()})"
-        )
+        raise CanonicalizationError(f"{path}: datetime must be in UTC (got offset {value.utcoffset()})")
     formatted = value.strftime("%Y-%m-%dT%H:%M:%S")
     micro = f".{value.microsecond:06d}"
     _emit_string(formatted + micro + "Z", out, path=path)
@@ -146,9 +137,7 @@ def _emit_object(value: dict[Any, Any], out: list[str], *, path: str) -> None:
     keys: list[str] = []
     for key in value:
         if not isinstance(key, str):
-            raise CanonicalizationError(
-                f"{path}: object keys must be strings (got {type(key).__name__!r})"
-            )
+            raise CanonicalizationError(f"{path}: object keys must be strings (got {type(key).__name__!r})")
         keys.append(key)
     keys.sort()
     seen: set[str] = set()

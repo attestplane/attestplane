@@ -74,38 +74,40 @@ ReasonCodeV1 = Literal[
 """The frozen v1 reason code value set. Match ADR-0010 § 3 exactly."""
 
 
-ALL_REASON_CODES_V1: Final[frozenset[str]] = frozenset({
-    # Chain
-    "CHAIN_OK",
-    "CHAIN_SEQ_MISMATCH",
-    "CHAIN_PREV_HASH_MISMATCH",
-    "CHAIN_EVENT_HASH_MISMATCH",
-    # Signature
-    "SIGNATURE_OK",
-    "SIGNATURE_INVALID",
-    "SIGNATURE_UNKNOWN_KEY",
-    "SIGNATURE_EXPIRED_KEY",
-    "SIGNATURE_SCHEMA_MISMATCH",
-    "SIGNATURE_PAYLOAD_MISMATCH",
-    # Anchor
-    "ANCHOR_OK",
-    "ANCHOR_INVALID",
-    "ANCHOR_CERT_EXPIRED",
-    "ANCHOR_OCSP_FAILED",
-    "ANCHOR_MISSING_LTV_ARTIFACTS",
-    # Payload
-    "PAYLOAD_OK",
-    "PAYLOAD_MISSING_REQUIRED_FIELD",
-    "PAYLOAD_FIELD_TYPE_MISMATCH",
-    "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
-    "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
-    "PAYLOAD_SCHEMA_VERSION_MISMATCH",
-    # Cross-cutting
-    "UNSIGNED_SEGMENT",
-    "UNANCHORED_SEGMENT",
-    "BUNDLE_MISSING_REQUIRED_FIELD",
-    "INTERNAL_ERROR",
-})
+ALL_REASON_CODES_V1: Final[frozenset[str]] = frozenset(
+    {
+        # Chain
+        "CHAIN_OK",
+        "CHAIN_SEQ_MISMATCH",
+        "CHAIN_PREV_HASH_MISMATCH",
+        "CHAIN_EVENT_HASH_MISMATCH",
+        # Signature
+        "SIGNATURE_OK",
+        "SIGNATURE_INVALID",
+        "SIGNATURE_UNKNOWN_KEY",
+        "SIGNATURE_EXPIRED_KEY",
+        "SIGNATURE_SCHEMA_MISMATCH",
+        "SIGNATURE_PAYLOAD_MISMATCH",
+        # Anchor
+        "ANCHOR_OK",
+        "ANCHOR_INVALID",
+        "ANCHOR_CERT_EXPIRED",
+        "ANCHOR_OCSP_FAILED",
+        "ANCHOR_MISSING_LTV_ARTIFACTS",
+        # Payload
+        "PAYLOAD_OK",
+        "PAYLOAD_MISSING_REQUIRED_FIELD",
+        "PAYLOAD_FIELD_TYPE_MISMATCH",
+        "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
+        "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
+        "PAYLOAD_SCHEMA_VERSION_MISMATCH",
+        # Cross-cutting
+        "UNSIGNED_SEGMENT",
+        "UNANCHORED_SEGMENT",
+        "BUNDLE_MISSING_REQUIRED_FIELD",
+        "INTERNAL_ERROR",
+    }
+)
 
 
 REASON_CODE_DESCRIPTIONS: Final[Mapping[str, str]] = {
@@ -113,8 +115,7 @@ REASON_CODE_DESCRIPTIONS: Final[Mapping[str, str]] = {
     "CHAIN_SEQ_MISMATCH": "ChainedEvent.seq does not equal expected position in chain.",
     "CHAIN_PREV_HASH_MISMATCH": "ChainedEvent.prev_hash does not equal previous event's event_hash.",
     "CHAIN_EVENT_HASH_MISMATCH": (
-        "ChainedEvent.event_hash does not equal hash_event(audit_event); "
-        "canonicalize bytes have drifted."
+        "ChainedEvent.event_hash does not equal hash_event(audit_event); canonicalize bytes have drifted."
     ),
     "SIGNATURE_OK": "Ed25519 signature verified.",
     "SIGNATURE_INVALID": "Ed25519 verification failed (cryptographic mismatch).",
@@ -127,8 +128,7 @@ REASON_CODE_DESCRIPTIONS: Final[Mapping[str, str]] = {
     "ANCHOR_CERT_EXPIRED": "TSA certificate chain expired at verification_time.",
     "ANCHOR_OCSP_FAILED": "OCSP response invalid, revoked, or missing for the TSA certificate.",
     "ANCHOR_MISSING_LTV_ARTIFACTS": (
-        "tsa_cert_chain or ocsp_responses is empty; "
-        "CAdES-A long-term validation unsupported."
+        "tsa_cert_chain or ocsp_responses is empty; CAdES-A long-term validation unsupported."
     ),
     "PAYLOAD_OK": "Payload validates against its declared event schema.",
     "PAYLOAD_MISSING_REQUIRED_FIELD": "A required payload field is absent.",
