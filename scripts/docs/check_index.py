@@ -15,7 +15,6 @@ Run locally with:
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -123,7 +122,9 @@ def main() -> int:
             for rel_path in missing_files:
                 print(f"  - {rel_path}")
         if missing_links:
-            print("docs index check failed: manifest paths missing from docs/README.md:")
+            print(
+                "docs index check failed: manifest paths missing from docs/README.md:"
+            )
             for rel_path in missing_links:
                 print(f"  - {rel_path}")
         return 1

@@ -35,7 +35,9 @@ TASK_LABEL = "planned-task"
 TITLE_RE = re.compile(
     r"^(?:#+\s*)?(?:\*\*)?\s*ISSUE\s+\d+\s*[.:·-]\s*(?P<title>\[[Pp][0-2]\].+?)(?:\*\*)?\s*$",
 )
-FALLBACK_TITLE_RE = re.compile(r"^(?:#+\s*)?(?:\*\*)?(?P<title>\[[Pp][0-2]\].+?)(?:\*\*)?\s*$")
+FALLBACK_TITLE_RE = re.compile(
+    r"^(?:#+\s*)?(?:\*\*)?(?P<title>\[[Pp][0-2]\].+?)(?:\*\*)?\s*$"
+)
 PRIORITY_RE = re.compile(r"\[(P[0-2])\]", re.IGNORECASE)
 
 MODULE_LABELS = {
@@ -95,10 +97,14 @@ def extract_priority(title: str, body: str) -> str:
     return "P2"
 
 
-def labels_for(title: str, priority: str, modules: list[str] | tuple[str, ...] | None = None) -> tuple[str, ...]:
+def labels_for(
+    title: str, priority: str, modules: list[str] | tuple[str, ...] | None = None
+) -> tuple[str, ...]:
     labels: list[str] = [TASK_LABEL]
     labels.append("priority-P0" if priority == "P0" else f"priority:{priority}")
-    module_tokens = modules if modules is not None else re.findall(r"\[([^\]]+)\]", title)
+    module_tokens = (
+        modules if modules is not None else re.findall(r"\[([^\]]+)\]", title)
+    )
     for module in module_tokens:
         key = module.strip().lower()
         labels.extend(MODULE_LABELS.get(key, []))
@@ -118,7 +124,11 @@ def is_title_line(line: str) -> re.Match[str] | None:
     if match:
         return match
     fallback = FALLBACK_TITLE_RE.match(line.strip())
-    if fallback and "Acceptance criteria" not in line and "Validation commands" not in line:
+    if (
+        fallback
+        and "Acceptance criteria" not in line
+        and "Validation commands" not in line
+    ):
         return fallback
     return None
 
@@ -151,7 +161,11 @@ def parse_structured_plan(markdown: str, source_issue: int) -> list[PlannedTask]
                 title=title,
                 body=body,
                 priority=priority,
-                labels=labels_for(title, priority, modules if isinstance(modules, (list, tuple)) else None),
+                labels=labels_for(
+                    title,
+                    priority,
+                    modules if isinstance(modules, (list, tuple)) else None,
+                ),
                 plan_id=plan_id,
             ),
         )
@@ -214,7 +228,9 @@ def run_gh(args: list[str], *, retries: int = 0, retry_delay: float = 2.0) -> st
     attempt = 0
     while True:
         try:
-            proc = subprocess.run(["gh", *args], check=True, capture_output=True, text=True)
+            proc = subprocess.run(
+                ["gh", *args], check=True, capture_output=True, text=True
+            )
             return proc.stdout.strip()
         except subprocess.CalledProcessError:
             attempt += 1
@@ -223,12 +239,37 @@ def run_gh(args: list[str], *, retries: int = 0, retry_delay: float = 2.0) -> st
             time.sleep(retry_delay * attempt)
 
 
-def issue_exists(title: str, source_issue: int, plan_id: str | None = None) -> str | None:
+def issue_exists(
+    title: str, source_issue: int, plan_id: str | None = None
+) -> str | None:
     query = f"{title} in:title"
-    stdout = run_gh(["issue", "list", "--state", "all", "--search", query, "--json", "number,url,title"], retries=2)
+    stdout = run_gh(
+        [
+            "issue",
+            "list",
+            "--state",
+            "all",
+            "--search",
+            query,
+            "--json",
+            "number,url,title",
+        ],
+        retries=2,
+    )
     for item in json.loads(stdout or "[]"):
         if item.get("title") == title:
-            body = run_gh(["issue", "view", str(item["number"]), "--json", "body", "--jq", ".body"], retries=2)
+            body = run_gh(
+                [
+                    "issue",
+                    "view",
+                    str(item["number"]),
+                    "--json",
+                    "body",
+                    "--jq",
+                    ".body",
+                ],
+                retries=2,
+            )
             has_source = f"Source planning issue: #{source_issue}" in body
             has_plan = plan_id is None or f"Plan ID: `{plan_id}`" in body
             legacy_unstructured = plan_id is not None and "Plan ID:" not in body
@@ -264,7 +305,9 @@ def issue_payload_from_github(item: dict[str, object]) -> dict[str, object]:
     }
 
 
-def fetch_uploaded_issues(source_issue: int, plan_ids: set[str], titles: set[str] | None = None) -> list[dict[str, object]]:
+def fetch_uploaded_issues(
+    source_issue: int, plan_ids: set[str], titles: set[str] | None = None
+) -> list[dict[str, object]]:
     stdout = run_gh(
         [
             "issue",
@@ -289,7 +332,9 @@ def fetch_uploaded_issues(source_issue: int, plan_ids: set[str], titles: set[str
         if not isinstance(body, str) or source_marker not in body:
             continue
         has_matching_plan = any(f"Plan ID: `{plan_id}`" in body for plan_id in plan_ids)
-        legacy_matching_title = "Plan ID:" not in body and (not titles or str(item.get("title") or "") in titles)
+        legacy_matching_title = "Plan ID:" not in body and (
+            not titles or str(item.get("title") or "") in titles
+        )
         if plan_ids and not (has_matching_plan or legacy_matching_title):
             continue
         uploaded.append(issue_payload_from_github(item))
@@ -358,7 +403,9 @@ def create_issues(
             stream=event_stream,
         )
     if not uploaded:
-        raise RuntimeError("planned-task issues were created but could not be fetched back from GitHub")
+        raise RuntimeError(
+            "planned-task issues were created but could not be fetched back from GitHub"
+        )
     return uploaded
 
 
@@ -383,10 +430,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan-file", type=Path)
     parser.add_argument("--source-issue", type=int, default=0)
-    parser.add_argument("--create", action="store_true", help="Create GitHub issues with gh.")
-    parser.add_argument("--dry-run", action="store_true", help="Parse without creating GitHub issues.")
-    parser.add_argument("--emit-events", action="store_true", help="Emit structured observability events.")
-    parser.add_argument("--milestone", default="", help="Milestone value included in observability events.")
+    parser.add_argument(
+        "--create", action="store_true", help="Create GitHub issues with gh."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Parse without creating GitHub issues."
+    )
+    parser.add_argument(
+        "--emit-events",
+        action="store_true",
+        help="Emit structured observability events.",
+    )
+    parser.add_argument(
+        "--milestone",
+        default="",
+        help="Milestone value included in observability events.",
+    )
     parser.add_argument("--json", action="store_true", help="Print JSON output.")
     args = parser.parse_args(argv)
 

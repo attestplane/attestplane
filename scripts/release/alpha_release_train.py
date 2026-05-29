@@ -39,8 +39,12 @@ bootstrap_repo_root()
 DEFAULT_QUEUE = ROOT / "release" / "alpha-train" / "queue.json"
 DEFAULT_PROPOSALS_DIR = ROOT / "release" / "alpha-train" / "proposals"
 DEFAULT_REPORTS_DIR = ROOT / "release" / "alpha-train" / "reports"
-DEFAULT_STATE_FILE = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.json"
-DEFAULT_STATE_DB = ROOT / "release" / "alpha-train" / "reports" / "continuous-state.sqlite"
+DEFAULT_STATE_FILE = (
+    ROOT / "release" / "alpha-train" / "reports" / "continuous-state.json"
+)
+DEFAULT_STATE_DB = (
+    ROOT / "release" / "alpha-train" / "reports" / "continuous-state.sqlite"
+)
 DEFAULT_STOP_FILE = ROOT / "release" / "alpha-train" / "STOP"
 DEFAULT_PREPARED_DIR = ROOT / "release" / "alpha-train" / "prepared"
 DEFAULT_MAX_RELEASES_PER_DAY = 1
@@ -103,25 +107,43 @@ class AlphaCandidate:
     @classmethod
     def from_json(cls, value: dict[str, Any]) -> "AlphaCandidate":
         required = ("release", "python_version", "npm_version")
-        missing = [key for key in required if not isinstance(value.get(key), str) or not value[key]]
+        missing = [
+            key
+            for key in required
+            if not isinstance(value.get(key), str) or not value[key]
+        ]
         if missing:
-            raise ValueError(f"alpha candidate missing required fields: {', '.join(missing)}")
+            raise ValueError(
+                f"alpha candidate missing required fields: {', '.join(missing)}"
+            )
         release = value["release"]
         python_version = value["python_version"]
         npm_version = value["npm_version"]
         if not release.startswith("v") or not release.endswith("-alpha"):
-            raise ValueError(f"alpha release names must look like vX.Y.Z-alpha: {release!r}")
+            raise ValueError(
+                f"alpha release names must look like vX.Y.Z-alpha: {release!r}"
+            )
         if not python_version.endswith("a0"):
-            raise ValueError(f"python alpha versions must use PEP 440 a0 form: {python_version!r}")
+            raise ValueError(
+                f"python alpha versions must use PEP 440 a0 form: {python_version!r}"
+            )
         if not npm_version.endswith("-alpha"):
-            raise ValueError(f"npm alpha versions must use an -alpha prerelease suffix: {npm_version!r}")
+            raise ValueError(
+                f"npm alpha versions must use an -alpha prerelease suffix: {npm_version!r}"
+            )
         return cls(
             release=release,
             python_version=python_version,
             npm_version=npm_version,
-            release_notes=value.get("release_notes", f"docs/release-notes/{release}.draft.md"),
-            manifest=value.get("manifest", f"release/artifacts/{release}/artifact-manifest.json"),
-            checksums=value.get("checksums", f"release/artifacts/{release}/checksums.sha256"),
+            release_notes=value.get(
+                "release_notes", f"docs/release-notes/{release}.draft.md"
+            ),
+            manifest=value.get(
+                "manifest", f"release/artifacts/{release}/artifact-manifest.json"
+            ),
+            checksums=value.get(
+                "checksums", f"release/artifacts/{release}/checksums.sha256"
+            ),
             publish_python=bool(value.get("publish_python", True)),
             publish_npm=bool(value.get("publish_npm", True)),
             create_github_release=bool(value.get("create_github_release", True)),
@@ -146,7 +168,9 @@ def normalize_git_push_argv(argv: list[str]) -> list[str]:
     return argv
 
 
-def run(argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    argv: list[str], *, dry_run: bool, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
         return subprocess.CompletedProcess(argv, 0, "", "")
@@ -180,7 +204,10 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
             last_error = exc
             if git_push_remote_converged(argv):
-                print("git push remote state already converged; continuing after failed or timed-out local push", flush=True)
+                print(
+                    "git push remote state already converged; continuing after failed or timed-out local push",
+                    flush=True,
+                )
                 return subprocess.CompletedProcess(argv, 0, "", "")
             failure_reason = classify_git_push_failure(exc)
             if failure_reason in {
@@ -206,7 +233,9 @@ def run_git_push(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProce
     raise last_error
 
 
-def attempt_git_push_once(argv: list[str], *, dry_run: bool) -> subprocess.CompletedProcess[str]:
+def attempt_git_push_once(
+    argv: list[str], *, dry_run: bool
+) -> subprocess.CompletedProcess[str]:
     argv = normalize_git_push_argv(argv)
     print("+ " + " ".join(argv), flush=True)
     if dry_run:
@@ -331,7 +360,9 @@ def classify_git_push_failure(exc: BaseException) -> str:
     return f"git_push_{type(exc).__name__.lower()}"
 
 
-def git_push_cooldown_seconds_for_failure(failure_reason: str, *, attempts: int, default_seconds: int) -> int:
+def git_push_cooldown_seconds_for_failure(
+    failure_reason: str, *, attempts: int, default_seconds: int
+) -> int:
     attempt_number = max(1, attempts)
     if failure_reason == "git_push_timeout":
         return max(default_seconds, min(3600, 900 * attempt_number))
@@ -379,7 +410,11 @@ def git_push_remote_converged(argv: list[str]) -> bool:
 
 def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
     argv = normalize_git_push_argv(argv)
-    if len(argv) != 6 or argv[:4] != ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "push"] or argv[4] != "origin":
+    if (
+        len(argv) != 6
+        or argv[:4] != ["git", "-c", f"http.version={GIT_HTTP_VERSION}", "push"]
+        or argv[4] != "origin"
+    ):
         return False, None
     ref = argv[5]
     try:
@@ -388,15 +423,27 @@ def git_push_remote_status(argv: list[str]) -> tuple[bool, str | None]:
                 ["git", "rev-parse", "--verify", "refs/remotes/origin/main"],
                 timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
             )
-            local_head = capture(["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            local_head = capture(
+                ["git", "rev-parse", "HEAD"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS
+            )
             if local_tracking_head == local_head:
                 return True, None
-            remote_head = capture(["git", "ls-remote", "origin", "refs/heads/main"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            remote_head = capture(
+                ["git", "ls-remote", "origin", "refs/heads/main"],
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            )
             return bool(remote_head) and remote_head.split()[0] == local_head, None
         if re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref):
-            remote_tag = capture(["git", "ls-remote", "origin", f"refs/tags/{ref}"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+            remote_tag = capture(
+                ["git", "ls-remote", "origin", f"refs/tags/{ref}"],
+                timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
+            )
             return bool(remote_tag), None
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ) as exc:
         return False, classify_git_push_failure(exc)
     return False, None
 
@@ -420,7 +467,9 @@ def git_push_stage_name(ref: str) -> str:
 
 
 def is_alpha_tag_push_stage(stage: str, ref: str) -> bool:
-    return stage == "tag_pushed" and re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref) is not None
+    return (
+        stage == "tag_pushed" and re.fullmatch(r"v\d+\.\d+\.\d+-alpha", ref) is not None
+    )
 
 
 def init_state_db(db_path: Path) -> None:
@@ -502,11 +551,15 @@ def init_state_db(db_path: Path) -> None:
 
 
 def release_status(db: sqlite3.Connection, release: str) -> str | None:
-    row = db.execute("SELECT status FROM release_state WHERE release = ?", (release,)).fetchone()
+    row = db.execute(
+        "SELECT status FROM release_state WHERE release = ?", (release,)
+    ).fetchone()
     return str(row[0]) if row else None
 
 
-def upsert_release_state(db: sqlite3.Connection, candidate: AlphaCandidate, status: str, now: int) -> None:
+def upsert_release_state(
+    db: sqlite3.Connection, candidate: AlphaCandidate, status: str, now: int
+) -> None:
     current = release_status(db, candidate.release)
     if current == "released" and status != "released":
         return
@@ -522,7 +575,13 @@ def upsert_release_state(db: sqlite3.Connection, candidate: AlphaCandidate, stat
             status = excluded.status,
             updated_at_epoch = excluded.updated_at_epoch
         """,
-        (candidate.release, candidate.python_version, candidate.npm_version, status, now),
+        (
+            candidate.release,
+            candidate.python_version,
+            candidate.npm_version,
+            status,
+            now,
+        ),
     )
 
 
@@ -537,14 +596,22 @@ def increment_daily_count(db: sqlite3.Connection, kind: str, now: int) -> None:
     )
 
 
-def append_state_event(db: sqlite3.Connection, release: str | None, event: str, detail: dict[str, Any], now: int) -> None:
+def append_state_event(
+    db: sqlite3.Connection,
+    release: str | None,
+    event: str,
+    detail: dict[str, Any],
+    now: int,
+) -> None:
     db.execute(
         "INSERT INTO state_events(release, event, detail, created_at_epoch) VALUES (?, ?, ?, ?)",
         (release, event, json.dumps(detail, sort_keys=True), now),
     )
 
 
-def enqueue_git_push_task(path: Path, candidate: AlphaCandidate, ref: str, *, dry_run: bool) -> None:
+def enqueue_git_push_task(
+    path: Path, candidate: AlphaCandidate, ref: str, *, dry_run: bool
+) -> None:
     if dry_run:
         return
     stage = git_push_stage_name(ref)
@@ -576,7 +643,9 @@ def enqueue_git_push_task(path: Path, candidate: AlphaCandidate, ref: str, *, dr
                 """,
                 (stage, now, candidate.release, ref),
             )
-        append_state_event(db, candidate.release, "git_push_queued", {"ref": ref, "stage": stage}, now)
+        append_state_event(
+            db, candidate.release, "git_push_queued", {"ref": ref, "stage": stage}, now
+        )
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
@@ -650,7 +719,12 @@ def update_git_push_task(
             db,
             candidate.release,
             f"git_push_{status}",
-            {"ref": ref, "stage": stage, "last_error": last_error, "next_attempt_at_epoch": next_attempt_at_epoch or now},
+            {
+                "ref": ref,
+                "stage": stage,
+                "last_error": last_error,
+                "next_attempt_at_epoch": next_attempt_at_epoch or now,
+            },
             now,
         )
     if status == "done":
@@ -661,7 +735,11 @@ def update_git_push_task(
             candidate,
             stage,
             "queued",
-            {"ref": ref, "next_attempt_at_epoch": next_attempt_at_epoch or now, "last_error": last_error},
+            {
+                "ref": ref,
+                "next_attempt_at_epoch": next_attempt_at_epoch or now,
+                "last_error": last_error,
+            },
         )
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
@@ -716,12 +794,23 @@ def process_git_push_tag_batch(
         candidate = prepared_candidate_from_release(str(release))
         ref_text = str(ref)
         if not is_alpha_tag_push_stage(str(stage), ref_text):
-            raise ValueError(f"expected alpha tag push task, got stage={stage!r} ref={ref_text!r}")
+            raise ValueError(
+                f"expected alpha tag push task, got stage={stage!r} ref={ref_text!r}"
+            )
         argv = normalize_git_push_argv(["git", "push", "origin", ref_text])
         converged, preflight_reason = git_push_remote_status(argv)
         if converged:
-            update_git_push_task(path, candidate, ref_text, status="done", dry_run=False)
-            processed.append({"release": candidate.release, "ref": ref_text, "status": "done", "observed": True})
+            update_git_push_task(
+                path, candidate, ref_text, status="done", dry_run=False
+            )
+            processed.append(
+                {
+                    "release": candidate.release,
+                    "ref": ref_text,
+                    "status": "done",
+                    "observed": True,
+                }
+            )
             continue
         if preflight_reason is not None:
             processed.append(
@@ -754,12 +843,20 @@ def process_git_push_tag_batch(
         converged, observe_reason = git_push_remote_status(argv)
         if converged:
             update_git_push_task(path, candidate, ref, status="done", dry_run=False)
-            event: dict[str, Any] = {"release": candidate.release, "ref": ref, "status": "done"}
+            event: dict[str, Any] = {
+                "release": candidate.release,
+                "ref": ref,
+                "status": "done",
+            }
             if batch_failure_reason is not None:
                 event["observed"] = True
             processed.append(event)
             continue
-        failure_reason = observe_reason or batch_failure_reason or "git_push_not_observed_after_batch"
+        failure_reason = (
+            observe_reason
+            or batch_failure_reason
+            or "git_push_not_observed_after_batch"
+        )
         processed.append(
             cooldown_git_push_task_event(
                 path,
@@ -809,15 +906,28 @@ def process_git_push_queue(
         processed_count = 0
         row_index = 0
         while row_index < len(rows):
-            release, ref, stage, status, attempts, next_attempt_at_epoch = rows[row_index]
-            if max_pushes_per_cycle is not None and processed_count >= max_pushes_per_cycle:
+            release, ref, stage, status, attempts, next_attempt_at_epoch = rows[
+                row_index
+            ]
+            if (
+                max_pushes_per_cycle is not None
+                and processed_count >= max_pushes_per_cycle
+            ):
                 break
             if is_alpha_tag_push_stage(str(stage), str(ref)):
-                remaining = None if max_pushes_per_cycle is None else max_pushes_per_cycle - processed_count
+                remaining = (
+                    None
+                    if max_pushes_per_cycle is None
+                    else max_pushes_per_cycle - processed_count
+                )
                 batch_rows: list[tuple[Any, ...]] = []
-                while row_index < len(rows) and (remaining is None or len(batch_rows) < remaining):
+                while row_index < len(rows) and (
+                    remaining is None or len(batch_rows) < remaining
+                ):
                     batch_row = rows[row_index]
-                    if not is_alpha_tag_push_stage(str(batch_row[2]), str(batch_row[1])):
+                    if not is_alpha_tag_push_stage(
+                        str(batch_row[2]), str(batch_row[1])
+                    ):
                         break
                     batch_rows.append(batch_row)
                     row_index += 1
@@ -837,8 +947,17 @@ def process_git_push_queue(
             try:
                 converged, preflight_reason = git_push_remote_status(argv)
                 if converged:
-                    update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
-                    processed.append({"release": str(release), "ref": str(ref), "status": "done", "observed": True})
+                    update_git_push_task(
+                        path, candidate, str(ref), status="done", dry_run=False
+                    )
+                    processed.append(
+                        {
+                            "release": str(release),
+                            "ref": str(ref),
+                            "status": "done",
+                            "observed": True,
+                        }
+                    )
                     processed_count += 1
                     row_index += 1
                     continue
@@ -871,8 +990,12 @@ def process_git_push_queue(
                     processed_count += 1
                     break
                 attempt_git_push_once(argv, dry_run=False)
-                update_git_push_task(path, candidate, str(ref), status="done", dry_run=False)
-                processed.append({"release": str(release), "ref": str(ref), "status": "done"})
+                update_git_push_task(
+                    path, candidate, str(ref), status="done", dry_run=False
+                )
+                processed.append(
+                    {"release": str(release), "ref": str(ref), "status": "done"}
+                )
                 processed_count += 1
             except Exception as exc:
                 failure_reason = classify_git_push_failure(exc)
@@ -910,11 +1033,20 @@ def process_git_push_queue(
 
 
 def stage_status(db: sqlite3.Connection, release: str, stage: str) -> str | None:
-    row = db.execute("SELECT status FROM release_stages WHERE release = ? AND stage = ?", (release, stage)).fetchone()
+    row = db.execute(
+        "SELECT status FROM release_stages WHERE release = ? AND stage = ?",
+        (release, stage),
+    ).fetchone()
     return str(row[0]) if row else None
 
 
-def mark_stage(path: Path | None, candidate: AlphaCandidate, stage: str, status: str, detail: dict[str, Any] | None = None) -> None:
+def mark_stage(
+    path: Path | None,
+    candidate: AlphaCandidate,
+    stage: str,
+    status: str,
+    detail: dict[str, Any] | None = None,
+) -> None:
     if path is None:
         return
     if stage not in EXTERNAL_STAGES:
@@ -932,9 +1064,21 @@ def mark_stage(path: Path | None, candidate: AlphaCandidate, stage: str, status:
                 detail = excluded.detail,
                 updated_at_epoch = excluded.updated_at_epoch
             """,
-            (candidate.release, stage, status, json.dumps(detail or {}, sort_keys=True), now),
+            (
+                candidate.release,
+                stage,
+                status,
+                json.dumps(detail or {}, sort_keys=True),
+                now,
+            ),
         )
-        append_state_event(db, candidate.release, f"stage_{status}", {"stage": stage, **(detail or {})}, now)
+        append_state_event(
+            db,
+            candidate.release,
+            f"stage_{status}",
+            {"stage": stage, **(detail or {})},
+            now,
+        )
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
@@ -953,19 +1097,29 @@ def stage_done(path: Path | None, candidate: AlphaCandidate, stage: str) -> bool
 def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
     init_state_db(db_path)
     with sqlite3.connect(db_path) as db:
-        rows = db.execute("SELECT release, status FROM release_state ORDER BY release").fetchall()
-        counts = db.execute("SELECT day, kind, count FROM daily_counts ORDER BY day, kind").fetchall()
+        rows = db.execute(
+            "SELECT release, status FROM release_state ORDER BY release"
+        ).fetchall()
+        counts = db.execute(
+            "SELECT day, kind, count FROM daily_counts ORDER BY day, kind"
+        ).fetchall()
         stage_rows = db.execute(
             "SELECT release, stage, status FROM release_stages ORDER BY release, stage"
         ).fetchall()
         queue_rows = db.execute(
             "SELECT release, ref, stage, status, attempts, next_attempt_at_epoch FROM git_push_tasks ORDER BY next_attempt_at_epoch, created_at_epoch"
         ).fetchall()
-    prepared = sorted(str(release) for release, status in rows if status in ACTIVE_RELEASE_STATUSES)
+    prepared = sorted(
+        str(release) for release, status in rows if status in ACTIVE_RELEASE_STATUSES
+    )
     processed = sorted(str(release) for release, status in rows if status == "released")
     retired = sorted(str(release) for release, status in rows if status == "retired")
-    prepare_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "prepared"}
-    release_count_by_day = {str(day): int(count) for day, kind, count in counts if kind == "released"}
+    prepare_count_by_day = {
+        str(day): int(count) for day, kind, count in counts if kind == "prepared"
+    }
+    release_count_by_day = {
+        str(day): int(count) for day, kind, count in counts if kind == "released"
+    }
     return {
         "schema": "attestplane_alpha_continuous_state.v2",
         "state_backend": "sqlite",
@@ -976,7 +1130,11 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
         "prepare_count_by_day": prepare_count_by_day,
         "release_count_by_day": release_count_by_day,
         "release_stages": {
-            str(release): {str(stage): str(status) for rel, stage, status in stage_rows if rel == release}
+            str(release): {
+                str(stage): str(status)
+                for rel, stage, status in stage_rows
+                if rel == release
+            }
             for release in sorted({row[0] for row in stage_rows})
         },
         "git_push_tasks": [
@@ -997,7 +1155,9 @@ def continuous_state_from_db(db_path: Path) -> dict[str, Any]:
 def write_continuous_state_snapshot(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     tmp.replace(path)
 
 
@@ -1010,7 +1170,9 @@ def migrate_json_state_to_sqlite(state_path: Path, db_path: Path) -> None:
     save_continuous_state(state_path, payload)
 
 
-def remote_probe(argv: list[str], *, timeout_error: str) -> subprocess.CompletedProcess[str]:
+def remote_probe(
+    argv: list[str], *, timeout_error: str
+) -> subprocess.CompletedProcess[str]:
     last_timeout: subprocess.TimeoutExpired | None = None
     for attempt in range(1, REMOTE_PROBE_ATTEMPTS + 1):
         try:
@@ -1034,7 +1196,9 @@ def remote_probe(argv: list[str], *, timeout_error: str) -> subprocess.Completed
 
 
 def github_repo_slug() -> str:
-    origin = capture(["git", "remote", "get-url", "origin"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS)
+    origin = capture(
+        ["git", "remote", "get-url", "origin"], timeout=REMOTE_PROBE_TIMEOUT_SECONDS
+    )
     match = re.search(r"github\.com[:/](?P<slug>[^/]+/[^/.]+)(?:\.git)?$", origin)
     if not match:
         raise RuntimeError(f"origin is not a GitHub repository URL: {origin!r}")
@@ -1073,7 +1237,9 @@ def load_queue(path: Path) -> list[AlphaCandidate]:
             duplicates.add(candidate.release)
         seen.add(candidate.release)
     if duplicates:
-        raise ValueError("duplicate alpha release entries: " + ", ".join(sorted(duplicates)))
+        raise ValueError(
+            "duplicate alpha release entries: " + ", ".join(sorted(duplicates))
+        )
     return candidates
 
 
@@ -1097,7 +1263,9 @@ def write_queue(path: Path, candidates: list[AlphaCandidate]) -> None:
         ],
     }
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     tmp.replace(path)
 
 
@@ -1121,7 +1289,9 @@ def alpha_registry_publish_enabled(release: str) -> bool:
     return patch == 0
 
 
-def alpha_registry_publish_skip_detail(candidate: AlphaCandidate) -> dict[str, str | bool]:
+def alpha_registry_publish_skip_detail(
+    candidate: AlphaCandidate,
+) -> dict[str, str | bool]:
     return {
         "observed": True,
         "reason": "minor_boundary_only",
@@ -1181,7 +1351,9 @@ def draft_candidate_id(candidate: AlphaCandidate) -> str:
     return f"{candidate.release}-{capture(['git', 'rev-parse', '--short=12', 'HEAD'])}"
 
 
-def write_draft_release_notes(candidate: AlphaCandidate, advisory_plan: Path | None, prepared_dir: Path) -> Path:
+def write_draft_release_notes(
+    candidate: AlphaCandidate, advisory_plan: Path | None, prepared_dir: Path
+) -> Path:
     path = prepared_dir / "NOTES.draft.md"
     advisory_ref = display_path(advisory_plan) if advisory_plan else "not available"
     path.write_text(
@@ -1230,7 +1402,9 @@ def write_draft_release_notes(candidate: AlphaCandidate, advisory_plan: Path | N
     return path
 
 
-def write_draft_candidate_bundle(candidate: AlphaCandidate, *, advisory_plan: Path | None, prepared_root: Path) -> Path:
+def write_draft_candidate_bundle(
+    candidate: AlphaCandidate, *, advisory_plan: Path | None, prepared_root: Path
+) -> Path:
     candidate_id = draft_candidate_id(candidate)
     prepared_dir = prepared_root / candidate_id
     prepared_dir.mkdir(parents=True, exist_ok=True)
@@ -1262,7 +1436,9 @@ def write_draft_candidate_bundle(candidate: AlphaCandidate, *, advisory_plan: Pa
         },
         "status": "draft_unverified_not_queued",
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     checksums = prepared_dir / "SHA256SUMS"
     checksums.write_text(
         f"{sha256_file(notes)}  NOTES.draft.md\n{sha256_file(manifest_path)}  manifest.json\n",
@@ -1278,7 +1454,9 @@ def write_draft_candidate_bundle(candidate: AlphaCandidate, *, advisory_plan: Pa
 def update_python_version(version: str) -> None:
     path = ROOT / "sdk" / "python" / "pyproject.toml"
     text = path.read_text(encoding="utf-8")
-    updated = re.sub(r'(?m)^version = "[^"]+"$', f'version = "{version}"', text, count=1)
+    updated = re.sub(
+        r'(?m)^version = "[^"]+"$', f'version = "{version}"', text, count=1
+    )
     updated = updated.replace(
         '"Development Status :: 2 - Pre-Alpha"',
         '"Development Status :: 3 - Alpha"',
@@ -1291,7 +1469,9 @@ def update_python_version(version: str) -> None:
 def update_python_runtime_version(version: str) -> None:
     path = ROOT / "sdk" / "python" / "src" / "attestplane" / "__init__.py"
     text = path.read_text(encoding="utf-8")
-    updated = re.sub(r'(?m)^__version__ = "[^"]+"$', f'__version__ = "{version}"', text, count=1)
+    updated = re.sub(
+        r'(?m)^__version__ = "[^"]+"$', f'__version__ = "{version}"', text, count=1
+    )
     if updated == text:
         raise RuntimeError(f"could not update Python runtime version in {path}")
     path.write_text(updated, encoding="utf-8")
@@ -1307,7 +1487,9 @@ def update_python_import_surface_test_version(version: str) -> None:
         count=1,
     )
     if updated == text:
-        raise RuntimeError(f"could not update Python import-surface test version in {path}")
+        raise RuntimeError(
+            f"could not update Python import-surface test version in {path}"
+        )
     path.write_text(updated, encoding="utf-8")
 
 
@@ -1319,7 +1501,9 @@ def update_npm_version(version: str) -> None:
     path = ROOT / "sdk" / "typescript" / "package.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["version"] = version
-    path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8"
+    )
     lock_path = ROOT / "sdk" / "typescript" / "package-lock.json"
     if lock_path.exists():
         lock_payload = json.loads(lock_path.read_text(encoding="utf-8"))
@@ -1327,13 +1511,20 @@ def update_npm_version(version: str) -> None:
         packages = lock_payload.get("packages")
         if isinstance(packages, dict) and isinstance(packages.get(""), dict):
             packages[""]["version"] = version
-        lock_path.write_text(json.dumps(lock_payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+        lock_path.write_text(
+            json.dumps(lock_payload, indent=2, sort_keys=False) + "\n", encoding="utf-8"
+        )
 
 
 def update_npm_runtime_version(version: str) -> None:
     path = ROOT / "sdk" / "typescript" / "src" / "index_version.ts"
     text = path.read_text(encoding="utf-8")
-    updated = re.sub(r"(?m)^export const VERSION = '[^']+';$", f"export const VERSION = '{version}';", text, count=1)
+    updated = re.sub(
+        r"(?m)^export const VERSION = '[^']+';$",
+        f"export const VERSION = '{version}';",
+        text,
+        count=1,
+    )
     if updated == text:
         raise RuntimeError(f"could not update TypeScript runtime version in {path}")
     path.write_text(updated, encoding="utf-8")
@@ -1343,9 +1534,15 @@ def update_readme_release_state(candidate: AlphaCandidate) -> None:
     path = ROOT / "README.md"
     text = path.read_text(encoding="utf-8")
     replacements = [
-        (r"PyPI-attestplane%20[0-9.]+a0-blue", f"PyPI-attestplane%20{candidate.python_version}-blue"),
+        (
+            r"PyPI-attestplane%20[0-9.]+a0-blue",
+            f"PyPI-attestplane%20{candidate.python_version}-blue",
+        ),
         (r"\*\*v0\.0\.5-alpha\*\* builds on", f"**{candidate.release}** builds on"),
-        (r"The next alpha line, \*\*v0\.0\.5-alpha\*\*,", f"The current alpha line, **{candidate.release}**,"),
+        (
+            r"The next alpha line, \*\*v0\.0\.5-alpha\*\*,",
+            f"The current alpha line, **{candidate.release}**,",
+        ),
         (
             r"Python \(0\.0\.5a0\)\s+\│  TypeScript \(0\.0\.5-alpha\)",
             f"Python ({candidate.python_version})   │  TypeScript ({candidate.npm_version})",
@@ -1354,20 +1551,38 @@ def update_readme_release_state(candidate: AlphaCandidate) -> None:
             r"Python `attestplane==[^`]+` is published to PyPI, and\n`@attestplane/attestplane@[^`]+` is published to npm",
             f"Python `attestplane=={candidate.python_version}` is published to PyPI, and\n`@attestplane/attestplane@{candidate.npm_version}` is published to npm",
         ),
-        (r"The `v0\.0\.5-alpha` line tightens", f"The `{candidate.release}` line tightens"),
-        (r"through the v0\.0\.5-alpha release-prep line", f"through the {candidate.release} release-prep line"),
+        (
+            r"The `v0\.0\.5-alpha` line tightens",
+            f"The `{candidate.release}` line tightens",
+        ),
+        (
+            r"through the v0\.0\.5-alpha release-prep line",
+            f"through the {candidate.release} release-prep line",
+        ),
         (
             r"\(`v0\.0\.5-alpha`\), still under alpha/non-certification boundaries",
             f"(`{candidate.release}`), still under alpha/non-certification boundaries",
         ),
-        (r"`attestplane==[^`]+` \| \[PyPI\]", f"`attestplane=={candidate.python_version}` | [PyPI]"),
+        (
+            r"`attestplane==[^`]+` \| \[PyPI\]",
+            f"`attestplane=={candidate.python_version}` | [PyPI]",
+        ),
         (
             r"`@attestplane/attestplane@[^`]+` \| \[npm alpha/latest dist-tags\]",
             f"`@attestplane/attestplane@{candidate.npm_version}` | [npm alpha/latest dist-tags]",
         ),
-        (r"GitHub Release \| `v[0-9.]+-alpha`", f"GitHub Release | `{candidate.release}`"),
-        (r"pip install attestplane==[0-9.]+a0", f"pip install attestplane=={candidate.python_version}"),
-        (r"prepared v0\.0\.5-alpha artifacts include", f"prepared {candidate.release} artifacts include"),
+        (
+            r"GitHub Release \| `v[0-9.]+-alpha`",
+            f"GitHub Release | `{candidate.release}`",
+        ),
+        (
+            r"pip install attestplane==[0-9.]+a0",
+            f"pip install attestplane=={candidate.python_version}",
+        ),
+        (
+            r"prepared v0\.0\.5-alpha artifacts include",
+            f"prepared {candidate.release} artifacts include",
+        ),
         (r"\*\*M5 — v0\.1\.0 alpha hardening\*\*", "**M5 — v0.1.x alpha hardening**"),
     ]
     updated = text
@@ -1524,9 +1739,15 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
         },
         "upload_plan_file": f"release/artifacts/{candidate.release}/upload-plan.md",
     }
-    (ROOT / candidate.manifest).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    checksum_lines = [f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts]
-    (ROOT / candidate.checksums).write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
+    (ROOT / candidate.manifest).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    checksum_lines = [
+        f"{artifact['sha256']}  {artifact['path']}" for artifact in artifacts
+    ]
+    (ROOT / candidate.checksums).write_text(
+        "\n".join(checksum_lines) + "\n", encoding="utf-8"
+    )
     (release_dir / "upload-plan.md").write_text(
         "\n".join(
             [
@@ -1545,9 +1766,9 @@ def write_release_metadata(candidate: AlphaCandidate) -> None:
                 "## Release Commands",
                 "",
                 "```bash",
-                f"git tag -a {candidate.release} -m \"{candidate.release}\"",
+                f'git tag -a {candidate.release} -m "{candidate.release}"',
                 f"git -c http.version={GIT_HTTP_VERSION} push origin {candidate.release}",
-                f"gh release create {candidate.release} --prerelease --title \"{candidate.release}\" --notes-file {candidate.release_notes} ...",
+                f'gh release create {candidate.release} --prerelease --title "{candidate.release}" --notes-file {candidate.release_notes} ...',
                 "gh workflow run publish-python.yml -f target=pypi --ref main",
                 "gh workflow run publish-typescript.yml -f tag=alpha -f dry_run=false --ref main",
                 "```",
@@ -1589,7 +1810,10 @@ def commit_release_prep(candidate: AlphaCandidate) -> None:
         f"release/artifacts/{candidate.release}/upload-plan.md",
     ]
     run(["git", "add", *files], dry_run=False)
-    run(["git", "commit", "-s", "-m", f"chore(release): prepare {candidate.release}"], dry_run=False)
+    run(
+        ["git", "commit", "-s", "-m", f"chore(release): prepare {candidate.release}"],
+        dry_run=False,
+    )
 
 
 def finalize_next_alpha(
@@ -1656,7 +1880,9 @@ def auto_prepare_next_alpha(
         return candidate
     if version_evaluation is not None:
         advisory_plan = version_evaluation
-    prepared_dir = write_draft_candidate_bundle(candidate, advisory_plan=advisory_plan, prepared_root=prepared_root)
+    prepared_dir = write_draft_candidate_bundle(
+        candidate, advisory_plan=advisory_plan, prepared_root=prepared_root
+    )
     print(f"alpha train: prepared draft candidate bundle {display_path(prepared_dir)}")
     return candidate
 
@@ -1687,16 +1913,22 @@ def discover_prepared_candidates() -> list[AlphaCandidate]:
         except FileNotFoundError:
             continue
         releases.append(release)
-    return [prepared_candidate_from_release(release) for release in sorted(set(releases))]
+    return [
+        prepared_candidate_from_release(release) for release in sorted(set(releases))
+    ]
 
 
-def merge_prepared_candidates(queue_path: Path, discovered: list[AlphaCandidate], *, dry_run: bool) -> list[AlphaCandidate]:
+def merge_prepared_candidates(
+    queue_path: Path, discovered: list[AlphaCandidate], *, dry_run: bool
+) -> list[AlphaCandidate]:
     queued = load_queue(queue_path)
     by_release = {candidate.release: candidate for candidate in queued}
     for candidate in discovered:
         by_release.setdefault(candidate.release, candidate)
     merged = [by_release[release] for release in sorted(by_release)]
-    if not dry_run and [candidate.release for candidate in merged] != [candidate.release for candidate in queued]:
+    if not dry_run and [candidate.release for candidate in merged] != [
+        candidate.release for candidate in queued
+    ]:
         write_queue(queue_path, merged)
     return merged
 
@@ -1706,7 +1938,9 @@ def reject_advisory_release_input(path: Path) -> None:
         return
     prefix = path.read_text(encoding="utf-8", errors="ignore")[:512]
     if "STATUS: ADVISORY" in prefix or "NOT_AUTHORIZED_FOR_PUBLISH" in prefix:
-        raise RuntimeError(f"advisory planning output cannot be used as release input: {path}")
+        raise RuntimeError(
+            f"advisory planning output cannot be used as release input: {path}"
+        )
 
 
 def verify_candidate_files(candidate: AlphaCandidate) -> None:
@@ -1720,7 +1954,9 @@ def verify_candidate_files(candidate: AlphaCandidate) -> None:
     ]
     missing = [path for path in paths if not (ROOT / path).is_file()]
     if missing:
-        raise FileNotFoundError("candidate is not release-prepared; missing: " + ", ".join(missing))
+        raise FileNotFoundError(
+            "candidate is not release-prepared; missing: " + ", ".join(missing)
+        )
     for path in paths[:3]:
         reject_advisory_release_input(ROOT / path)
 
@@ -1731,7 +1967,9 @@ def assert_clean_tree() -> None:
         raise RuntimeError("working tree must be clean before alpha train execution")
 
 
-def preflight_public_release_surfaces(candidate: AlphaCandidate, state_path: Path | None = None) -> None:
+def preflight_public_release_surfaces(
+    candidate: AlphaCandidate, state_path: Path | None = None
+) -> None:
     local_tag = subprocess.run(
         ["git", "rev-parse", "-q", "--verify", f"refs/tags/{candidate.release}"],
         cwd=ROOT,
@@ -1746,23 +1984,41 @@ def preflight_public_release_surfaces(candidate: AlphaCandidate, state_path: Pat
             or stage_done(state_path, candidate, "tag_pushed")
             or stage_done(state_path, candidate, "gh_release_created")
         ):
-            print(f"local tag already exists; treating as interrupted release recovery: {candidate.release}")
+            print(
+                f"local tag already exists; treating as interrupted release recovery: {candidate.release}"
+            )
         else:
-            raise RuntimeError(f"local tag already exists; refusing retag: {candidate.release}")
+            raise RuntimeError(
+                f"local tag already exists; refusing retag: {candidate.release}"
+            )
 
     if remote_tag_exists(candidate.release):
-        if local_tag_points_at_head(candidate.release) or stage_done(state_path, candidate, "tag_pushed"):
+        if local_tag_points_at_head(candidate.release) or stage_done(
+            state_path, candidate, "tag_pushed"
+        ):
             mark_stage(state_path, candidate, "tag_pushed", "done", {"observed": True})
-            print(f"remote tag already exists; treating as interrupted tag-push recovery: {candidate.release}")
+            print(
+                f"remote tag already exists; treating as interrupted tag-push recovery: {candidate.release}"
+            )
         else:
-            raise RuntimeError(f"remote tag already exists; refusing tag overwrite: {candidate.release}")
+            raise RuntimeError(
+                f"remote tag already exists; refusing tag overwrite: {candidate.release}"
+            )
 
     if gh_release_exists(candidate.release):
-        if local_tag_points_at_head(candidate.release) or stage_done(state_path, candidate, "gh_release_created"):
-            mark_stage(state_path, candidate, "gh_release_created", "done", {"observed": True})
-            print(f"GitHub Release already exists; treating as interrupted release-create recovery: {candidate.release}")
+        if local_tag_points_at_head(candidate.release) or stage_done(
+            state_path, candidate, "gh_release_created"
+        ):
+            mark_stage(
+                state_path, candidate, "gh_release_created", "done", {"observed": True}
+            )
+            print(
+                f"GitHub Release already exists; treating as interrupted release-create recovery: {candidate.release}"
+            )
         else:
-            raise RuntimeError(f"GitHub Release already exists; refusing duplicate release: {candidate.release}")
+            raise RuntimeError(
+                f"GitHub Release already exists; refusing duplicate release: {candidate.release}"
+            )
 
 
 def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
@@ -1773,8 +2029,22 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
         "NPM_VERSION": candidate.npm_version,
     }
     prebuilt_env = {**env, "ATTESTPLANE_RELEASE_ASSETS_PREBUILT": "1"}
-    run(["bash", "-lc", "cd sdk/python && uv run pytest -q && uv run ruff check src tests && uv run mypy"], dry_run=dry_run)
-    run(["bash", "-lc", "cd sdk/typescript && npm test --silent && npm run typecheck --silent && npm run lint --silent"], dry_run=dry_run)
+    run(
+        [
+            "bash",
+            "-lc",
+            "cd sdk/python && uv run pytest -q && uv run ruff check src tests && uv run mypy",
+        ],
+        dry_run=dry_run,
+    )
+    run(
+        [
+            "bash",
+            "-lc",
+            "cd sdk/typescript && npm test --silent && npm run typecheck --silent && npm run lint --silent",
+        ],
+        dry_run=dry_run,
+    )
     for command in (
         ["scripts/check-public-api.sh"],
         ["scripts/check-schema-hashes.sh"],
@@ -1784,21 +2054,33 @@ def run_local_gates(candidate: AlphaCandidate, *, dry_run: bool) -> None:
         ["gitleaks", "detect", "--source", ".", "--no-git", "--redact"],
         ["git", "diff", "--check"],
     ):
-        command_env = prebuilt_env if command == ["scripts/check-release-assets-prep.sh"] else env
+        command_env = (
+            prebuilt_env if command == ["scripts/check-release-assets-prep.sh"] else env
+        )
         run(command, dry_run=dry_run, env=command_env)
 
 
-def ensure_local_gates(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None) -> None:
+def ensure_local_gates(
+    candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None
+) -> None:
     if stage_done(state_path, candidate, "local_gates_passed"):
-        print(f"stage local_gates_passed already done; skipping gates: {candidate.release}", flush=True)
+        print(
+            f"stage local_gates_passed already done; skipping gates: {candidate.release}",
+            flush=True,
+        )
         return
     run_local_gates(candidate, dry_run=dry_run)
     mark_stage(state_path, candidate, "local_gates_passed", "done")
 
 
-def ensure_main_pushed(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None) -> None:
+def ensure_main_pushed(
+    candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None
+) -> None:
     if stage_done(state_path, candidate, "main_pushed"):
-        print(f"stage main_pushed already done; skipping main push: {candidate.release}", flush=True)
+        print(
+            f"stage main_pushed already done; skipping main push: {candidate.release}",
+            flush=True,
+        )
         return
     if state_path is not None:
         enqueue_git_push_task(state_path, candidate, "main", dry_run=dry_run)
@@ -1815,7 +2097,9 @@ def gh_release_exists(release: str) -> bool:
 
 
 def pypi_version_exists(python_version: str) -> bool:
-    with urllib.request.urlopen(f"https://pypi.org/pypi/{PYPI_PROJECT}/json", timeout=30) as handle:
+    with urllib.request.urlopen(
+        f"https://pypi.org/pypi/{PYPI_PROJECT}/json", timeout=30
+    ) as handle:
         pypi = json.load(handle)
     if python_version in pypi.get("releases", {}):
         return True
@@ -1833,14 +2117,26 @@ def npm_package_info(npm_version: str) -> dict[str, Any]:
     try:
         npm = json.loads(
             capture(
-                ["npm", "view", f"{NPM_PACKAGE}@{npm_version}", "version", tag_field, "--json"],
+                [
+                    "npm",
+                    "view",
+                    f"{NPM_PACKAGE}@{npm_version}",
+                    "version",
+                    tag_field,
+                    "--json",
+                ],
                 timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
             )
         )
         if not isinstance(npm, dict):
             raise RuntimeError(f"npm returned malformed package info: {npm!r}")
         return npm
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+        json.JSONDecodeError,
+    ):
         with urllib.request.urlopen(NPM_REGISTRY_PACKAGE_URL, timeout=30) as handle:
             npm = json.load(handle)
         if not isinstance(npm, dict):
@@ -1855,7 +2151,13 @@ def npm_version_exists(npm_version: str) -> bool:
         if isinstance(versions, dict) and npm_version in versions:
             return True
         return npm.get("version") == npm_version
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, urllib.error.URLError):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+        json.JSONDecodeError,
+        urllib.error.URLError,
+    ):
         return False
 
 
@@ -1865,28 +2167,53 @@ def npm_dist_tags_synced(npm_version: str) -> bool:
         tag_field = "dist" + "-tags"
         versions = npm.get("versions", {})
         return (
-            (npm.get("version") == npm_version or (isinstance(versions, dict) and npm_version in versions))
-            and npm.get(tag_field, {}).get("alpha") == npm_version
-        )
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, urllib.error.URLError):
+            npm.get("version") == npm_version
+            or (isinstance(versions, dict) and npm_version in versions)
+        ) and npm.get(tag_field, {}).get("alpha") == npm_version
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+        json.JSONDecodeError,
+        urllib.error.URLError,
+    ):
         return False
 
 
-def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
+def create_tag_and_release(
+    candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None
+) -> None:
     if (
         local_tag_points_at_head(candidate.release)
         or stage_done(state_path, candidate, "tag_pushed")
         or stage_done(state_path, candidate, "gh_release_created")
     ):
-        print(f"local tag already exists or is recorded; skipping local tag creation: {candidate.release}", flush=True)
+        print(
+            f"local tag already exists or is recorded; skipping local tag creation: {candidate.release}",
+            flush=True,
+        )
     else:
-        run(["git", "tag", "-a", candidate.release, "-m", candidate.release], dry_run=dry_run)
+        run(
+            ["git", "tag", "-a", candidate.release, "-m", candidate.release],
+            dry_run=dry_run,
+        )
     if stage_done(state_path, candidate, "tag_pushed"):
-        print(f"stage tag_pushed already done; skipping tag push: {candidate.release}", flush=True)
+        print(
+            f"stage tag_pushed already done; skipping tag push: {candidate.release}",
+            flush=True,
+        )
     else:
         if state_path is not None:
-            enqueue_git_push_task(state_path, candidate, candidate.release, dry_run=dry_run)
-            mark_stage(state_path, candidate, "tag_pushed", "queued", {"ref": candidate.release})
+            enqueue_git_push_task(
+                state_path, candidate, candidate.release, dry_run=dry_run
+            )
+            mark_stage(
+                state_path,
+                candidate,
+                "tag_pushed",
+                "queued",
+                {"ref": candidate.release},
+            )
         print(f"stage tag_pushed queued: {candidate.release}", flush=True)
         if state_path is not None and not dry_run:
             process_git_push_queue(
@@ -1899,14 +2226,24 @@ def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_pa
                     f"stage gh_release_created pending tag push queue: {candidate.release}",
                     flush=True,
                 )
-                raise QueueDependencyPending(f"tag push pending for {candidate.release}")
+                raise QueueDependencyPending(
+                    f"tag push pending for {candidate.release}"
+                )
     if candidate.create_github_release:
         if stage_done(state_path, candidate, "gh_release_created"):
-            print(f"stage gh_release_created already done; skipping GitHub Release create: {candidate.release}", flush=True)
+            print(
+                f"stage gh_release_created already done; skipping GitHub Release create: {candidate.release}",
+                flush=True,
+            )
             return
         if not dry_run and gh_release_exists(candidate.release):
-            mark_stage(state_path, candidate, "gh_release_created", "done", {"observed": True})
-            print(f"stage gh_release_created observed done; skipping GitHub Release create: {candidate.release}", flush=True)
+            mark_stage(
+                state_path, candidate, "gh_release_created", "done", {"observed": True}
+            )
+            print(
+                f"stage gh_release_created observed done; skipping GitHub Release create: {candidate.release}",
+                flush=True,
+            )
             return
         assets = [
             f"sdk/python/dist/attestplane-{candidate.python_version}.tar.gz",
@@ -1936,7 +2273,9 @@ def create_tag_and_release(candidate: AlphaCandidate, *, dry_run: bool, state_pa
         mark_stage(state_path, candidate, "gh_release_created", "done")
 
 
-def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> tuple[str | None, str | None]:
+def publish_platforms(
+    candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None
+) -> tuple[str | None, str | None]:
     python_run = None
     npm_run = None
     if not alpha_registry_publish_enabled(candidate.release):
@@ -1962,15 +2301,35 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
         return python_run, npm_run
     if candidate.publish_python:
         if stage_done(state_path, candidate, "pypi_published"):
-            print(f"stage pypi_published already done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
+            print(
+                f"stage pypi_published already done; skipping PyPI publish dispatch: {candidate.release}",
+                flush=True,
+            )
         elif not dry_run and pypi_version_exists(candidate.python_version):
-            mark_stage(state_path, candidate, "pypi_published", "done", {"observed": True})
-            print(f"stage pypi_published observed done; skipping PyPI publish dispatch: {candidate.release}", flush=True)
+            mark_stage(
+                state_path, candidate, "pypi_published", "done", {"observed": True}
+            )
+            print(
+                f"stage pypi_published observed done; skipping PyPI publish dispatch: {candidate.release}",
+                flush=True,
+            )
         else:
             last_error = "PyPI publish workflow did not run"
             published = False
             for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
-                run(["gh", "workflow", "run", "publish-python.yml", "-f", "target=pypi", "--ref", "main"], dry_run=dry_run)
+                run(
+                    [
+                        "gh",
+                        "workflow",
+                        "run",
+                        "publish-python.yml",
+                        "-f",
+                        "target=pypi",
+                        "--ref",
+                        "main",
+                    ],
+                    dry_run=dry_run,
+                )
                 if dry_run:
                     break
                 time.sleep(5)
@@ -2002,14 +2361,24 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                             candidate,
                             "pypi_published",
                             "done",
-                            {"run": python_run, "observed": True, "watch_error": watch_error},
+                            {
+                                "run": python_run,
+                                "observed": True,
+                                "watch_error": watch_error,
+                            },
                         )
                         print(
                             f"stage pypi_published observed done after watch failure: {candidate.release}",
                             flush=True,
                         )
                     else:
-                        mark_stage(state_path, candidate, "pypi_published", "done", {"run": python_run})
+                        mark_stage(
+                            state_path,
+                            candidate,
+                            "pypi_published",
+                            "done",
+                            {"run": python_run},
+                        )
                     break
                 last_error = watch_error or last_error
                 if attempt == PUBLISH_WORKFLOW_ATTEMPTS:
@@ -2020,20 +2389,43 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                     flush=True,
                 )
                 time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
-            if not dry_run and not published and not stage_done(state_path, candidate, "pypi_published"):
+            if (
+                not dry_run
+                and not published
+                and not stage_done(state_path, candidate, "pypi_published")
+            ):
                 raise RuntimeError(last_error)
     if candidate.publish_npm:
         if stage_done(state_path, candidate, "npm_published"):
-            print(f"stage npm_published already done; skipping npm publish dispatch: {candidate.release}", flush=True)
+            print(
+                f"stage npm_published already done; skipping npm publish dispatch: {candidate.release}",
+                flush=True,
+            )
         elif not dry_run and npm_version_exists(candidate.npm_version):
-            mark_stage(state_path, candidate, "npm_published", "done", {"observed": True})
-            print(f"stage npm_published observed done; skipping npm publish dispatch: {candidate.release}", flush=True)
+            mark_stage(
+                state_path, candidate, "npm_published", "done", {"observed": True}
+            )
+            print(
+                f"stage npm_published observed done; skipping npm publish dispatch: {candidate.release}",
+                flush=True,
+            )
         else:
             last_error = "npm publish workflow did not run"
             published = False
             for attempt in range(1, PUBLISH_WORKFLOW_ATTEMPTS + 1):
                 run(
-                    ["gh", "workflow", "run", "publish-typescript.yml", "-f", "tag=alpha", "-f", "dry_run=false", "--ref", "main"],
+                    [
+                        "gh",
+                        "workflow",
+                        "run",
+                        "publish-typescript.yml",
+                        "-f",
+                        "tag=alpha",
+                        "-f",
+                        "dry_run=false",
+                        "--ref",
+                        "main",
+                    ],
                     dry_run=dry_run,
                 )
                 if dry_run:
@@ -2067,14 +2459,24 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                             candidate,
                             "npm_published",
                             "done",
-                            {"run": npm_run, "observed": True, "watch_error": watch_error},
+                            {
+                                "run": npm_run,
+                                "observed": True,
+                                "watch_error": watch_error,
+                            },
                         )
                         print(
                             f"stage npm_published observed done after watch failure: {candidate.release}",
                             flush=True,
                         )
                     else:
-                        mark_stage(state_path, candidate, "npm_published", "done", {"run": npm_run})
+                        mark_stage(
+                            state_path,
+                            candidate,
+                            "npm_published",
+                            "done",
+                            {"run": npm_run},
+                        )
                     break
                 last_error = watch_error or last_error
                 if attempt == PUBLISH_WORKFLOW_ATTEMPTS:
@@ -2085,10 +2487,17 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
                     flush=True,
                 )
                 time.sleep(PUBLISH_WORKFLOW_RETRY_SECONDS)
-            if not dry_run and not published and not stage_done(state_path, candidate, "npm_published"):
+            if (
+                not dry_run
+                and not published
+                and not stage_done(state_path, candidate, "npm_published")
+            ):
                 raise RuntimeError(last_error)
         if stage_done(state_path, candidate, "dist_tag_synced"):
-            print(f"stage dist_tag_synced already done; skipping npm alpha tag record: {candidate.release}", flush=True)
+            print(
+                f"stage dist_tag_synced already done; skipping npm alpha tag record: {candidate.release}",
+                flush=True,
+            )
         else:
             mark_stage(
                 state_path,
@@ -2107,30 +2516,49 @@ def publish_platforms(candidate: AlphaCandidate, *, dry_run: bool, state_path: P
     return python_run, npm_run
 
 
-def verify_registries(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
+def verify_registries(
+    candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None
+) -> None:
     if stage_done(state_path, candidate, "registry_verified"):
-        print(f"stage registry_verified already done; skipping registry verification: {candidate.release}", flush=True)
+        print(
+            f"stage registry_verified already done; skipping registry verification: {candidate.release}",
+            flush=True,
+        )
         return
     if not alpha_registry_publish_enabled(candidate.release):
-        mark_stage(state_path, candidate, "registry_verified", "done", alpha_registry_publish_skip_detail(candidate))
+        mark_stage(
+            state_path,
+            candidate,
+            "registry_verified",
+            "done",
+            alpha_registry_publish_skip_detail(candidate),
+        )
         print(
             f"stage registry_verified skipped by minor-boundary registry policy: {candidate.release}",
             flush=True,
         )
         return
     if dry_run:
-        print(f"DRY-RUN: would verify PyPI {candidate.python_version} and npm {candidate.npm_version}")
+        print(
+            f"DRY-RUN: would verify PyPI {candidate.python_version} and npm {candidate.npm_version}"
+        )
         mark_stage(state_path, candidate, "registry_verified", "done")
         return
     last_error = "registry verification did not run"
     for attempt in range(1, REGISTRY_VERIFY_ATTEMPTS + 1):
         try:
             if not pypi_version_exists(candidate.python_version):
-                raise RuntimeError(f"PyPI version missing after publish: {candidate.python_version}")
+                raise RuntimeError(
+                    f"PyPI version missing after publish: {candidate.python_version}"
+                )
             if not npm_version_exists(candidate.npm_version):
-                raise RuntimeError(f"npm version missing after publish: {candidate.npm_version}")
+                raise RuntimeError(
+                    f"npm version missing after publish: {candidate.npm_version}"
+                )
             if not npm_dist_tags_synced(candidate.npm_version):
-                raise RuntimeError(f"npm alpha dist-tag did not move to {candidate.npm_version}")
+                raise RuntimeError(
+                    f"npm alpha dist-tag did not move to {candidate.npm_version}"
+                )
             mark_stage(state_path, candidate, "registry_verified", "done")
             return
         except Exception as exc:
@@ -2166,7 +2594,11 @@ def latest_open_issues() -> str:
             ],
             timeout=REMOTE_PROBE_TIMEOUT_SECONDS,
         )
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except (
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+        subprocess.TimeoutExpired,
+    ):
         return "[]"
 
 
@@ -2210,7 +2642,9 @@ def strip_forbidden_advisory_commands(text: str) -> tuple[str, list[str]]:
     return "\n".join(kept).strip() + "\n", removed
 
 
-def advisory_header(prompt: str, removed_lines: list[str], *, scope: str = "ISSUE_PLANNING_ONLY") -> str:
+def advisory_header(
+    prompt: str, removed_lines: list[str], *, scope: str = "ISSUE_PLANNING_ONLY"
+) -> str:
     prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
     return "\n".join(
         [
@@ -2242,12 +2676,16 @@ def write_advisory_plan(
     stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
     output = proposals_dir / f"{filename_prefix}-{stamp}.md"
     tmp = output.with_suffix(".tmp")
-    tmp.write_text(advisory_header(prompt, removed, scope=scope) + cleaned, encoding="utf-8")
+    tmp.write_text(
+        advisory_header(prompt, removed, scope=scope) + cleaned, encoding="utf-8"
+    )
     tmp.replace(output)
     return output
 
 
-def plan_next_alpha_issues(*, dry_run: bool, timeout_seconds: int, proposals_dir: Path) -> Path | None:
+def plan_next_alpha_issues(
+    *, dry_run: bool, timeout_seconds: int, proposals_dir: Path
+) -> Path | None:
     prompt = build_alpha_issue_planning_prompt()
     if dry_run:
         print("DRY-RUN: would call ask_opus.sh architect for next alpha issue planning")
@@ -2354,7 +2792,9 @@ def plan_alpha_version_evaluation(
         return None
     prompt = build_alpha_version_evaluation_prompt(release)
     if dry_run:
-        print(f"DRY-RUN: would call ask_opus.sh architect for alpha version evaluation {release}")
+        print(
+            f"DRY-RUN: would call ask_opus.sh architect for alpha version evaluation {release}"
+        )
         return None
     fake = os.environ.get("ATTESTPLANE_ALPHA_VERSION_EVAL_FAKE_RESPONSE")
     if fake is not None:
@@ -2428,10 +2868,14 @@ def selected_version_from_advisory(path: Path) -> str | None:
 def validate_opus_selected_alpha_version(selected: str, *, latest: str) -> None:
     parse_alpha_release(selected)
     if compare_alpha_releases(selected, latest) <= 0:
-        raise ValueError(f"Opus-selected alpha release must be greater than latest {latest}: {selected}")
+        raise ValueError(
+            f"Opus-selected alpha release must be greater than latest {latest}: {selected}"
+        )
     major, _minor, _patch = parse_alpha_release(selected)
     if major != 0:
-        raise ValueError(f"Opus-selected alpha release must stay in major version 0 while alpha: {selected}")
+        raise ValueError(
+            f"Opus-selected alpha release must stay in major version 0 while alpha: {selected}"
+        )
 
 
 def resolve_opus_decided_alpha_release(
@@ -2442,7 +2886,9 @@ def resolve_opus_decided_alpha_release(
     proposals_dir: Path,
 ) -> tuple[str, Path | None]:
     deterministic_release = resolve_next_alpha_release(release_override)
-    if release_override is not None or not requires_version_evaluation(deterministic_release):
+    if release_override is not None or not requires_version_evaluation(
+        deterministic_release
+    ):
         return deterministic_release, None
     advisory = plan_alpha_version_evaluation(
         release=deterministic_release,
@@ -2460,7 +2906,9 @@ def resolve_opus_decided_alpha_release(
             flush=True,
         )
         return deterministic_release, advisory
-    validate_opus_selected_alpha_version(selected, latest=latest_alpha_release_from_notes())
+    validate_opus_selected_alpha_version(
+        selected, latest=latest_alpha_release_from_notes()
+    )
     return selected, advisory
 
 
@@ -2485,7 +2933,9 @@ def write_pipeline_report(
         raw_stages = state.get("release_stages", {})
         if isinstance(raw_stages, dict):
             stage_summary = {
-                str(release): {str(stage): str(status) for stage, status in stages.items()}
+                str(release): {
+                    str(stage): str(status) for stage, status in stages.items()
+                }
                 for release, stages in raw_stages.items()
                 if isinstance(stages, dict)
             }
@@ -2503,7 +2953,9 @@ def write_pipeline_report(
             {
                 "name": "opus_issue_planning",
                 "authority": "advisory_only",
-                "output": str(advisory_plan.relative_to(ROOT)) if advisory_plan and advisory_plan.is_relative_to(ROOT) else str(advisory_plan)
+                "output": str(advisory_plan.relative_to(ROOT))
+                if advisory_plan and advisory_plan.is_relative_to(ROOT)
+                else str(advisory_plan)
                 if advisory_plan
                 else None,
             },
@@ -2528,7 +2980,9 @@ def write_pipeline_report(
             "unbounded_loop_without_queue": False,
         },
     }
-    report.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    report.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return report
 
 
@@ -2539,7 +2993,9 @@ def display_path(path: Path) -> Path:
         return path
 
 
-def run_candidate(candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None) -> None:
+def run_candidate(
+    candidate: AlphaCandidate, *, dry_run: bool, state_path: Path | None = None
+) -> None:
     print(f"=== alpha candidate: {candidate.release} ===", flush=True)
     verify_candidate_files(candidate)
     assert_clean_tree()
@@ -2592,7 +3048,10 @@ def save_continuous_state(path: Path, payload: dict[str, Any]) -> None:
             candidate = prepared_candidate_from_release(release)
             status = "released" if release in processed else "prepared"
             upsert_release_state(db, candidate, status, now)
-        for key, kind in (("prepare_count_by_day", "prepared"), ("release_count_by_day", "released")):
+        for key, kind in (
+            ("prepare_count_by_day", "prepared"),
+            ("release_count_by_day", "released"),
+        ):
             counts = payload.get(key, {})
             if not isinstance(counts, dict):
                 raise ValueError(f"continuous state {key} is malformed: {path}")
@@ -2617,7 +3076,9 @@ def mark_processed(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> N
         upsert_release_state(db, candidate, "released", now)
         if not already_released:
             increment_daily_count(db, "released", now)
-        append_state_event(db, candidate.release, "released", {"idempotent": already_released}, now)
+        append_state_event(
+            db, candidate.release, "released", {"idempotent": already_released}, now
+        )
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
@@ -2629,11 +3090,17 @@ def mark_prepared(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> No
     init_state_db(db_path)
     now = int(time.time())
     with sqlite3.connect(db_path) as db:
-        already_present = release_status(db, candidate.release) in {"prepared", "processing", "released"}
+        already_present = release_status(db, candidate.release) in {
+            "prepared",
+            "processing",
+            "released",
+        }
         upsert_release_state(db, candidate, "prepared", now)
         if not already_present:
             increment_daily_count(db, "prepared", now)
-        append_state_event(db, candidate.release, "prepared", {"idempotent": already_present}, now)
+        append_state_event(
+            db, candidate.release, "prepared", {"idempotent": already_present}, now
+        )
     if path.suffix != ".sqlite":
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
@@ -2651,7 +3118,9 @@ def mark_processing(path: Path, candidate: AlphaCandidate, *, dry_run: bool) -> 
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
-def mark_failed(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool) -> None:
+def mark_failed(
+    path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool
+) -> None:
     if dry_run:
         return
     db_path = state_db_path(path)
@@ -2664,7 +3133,9 @@ def mark_failed(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: 
         write_continuous_state_snapshot(path, continuous_state_from_db(db_path))
 
 
-def retire_prepared(path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool) -> None:
+def retire_prepared(
+    path: Path, candidate: AlphaCandidate, *, reason: str, dry_run: bool
+) -> None:
     if dry_run:
         return
     db_path = state_db_path(path)
@@ -2767,10 +3238,14 @@ def recoverable_failed_publish_candidates(state_path: Path) -> list[AlphaCandida
                     continue
             except ValueError:
                 continue
-            gh_release_done = stage_status(db, release_text, "gh_release_created") == "done"
+            gh_release_done = (
+                stage_status(db, release_text, "gh_release_created") == "done"
+            )
             pypi_done = stage_status(db, release_text, "pypi_published") == "done"
             npm_done = stage_status(db, release_text, "npm_published") == "done"
-            registry_done = stage_status(db, release_text, "registry_verified") == "done"
+            registry_done = (
+                stage_status(db, release_text, "registry_verified") == "done"
+            )
             candidate = prepared_candidate_from_release(release_text)
             if not registry_done:
                 try:
@@ -2785,7 +3260,9 @@ def recoverable_failed_publish_candidates(state_path: Path) -> list[AlphaCandida
     return [prepared_candidate_from_release(latest)]
 
 
-def unprocessed_candidates(candidates: list[AlphaCandidate], state_path: Path) -> list[AlphaCandidate]:
+def unprocessed_candidates(
+    candidates: list[AlphaCandidate], state_path: Path
+) -> list[AlphaCandidate]:
     state = load_continuous_state(state_path)
     processed = set(str(item) for item in state.get("processed_releases", []))
     return [candidate for candidate in candidates if candidate.release not in processed]
@@ -2795,7 +3272,9 @@ def daily_release_count(state_path: Path) -> int:
     state = load_continuous_state(state_path)
     releases_by_day = state.get("release_count_by_day", {})
     if not isinstance(releases_by_day, dict):
-        raise ValueError(f"continuous state release_count_by_day is malformed: {state_path}")
+        raise ValueError(
+            f"continuous state release_count_by_day is malformed: {state_path}"
+        )
     day = time.strftime("%Y-%m-%d", time.gmtime())
     return int(releases_by_day.get(day, 0))
 
@@ -2804,7 +3283,9 @@ def daily_prepare_count(state_path: Path) -> int:
     state = load_continuous_state(state_path)
     prepares_by_day = state.get("prepare_count_by_day", {})
     if not isinstance(prepares_by_day, dict):
-        raise ValueError(f"continuous state prepare_count_by_day is malformed: {state_path}")
+        raise ValueError(
+            f"continuous state prepare_count_by_day is malformed: {state_path}"
+        )
     day = time.strftime("%Y-%m-%d", time.gmtime())
     return int(prepares_by_day.get(day, 0))
 
@@ -2828,7 +3309,10 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
     )
     while True:
         if stop_requested(args.stop_file):
-            print(f"alpha train: stop file present; exiting: {display_path(args.stop_file)}", flush=True)
+            print(
+                f"alpha train: stop file present; exiting: {display_path(args.stop_file)}",
+                flush=True,
+            )
             return 0
 
         now = time.time()
@@ -2849,7 +3333,10 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                 discovered,
                 dry_run=not args.execute or args.auto_finalize_next_alpha,
             )
-            print(f"alpha train: auto-promote discovered {len(discovered)} prepared candidates", flush=True)
+            print(
+                f"alpha train: auto-promote discovered {len(discovered)} prepared candidates",
+                flush=True,
+            )
 
         recoverable_candidates = recoverable_failed_publish_candidates(args.state_file)
         queued_releases = {candidate.release for candidate in queue_candidates}
@@ -2877,7 +3364,10 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             not candidates
             and args.auto_finalize_next_alpha
             and args.execute
-            and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
+            and (
+                not args.max_prepares_per_day
+                or daily_prepare_count(args.state_file) < args.max_prepares_per_day
+            )
         ):
             finalized = finalize_next_alpha(
                 advisory_plan=advisory_plan,
@@ -2888,13 +3378,19 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             if finalized is not None:
                 mark_prepared(args.state_file, finalized, dry_run=False)
                 candidates = [finalized]
-                print(f"alpha train: auto-finalized {finalized.release}; entering release train", flush=True)
+                print(
+                    f"alpha train: auto-finalized {finalized.release}; entering release train",
+                    flush=True,
+                )
 
         if (
             not candidates
             and args.auto_prepare_next_alpha
             and not args.auto_finalize_next_alpha
-            and (not args.max_prepares_per_day or daily_prepare_count(args.state_file) < args.max_prepares_per_day)
+            and (
+                not args.max_prepares_per_day
+                or daily_prepare_count(args.state_file) < args.max_prepares_per_day
+            )
         ):
             prepared = auto_prepare_next_alpha(
                 advisory_plan=advisory_plan,
@@ -2906,9 +3402,16 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
             )
             if prepared is not None:
                 mark_prepared(args.state_file, prepared, dry_run=not args.execute)
-                print(f"alpha train: auto-prepared draft {prepared.release}; release queue unchanged", flush=True)
+                print(
+                    f"alpha train: auto-prepared draft {prepared.release}; release queue unchanged",
+                    flush=True,
+                )
 
-        if args.execute and args.max_releases_per_day and daily_release_count(args.state_file) >= args.max_releases_per_day:
+        if (
+            args.execute
+            and args.max_releases_per_day
+            and daily_release_count(args.state_file) >= args.max_releases_per_day
+        ):
             print(
                 f"alpha train: max releases per UTC day reached ({args.max_releases_per_day}); sleeping {args.poll_seconds}s",
                 flush=True,
@@ -2930,12 +3433,18 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
         if candidates:
             for candidate in candidates[: args.max_count]:
                 try:
-                    mark_processing(args.state_file, candidate, dry_run=not args.execute)
-                    run_candidate(candidate, dry_run=not args.execute, state_path=args.state_file)
+                    mark_processing(
+                        args.state_file, candidate, dry_run=not args.execute
+                    )
+                    run_candidate(
+                        candidate, dry_run=not args.execute, state_path=args.state_file
+                    )
                     mark_processed(args.state_file, candidate, dry_run=not args.execute)
                     if args.execute:
                         try:
-                            from scripts.release.alpha_train_integrations import write_alpha_integration_reports
+                            from scripts.release.alpha_train_integrations import (
+                                write_alpha_integration_reports,
+                            )
 
                             json_report, md_report = write_alpha_integration_reports(
                                 candidate.release,
@@ -2947,7 +3456,9 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                                 f"{display_path(json_report)}, {display_path(md_report)}",
                                 flush=True,
                             )
-                        except Exception as exc:  # pragma: no cover - observe-only integration guard.
+                        except (
+                            Exception
+                        ) as exc:  # pragma: no cover - observe-only integration guard.
                             print(
                                 f"alpha train: integration evidence limitation: {type(exc).__name__}",
                                 flush=True,
@@ -2969,12 +3480,23 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
                         )
                         continue
                     if args.execute:
-                        mark_failed(args.state_file, candidate, reason=type(exc).__name__, dry_run=False)
-                        request_stop(args.stop_file, f"fail-closed after {candidate.release}: {type(exc).__name__}")
+                        mark_failed(
+                            args.state_file,
+                            candidate,
+                            reason=type(exc).__name__,
+                            dry_run=False,
+                        )
+                        request_stop(
+                            args.stop_file,
+                            f"fail-closed after {candidate.release}: {type(exc).__name__}",
+                        )
                     raise
             cycles += 1
         else:
-            print(f"alpha train: no unprocessed candidates; sleeping {args.poll_seconds}s", flush=True)
+            print(
+                f"alpha train: no unprocessed candidates; sleeping {args.poll_seconds}s",
+                flush=True,
+            )
             cycles += 1
 
         if args.execute:
@@ -3005,11 +3527,30 @@ def run_continuous_pipeline(args: argparse.Namespace) -> int:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue", type=Path, default=DEFAULT_QUEUE)
-    parser.add_argument("--execute", action="store_true", help="Perform mutations. Default is dry-run.")
-    parser.add_argument("--max-count", type=int, default=1, help="Maximum candidates to process in this invocation.")
-    parser.add_argument("--plan-next-alpha", action="store_true", help="Call Opus advisory to draft next-alpha issues first.")
-    parser.add_argument("--pipeline", action="store_true", help="Run the linked advisory-plan then finite release-queue pipeline.")
-    parser.add_argument("--continuous", action="store_true", help="Continuously watch the queue until manually stopped.")
+    parser.add_argument(
+        "--execute", action="store_true", help="Perform mutations. Default is dry-run."
+    )
+    parser.add_argument(
+        "--max-count",
+        type=int,
+        default=1,
+        help="Maximum candidates to process in this invocation.",
+    )
+    parser.add_argument(
+        "--plan-next-alpha",
+        action="store_true",
+        help="Call Opus advisory to draft next-alpha issues first.",
+    )
+    parser.add_argument(
+        "--pipeline",
+        action="store_true",
+        help="Run the linked advisory-plan then finite release-queue pipeline.",
+    )
+    parser.add_argument(
+        "--continuous",
+        action="store_true",
+        help="Continuously watch the queue until manually stopped.",
+    )
     parser.add_argument(
         "--full-auto-alpha",
         action="store_true",
@@ -3034,23 +3575,58 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="When the queue is empty, build and commit the next release-ready alpha candidate, then release it.",
     )
-    parser.add_argument("--advisor-timeout", type=int, default=120, help="Seconds to wait for Opus advisory planning.")
-    parser.add_argument("--plan-interval-seconds", type=int, default=3600, help="Minimum seconds between Opus advisory planning calls in continuous mode.")
-    parser.add_argument("--poll-seconds", type=int, default=300, help="Seconds to sleep between continuous queue checks.")
+    parser.add_argument(
+        "--advisor-timeout",
+        type=int,
+        default=120,
+        help="Seconds to wait for Opus advisory planning.",
+    )
+    parser.add_argument(
+        "--plan-interval-seconds",
+        type=int,
+        default=3600,
+        help="Minimum seconds between Opus advisory planning calls in continuous mode.",
+    )
+    parser.add_argument(
+        "--poll-seconds",
+        type=int,
+        default=300,
+        help="Seconds to sleep between continuous queue checks.",
+    )
     parser.add_argument(
         "--remote-push-cooldown-seconds",
         type=int,
         default=CONTINUOUS_REMOTE_PUSH_COOLDOWN_SECONDS,
         help="Seconds to wait before retrying the same continuous candidate after exhausted git push network failures.",
     )
-    parser.add_argument("--idle-exit-after", type=int, default=0, help="Testing helper: exit continuous mode after N cycles. 0 means never.")
-    parser.add_argument("--max-releases-per-day", type=int, default=DEFAULT_MAX_RELEASES_PER_DAY, help="UTC daily release cap in continuous execute mode. 0 means unlimited.")
-    parser.add_argument("--max-prepares-per-day", type=int, default=DEFAULT_MAX_PREPARES_PER_DAY, help="UTC daily auto-prepare cap in continuous execute mode. 0 means unlimited.")
+    parser.add_argument(
+        "--idle-exit-after",
+        type=int,
+        default=0,
+        help="Testing helper: exit continuous mode after N cycles. 0 means never.",
+    )
+    parser.add_argument(
+        "--max-releases-per-day",
+        type=int,
+        default=DEFAULT_MAX_RELEASES_PER_DAY,
+        help="UTC daily release cap in continuous execute mode. 0 means unlimited.",
+    )
+    parser.add_argument(
+        "--max-prepares-per-day",
+        type=int,
+        default=DEFAULT_MAX_PREPARES_PER_DAY,
+        help="UTC daily auto-prepare cap in continuous execute mode. 0 means unlimited.",
+    )
     parser.add_argument(
         "--next-alpha-release",
         help="Explicit next alpha release, e.g. v0.1.0-alpha. Defaults to patch-incrementing the latest release note.",
     )
-    parser.add_argument("--stop-file", type=Path, default=DEFAULT_STOP_FILE, help="If this file exists, continuous mode exits before starting the next cycle.")
+    parser.add_argument(
+        "--stop-file",
+        type=Path,
+        default=DEFAULT_STOP_FILE,
+        help="If this file exists, continuous mode exits before starting the next cycle.",
+    )
     parser.add_argument("--proposals-dir", type=Path, default=DEFAULT_PROPOSALS_DIR)
     parser.add_argument("--reports-dir", type=Path, default=DEFAULT_REPORTS_DIR)
     parser.add_argument("--prepared-dir", type=Path, default=DEFAULT_PREPARED_DIR)
@@ -3074,7 +3650,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.max_releases_per_day = FULL_AUTO_MAX_RELEASES_PER_DAY
         args.max_prepares_per_day = FULL_AUTO_MAX_PREPARES_PER_DAY
     if args.max_count < 1:
-        raise SystemExit("--max-count must be >= 1; unbounded release loops are intentionally unsupported")
+        raise SystemExit(
+            "--max-count must be >= 1; unbounded release loops are intentionally unsupported"
+        )
     if args.poll_seconds < 1:
         raise SystemExit("--poll-seconds must be >= 1")
     if args.remote_push_cooldown_seconds < 1:
@@ -3100,7 +3678,10 @@ def main(argv: list[str] | None = None) -> int:
             return run_continuous_pipeline(args)
         except Exception as exc:
             if args.execute:
-                request_stop(args.stop_file, f"fail-closed continuous pipeline: {type(exc).__name__}")
+                request_stop(
+                    args.stop_file,
+                    f"fail-closed continuous pipeline: {type(exc).__name__}",
+                )
             raise
 
     advisory_plan = None

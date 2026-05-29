@@ -11,14 +11,29 @@ def test_open_issue_enters_queue_without_approval_gate() -> None:
     open_issue = IssueTask(1, "Fix", "", "", [])
     pr_opened = IssueTask(2, "Fix", "", "", ["codex-pr-opened"])
 
-    assert should_process_issue(open_issue, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
-    assert should_process_issue(pr_opened, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
+    assert should_process_issue(
+        open_issue,
+        approved_label="auto-codex-approved",
+        pr_opened_label="codex-pr-opened",
+        needs_human_label="codex-needs-human",
+    )
+    assert should_process_issue(
+        pr_opened,
+        approved_label="auto-codex-approved",
+        pr_opened_label="codex-pr-opened",
+        needs_human_label="codex-needs-human",
+    )
 
 
 def test_needs_human_issue_is_not_blocked_by_queue_rules() -> None:
     issue = IssueTask(1, "Fix", "", "", ["auto-codex-approved", "codex-needs-human"])
 
-    assert should_process_issue(issue, approved_label="auto-codex-approved", pr_opened_label="codex-pr-opened", needs_human_label="codex-needs-human")
+    assert should_process_issue(
+        issue,
+        approved_label="auto-codex-approved",
+        pr_opened_label="codex-pr-opened",
+        needs_human_label="codex-needs-human",
+    )
 
 
 def test_processable_issues_prioritizes_p0_and_p1_before_newer_p2() -> None:
@@ -26,7 +41,9 @@ def test_processable_issues_prioritizes_p0_and_p1_before_newer_p2() -> None:
         IssueTask(175, "[P2][test] Newer task", "", "", ["priority:P2"]),
         IssueTask(172, "[P1][verifier] Product task", "", "", ["priority:P1"]),
         IssueTask(114, "[P0][release] Boundary task", "", "", ["priority-P0"]),
-        IssueTask(141, "[P2][docs] Open PR", "", "", ["priority:P2", "codex-pr-opened"]),
+        IssueTask(
+            141, "[P2][docs] Open PR", "", "", ["priority:P2", "codex-pr-opened"]
+        ),
     ]
 
     queue = processable_issues(
@@ -88,7 +105,9 @@ def test_product_delta_idle_filter_skips_support_only_tasks() -> None:
     assert [issue.number for issue in queue] == [22, 21]
 
 
-def test_product_delta_idle_filter_skips_explicit_docs_release_tasks_even_with_api_text() -> None:
+def test_product_delta_idle_filter_skips_explicit_docs_release_tasks_even_with_api_text() -> (
+    None
+):
     docs_release = IssueTask(
         67,
         "[P1][docs][release] Publish API reference as versioned stable documentation",

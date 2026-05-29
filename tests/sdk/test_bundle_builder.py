@@ -9,6 +9,7 @@ import pytest
 from attestplane.sdk import IncompleteProofBundleError, ProofBundleBuilder
 from attestplane.signing import InMemoryKeyProvider, Signer
 from attestplane.verifier import verify_proof_bundle
+from attestplane.verify_reason_codes import VERIFY_REASON_TAXONOMY_VERSION
 
 
 SUBJECT_DIGEST = "3f551d9" + "0" * 57
@@ -43,7 +44,10 @@ def test_minimal_bundle_passes_non_empty_and_signed_schema() -> None:
     }
     assert bundle["events"][0]["event"]["matched_input_ref"] == SUBJECT_DIGEST
     assert bundle["events"][0]["event"]["payload"]["subject_digest"] == SUBJECT_DIGEST
-    assert bundle["signatures"][0]["signed_event_hash_hex"] == bundle["events"][0]["event_hash_hex"]
+    assert (
+        bundle["signatures"][0]["signed_event_hash_hex"]
+        == bundle["events"][0]["event_hash_hex"]
+    )
 
 
 def test_minimal_docstring_documents_v17_stability() -> None:
@@ -61,8 +65,20 @@ def test_minimal_docstring_documents_v17_stability() -> None:
         "g" * 64,
     ],
 )
-def test_minimal_rejects_invalid_subject_digest_with_typed_error(subject_digest: str) -> None:
+def test_minimal_rejects_invalid_subject_digest_with_typed_error(
+    subject_digest: str,
+) -> None:
     with pytest.raises(IncompleteProofBundleError) as exc_info:
         ProofBundleBuilder.minimal(subject_digest, _signer())
 
     assert exc_info.value.error_code == "bundle.schema.incomplete"
+
+
+def test_verify_result_exposes_taxonomy_version_contract() -> None:
+    bundle = ProofBundleBuilder.minimal(SUBJECT_DIGEST, _signer())
+
+    result = verify_proof_bundle(bundle)
+
+    assert result.ok is True
+    assert result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
+    assert "taxonomy_version" in type(result).__dataclass_fields__

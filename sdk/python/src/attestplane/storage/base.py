@@ -76,14 +76,17 @@ class AbstractStorageBackend(ABC):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         forbidden = {
-            "delete", "remove", "purge", "truncate",
-            "update", "mutate", "rewrite", "overwrite",
+            "delete",
+            "remove",
+            "purge",
+            "truncate",
+            "update",
+            "mutate",
+            "rewrite",
+            "overwrite",
             "compact",
         }
-        offenders = sorted(
-            name for name in vars(cls)
-            if not name.startswith("_") and name in forbidden
-        )
+        offenders = sorted(name for name in vars(cls) if not name.startswith("_") and name in forbidden)
         if offenders:
             raise StorageBoundaryError(
                 f"{cls.__name__} defines forbidden mutating method(s) {offenders}; "

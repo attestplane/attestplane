@@ -86,6 +86,7 @@ def test_derive_key_id_rejects_empty_input() -> None:
 
 def test_derive_key_id_first_16_sha256_bytes() -> None:
     import hashlib
+
     der = _public_der(_fresh_signing_material())
     expected = hashlib.sha256(der).digest()[:16].hex()
     assert derive_key_id(der) == expected
@@ -223,6 +224,7 @@ def test_key_provider_subclass_rejects_forbidden_verb(verb: str) -> None:
 
 def test_key_provider_private_helper_with_forbidden_stem_allowed() -> None:
     """Leading underscore exempts; only public names are gated."""
+
     class GoodProvider(KeyProvider):
         provider_id = "good"
         schema_version = SIGNATURE_SCHEMA_VERSION

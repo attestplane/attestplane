@@ -47,8 +47,7 @@ def _build_chain(n: int) -> list:
     head = genesis_head()
     for i in range(n):
         draft = EventDraft(event_type="eval_event", actor=f"a{i}", payload={"i": i})
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -86,7 +85,11 @@ def test_v1_segment_head_signed_valid() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))
 
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, records, chain_id="vec-1", trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="vec-1",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
 
     assert status == "valid"
@@ -111,7 +114,11 @@ def test_v2_per_event_signed_valid() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_01))
 
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, records, chain_id="vec-2", trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="vec-2",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert status == "valid"
     assert results[0].status == "valid"
@@ -125,10 +132,12 @@ def test_v2_per_event_signed_valid() -> None:
 
 def test_v3_multi_signer_plurality_both_valid() -> None:
     chain = _build_chain(5)
-    multi = MultiSignerProvider([
-        InMemoryKeyProvider(seed=_SEED_00, provider_id="alpha"),
-        InMemoryKeyProvider(seed=_SEED_02, provider_id="beta"),
-    ])
+    multi = MultiSignerProvider(
+        [
+            InMemoryKeyProvider(seed=_SEED_00, provider_id="alpha"),
+            InMemoryKeyProvider(seed=_SEED_02, provider_id="beta"),
+        ]
+    )
     signer = Signer(chain_id="vec-3", key_provider=multi, now=lambda: _NOW)
     head = ChainHead(seq=4, event_hash=chain[4].event_hash)
     records = signer.sign_segment_head(head)
@@ -138,7 +147,11 @@ def test_v3_multi_signer_plurality_both_valid() -> None:
     )
 
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, records, chain_id="vec-3", trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="vec-3",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert status == "valid"
     assert len(results) == 2
@@ -164,7 +177,11 @@ def test_v4_unknown_key_replay() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))
 
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, records, chain_id="vec-4", trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="vec-4",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert status == "unknown_key"
     assert results[0].status == "unknown_key"
@@ -203,7 +220,11 @@ def test_v5_tampered_payload_invalid() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))
 
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, [tampered], chain_id="vec-5", trust_roots=tr, verification_time=_NOW,
+        chain,
+        [tampered],
+        chain_id="vec-5",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert status == "invalid"
     assert results[0].status == "invalid"
@@ -216,10 +237,12 @@ def test_v5_tampered_payload_invalid() -> None:
 
 def test_plurality_mixed_valid_and_unknown_key_resolves_valid() -> None:
     chain = _build_chain(2)
-    multi = MultiSignerProvider([
-        InMemoryKeyProvider(seed=_SEED_00, provider_id="trusted"),
-        InMemoryKeyProvider(seed=_SEED_FF, provider_id="untrusted"),
-    ])
+    multi = MultiSignerProvider(
+        [
+            InMemoryKeyProvider(seed=_SEED_00, provider_id="trusted"),
+            InMemoryKeyProvider(seed=_SEED_FF, provider_id="untrusted"),
+        ]
+    )
     signer = Signer(chain_id="mix", key_provider=multi, now=lambda: _NOW)
     head = ChainHead(seq=1, event_hash=chain[1].event_hash)
     records = signer.sign_segment_head(head)
@@ -227,7 +250,11 @@ def test_plurality_mixed_valid_and_unknown_key_resolves_valid() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))  # only seed_00 trusted
 
     status, results, signed_count, first_bad = verify_chain_with_signatures(
-        chain, records, chain_id="mix", trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="mix",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     # Bundle-level status is the worst of all signed seqs; but per-seq
     # plurality merge gives "valid" because at least one is valid.
@@ -251,13 +278,21 @@ def test_coverage_segment_head_covers_whole_segment() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))
 
     _, _, count, _ = verify_chain_with_signatures(
-        chain, [rec1, rec2], chain_id="cov", trust_roots=tr, verification_time=_NOW,
+        chain,
+        [rec1, rec2],
+        chain_id="cov",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert count == 6  # {0..5}
 
     # Only seq=2 valid → covers {0,1,2} = 3.
     _, _, partial_count, _ = verify_chain_with_signatures(
-        chain, [rec1], chain_id="cov", trust_roots=tr, verification_time=_NOW,
+        chain,
+        [rec1],
+        chain_id="cov",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert partial_count == 3
 
@@ -276,14 +311,20 @@ def test_expired_key_status() -> None:
         ChainHead(seq=1, event_hash=chain[1].event_hash),
     )
     # verification_time AFTER valid_until → expired_key
-    tr = _trust_roots(_trust_root_entry(
-        _SEED_00,
-        vf=datetime(2026, 1, 1, tzinfo=UTC),
-        vu=datetime(2026, 3, 1, tzinfo=UTC),  # expires before _NOW
-    ))
+    tr = _trust_roots(
+        _trust_root_entry(
+            _SEED_00,
+            vf=datetime(2026, 1, 1, tzinfo=UTC),
+            vu=datetime(2026, 3, 1, tzinfo=UTC),  # expires before _NOW
+        )
+    )
 
     status, results, signed_count, _ = verify_chain_with_signatures(
-        chain, records, chain_id="exp", trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="exp",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert status == "expired_key"
     assert "exceeds valid_until" in (results[0].reason or "")
@@ -311,8 +352,11 @@ def test_chain_id_mismatch_surfaces_in_reason() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))
 
     status, results, _, _ = verify_chain_with_signatures(
-        chain, records, chain_id="verifier-chain-id",
-        trust_roots=tr, verification_time=_NOW,
+        chain,
+        records,
+        chain_id="verifier-chain-id",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert status == "invalid"
     reason = results[0].reason or ""
@@ -376,15 +420,17 @@ def test_verify_chain_full_with_signatures() -> None:
 def test_verify_chain_full_requires_chain_id_when_signatures_present() -> None:
     chain = _build_chain(2)
     signer = Signer(
-        chain_id="x", key_provider=InMemoryKeyProvider(seed=_SEED_00),
+        chain_id="x",
+        key_provider=InMemoryKeyProvider(seed=_SEED_00),
         now=lambda: _NOW,
     )
     records = signer.sign_segment_head(
         ChainHead(seq=1, event_hash=chain[1].event_hash),
     )
     with pytest.raises(Exception, match="chain_id or"):
-        verify_chain_full(chain, signatures=records, chain_id=None,
-                          trust_roots=_trust_roots(_trust_root_entry(_SEED_00)))
+        verify_chain_full(
+            chain, signatures=records, chain_id=None, trust_roots=_trust_roots(_trust_root_entry(_SEED_00))
+        )
 
 
 def test_verify_chain_full_ok_excludes_signature_status() -> None:
@@ -395,7 +441,8 @@ def test_verify_chain_full_ok_excludes_signature_status() -> None:
     themselves)."""
     chain = _build_chain(2)
     signer = Signer(
-        chain_id="x", key_provider=InMemoryKeyProvider(seed=_SEED_FF),
+        chain_id="x",
+        key_provider=InMemoryKeyProvider(seed=_SEED_FF),
         now=lambda: _NOW,
     )
     records = signer.sign_segment_head(
@@ -405,8 +452,11 @@ def test_verify_chain_full_ok_excludes_signature_status() -> None:
     tr = _trust_roots(_trust_root_entry(_SEED_00))
 
     result = verify_chain_full(
-        chain, signatures=records, chain_id="x",
-        trust_roots=tr, verification_time=_NOW,
+        chain,
+        signatures=records,
+        chain_id="x",
+        trust_roots=tr,
+        verification_time=_NOW,
     )
     assert result.ok is True
     assert result.signature_status == "unknown_key"

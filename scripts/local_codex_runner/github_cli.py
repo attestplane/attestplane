@@ -18,7 +18,9 @@ SECRET_PATTERNS = (
     re.compile(r"(ghp_|github_pat_|GITHUB_TOKEN=)[A-Za-z0-9_:\-]+"),
     re.compile(r"(sk-[A-Za-z0-9]{12,})"),
     re.compile(r"(?i)(token|password|secret|cookie)=\S+"),
-    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S),
+    re.compile(
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S
+    ),
 )
 
 
@@ -29,7 +31,9 @@ class RunnerCommandError(RuntimeError):
         self.command = command
         self.returncode = returncode
         self.stderr = truncate(redact(stderr))
-        super().__init__(f"command failed ({returncode}): {' '.join(command)}\n{self.stderr}")
+        super().__init__(
+            f"command failed ({returncode}): {' '.join(command)}\n{self.stderr}"
+        )
 
 
 @dataclass(frozen=True)
@@ -56,10 +60,14 @@ class GitHubCLI:
         self.dry_run = dry_run
         self.commands_run: list[str] = []
 
-    def _run(self, command: list[str], *, write: bool = False) -> subprocess.CompletedProcess[str]:
+    def _run(
+        self, command: list[str], *, write: bool = False
+    ) -> subprocess.CompletedProcess[str]:
         self.commands_run.append(" ".join(command))
         if self.dry_run and write:
-            return subprocess.CompletedProcess(command, 0, stdout="[dry-run]\n", stderr="")
+            return subprocess.CompletedProcess(
+                command, 0, stdout="[dry-run]\n", stderr=""
+            )
         completed = subprocess.run(command, capture_output=True, text=True, check=False)
         completed.stdout = redact(completed.stdout)
         completed.stderr = redact(completed.stderr)
@@ -74,10 +82,13 @@ class GitHubCLI:
             raise RunnerCommandError(
                 exc.command,
                 exc.returncode,
-                exc.stderr + "\nRun `gh auth login` locally; do not store tokens in runner config.",
+                exc.stderr
+                + "\nRun `gh auth login` locally; do not store tokens in runner config.",
             ) from exc
 
-    def list_issues(self, repo: str, label: str | None, limit: int, *, state: str = "open") -> list[IssueTask]:
+    def list_issues(
+        self, repo: str, label: str | None, limit: int, *, state: str = "open"
+    ) -> list[IssueTask]:
         command = [
             "gh",
             "issue",
@@ -94,9 +105,14 @@ class GitHubCLI:
         if label:
             command.extend(["--label", label])
         completed = self._run(command)
-        return [IssueTask.from_gh_json(item) for item in json.loads(completed.stdout or "[]")]
+        return [
+            IssueTask.from_gh_json(item)
+            for item in json.loads(completed.stdout or "[]")
+        ]
 
-    def list_pull_requests(self, repo: str, base: str, limit: int) -> list[dict[str, Any]]:
+    def list_pull_requests(
+        self, repo: str, base: str, limit: int
+    ) -> list[dict[str, Any]]:
         completed = self._run(
             [
                 "gh",
@@ -136,17 +152,48 @@ class GitHubCLI:
         return dict(loaded) if isinstance(loaded, dict) else {}
 
     def view_issue(self, repo: str, issue_number: int) -> IssueTask:
-        completed = self._run(["gh", "issue", "view", str(issue_number), "--repo", repo, "--json", "number,title,url,labels,body"])
+        completed = self._run(
+            [
+                "gh",
+                "issue",
+                "view",
+                str(issue_number),
+                "--repo",
+                repo,
+                "--json",
+                "number,title,url,labels,body",
+            ]
+        )
         return IssueTask.from_gh_json(json.loads(completed.stdout))
 
     def view_issue_state(self, repo: str, issue_number: int) -> str:
-        completed = self._run(["gh", "issue", "view", str(issue_number), "--repo", repo, "--json", "state"])
+        completed = self._run(
+            [
+                "gh",
+                "issue",
+                "view",
+                str(issue_number),
+                "--repo",
+                repo,
+                "--json",
+                "state",
+            ]
+        )
         data = json.loads(completed.stdout or "{}")
         return str(data.get("state", "UNKNOWN"))
 
     def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
         if labels:
-            command = ["gh", "issue", "edit", str(issue_number), "--repo", repo, "--add-label", ",".join(labels)]
+            command = [
+                "gh",
+                "issue",
+                "edit",
+                str(issue_number),
+                "--repo",
+                repo,
+                "--add-label",
+                ",".join(labels),
+            ]
             try:
                 self._run(command, write=True)
             except RunnerCommandError as exc:
@@ -177,15 +224,49 @@ class GitHubCLI:
 
     def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
         if labels:
-            self._run(["gh", "issue", "edit", str(issue_number), "--repo", repo, "--remove-label", ",".join(labels)], write=True)
+            self._run(
+                [
+                    "gh",
+                    "issue",
+                    "edit",
+                    str(issue_number),
+                    "--repo",
+                    repo,
+                    "--remove-label",
+                    ",".join(labels),
+                ],
+                write=True,
+            )
 
     def comment_issue(self, repo: str, issue_number: int, body: str) -> None:
-        self._run(["gh", "issue", "comment", str(issue_number), "--repo", repo, "--body", redact(body)], write=True)
+        self._run(
+            [
+                "gh",
+                "issue",
+                "comment",
+                str(issue_number),
+                "--repo",
+                repo,
+                "--body",
+                redact(body),
+            ],
+            write=True,
+        )
 
     def create_issue(self, repo: str, title: str, body: str, labels: list[str]) -> str:
         if labels:
             self.ensure_labels(repo, labels)
-        command = ["gh", "issue", "create", "--repo", repo, "--title", title, "--body", redact(body)]
+        command = [
+            "gh",
+            "issue",
+            "create",
+            "--repo",
+            repo,
+            "--title",
+            title,
+            "--body",
+            redact(body),
+        ]
         for label in labels:
             command.extend(["--label", label])
         completed = self._run(command, write=True)
@@ -193,16 +274,42 @@ class GitHubCLI:
 
     def create_pr(self, repo: str, title: str, body: str, base: str, head: str) -> str:
         completed = self._run(
-            ["gh", "pr", "create", "--repo", repo, "--title", title, "--body", redact(body), "--base", base, "--head", head],
+            [
+                "gh",
+                "pr",
+                "create",
+                "--repo",
+                repo,
+                "--title",
+                title,
+                "--body",
+                redact(body),
+                "--base",
+                base,
+                "--head",
+                head,
+            ],
             write=True,
         )
         return completed.stdout.strip()
 
     def merge_pr(self, repo: str, pr_number: int) -> None:
-        self._run(["gh", "pr", "merge", str(pr_number), "--repo", repo, "--squash"], write=True)
+        self._run(
+            ["gh", "pr", "merge", str(pr_number), "--repo", repo, "--squash"],
+            write=True,
+        )
 
     def pr_checks(self, repo: str, pr_number_or_branch: str) -> list[CheckStatus]:
-        command = ["gh", "pr", "checks", pr_number_or_branch, "--repo", repo, "--json", "name,state,bucket,link"]
+        command = [
+            "gh",
+            "pr",
+            "checks",
+            pr_number_or_branch,
+            "--repo",
+            repo,
+            "--json",
+            "name,state,bucket,link",
+        ]
         try:
             completed = self._run(command)
         except RunnerCommandError as exc:
@@ -212,14 +319,28 @@ class GitHubCLI:
         return [check_from_json(item) for item in json.loads(completed.stdout or "[]")]
 
     def run_view_failed_logs(self, repo: str, pr_number_or_branch: str) -> str:
-        failed = [check for check in self.pr_checks(repo, pr_number_or_branch) if check.bucket in {"fail", "cancel"}]
+        failed = [
+            check
+            for check in self.pr_checks(repo, pr_number_or_branch)
+            if check.bucket in {"fail", "cancel"}
+        ]
         if not failed:
             return "No failed check links found."
-        return "\n".join(["Failed GitHub check links:", *[f"- {check.name}: {check.link or 'no link'}" for check in failed]])
+        return "\n".join(
+            [
+                "Failed GitHub check links:",
+                *[f"- {check.name}: {check.link or 'no link'}" for check in failed],
+            ]
+        )
 
 
 def check_from_json(data: dict[str, Any]) -> CheckStatus:
-    return CheckStatus(name=str(data.get("name", "")), state=str(data.get("state", "")), bucket=str(data.get("bucket", "")), link=data.get("link"))
+    return CheckStatus(
+        name=str(data.get("name", "")),
+        state=str(data.get("state", "")),
+        bucket=str(data.get("bucket", "")),
+        link=data.get("link"),
+    )
 
 
 def label_color(label: str) -> str:
@@ -239,4 +360,6 @@ def label_description(label: str) -> str:
         return "Local Codex runner observed green CI for the linked pull request."
     if label.startswith("codex-"):
         return "Managed by the local Codex runner."
-    return "Created automatically by the local Codex runner when applying workflow state."
+    return (
+        "Created automatically by the local Codex runner when applying workflow state."
+    )

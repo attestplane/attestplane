@@ -39,10 +39,11 @@ def _build_chain(n: int) -> list:
     head = genesis_head()
     for i in range(n):
         draft = EventDraft(
-            event_type="eval_event", actor=f"a{i}", payload={"i": i},
+            event_type="eval_event",
+            actor=f"a{i}",
+            payload={"i": i},
         )
-        ev = chain_extend(head, draft, now=_NOW,
-                          event_id=f"00000000-0000-7000-8000-{i:012d}")
+        ev = chain_extend(head, draft, now=_NOW, event_id=f"00000000-0000-7000-8000-{i:012d}")
         chain.append(ev)
         head = ChainHead(seq=ev.seq, event_hash=ev.event_hash)
     return chain
@@ -58,8 +59,9 @@ def test_segment_head_payload_locked_recipe() -> None:
     # Alphabetical sort → chain_id, event_hash, schema_version, seq,
     # signature_schema_version.
     expected = (
-        b'{"chain_id":"vec-1","event_hash":"' + b"ab" * 32 +
-        b'","schema_version":1,"seq":4,"signature_schema_version":1}'
+        b'{"chain_id":"vec-1","event_hash":"'
+        + b"ab" * 32
+        + b'","schema_version":1,"seq":4,"signature_schema_version":1}'
     )
     assert bytes_out == expected
 
@@ -162,10 +164,12 @@ def test_sign_event_uses_canonicalize_audit_event() -> None:
 
 
 def test_signer_with_multi_signer_produces_n_records() -> None:
-    provider = MultiSignerProvider([
-        InMemoryKeyProvider(seed=_SEED_00, provider_id="alpha"),
-        InMemoryKeyProvider(seed=_SEED_02, provider_id="beta"),
-    ])
+    provider = MultiSignerProvider(
+        [
+            InMemoryKeyProvider(seed=_SEED_00, provider_id="alpha"),
+            InMemoryKeyProvider(seed=_SEED_02, provider_id="beta"),
+        ]
+    )
     signer = Signer(chain_id="vec-1", key_provider=provider, now=lambda: _NOW)
     head = ChainHead(seq=4, event_hash=bytes.fromhex("ab" * 32))
     records = signer.sign_segment_head(head)
@@ -307,6 +311,7 @@ def test_pull_segment_heads_from_snapshot_via_callback() -> None:
 def test_substrate_module_does_not_import_signer() -> None:
     """Architect review § 1 decision 4 — Signer is NOT in substrate's import path."""
     import attestplane.substrate as substrate_mod
+
     src = open(substrate_mod.__file__).read()
     assert "from attestplane.signing" not in src
     assert "import attestplane.signing" not in src

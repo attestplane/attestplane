@@ -7,9 +7,13 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
-from scripts.local_codex_runner.config import RunnerConfig, add_common_args, load_config, overrides_from_args
+from scripts.local_codex_runner.config import (
+    RunnerConfig,
+    add_common_args,
+    load_config,
+    overrides_from_args,
+)
 from scripts.local_codex_runner.git_ops import GitOps
 from scripts.local_codex_runner.github_cli import GitHubCLI, RunnerCommandError
 from scripts.local_codex_runner.models import candidate_fetch_limit, processable_issues
@@ -20,8 +24,14 @@ from scripts.local_codex_runner.state_store import load_state, save_state
 def run_once(args: argparse.Namespace) -> dict[str, object]:
     config = load_config(args.config, overrides_from_args(args))
     gh = GitHubCLI(dry_run=config.dry_run)
-    cleanup_summary: dict[str, object] | None = cleanup_stale_state(config, gh) if config.cleanup_stale_state else None
-    transient_cleanup = [] if config.dry_run else GitOps(config.workdir_path()).remove_transient_evidence()
+    cleanup_summary: dict[str, object] | None = (
+        cleanup_stale_state(config, gh) if config.cleanup_stale_state else None
+    )
+    transient_cleanup = (
+        []
+        if config.dry_run
+        else GitOps(config.workdir_path()).remove_transient_evidence()
+    )
     external_errors: list[dict[str, object]] = []
     try:
         issues = gh.list_issues(
@@ -78,8 +88,14 @@ def cleanup_stale_state(config: RunnerConfig, gh: GitHubCLI) -> dict[str, object
     """Prune stale local state for issues that GitHub already closed."""
     state_path = config.state_file()
     state = load_state(state_path)
-    invalid_branch_keys = sorted(key for key in state.branch_mappings if not key.isdigit())
-    tracked = sorted(set(state.active_issue_ids).union(int(key) for key in state.branch_mappings if key.isdigit()))
+    invalid_branch_keys = sorted(
+        key for key in state.branch_mappings if not key.isdigit()
+    )
+    tracked = sorted(
+        set(state.active_issue_ids).union(
+            int(key) for key in state.branch_mappings if key.isdigit()
+        )
+    )
     pruned: list[int] = []
     kept: list[dict[str, object]] = []
     external_errors: list[dict[str, object]] = []

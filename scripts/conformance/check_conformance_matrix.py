@@ -12,12 +12,16 @@ import sys
 
 def _load_matrix_module(repo_root: Path):
     module_name = "attestplane_canonicalization_negative_matrix"
-    helper_path = repo_root / "tests" / "conformance" / "canonicalization_negative_matrix.py"
+    helper_path = (
+        repo_root / "tests" / "conformance" / "canonicalization_negative_matrix.py"
+    )
     if module_name in sys.modules:
         return sys.modules[module_name]
     spec = importlib.util.spec_from_file_location(module_name, helper_path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load canonicalization matrix helper from {helper_path}")
+        raise RuntimeError(
+            f"could not load canonicalization matrix helper from {helper_path}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)

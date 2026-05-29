@@ -3,7 +3,10 @@ from scripts.local_codex_runner.github_cli import CheckStatus, RunnerCommandErro
 
 
 def test_ci_pass_direct_success() -> None:
-    checks = [CheckStatus("ci", "SUCCESS", "pass", None), CheckStatus("skip", "SKIPPED", "skipping", None)]
+    checks = [
+        CheckStatus("ci", "SUCCESS", "pass", None),
+        CheckStatus("skip", "SKIPPED", "skipping", None),
+    ]
 
     assert classify_checks(checks) == "PASS"
 
@@ -28,7 +31,9 @@ def test_ci_wait_rechecks_single_failure_before_returning_fail(monkeypatch) -> N
     monkeypatch.setattr("time.sleep", lambda _: None)
     fake = FakeGH()
 
-    result = wait_for_ci(fake, repo="o/r", pr_number_or_branch="b", timeout_seconds=30, poll_seconds=1)
+    result = wait_for_ci(
+        fake, repo="o/r", pr_number_or_branch="b", timeout_seconds=30, poll_seconds=1
+    )
 
     assert result.status == "PASS"
     assert fake.calls == 2
@@ -41,7 +46,13 @@ def test_ci_wait_returns_repeated_failure(monkeypatch) -> None:
 
     monkeypatch.setattr("time.sleep", lambda _: None)
 
-    result = wait_for_ci(FakeGH(), repo="o/r", pr_number_or_branch="b", timeout_seconds=30, poll_seconds=1)
+    result = wait_for_ci(
+        FakeGH(),
+        repo="o/r",
+        pr_number_or_branch="b",
+        timeout_seconds=30,
+        poll_seconds=1,
+    )
 
     assert result.status == "FAIL"
 
@@ -53,7 +64,9 @@ def test_ci_pending_timeout(monkeypatch) -> None:
 
     monkeypatch.setattr("time.sleep", lambda _: None)
 
-    result = wait_for_ci(FakeGH(), repo="o/r", pr_number_or_branch="b", timeout_seconds=0, poll_seconds=0)
+    result = wait_for_ci(
+        FakeGH(), repo="o/r", pr_number_or_branch="b", timeout_seconds=0, poll_seconds=0
+    )
 
     assert result.status == "TIMEOUT"
 
@@ -69,7 +82,13 @@ def test_ci_no_checks_reported_is_pending(monkeypatch) -> None:
 
     monkeypatch.setattr("time.sleep", lambda _: None)
 
-    result = wait_for_ci(FakeGH(), repo="o/r", pr_number_or_branch="branch", timeout_seconds=0, poll_seconds=0)
+    result = wait_for_ci(
+        FakeGH(),
+        repo="o/r",
+        pr_number_or_branch="branch",
+        timeout_seconds=0,
+        poll_seconds=0,
+    )
 
     assert result.status == "TIMEOUT"
     assert result.summary == "No checks returned by gh pr checks."

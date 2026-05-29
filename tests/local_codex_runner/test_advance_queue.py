@@ -25,9 +25,21 @@ def test_parse_dependencies_accepts_common_headers() -> None:
 def test_dependencies_for_issue_maps_plan_local_ordinals() -> None:
     siblings = [
         IssueTask(121, "issue 1", "Source planning issue: #120", "u", ["planned-task"]),
-        IssueTask(122, "issue 2", "Source planning issue: #120\nAcceptance: match Issue 1", "u", ["planned-task"]),
+        IssueTask(
+            122,
+            "issue 2",
+            "Source planning issue: #120\nAcceptance: match Issue 1",
+            "u",
+            ["planned-task"],
+        ),
         IssueTask(123, "issue 3", "Source planning issue: #120", "u", ["planned-task"]),
-        IssueTask(125, "docs", "Source planning issue: #120\nLand after Issues 1-3 are merged.", "u", ["planned-task"]),
+        IssueTask(
+            125,
+            "docs",
+            "Source planning issue: #120\nLand after Issues 1-3 are merged.",
+            "u",
+            ["planned-task"],
+        ),
     ]
 
     assert dependencies_for_issue(siblings[1], siblings) == [121]
@@ -35,7 +47,13 @@ def test_dependencies_for_issue_maps_plan_local_ordinals() -> None:
 
 
 def test_dependencies_for_issue_maps_extends_hint() -> None:
-    issue = IssueTask(124, "test", "Source planning issue: #120\nExtend #115 rather than duplicate.", "u", ["planned-task"])
+    issue = IssueTask(
+        124,
+        "test",
+        "Source planning issue: #120\nExtend #115 rather than duplicate.",
+        "u",
+        ["planned-task"],
+    )
 
     assert dependencies_for_issue(issue, [issue]) == [115]
 
@@ -209,7 +227,9 @@ def test_dependency_unlock_approves_tasks_without_dependencies() -> None:
     assert decision.reason == "no_dependencies"
 
 
-def test_advance_queue_unlocks_only_product_tasks_during_product_delta_idle(monkeypatch, tmp_path) -> None:
+def test_advance_queue_unlocks_only_product_tasks_during_product_delta_idle(
+    monkeypatch, tmp_path
+) -> None:
     product = IssueTask(
         201,
         "[P1][sdk][verifier] Add product behavior",
@@ -230,7 +250,9 @@ def test_advance_queue_unlocks_only_product_tasks_during_product_delta_idle(monk
             self.commands_run = []
             self.added: list[tuple[int, list[str]]] = []
 
-        def list_issues(self, repo: str, label: str, limit: int, *, state: str = "open"):
+        def list_issues(
+            self, repo: str, label: str, limit: int, *, state: str = "open"
+        ):
             return [support, product]
 
         def list_pull_requests(self, repo: str, base: str, limit: int):
@@ -242,11 +264,15 @@ def test_advance_queue_unlocks_only_product_tasks_during_product_delta_idle(monk
         def add_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
             self.added.append((issue_number, labels))
 
-        def remove_labels(self, repo: str, issue_number: int, labels: list[str]) -> None:
+        def remove_labels(
+            self, repo: str, issue_number: int, labels: list[str]
+        ) -> None:
             pass
 
     fake = FakeGH()
-    monkeypatch.setattr("scripts.local_codex_runner.advance_queue.GitHubCLI", lambda dry_run=True: fake)
+    monkeypatch.setattr(
+        "scripts.local_codex_runner.advance_queue.GitHubCLI", lambda dry_run=True: fake
+    )
     config_path = tmp_path / "runner.yml"
     config_path.write_text(
         'repo: "o/r"\n'

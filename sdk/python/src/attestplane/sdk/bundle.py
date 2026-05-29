@@ -33,8 +33,7 @@ def raise_for_minimum_bundle_result(result: BundleVerificationResult) -> None:
         )
     if result.error_code == VERIFY_BUNDLE_SCHEMA_INCOMPLETE:
         raise IncompleteProofBundleError(
-            result.signed_attestation_schema_reason
-            or "proof bundle lacks the minimum signed-attestation schema",
+            result.signed_attestation_schema_reason or "proof bundle lacks the minimum signed-attestation schema",
             error_code=result.error_code,
         )
     raise IncompleteProofBundleError(result.short_summary(), error_code=result.error_code)
