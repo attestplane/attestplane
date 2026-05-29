@@ -86,21 +86,39 @@ jobs:
             tag_epoch=$(git log -1 --format=%ct "$latest_tag" 2>/dev/null || echo 0)
           fi
 
-          # Count autodev PRs merged after last tag (compare as epoch seconds)
-          prs_since=$(gh pr list \
+          # Count autodev PRs merged/closed after last tag — use Python for
+          # robust epoch comparison (jq fromdateiso8601 is flaky on GH Actions runners)
+          merged_json=$(gh pr list \
             --repo "${{ github.repository }}" \
             --label autodev-pr \
             --state merged \
-            --json mergedAt \
-            --jq "[.[] | select((.mergedAt | fromdateiso8601) > ${tag_epoch})] | length")
+            --limit 100 \
+            --json mergedAt)
+          prs_since=$(python3 -c "
+import json, datetime, sys
+data = json.loads('''${merged_json}''')
+tag_epoch = ${tag_epoch}
+count = sum(1 for pr in data
+    if pr.get('mergedAt') and
+       datetime.datetime.fromisoformat(pr['mergedAt'].replace('Z','+00:00')).timestamp() > tag_epoch)
+print(count)
+")
 
-          # Count autodev PRs closed-without-merging since last tag
-          closed_failed_since=$(gh pr list \
+          closed_json=$(gh pr list \
             --repo "${{ github.repository }}" \
             --label autodev-pr \
             --state closed \
-            --json closedAt,mergedAt \
-            --jq "[.[] | select(.mergedAt == null and (.closedAt | fromdateiso8601) > ${tag_epoch})] | length")
+            --limit 100 \
+            --json closedAt,mergedAt)
+          closed_failed_since=$(python3 -c "
+import json, datetime, sys
+data = json.loads('''${closed_json}''')
+tag_epoch = ${tag_epoch}
+count = sum(1 for pr in data
+    if pr.get('mergedAt') is None and pr.get('closedAt') and
+       datetime.datetime.fromisoformat(pr['closedAt'].replace('Z','+00:00')).timestamp() > tag_epoch)
+print(count)
+")
 
           # Days since last tag
           days_since=$(( ( $(date +%s) - tag_epoch ) / 86400 ))
