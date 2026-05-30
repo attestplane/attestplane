@@ -79,7 +79,7 @@ class BundleSchemaError(BundleVerificationError):
 class VerifyAnchoringState:
     """Typed anchoring state exposed by :class:`BundleVerificationResult`."""
 
-    status: Literal["anchored", "quarantined", "unanchored"]
+    status: Literal["verified", "quarantined", "absent"]
     quarantined: bool
 
 
@@ -100,10 +100,12 @@ class BundleVerificationResult:
 
     Stable additive fields:
 
-    - ``anchoring_status``: one of ``"anchored"``, ``"quarantined"``,
-      or ``"unanchored"``.
+    - ``anchoring_status``: one of ``"verified"``, ``"quarantined"``,
+      or ``"absent"``.
     - ``anchoring_quarantined``: ``True`` iff the verifier quarantined
       the bundle instead of treating it as a normal verification failure.
+    - ``quarantine_reason``: the :class:`~attestplane.verify_reason_codes.VerifyReasonCodeV1`
+      that triggered quarantine, or ``None`` when not quarantined.
     - ``taxonomy_version``: copied from
       ``chain_metadata.evidence_taxonomy_version`` when the bundle
       declares it, otherwise ``None`` for legacy bundles.
@@ -131,7 +133,8 @@ class BundleVerificationResult:
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
     anchoring_quarantined: bool
-    anchoring_status: Literal["anchored", "quarantined", "unanchored"]
+    quarantine_reason: VerifyReasonCodeV1 | None
+    anchoring_status: Literal["verified", "quarantined", "absent"]
 
     @property
     def anchoring(self) -> VerifyAnchoringState:
@@ -698,18 +701,19 @@ def verify_proof_bundle(
         primary_reason=primary_reason,
     )
     if anchoring_quarantined:
-        anchoring_status: Literal["anchored", "quarantined", "unanchored"] = "quarantined"
+        anchoring_status: Literal["verified", "quarantined", "absent"] = "quarantined"
     elif bundle_anchoring_status is not None:
         if bundle_anchoring_status == "anchored":
-            anchoring_status = "anchored"
+            anchoring_status = "verified"
         elif bundle_anchoring_status == "quarantined":
             anchoring_status = "quarantined"
         else:
-            anchoring_status = "unanchored"
+            anchoring_status = "absent"
     elif _bundle_anchor_ref_present(bundle):
-        anchoring_status = "anchored"
+        anchoring_status = "verified"
     else:
-        anchoring_status = "unanchored"
+        anchoring_status = "absent"
+    quarantine_reason = primary_reason if anchoring_quarantined else None
     return BundleVerificationResult(
         ok=(
             chain_result.ok
@@ -740,6 +744,7 @@ def verify_proof_bundle(
         primary_reason=primary_reason,
         secondary_reasons=secondary_reasons,
         anchoring_quarantined=anchoring_quarantined,
+        quarantine_reason=quarantine_reason,
         anchoring_status=anchoring_status,
     )
 

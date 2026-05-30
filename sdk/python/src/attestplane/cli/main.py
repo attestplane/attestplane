@@ -24,6 +24,8 @@ from typing import Any
 
 from attestplane import __version__
 from attestplane.cli.verify_json import (
+    VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
     _anchoring_payload,
     _bundle_taxonomy_version_failure,
     _verify_explanations,
@@ -140,6 +142,11 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "fail closed when chain_metadata.evidence_taxonomy_version is missing or does not match the required value"
         ),
+    )
+    p_verify.add_argument(
+        "--strict-anchoring",
+        action="store_true",
+        help=("promote quarantine to a hard verification failure (exit code 1) instead of advisory exit code 2"),
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -458,10 +465,16 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
             explain=getattr(args, "explain", False),
         )
+        strict_anchoring = getattr(args, "strict_anchoring", False)
+        if strict_anchoring and outcome.exit_code == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE:
+            outcome.payload["exit_code"] = VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
+        exit_code = outcome.exit_code
+        if strict_anchoring and exit_code == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE:
+            exit_code = VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
         _emit(outcome.payload, True, human="")
         if outcome.stderr_code is not None:
             sys.stderr.write(f"{outcome.stderr_code}\n")
-        return outcome.exit_code
+        return exit_code
 
     try:
         bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
@@ -668,7 +681,10 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _emit(payload, args.json_output, human=human)
     if explain and not args.json_output and not result.ok:
         _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True))
-    return verify_result_exit_code(result)
+    exit_code = verify_result_exit_code(result)
+    if getattr(args, "strict_anchoring", False) and exit_code == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE:
+        exit_code = VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
+    return exit_code
 
 
 def cmd_verify_proofbundle(args: argparse.Namespace) -> int:

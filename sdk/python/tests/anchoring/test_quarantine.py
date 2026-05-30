@@ -58,7 +58,7 @@ def test_bundle_anchoring_field_is_schema_compatible(
     result = verify_proof_bundle(bundle)
 
     assert result.ok is expected_ok
-    assert result.anchoring_status == status
+    assert result.anchoring_status == ("verified" if status == "anchored" else status)
     assert result.anchoring_quarantined is expected_quarantined
     if status == "quarantined":
         assert result.primary_reason == VERIFY_REASON_ANCHOR_INVALID

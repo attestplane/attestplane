@@ -31,7 +31,7 @@ def test_freetsa_replay_fixtures_are_byte_stable() -> None:
 def test_freetsa_anchored_fixture_verifies_as_anchored() -> None:
     result = verify_proof_bundle(_load(ANCHORED_FIXTURE))
     assert result.ok is True
-    assert result.anchoring_status == "anchored"
+    assert result.anchoring_status == "verified"
     assert result.anchoring_quarantined is False
 
 
