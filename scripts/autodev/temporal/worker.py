@@ -20,8 +20,9 @@ import concurrent.futures
 import logging
 import os
 import signal
+import sqlite3
 
-from temporalio.client import Client
+from temporalio.client import Client, WorkflowExecutionStatus
 from temporalio.worker import Worker
 
 from .activities import (
@@ -45,11 +46,61 @@ TASK_QUEUE = "autodev"
 REVIEW_QUEUE = "review"
 MAX_IMPLEMENT = int(os.environ.get("AUTODEV_CONCURRENCY", "10"))
 MAX_REVIEW = MAX_IMPLEMENT * 2
+DB_PATH = os.environ.get(
+    "AUTODEV_DB_PATH",
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "data", "autodev_state.db"
+        )
+    ),
+)
+
+
+async def _cleanup_orphaned_runs(client: Client, db_path: str) -> int:
+    if not os.path.exists(db_path):
+        log.info("Cleaned 0 orphaned pipeline runs at startup")
+        return 0
+
+    cleaned = 0
+    with sqlite3.connect(db_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT issue_number
+            FROM pipeline_runs
+            WHERE stage NOT IN ('merged', 'failed')
+            """
+        ).fetchall()
+        for (issue_number,) in rows:
+            try:
+                handle = client.get_workflow_handle(f"autodev-issue-{issue_number}")
+                description = await handle.describe()
+            except Exception:
+                description = None
+
+            if description is None or description.status not in (
+                WorkflowExecutionStatus.RUNNING,
+                WorkflowExecutionStatus.CONTINUED_AS_NEW,
+            ):
+                connection.execute(
+                    """
+                    UPDATE pipeline_runs
+                    SET stage='failed',
+                        error='orphaned: workflow not running at startup',
+                        updated_at=strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                    WHERE issue_number=?
+                    """,
+                    [issue_number],
+                )
+                cleaned += 1
+
+    log.info("Cleaned %d orphaned pipeline runs at startup", cleaned)
+    return cleaned
 
 
 async def _main() -> None:
     log.info("Connecting to Temporal at %s ...", TEMPORAL_ADDRESS)
     client = await Client.connect(TEMPORAL_ADDRESS)
+    await _cleanup_orphaned_runs(client, DB_PATH)
 
     implement_pool = concurrent.futures.ThreadPoolExecutor(
         max_workers=MAX_IMPLEMENT,
@@ -93,8 +144,10 @@ async def _main() -> None:
 
     log.info(
         "autodev-train workers ready -- implement=%s (%d slots)  review=%s (%d slots)",
-        TASK_QUEUE, MAX_IMPLEMENT,
-        REVIEW_QUEUE, MAX_REVIEW,
+        TASK_QUEUE,
+        MAX_IMPLEMENT,
+        REVIEW_QUEUE,
+        MAX_REVIEW,
     )
 
     loop = asyncio.get_event_loop()
