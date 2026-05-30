@@ -1,0 +1,68 @@
+{
+  "$schema_version": 1,
+  "$comment": [
+    "Golden lock preventing silent reason-code taxonomy drift.",
+    "",
+    "Stability contract: within a given `reason_code_version` / `verify_reason_taxonomy_version`",
+    "the code set is frozen. Existing codes are append-only across versions — renaming or",
+    "removing a code always requires bumping the version.",
+    "",
+    "Drift detection: any add/remove/rename of a code without a corresponding version bump",
+    "causes `test_reason_code_golden_lock` to fail. The intent is to force every taxonomy",
+    "change to be an explicit, versioned event — never a silent modification.",
+    "",
+    "Regeneration: To update this snapshot after a deliberate taxonomy version bump:",
+    "  REASON_CODE_GOLDEN_UPDATE=1 python3.11 -m pytest sdk/python/tests/conformance/test_reason_code_golden.py -x -q",
+    "",
+    "The regeneration writes a new snapshot from live module state. The regenerated file",
+    "must be committed alongside the version bump."
+  ],
+  "frozen_at": "2026-05-30T00:00:00Z",
+  "reason_codes_v1": {
+    "version": 1,
+    "codes": [
+      "ANCHOR_CERT_EXPIRED",
+      "ANCHOR_INVALID",
+      "ANCHOR_MISSING_LTV_ARTIFACTS",
+      "ANCHOR_OCSP_FAILED",
+      "ANCHOR_OK",
+      "BUNDLE_MISSING_REQUIRED_FIELD",
+      "CHAIN_EVENT_HASH_MISMATCH",
+      "CHAIN_OK",
+      "CHAIN_PREV_HASH_MISMATCH",
+      "CHAIN_SEQ_MISMATCH",
+      "INTERNAL_ERROR",
+      "PAYLOAD_FIELD_TYPE_MISMATCH",
+      "PAYLOAD_FIELD_VALUE_OUT_OF_RANGE",
+      "PAYLOAD_FORBIDDEN_FIELD_PRESENT",
+      "PAYLOAD_MISSING_REQUIRED_FIELD",
+      "PAYLOAD_OK",
+      "PAYLOAD_SCHEMA_VERSION_MISMATCH",
+      "SIGNATURE_EXPIRED_KEY",
+      "SIGNATURE_INVALID",
+      "SIGNATURE_OK",
+      "SIGNATURE_PAYLOAD_MISMATCH",
+      "SIGNATURE_SCHEMA_MISMATCH",
+      "SIGNATURE_UNKNOWN_KEY",
+      "UNANCHORED_SEGMENT",
+      "UNSIGNED_SEGMENT"
+    ],
+    "count": 25
+  },
+  "verify_reason_codes_v1": {
+    "version": 1,
+    "codes": [
+      "att.verify.anchor_invalid",
+      "att.verify.canonical_mismatch",
+      "att.verify.required_field_missing",
+      "att.verify.schema_invalid",
+      "att.verify.schema_unknown",
+      "att.verify.schema_version_missing",
+      "att.verify.schema_version_unsupported",
+      "att.verify.signature_invalid",
+      "att.verify.signature_missing",
+      "att.verify.structure_invalid"
+    ],
+    "count": 10
+  }
+}
