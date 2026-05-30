@@ -18,7 +18,7 @@ No standalone P0 product task is proposed for this daily plan. The unified plann
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][sdk][verifier] Add a verifier-facing product increment for v1.6.1
+### ISSUE 1 · \[P1\]\[sdk\]\[verifier\] Add a verifier-facing product increment for v1.6.1
 
 Owner: verifier/CLI
 
@@ -44,7 +44,7 @@ Rollout / migration notes:
 
 - Daily work should land a real Attestplane product delta before any release-train-only task.
 
-### ISSUE 2 · [P1][test][conformance] Pin cross-SDK coverage for the daily product change
+### ISSUE 2 · \[P1\]\[test\]\[conformance\] Pin cross-SDK coverage for the daily product change
 
 Owner: conformance
 
@@ -72,7 +72,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][api] Document the user-visible product delta for v1.6.1
+### ISSUE 3 · \[P2\]\[docs\]\[api\] Document the user-visible product delta for v1.6.1
 
 Owner: docs/release
 
