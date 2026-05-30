@@ -40,6 +40,7 @@ STRINGs = "STRINGs"
 # Frozen git short-sha in Issue 92 local release-boundary evidence; typos
 # tokenises the leading two chars as `ba` and suggests prose words.
 "ba569a9" = "ba569a9"
+"ba569a9fa5f0" = "ba569a9fa5f0"
 
 [files]
 extend-exclude = [
