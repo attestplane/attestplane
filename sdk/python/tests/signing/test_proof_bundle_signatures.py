@@ -24,7 +24,6 @@ pytest.importorskip("cryptography")
 pytest.importorskip("jsonschema")
 
 import jsonschema
-
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import (
     ProofBundleBuilder,

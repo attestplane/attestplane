@@ -88,6 +88,7 @@ def sampled_from(values: Iterable[T]) -> Strategy[T]:
 def one_of(*strategies: Strategy[T]) -> Strategy[T]:
     if not strategies:
         raise ValueError("one_of() requires at least one strategy")
+
     def _example() -> T:
         return strategies[0].example()
 
@@ -155,6 +156,7 @@ def recursive(
     max_leaves: int = 1,
 ) -> Strategy[T]:
     _ = max_leaves
+
     def _example() -> T:
         return base.example()
 
