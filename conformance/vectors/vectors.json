@@ -1,0 +1,25 @@
+{
+  "cases": [
+    {
+      "case_id": "additive_optional_pass",
+      "description": "Bundle carrying an unknown additive-optional top-level field under a known schema_version verifies as PASS.",
+      "path": "conformance/vectors/additive_optional_pass.json",
+      "expected_ok": true,
+      "expected_reason_code": null,
+      "verify_options": {
+        "require_signed_attestation": true
+      }
+    },
+    {
+      "case_id": "critical_required_fail",
+      "description": "Bundle carrying an unknown required (critical_) top-level field must fail closed — no over-permissive acceptance.",
+      "path": "conformance/vectors/critical_required_fail.json",
+      "expected_ok": false,
+      "expected_reason_code": "att.verify.schema_unknown",
+      "verify_options": {
+        "require_signed_attestation": true
+      }
+    }
+  ],
+  "schema_version": "attestplane.forward_compatible_additive.v1"
+}
