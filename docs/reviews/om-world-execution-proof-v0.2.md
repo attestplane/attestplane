@@ -180,7 +180,7 @@ discipline:
 
 - **Triggering signal.** om-world publishes a v0.2 candidate — expected
   announcement on the
-  [`omworldprotocol/om-world` repo](https://github.com/omworldprotocol/om-world),
+  [`omworldprotocol/om-world` repo](https://github.com/omworldprotocol/om-world/),
   expected ~2026-07-25.
 - **What to fetch.**
   - The v0.2 candidate spec text.
