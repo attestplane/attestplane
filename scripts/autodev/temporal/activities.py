@@ -114,7 +114,9 @@ async def implement_activity(
         except RuntimeError:
             pass  # ls-remote failed → proceed with normal Qwen run
 
-    worktree = str(MAIN_REPO.parent / f"attestplane-wt-{issue_number}")
+    # Use /tmp to keep worktrees outside the project tree so qwen (yolo mode)
+    # cannot discover and delete sibling worktrees.
+    worktree = f"/tmp/aw-impl-{issue_number}"
     main = str(MAIN_REPO)
 
     db.upsert_run(issue_number, stage="implementing", branch=branch)
@@ -561,7 +563,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
     # ── run Qwen on a fresh worktree of the branch ───────────────────────────
     import shutil as _shutil
     main = str(MAIN_REPO)
-    worktree = str(MAIN_REPO.parent / f"attestplane-cifix-{issue_number}")
+    worktree = f"/tmp/aw-cifix-{issue_number}"
     try:
         _run(["git", "fetch", "origin", branch], cwd=main)
         if Path(worktree).exists():
