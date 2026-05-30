@@ -458,7 +458,15 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
             explain=getattr(args, "explain", False),
         )
-        _emit(outcome.payload, True, human="")
+        sys.stdout.write(
+            json.dumps(
+                outcome.payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n"
+        )
         if outcome.stderr_code is not None:
             sys.stderr.write(f"{outcome.stderr_code}\n")
         return outcome.exit_code
