@@ -45,7 +45,8 @@
     },
     "taxonomy_version": {
       "type": "integer",
-      "const": 1
+      "const": 1,
+      "description": "Stable public verifier taxonomy version shared with verify --json, verify --explain, and SDK result objects."
     },
     "reasons": {
       "type": "array",
