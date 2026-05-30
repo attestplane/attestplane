@@ -67,8 +67,8 @@ services.
    - Add a concise v1.6.2 entry or unreleased note in the repository's existing
      changelog style.
    - Cross-link the source planning issue
-     [#113](https://github.com/attestplane/attestplane/issues/113), this task
-     [#118](https://github.com/attestplane/attestplane/issues/118), the
+     [#113](https://github.com/attestplane/attestplaneissues113), this task
+     [#118](https://github.com/attestplane/attestplaneissues118), the
      #108-style boundary audit / milestone ISSUE 1 when the exact local issue
      number is available from runner evidence, and the related planned-task
      issues spawned from this plan.

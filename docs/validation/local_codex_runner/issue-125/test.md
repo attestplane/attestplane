@@ -114,8 +114,8 @@ required = [
     'Issue 1 tightens the minimum signed-attestation schema',
     'Issue 3 adds the SDK migration path',
     '## What Integrators Must Do',
-    'https://github.com/attestplane/attestplane/issues/120',
-    'https://github.com/attestplane/attestplane/issues/125',
+    'https://github.com/attestplane/attestplaneissues120',
+    'https://github.com/attestplane/attestplaneissues125',
 ]
 for rel in [Path('docs/release-notes/v1.7.0.md'), Path('docs/release-notes/v1.7.0.draft.md')]:
     text = rel.read_text(encoding='utf-8')

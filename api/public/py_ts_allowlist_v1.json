@@ -442,6 +442,14 @@
     },
     {
       "classification": "language_specific",
+      "python": true,
+      "reason": "Python exposes a typed anchoring-state helper on BundleVerificationResult; TypeScript keeps the state inline in the verification result object.",
+      "review_by": "v1.8.4",
+      "symbol": "VerifyAnchoringState",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": false,
       "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
       "review_by": "v0.0.3-alpha",

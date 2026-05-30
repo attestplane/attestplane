@@ -96,7 +96,7 @@ Three independent verification paths are available to any reader:
 3. **Local re-run.** Any reader can re-run Scorecard locally against a
    pinned commit using the upstream Scorecard CLI; the GitHub Actions
    run logs at
-   `https://github.com/attestplane/attestplane/actions/workflows/scorecard.yml`
+   `https://github.com/attestplane/attestplaneactions/workflows/scorecard.yml`
    are the canonical source of truth.
 
 ## Honest note: the score will publicly track, and may go down
@@ -130,7 +130,7 @@ redundant.
 ## Complementary artifact
 
 This Scorecard publication pairs with the project's
-[OpenSSF Best Practices passing badge (project 12924)](https://www.bestpractices.dev/projects/12924/),
+[OpenSSF Best Practices passing badge (project 12924)](https://www.bestpractices.devprojects/12924),
 documented in
 [`openssf-best-practices.md`](openssf-best-practices.md). Together
 they form the project's *OSSF posture* pair: Best Practices captures

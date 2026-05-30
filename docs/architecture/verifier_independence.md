@@ -107,6 +107,6 @@ now carries the same rule — the trust root MUST be the deterministic
 open-source verifier + versioned schemas + exported evidence bytes, with
 hosted indices/APIs as a convenience layer that verification correctness MUST
 NOT depend on. The cross-adoption is tracked in
-[issue #7](https://github.com/attestplane/attestplane/issues/7); attestplane is
+[issue #7](https://github.com/attestplane/attestplaneissues7); attestplane is
 listed as a Genesis Reviewer of that spec
 ([CONTRIBUTORS.md](https://github.com/omworldprotocol/om-world/blob/main/CONTRIBUTORS.md#execution-proof)).

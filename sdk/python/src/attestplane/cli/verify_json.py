@@ -40,6 +40,17 @@ from attestplane.verify_reason_codes import (
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
 VERIFY_BUNDLE_SCHEMA_VERSION: int = 1
+VERIFY_JSON_EXIT_CODE_VERIFIED: int = 0
+VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE: int = 1
+VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE: int = 2
+VERIFY_JSON_EXIT_CODE_USAGE_ERROR: int = 3
+
+VERIFY_JSON_EXIT_CODES: dict[str, int] = {
+    "verified": VERIFY_JSON_EXIT_CODE_VERIFIED,
+    "verification_failure": VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+    "pinning_gate_failure": VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    "usage_error": VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+}
 
 
 class _DuplicateKeyError(ValueError):
@@ -205,7 +216,7 @@ def _bundle_anchor_ref_present(bundle: dict[str, Any] | None) -> bool:
 
 
 def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict[str, Any]:
-    if exit_code == 2:
+    if exit_code == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE:
         status = "quarantined"
         quarantined = True
     else:
@@ -402,18 +413,18 @@ def _json_pass(
 def verify_result_exit_code(result: Any | None) -> int:
     """Map a verifier result to the stable CLI exit-code contract.
 
-    - 0: success
+    - 0: verified
     - 1: verification failure
-    - 2: quarantine / fail-closed bundle contract rejection
+    - 2: pinning-gate failure / quarantine
     - 3: usage, I/O, or malformed-input failure
     """
     if result is None:
-        return 1
+        return VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
     if getattr(result, "ok", False):
-        return 0
+        return VERIFY_JSON_EXIT_CODE_VERIFIED
     if getattr(result, "anchoring_quarantined", False):
-        return 2
-    return 1
+        return VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE
+    return VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
 
 
 def _bundle_digest(raw_bytes: bytes) -> str:
@@ -587,7 +598,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=3,
+            exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
             bundle=None,
             stderr_code=VERIFY_IO_ERROR,
             explanation=(
@@ -614,7 +625,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=3,
+            exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
             bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -638,7 +649,7 @@ def build_verify_json_outcome(
                 detail=message,
                 explain=explain,
             ),
-            exit_code=3,
+            exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
             bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
@@ -653,7 +664,7 @@ def build_verify_json_outcome(
                 detail=f"{bundle_path}: not valid JSON: {exc.msg}",
                 explain=explain,
             ),
-            exit_code=3,
+            exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
             bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -673,7 +684,7 @@ def build_verify_json_outcome(
                 detail=f"bundle must be a JSON object, got {type(bundle).__name__}",
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
             bundle=bundle if isinstance(bundle, dict) else None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -701,7 +712,7 @@ def build_verify_json_outcome(
                 detail=detail,
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
             bundle=bundle,
             explanation=([_explanation_entry(code, path, detail)] if explain else None),
         )
@@ -718,7 +729,7 @@ def build_verify_json_outcome(
                 detail=str(canonical_exc),
                 explain=explain,
             ),
-            exit_code=1,
+            exit_code=VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
             bundle=bundle,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
@@ -742,7 +753,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
             bundle=bundle,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
@@ -758,7 +769,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=1,
+            exit_code=VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
             bundle=bundle,
             explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
@@ -802,6 +813,11 @@ def build_verify_json_outcome(
 
 __all__ = [
     "VERIFY_BUNDLE_SCHEMA_VERSION",
+    "VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE",
+    "VERIFY_JSON_EXIT_CODE_USAGE_ERROR",
+    "VERIFY_JSON_EXIT_CODE_VERIFIED",
+    "VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE",
+    "VERIFY_JSON_EXIT_CODES",
     "VERIFY_RESULT_SCHEMA_VERSION",
     "VerifyJsonOutcome",
     "build_verify_json_outcome",

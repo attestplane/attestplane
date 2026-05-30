@@ -16,6 +16,10 @@ import pytest
 
 from attestplane.cli.main import _explain_reserved_reasons, main
 from attestplane.cli.verify_json import (
+    VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+    VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+    VERIFY_JSON_EXIT_CODE_VERIFIED,
     _canonical_path_to_pointer,
     _reject_duplicate_keys,
     _schema_path_from_bundle_error,
@@ -41,10 +45,10 @@ SCHEMA_VERSION_ADDITIVE_FIXTURE = (
 GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
 VERIFY_JSON_EXIT_CODES = {
-    "accept": 0,
-    "verification_failure": 1,
-    "quarantine": 2,
-    "usage_error": 3,
+    "accept": VERIFY_JSON_EXIT_CODE_VERIFIED,
+    "verification_failure": VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+    "quarantine": VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    "usage_error": VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
 }
 
 

@@ -9,7 +9,7 @@ SPDX-License-Identifier: Apache-2.0
 
 - **Status**: Alpha — evidence-supporting alignment mapping, NOT compliance certification.
 - **Version**: `v1` — pre-GA threat model covering the `v1.0.x` release line.
-- **Source planning issue**: [#61](https://github.com/attestplane/attestplane/issues/61)
+- **Source planning issue**: [#61](https://github.com/attestplane/attestplaneissues61)
 - **Traceability matrix**: [`docs/spec/compliance-traceability-matrix.md`](../spec/compliance-traceability-matrix.md)
 - **Posture**: This is an **evidence-supporting** document. It is **not** a
   compliance certification, not a conformity assessment, and not a

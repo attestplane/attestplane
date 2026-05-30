@@ -116,4 +116,4 @@ and verifier predicates under this boundary.
   adopts the same commit-then-redact primitive: minimize PII before ingest →
   controller-owned sidecar for raw/deletable material → signed
   deletion-evidence event → append-only chain preserved. Cross-adoption
-  tracked in [issue #7](https://github.com/attestplane/attestplane/issues/7).
+  tracked in [issue #7](https://github.com/attestplane/attestplaneissues7).

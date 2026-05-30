@@ -97,7 +97,7 @@ submission until after v1.0 GA (target 2026-08-15).**
 | Public point of contact (institutional) | **Met** | `security@attestplane.com` — non-personal, routed to maintainer queue |
 | Coordinated-disclosure handling commitment | **Met** | 90-day default embargo, severity tiers, response SLA published |
 | Response SLA published (acknowledge / triage / fix) | **Met** | 7-day acknowledge / 14-day triage / 30-day Critical fix per `SECURITY.md` — exceeds the CNA Operational Rules' minimum of "acknowledge within a reasonable period" |
-| Apache-2.0 / open-source / community project | **Met** | Apache-2.0; OpenSSF Best Practices passing badge ([project 12924](https://www.bestpractices.dev/projects/12924/)) |
+| Apache-2.0 / open-source / community project | **Met** | Apache-2.0; OpenSSF Best Practices passing badge ([project 12924](https://www.bestpractices.devprojects/12924)) |
 | English-language coordination | **Met** | All security correspondence and advisories in English |
 | Willingness to follow CNA Operational Rules | **Met (commitment)** | Maintainer commits to follow current rules at submission time |
 
@@ -165,7 +165,7 @@ project answers regardless of label wording.
 | Organisation legal name | Attestplane Pte. Ltd. (Singapore — registration status as of submission date; the maintainer updates this line at submission) |
 | Organisation type | Open-source project with commercial entity maintainer |
 | Organisation website | `https://attestplane.com` |
-| Public-facing project URL | `https://github.com/attestplane/attestplane/` |
+| Public-facing project URL | `https://github.com/attestplane/attestplane` |
 | Primary contact name | (maintainer fills in at submission; do not commit personal name to repo) |
 | Primary contact email (institutional) | `security@attestplane.com` |
 | Backup contact email | (second triage contact email — to be designated before submission per §1.4) |
@@ -186,7 +186,7 @@ project answers regardless of label wording.
 
 | cveform field | Value to paste |
 |---------------|----------------|
-| Public vulnerability-disclosure policy URL | `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` |
+| Public vulnerability-disclosure policy URL | `https://github.com/attestplane/attestplaneblob/main/SECURITY.md` |
 | Public security contact email (must match disclosure policy) | `security@attestplane.com` |
 | Acknowledgement SLA | 7 days from receipt (per `SECURITY.md § Response Timeline`) |
 | Triage / initial severity SLA | 14 days from receipt |
@@ -210,10 +210,10 @@ project answers regardless of label wording.
 
 | cveform field | Value to paste |
 |---------------|----------------|
-| Disclosure policy URL | `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` |
-| Public repository URL | `https://github.com/attestplane/attestplane/` |
+| Disclosure policy URL | `https://github.com/attestplane/attestplaneblob/main/SECURITY.md` |
+| Public repository URL | `https://github.com/attestplane/attestplane` |
 | License | Apache-2.0 |
-| OpenSSF Best Practices badge | `https://www.bestpractices.dev/projects/12924/` (passing) |
+| OpenSSF Best Practices badge | `https://www.bestpractices.devprojects/12924` (passing) |
 | Threat model | [`docs/security/threat-model-v1.md`](threat-model-v1.md) |
 | GPG key fingerprint (post-GA) | (filled in at submission, after M5 W6 publication; pre-GA submission would mark "to be published at v1.0 GA cut, target 2026-08-15") |
 
@@ -225,7 +225,7 @@ Items the maintainer should have ready *before* opening the cveform
 submission. None of these need to be inlined into the form itself,
 but reviewers may request them by reply.
 
-- [ ] **Disclosure policy URL stable** at `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` — confirmed reachable and not behind a redirect chain.
+- [ ] **Disclosure policy URL stable** at `https://github.com/attestplane/attestplaneblob/main/SECURITY.md` — confirmed reachable and not behind a redirect chain.
 - [ ] **Acknowledgement SLA published** in the same document (7-day per `SECURITY.md`). Reviewers verify this with their own browser.
 - [ ] **Institutional security contact** (`security@attestplane.com`) confirmed receiving mail and routing to maintainer queue. Send a self-test from an external address.
 - [ ] **Second triage contact** designated and the contact aware of the responsibility (verbal/email confirmation retained).
