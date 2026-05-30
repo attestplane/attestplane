@@ -22,29 +22,30 @@ work and cannot satisfy this plan by itself.
 
 Recent real commits considered:
 
-- `60aadf014726` Fix #254: [P1][conformance] Pin `verify --explain` and `verify --json` to the single versioned reason-code taxonomy with a cross-surface parity vector (#264)
-- `d828417e0b35` Fix #255: [P1][conformance] Bind landed negative canonicalization vectors to stable reason codes (#263)
-- `8dfcafe4b257` Fix #244: [P1][conformance] Bind landed negative canonicalization vectors to stable reason codes (#251)
+- `60aadf014726` Fix #254: \[P1\]\[conformance\] Pin `verify --explain` and `verify --json` to the single versioned reason-code taxonomy with a cross-surface parity vector (#264)
+- `d828417e0b35` Fix #255: \[P1\]\[conformance\] Bind landed negative canonicalization vectors to stable reason codes (#263)
+- `8dfcafe4b257` Fix #244: \[P1\]\[conformance\] Bind landed negative canonicalization vectors to stable reason codes (#251)
 - `460a3c90334d` Fix #236: unify verify reason-code taxonomy
-- `bb3dd5e1cc4c` Fix #227: [P1][cli] Implement `verify --explain` reason-code rationale output
-- `921a60a38bd8` Fix #228: [P1][test] Close the #173 ↔ #184/#198 negative-conformance vector gap (#233)
-- `b8164001c4e3` Fix #209: [P1][sdk] Validate proof-bundle `schema_version` with forward-compatible additive rules (#217)
-- `9c29781eeb25` Fix #184: [P1][sdk] Land negative conformance vectors mirroring #150 canonicalization edges (#198)
-- `7dce5fc1f036` Fix #172: [P1][verifier] Introduce stable rejection reason-code taxonomy for `verify` failures
-- `67849e649247` Fix #137: [P1][sdk] Extend minimum-bundle helper with canonicalization edge-case conformance vectors (#150)
+- `bb3dd5e1cc4c` Fix #227: \[P1\]\[cli\] Implement `verify --explain` reason-code rationale output
+- `921a60a38bd8` Fix #228: \[P1\]\[test\] Close the #173 ↔ #184/#198 negative-conformance vector gap (#233)
+- `b8164001c4e3` Fix #209: \[P1\]\[sdk\] Validate proof-bundle `schema_version` with forward-compatible additive rules (#217)
+- `9c29781eeb25` Fix #184: \[P1\]\[sdk\] Land negative conformance vectors mirroring #150 canonicalization edges (#198)
+- `7dce5fc1f036` Fix #172: \[P1\]\[verifier\] Introduce stable rejection reason-code taxonomy for `verify` failures
+- `67849e649247` Fix #137: \[P1\]\[sdk\] Extend minimum-bundle helper with canonicalization edge-case conformance vectors (#150)
 
 Open GitHub issues considered:
 
-- #415 [P0][anchoring] Restore claim-safe FreeTSA live anchoring verification with quarantine path [priority-P0, planned-task]
-- #412 [P1][cli] Pin the versioned `verify --json` output-contract fixture and deterministic exit-code contract for CI gating [priority:P1, area:conformance, planned-task]
-- #410 [P1][verifier] Consolidate stable `taxonomy_version` surfacing across `verify --json`, `--explain`, and SDK result object [priority:P1, area:verifier, planned-task]
-- #400 [P1][cli] Pin the versioned `verify --json` output-contract fixture and deterministic exit-code contract for CI gating [priority:P1, area:conformance, planned-task]
-- #396 [P0][anchoring] Restore claim-safe FreeTSA live anchoring verification with quarantine path [priority-P0, planned-task]
-- #366 [P1][verifier] Implement `--require-taxonomy-version` consumer pinning gate with negative conformance vector [priority:P1, area:verifier, planned-task]
-- #358 [P1][conformance] Land the positive forward-compatible additive-optional-field acceptance vector under `schema_version` [priority:P1, area:conformance, planned-task]
-- #349 [P1][cli] Pin a deterministic `verify` exit-code contract for CI gating [priority:P1, area:conformance, planned-task]
+- #415 \[P0\]\[anchoring\] Restore claim-safe FreeTSA live anchoring verification with quarantine path [priority-P0, planned-task]
+- #412 \[P1\]\[cli\] Pin the versioned `verify --json` output-contract fixture and deterministic exit-code contract for CI gating [priority:P1, area:conformance, planned-task]
+- #410 \[P1\]\[verifier\] Consolidate stable `taxonomy_version` surfacing across `verify --json`, `--explain`, and SDK result object [priority:P1, area:verifier, planned-task]
+- #400 \[P1\]\[cli\] Pin the versioned `verify --json` output-contract fixture and deterministic exit-code contract for CI gating [priority:P1, area:conformance, planned-task]
+- #396 \[P0\]\[anchoring\] Restore claim-safe FreeTSA live anchoring verification with quarantine path [priority-P0, planned-task]
+- #366 \[P1\]\[verifier\] Implement `--require-taxonomy-version` consumer pinning gate with negative conformance vector [priority:P1, area:verifier, planned-task]
+- #358 \[P1\]\[conformance\] Land the positive forward-compatible additive-optional-field acceptance vector under `schema_version` [priority:P1, area:conformance, planned-task]
+- #349 \[P1\]\[cli\] Pin a deterministic `verify` exit-code contract for CI gating [priority:P1, area:conformance, planned-task]
 
-**ISSUE 1 · [P1][verifier][cli] Consolidate `taxonomy_version` surfacing across `verify --json`, `--explain`, and SDK result object**
+**ISSUE 1 · \[P1\]\[verifier\][cli] Consolidate `taxonomy_version` surfacing across `verify --json`, `--explain`, and SDK result object**
+
 - Priority: P1
 - Affected modules: Python SDK verifier, Python CLI JSON serialization, TypeScript SDK verifier, SDK result object
 - Acceptance criteria:
@@ -58,7 +59,8 @@ Open GitHub issues considered:
   - `git diff --check`
 - Rollout / migration notes: This product increment is the v1.8.1 mandatory product delta. Keep the current failure semantics stable during migration; do not remove or rename existing error fields.
 
-**ISSUE 2 · [P1][conformance] Pin forward-compatible additive-optional-field acceptance under `schema_version` and CI output contract**
+**ISSUE 2 · \[P1\]\[conformance\] Pin forward-compatible additive-optional-field acceptance under `schema_version` and CI output contract**
+
 - Priority: P1
 - Affected modules: Python conformance vectors, Verifier conformance tests, CLI output-contract fixture, fixture-lock maintenance
 - Acceptance criteria:
@@ -73,7 +75,8 @@ Open GitHub issues considered:
   - `git diff --check`
 - Rollout / migration notes: Update locked fixture hashes only if the new vector is intentionally added. Do not regenerate unrelated fixtures.
 
-**ISSUE 3 · [P2][docs][release] Document the v1.8.1 user-visible delta and taxonomy-version consumer-pinning guidance**
+**ISSUE 3 · \[P2\]\[docs\][release] Document the v1.8.1 user-visible delta and taxonomy-version consumer-pinning guidance**
+
 - Priority: P2
 - Affected modules: docs, validation evidence, release notes
 - Acceptance criteria:
