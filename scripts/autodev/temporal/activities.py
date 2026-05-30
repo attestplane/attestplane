@@ -124,12 +124,17 @@ async def implement_activity(
         _run(["git", "checkout", "main"], cwd=main)
         _run(["git", "reset", "--hard", "origin/main"], cwd=main)
 
-        # Create / reset worktree
+        # Create / reset worktree.
+        # git worktree remove --force deregisters the worktree from git but does
+        # not always delete the directory (e.g. when files have local changes).
+        # Explicitly rmtree afterwards so git worktree add never sees a stale dir.
+        import shutil as _shutil
         if Path(worktree).exists():
             try:
                 _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
             except RuntimeError:
                 pass
+            _shutil.rmtree(worktree, ignore_errors=True)
         _run(["git", "worktree", "add", "-B", branch, worktree, "origin/main"], cwd=main)
 
         # Build Codex prompt
