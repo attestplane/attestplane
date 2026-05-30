@@ -14,6 +14,9 @@ PR alongside ``anchor_vectors.json``; until then,
 ``"VALID_UNVERIFIED"`` for anchors with non-empty cert chains and
 ``"MISSING_LTV_ARTIFACTS"`` otherwise.
 
+Cross-reference-correct anchors that cannot be cryptographically
+verified are treated as quarantined, not as anchored.
+
 What this v1 implementation DOES check:
 
 1. Every :class:`AnchorRecord.anchored_event_hash` matches the
@@ -57,7 +60,7 @@ CertStatus = Literal[
     "EXPIRED_VALID_AT_ISSUANCE",
     "REVOKED",
 ]
-AnchorVerificationStatus = Literal["verified", "failed", "not_performed"]
+AnchorVerificationStatus = Literal["verified", "failed", "quarantined", "not_performed"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,11 +95,11 @@ class AnchorVerificationResult:
     """One entry per (anchor record, chain) pair, in input order."""
 
     verification_status: AnchorVerificationStatus
-    """Explicit aggregate status; empty anchor evidence is not a successful anchored verification."""
+    """Explicit aggregate status; empty or unverifiable anchor evidence is not a successful anchored verification."""
 
     @property
     def ok(self) -> bool:
-        """True iff chain verifies AND at least one supplied anchor verifies."""
+        """True iff chain verifies AND at least one supplied anchor cryptographically verifies."""
         return self.chain_ok and self.verification_status == "verified"
 
 
@@ -415,19 +418,20 @@ def verify_chain_with_anchors(
                 SingleAnchorResult(
                     seq=anchor.anchored_seq,
                     provider=provider,
-                    valid=True,
+                    valid=False,
                     cert_status="VALID_UNVERIFIED",
                     ltv_artifacts_present=True,
-                    reason=None,
+                    reason="trust_roots_der not provided; anchor verification quarantined",
                 )
             )
-        anchored_seqs.add(anchor.anchored_seq)
 
     unanchored_seqs = seqs_in_chain - anchored_seqs
     if not anchor_results:
         verification_status: AnchorVerificationStatus = "not_performed"
     elif all(a.valid for a in anchor_results):
         verification_status = "verified"
+    elif trust_roots_der is None and all(a.cert_status == "VALID_UNVERIFIED" for a in anchor_results):
+        verification_status = "quarantined"
     else:
         verification_status = "failed"
 

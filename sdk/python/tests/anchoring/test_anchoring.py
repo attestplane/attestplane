@@ -317,13 +317,14 @@ def test_verify_chain_with_one_good_anchor() -> None:
     chain = _build_chain(3)
     anchors = [_good_anchor(chain, 2)]  # anchor the tip
     result = verify_chain_with_anchors(chain, anchors)
-    assert result.ok is True
-    assert result.verification_status == "verified"
-    assert result.anchor_results[0].valid is True
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert result.anchor_results[0].valid is False
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
     assert result.anchor_results[0].ltv_artifacts_present is True
-    assert result.anchored_seqs == frozenset({2})
-    assert result.unanchored_seqs == frozenset({0, 1})
+    assert result.anchor_results[0].reason == "trust_roots_der not provided; anchor verification quarantined"
+    assert result.anchored_seqs == frozenset()
+    assert result.unanchored_seqs == frozenset({0, 1, 2})
 
 
 def test_verify_chain_with_multi_anchor_per_seq() -> None:
@@ -337,10 +338,11 @@ def test_verify_chain_with_multi_anchor_per_seq() -> None:
         anchored_seq=1,
     )
     result = verify_chain_with_anchors(chain, anchors)
-    assert result.ok is True
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
     assert len(result.anchor_results) == 2
-    assert all(a.valid for a in result.anchor_results)
-    assert result.anchored_seqs == frozenset({1})
+    assert all(not a.valid for a in result.anchor_results)
+    assert result.anchored_seqs == frozenset()
 
 
 def test_verify_detects_hash_mismatch() -> None:
@@ -426,8 +428,10 @@ def test_verify_propagates_chain_failure() -> None:
     result = verify_chain_with_anchors(chain, [anchor])
     assert result.chain_ok is False
     assert result.ok is False
-    # The anchor itself is still cross-reference-valid for seq=0.
-    assert result.anchor_results[0].valid is True
+    # The anchor remains cross-reference-correct for seq=0, but without
+    # trust roots it is quarantined instead of counted as anchored.
+    assert result.anchor_results[0].valid is False
+    assert result.verification_status == "quarantined"
 
 
 def test_v1_cert_status_is_unverified() -> None:
@@ -435,6 +439,8 @@ def test_v1_cert_status_is_unverified() -> None:
     chain = _build_chain(1)
     result = verify_chain_with_anchors(chain, [_good_anchor(chain, 0)])
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+    assert result.anchor_results[0].valid is False
+    assert result.verification_status == "quarantined"
 
 
 def test_verify_chain_with_anchors_is_read_only() -> None:
@@ -443,6 +449,6 @@ def test_verify_chain_with_anchors_is_read_only() -> None:
     before_chain = list(chain)
     before_anchors = list(anchors)
     result = verify_chain_with_anchors(chain, anchors)
-    assert result.ok is True
+    assert result.ok is False
     assert chain == before_chain
     assert anchors == before_anchors

@@ -25,8 +25,9 @@ Retry policy (ADR-0003 § 4 failure-mode table)
 
 - :class:`TSAUnavailableError` → exponential backoff
   (1 s, 2 s, 4 s, 8 s, 16 s, capped at :attr:`max_backoff_seconds`).
-  Re-queue at tail.
-- :class:`AnchorVerificationError` → quarantine. Item moves to
+  Re-queue at tail and mark the pending item quarantined until a
+  successful retry clears it.
+- :class:`AnchorVerificationError` → hard reject. Item moves to
   ``failed_permanent`` state and is not retried automatically.
 - Successful anchor → store result, transition to ``anchored``.
 
@@ -78,6 +79,7 @@ class WorkerStats:
 
     enqueued: int = 0
     anchored: int = 0
+    quarantined: int = 0
     failed_permanent: int = 0
     retries_after_unavailable: int = 0
     clock_skew_warnings: int = 0
@@ -172,6 +174,7 @@ class Anchorer:
             return WorkerStats(
                 enqueued=self._stats.enqueued,
                 anchored=self._stats.anchored,
+                quarantined=self._stats.quarantined,
                 failed_permanent=self._stats.failed_permanent,
                 retries_after_unavailable=self._stats.retries_after_unavailable,
                 clock_skew_warnings=self._stats.clock_skew_warnings,
@@ -197,7 +200,7 @@ class Anchorer:
         queue is empty. On :class:`TSAUnavailableError` the item is
         rescheduled (re-queued at tail with bumped backoff) and ``None``
         is returned. On :class:`AnchorVerificationError` the item is
-        quarantined and a result with ``record=None`` is returned.
+        hard-rejected and a result with ``record=None`` is returned.
 
         This method is what unit tests call to exercise the worker
         without spinning a real thread.
@@ -228,9 +231,11 @@ class Anchorer:
             pending.attempts += 1
             backoff = min(2 ** (pending.attempts - 1), self._max_backoff)
             pending.next_attempt_at = self._now_plus(backoff)
+            pending.status = "quarantined"
             pending.last_error = f"TSAUnavailableError: {exc}"
             with self._lock:
                 self._queue.append(pending)
+                self._stats.quarantined += 1
                 self._stats.retries_after_unavailable += 1
             return None
         except AnchorVerificationError as exc:

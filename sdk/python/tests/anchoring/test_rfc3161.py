@@ -299,8 +299,7 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
 
 
 def test_verify_chain_without_trust_roots_remains_unverified() -> None:
-    """When trust_roots_der is None, cross-reference-correct anchors stay
-    at cert_status=VALID_UNVERIFIED (preserves the substrate-only contract)."""
+    """When trust_roots_der is None, cross-reference-correct anchors are quarantined."""
     chain = _build_chain(1)
     authority = TestTSAAuthority(now=_NOW)
     provider = TestTSAProvider(authority)
@@ -310,8 +309,11 @@ def test_verify_chain_without_trust_roots_remains_unverified() -> None:
         now=_NOW,
     )
     result = verify_chain_with_anchors(chain, [anchor])
-    assert result.ok is True
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+    assert result.anchor_results[0].valid is False
+    assert result.anchored_seqs == frozenset()
 
 
 # ----- P3 / Issue #9 follow-up: EC-leaf TSA support (FreeTSA 2026 rotation) ---
@@ -391,7 +393,7 @@ def test_ec_leaf_signature_tamper_fails_closed() -> None:
 
 
 def test_ec_leaf_provider_anchor_record_verifies() -> None:
-    """End-to-end EC-leaf TSA through TestTSAProvider + verify_chain_with_anchors."""
+    """End-to-end EC-leaf TSA without trust roots is quarantined, not anchored."""
     authority = TestTSAAuthority(now=_NOW, leaf_key_type="ec")
     provider = TestTSAProvider(authority=authority)
     chain = _build_chain(1)
@@ -402,7 +404,9 @@ def test_ec_leaf_provider_anchor_record_verifies() -> None:
         now=_NOW,
     )
     result = verify_chain_with_anchors(chain, [anchor])
-    assert result.ok is True
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert result.anchor_results[0].valid is False
     # Absent OCSP material the cert_status stays VALID_UNVERIFIED — same
     # convention as the RSA leaf path. Leaf-key-class branch is exercised
     # via the verify_timestamp_token path inside verify_chain_with_anchors.
