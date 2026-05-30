@@ -22,16 +22,26 @@ GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 UNKNOWN_REQUIRED_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 ROOT_QUARANTINE_FIXTURE = ROOT / "fixtures" / "quarantined.bundle"
+VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+VERIFY_JSON_CONTRACT_VERSION = VERIFY_JSON_GOLDEN["contract_version"]
+VERIFY_JSON_ORDERING_POLICY = VERIFY_JSON_GOLDEN["ordering_policy"]
+VERIFY_JSON_PASS_GOLDEN = VERIFY_JSON_GOLDEN["pass"]
+VERIFY_JSON_FAIL_GOLDEN = VERIFY_JSON_GOLDEN["fail"]
 
 
 def _schema() -> dict[str, object]:
     return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
-def _payload(argv: list[str], capsys) -> tuple[int, dict[str, object]]:
+def _payload(argv: list[str], capsys) -> tuple[int, dict[str, object], str]:
     rc = main(argv)
     assert rc in {0, 1, 2, 3}
-    return rc, json.loads(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    return rc, json.loads(captured.out), captured.out
+
+
+def _assert_matches_ordering_policy(payload: dict[str, object], raw: str) -> None:
+    assert raw == json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
@@ -125,21 +135,27 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
 
 
 def test_verify_json_output_contract_matches_versioned_golden_fixture(capsys) -> None:
-    rc, payload = _payload(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc, payload, stdout = _payload(["verify", "--json", str(PASS_FIXTURE)], capsys)
     assert rc == 0
-    expected = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
-    assert payload == expected
+    assert VERIFY_JSON_CONTRACT_VERSION == 1
+    assert VERIFY_JSON_ORDERING_POLICY == "json.dumps(indent=2, sort_keys=True)"
+    assert payload == VERIFY_JSON_PASS_GOLDEN
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_fail_payload_matches_schema(capsys) -> None:
-    rc, payload = _payload(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, payload, stdout = _payload(["verify", "--json", str(FAIL_FIXTURE)], capsys)
     assert rc == 1
     _assert_matches_verify_result_v1(payload)
+    assert payload == VERIFY_JSON_FAIL_GOLDEN
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
-    rc, payload = _payload(["verify", "--json", str(ROOT_QUARANTINE_FIXTURE)], capsys)
+    rc, payload, stdout = _payload(
+        ["verify", "--json", str(ROOT_QUARANTINE_FIXTURE)], capsys
+    )
     assert rc == 2
     _assert_matches_verify_result_v1(payload)
     assert payload["result"] == "fail"
@@ -148,14 +164,17 @@ def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     capsys,
 ) -> None:
-    rc, payload = _payload(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    rc, payload, stdout = _payload(["verify", "--json", str(FAIL_FIXTURE)], capsys)
     assert rc == 1
     _assert_matches_verify_result_v1(payload)
+    assert payload == VERIFY_JSON_FAIL_GOLDEN
+    _assert_matches_ordering_policy(payload, stdout)
     json_reason_codes = [reason["code"] for reason in payload["reasons"]]
     assert json_reason_codes
     assert all(code in ALL_VERIFY_REASON_CODES_V1 for code in json_reason_codes)

@@ -16,6 +16,11 @@ import pytest
 
 from attestplane.cli.main import _explain_reserved_reasons, main
 from attestplane.cli.verify_json import (
+    VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    VERIFY_JSON_EXIT_CODE_SUCCESS,
+    VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+    VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+    VERIFY_JSON_EXIT_CODES_V1,
     _canonical_path_to_pointer,
     _reject_duplicate_keys,
     _schema_path_from_bundle_error,
@@ -40,21 +45,29 @@ SCHEMA_VERSION_ADDITIVE_FIXTURE = (
 )
 GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+VERIFY_JSON_PASS_GOLDEN = VERIFY_JSON_GOLDEN["pass"]
+VERIFY_JSON_FAIL_GOLDEN = VERIFY_JSON_GOLDEN["fail"]
+VERIFY_JSON_CONTRACT_VERSION = VERIFY_JSON_GOLDEN["contract_version"]
+VERIFY_JSON_ORDERING_POLICY = VERIFY_JSON_GOLDEN["ordering_policy"]
 VERIFY_JSON_EXIT_CODES = {
-    "accept": 0,
-    "verification_failure": 1,
-    "quarantine": 2,
-    "usage_error": 3,
+    "accept": VERIFY_JSON_EXIT_CODE_SUCCESS,
+    "verification_failure": VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+    "pinning_gate_failure": VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    "usage_error": VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
 }
 
 
 def _run_verify(
     argv: list[str],
     capsys: pytest.CaptureFixture[str],
-) -> tuple[int, dict[str, object], str]:
+) -> tuple[int, dict[str, object], str, str]:
     rc = main(argv)
     captured = capsys.readouterr()
-    return rc, json.loads(captured.out), captured.err
+    return rc, json.loads(captured.out), captured.out, captured.err
+
+
+def _assert_matches_ordering_policy(payload: dict[str, object], raw: str) -> None:
+    assert raw == json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _assert_matches_verify_result_v1(
@@ -138,17 +151,20 @@ def _assert_matches_verify_result_v1(
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["accept"]
     assert stderr == ""
-    assert payload == VERIFY_JSON_GOLDEN
+    assert VERIFY_JSON_CONTRACT_VERSION == 1
+    assert VERIFY_JSON_ORDERING_POLICY == "json.dumps(indent=2, sort_keys=True)"
+    assert payload == VERIFY_JSON_PASS_GOLDEN
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(
+    rc, payload, stdout, stderr = _run_verify(
         ["verify", "--json", "--explain", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)],
         capsys,
     )
@@ -171,53 +187,42 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         }
     ]
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["verification_failure"]
     assert stderr == ""
-    assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["verification_failure"]
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert payload["taxonomy_version"] == 1
-    assert payload["bundle"]["schema_version"] == 1
-    assert payload["bundle"]["digest"] == "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd"
-    assert payload["reasons"] == [
-        {
-            "code": VERIFY_REASON_CANONICAL_MISMATCH,
-            "message": "canonicalization failed",
-            "path": "/events/0/event/payload/artifact_ref",
-        },
-    ]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload == VERIFY_JSON_FAIL_GOLDEN
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_unknown_required_field_fixture_is_quarantined(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
 
-    assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert rc == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     assert stderr == ""
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
 
     assert rc == 1
     assert stderr == ""
@@ -230,6 +235,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_reports_invalid_json(
@@ -239,7 +245,7 @@ def test_verify_json_reports_invalid_json(
     bundle = tmp_path / "bad.json"
     bundle.write_text("{", encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -256,6 +262,22 @@ def test_verify_json_reports_invalid_json(
     assert str(bundle) in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    _assert_matches_ordering_policy(payload, stdout)
+
+
+def test_verify_json_exit_code_contract_is_pinned() -> None:
+    assert VERIFY_JSON_EXIT_CODES == {
+        "accept": 0,
+        "verification_failure": 1,
+        "pinning_gate_failure": 2,
+        "usage_error": 3,
+    }
+    assert VERIFY_JSON_EXIT_CODES_V1 == (
+        VERIFY_JSON_EXIT_CODE_SUCCESS,
+        VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+        VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+        VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+    )
 
 
 def test_verify_json_reports_invalid_utf8(
@@ -265,7 +287,7 @@ def test_verify_json_reports_invalid_utf8(
     bundle = tmp_path / "bad-utf8.json"
     bundle.write_bytes(b"\xff")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -277,6 +299,7 @@ def test_verify_json_reports_invalid_utf8(
     assert reason["path"] == "/"
     assert reason["message"] == "bundle is not valid UTF-8"
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_rejects_duplicate_keys(
@@ -286,7 +309,7 @@ def test_verify_json_rejects_duplicate_keys(
     bundle = tmp_path / "duplicate.json"
     bundle.write_text('{"chain_metadata": {}, "chain_metadata": {}}', encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -298,6 +321,7 @@ def test_verify_json_rejects_duplicate_keys(
     assert reason["path"] == "/chain_metadata"
     assert "duplicate JSON key: chain_metadata" in reason["message"]
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_rejects_non_object_root(
@@ -307,18 +331,19 @@ def test_verify_json_rejects_non_object_root(
     bundle = tmp_path / "array.json"
     bundle.write_text("[]", encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert rc == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
     assert reason["message"] == "bundle must be a JSON object, got list"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_reports_missing_bundle_path(
@@ -327,7 +352,7 @@ def test_verify_json_reports_missing_bundle_path(
 ) -> None:
     bundle = tmp_path / "missing.json"
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_IO_ERROR}\n"
@@ -339,6 +364,7 @@ def test_verify_json_reports_missing_bundle_path(
     assert reason["path"] == "/"
     assert "cannot read" in reason["message"]
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_schema_error_maps_missing_version_path(
@@ -350,14 +376,15 @@ def test_verify_json_schema_error_maps_missing_version_path(
     del payload["chain_metadata"]["schema_version"]
     bundle.write_text(json.dumps(payload), encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert rc == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     assert stderr == ""
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["path"] == "/chain_metadata/schema_version"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_unknown_required_field_reports_chain_metadata_path(
@@ -369,15 +396,16 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
     payload["chain_metadata"]["critical_future_field"] = True
     bundle.write_text(json.dumps(payload), encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, payload, stdout, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
-    assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert rc == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     assert stderr == ""
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["pinning_gate_failure"]
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert reason["path"] == "/chain_metadata/critical_future_field"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    _assert_matches_ordering_policy(payload, stdout)
 
 
 def test_verify_json_private_pointer_helpers_cover_known_paths() -> None:

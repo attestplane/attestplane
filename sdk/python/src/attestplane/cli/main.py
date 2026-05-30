@@ -24,6 +24,9 @@ from typing import Any
 
 from attestplane import __version__
 from attestplane.cli.verify_json import (
+    VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+    VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+    VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
     _anchoring_payload,
     _verify_explanations,
     _verify_success_summary,
@@ -424,7 +427,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     bundle_path = getattr(args, "bundle_option", None) or getattr(args, "bundle", None)
     if bundle_path is None:
         sys.stderr.write("attestplane verify: error: bundle path is required\n")
-        return 2
+        return VERIFY_JSON_EXIT_CODE_USAGE_ERROR
     strict_bundle_mode = getattr(args, "bundle_option", None) is not None
     require_non_empty = (
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
@@ -478,7 +481,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 3
+        return VERIFY_JSON_EXIT_CODE_USAGE_ERROR
     except json.JSONDecodeError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: schema error in {bundle_path}: {exc}"
@@ -507,7 +510,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 3
+        return VERIFY_JSON_EXIT_CODE_USAGE_ERROR
     except BundleSchemaError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: schema error in {bundle_path}: {exc}"
@@ -537,7 +540,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 2
+        return VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE
     except CanonicalizationError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: canonicalization error in {bundle_path}: {exc}"
@@ -564,7 +567,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
-        return 1
+        return VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
 
     payload = {
         "ok": result.ok,
