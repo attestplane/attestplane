@@ -155,14 +155,14 @@ cosign bundles and SLSA Build L3 provenance — attached to a single
 release. The release was tagged at 2026-05-20T21:32:20Z, after both
 [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) and the
 SLSA generator pin fix
-([PR #32](https://github.com/attestplane/attestplane/pull/32),
+([PR #32](https://github.com/attestplane/attestplanepull/32),
 merged 2026-05-20T21:55:37Z) landed, so it is the first tag the
 corrected workflow could populate end-to-end.
 
 Inventory on `v1.0.9` after the
-[`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192598447)
+[`sign-release.yml` execute run](https://github.com/attestplane/attestplaneactions/runs/26192598447)
 and the
-[`slsa-provenance.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192349031):
+[`slsa-provenance.yml` execute run](https://github.com/attestplane/attestplaneactions/runs/26192349031):
 
 ```
 artifact-manifest.json
@@ -231,9 +231,9 @@ to any single branch or tag form.
 ### Historical: v1.0.8 (cosign-only)
 
 Tag `v1.0.8` was the project's first cosign-signed release
-([`sign-release.yml` execute run `26191173510`](https://github.com/attestplane/attestplane/actions/runs/26191173510)),
+([`sign-release.yml` execute run `26191173510`](https://github.com/attestplane/attestplaneactions/runs/26191173510)),
 but it carries cosign bundles **only**. The SLSA generator pin fix
-in [PR #32](https://github.com/attestplane/attestplane/pull/32)
+in [PR #32](https://github.com/attestplane/attestplanepull/32)
 (reconciling ADR-0018 §"Tag-ref vs SHA-pin caveat") merged after
 `v1.0.8` was signed, so the SLSA leg was never attempted in execute
 mode against that tag. `v1.0.9` is the first tag with the complete
@@ -244,7 +244,7 @@ cosign-only evidence and is not retroactively re-signed for SLSA.
 
 If `cosign verify-blob` or `slsa-verifier verify-artifact` fails on a
 published release with this evidence attached, open an issue on
-`https://github.com/attestplane/attestplane/issues/` with:
+`https://github.com/attestplane/attestplaneissues` with:
 
 - The release tag.
 - The exact command invocation and its error output.

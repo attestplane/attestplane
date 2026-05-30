@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # OpenSSF Best Practices Badge — passing-tier self-assessment
 
 Attestplane is registered as project **12924** in the
-[OpenSSF Best Practices Badge Program](https://www.bestpractices.dev/projects/12924/).
+[OpenSSF Best Practices Badge Program](https://www.bestpractices.devprojects/12924).
 On 2026-05-21 the project reached the **passing** tier
 (`badge_level: passing`, `badge_percentage_0: 100`) with the silver tier
 at 15% and the gold tier at 13%.
@@ -51,7 +51,7 @@ verified offline against the source tree at any tagged release.
 | Gold     | in progress  | 13%       |
 
 The badge dashboard at
-[bestpractices.dev/projects/12924](https://www.bestpractices.dev/projects/12924/)
+[bestpractices.dev/projects/12924](https://www.bestpractices.devprojects/12924)
 is the authoritative record. This document is a mirror that travels
 with the source.
 
@@ -83,7 +83,7 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 | Criterion | Evidence |
 |---|---|
 | `description_good` | [README.md](../../README.md) |
-| `interact` | [CONTRIBUTING.md](../../CONTRIBUTING.md), [Issues](https://github.com/attestplane/attestplane/issues/), [Discussions](https://github.com/attestplane/attestplane/discussions/) |
+| `interact` | [CONTRIBUTING.md](../../CONTRIBUTING.md), [Issues](https://github.com/attestplane/attestplaneissues), [Discussions](https://github.com/attestplane/attestplanediscussions) |
 | `contribution` | [CONTRIBUTING.md](../../CONTRIBUTING.md) |
 | `contribution_requirements` | [CONTRIBUTING.md §4 PR Checklist](../../CONTRIBUTING.md) |
 | `floss_license` | [LICENSE](../../LICENSE) (Apache-2.0) |
@@ -92,9 +92,9 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 | `documentation_basics` | [README.md](../../README.md) + [docs/](../) tree |
 | `documentation_interface` | [sdk/python/README.md](../../sdk/python/README.md), [sdk/typescript/README.md](../../sdk/typescript/README.md), [docs/spec/](../spec/) |
 | `sites_https` | attestplane.io, github.com, pypi.org, npmjs.com all HTTPS-only |
-| `discussion` | [GitHub Issues](https://github.com/attestplane/attestplane/issues/), [Discussions](https://github.com/attestplane/attestplane/discussions/) |
+| `discussion` | [GitHub Issues](https://github.com/attestplane/attestplaneissues), [Discussions](https://github.com/attestplane/attestplanediscussions) |
 | `english` | Primary docs in English; `CONTRIBUTING_zh.md` is a translation |
-| `maintained` | [Commit history](https://github.com/attestplane/attestplane/commits/main/); v1.0 GA targeted 2026-08-15 |
+| `maintained` | [Commit history](https://github.com/attestplane/attestplanecommits/main); v1.0 GA targeted 2026-08-15 |
 
 ### Change Control (9 / 9 Met)
 
@@ -115,10 +115,10 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 | Criterion | Evidence |
 |---|---|
 | `report_process` | [CONTRIBUTING.md](../../CONTRIBUTING.md), [SECURITY.md](../../SECURITY.md) |
-| `report_tracker` | [GitHub Issues](https://github.com/attestplane/attestplane/issues/) |
+| `report_tracker` | [GitHub Issues](https://github.com/attestplane/attestplaneissues) |
 | `report_responses` | Issue triage cadence in recent activity |
 | `enhancement_responses` | Feature requests in Issues + Discussions |
-| `report_archive` | [GitHub Issues archive](https://github.com/attestplane/attestplane/issues/) |
+| `report_archive` | [GitHub Issues archive](https://github.com/attestplane/attestplaneissues) |
 | `vulnerability_report_process` | [SECURITY.md](../../SECURITY.md) §Reporting a Vulnerability |
 | `vulnerability_report_private` | [SECURITY.md](../../SECURITY.md): email + GitHub Security Advisories |
 | `vulnerability_report_response` | [SECURITY.md](../../SECURITY.md) §Response Timeline (v1.0 GA onwards) |
@@ -159,10 +159,10 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 
 ## Verification
 
-The badge SVG on the [project page](https://www.bestpractices.dev/projects/12924/)
+The badge SVG on the [project page](https://www.bestpractices.devprojects/12924)
 is updated automatically by the OpenSSF dashboard whenever an
 authorized maintainer edits the project on
-[bestpractices.dev](https://www.bestpractices.dev/). For offline
+[bestpractices.dev](https://www.bestpractices.dev). For offline
 verification, the durable source is
 [`/.bestpractices.json`](../../.bestpractices.json) at the relevant
 git tag.

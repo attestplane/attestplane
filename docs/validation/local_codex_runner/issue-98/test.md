@@ -51,12 +51,12 @@ Relevant output:
 ```text
 docs/release-notes/v1.5.10.draft.md:1:# v1.5.10
 docs/release-notes/v1.5.10.draft.md:3:`v1.5.10` is an automated suffix-free stable package cut from autodev-train.
-docs/release-notes/v1.5.10.draft.md:6:[#95](https://github.com/attestplane/attestplane/issues/95) and planned-task
-docs/release-notes/v1.5.10.draft.md:7:issue [#98](https://github.com/attestplane/attestplane/issues/98).
+docs/release-notes/v1.5.10.draft.md:6:[#95](https://github.com/attestplane/attestplaneissues95) and planned-task
+docs/release-notes/v1.5.10.draft.md:7:issue [#98](https://github.com/attestplane/attestplaneissues98).
 docs/release-notes/v1.5.10.draft.md:11:- Adds test coverage for the autodev-train release-planning path that maps
 docs/release-notes/v1.5.10.draft.md:12:  stable version changes to the documented Opus planning levels.
-docs/validation/local_codex_runner/issue-98/code.md:19:- Source planning issue: [#95](https://github.com/attestplane/attestplane/issues/95)
-docs/validation/local_codex_runner/issue-98/code.md:20:- Planned-task issue: [#98](https://github.com/attestplane/attestplane/issues/98)
+docs/validation/local_codex_runner/issue-98/code.md:19:- Source planning issue: [#95](https://github.com/attestplane/attestplaneissues95)
+docs/validation/local_codex_runner/issue-98/code.md:20:- Planned-task issue: [#98](https://github.com/attestplane/attestplaneissues98)
 ```
 
 ## Claim Boundary Check

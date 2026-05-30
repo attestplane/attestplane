@@ -39,7 +39,7 @@ Manual live FreeTSA verification:
 
 - Workflow: `nightly-anchor`
 - Event: `workflow_dispatch`
-- Run: <https://github.com/attestplane/attestplane/actions/runs/26085036796>
+- Run: <https://github.com/attestplane/attestplaneactions/runs/26085036796>
 - HEAD: `0ba5b323217fd6d1dbcdf63a48b08ad1e60826d1`
 - Conclusion: `success`
 - Result: `cert_status=VALID`, `ok=true`, `chain_ok=true`
@@ -48,15 +48,15 @@ Manual live FreeTSA verification:
 
 ### Closed
 
-- [#11](https://github.com/attestplane/attestplane/issues/11)
+- [#11](https://github.com/attestplane/attestplaneissues11)
   was closed after the remote live `nightly-anchor` verification
   passed on the fix commit.
 
 ### Still Open
 
-- [#7](https://github.com/attestplane/attestplane/issues/7)
+- [#7](https://github.com/attestplane/attestplaneissues7)
   remains open. A conservative design response was posted:
-  <https://github.com/attestplane/attestplane/issues/7#issuecomment-4485790505>
+  <https://github.com/attestplane/attestplaneissues7#issuecomment-4485790505>
 
 Keeping #7 open is intentional. It requires owner confirmation before
 turning the response into implementation work or public-facing claims.

@@ -23,8 +23,8 @@ Result:
 ```text
 docs/release-notes/v1.5.6.draft.md:1:# v1.5.6
 docs/release-notes/v1.5.6.draft.md:3:`v1.5.6` is an automated suffix-free stable package cut from autodev-train.
-docs/release-notes/v1.5.6.draft.md:6:[#78](https://github.com/attestplane/attestplane/issues/78) and planned-task
-docs/release-notes/v1.5.6.draft.md:7:issue [#81](https://github.com/attestplane/attestplane/issues/81).
+docs/release-notes/v1.5.6.draft.md:6:[#78](https://github.com/attestplane/attestplaneissues78) and planned-task
+docs/release-notes/v1.5.6.draft.md:7:issue [#81](https://github.com/attestplane/attestplaneissues81).
 docs/release-notes/v1.5.6.draft.md:9:## User-Visible Delta
 docs/release-notes/v1.5.6.draft.md:11:The user-visible delta in `v1.5.6` is the stable package cut itself: the
 docs/release-notes/v1.5.6.draft.md:25:## Explicit Boundaries

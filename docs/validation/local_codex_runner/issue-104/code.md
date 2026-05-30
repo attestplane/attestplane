@@ -37,9 +37,9 @@ Compatibility and boundary decisions:
 Issue-link evidence:
 
 - Linked the source planning issue:
-  [Issue #100](https://github.com/attestplane/attestplane/issues/100).
+  [Issue #100](https://github.com/attestplane/attestplaneissues100).
 - Linked this planned task:
-  [Issue #104](https://github.com/attestplane/attestplane/issues/104).
+  [Issue #104](https://github.com/attestplane/attestplaneissues104).
 - The local runner prompt requires cross-links to "ISSUE 1 boundary report" and
   "ISSUE 2 regression coverage", but local files and issue-104 evidence do not
   expose concrete issue numbers for those labels. The release summary and

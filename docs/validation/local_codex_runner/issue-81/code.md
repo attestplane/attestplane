@@ -8,8 +8,8 @@ Implemented the release-note update for v1.5.6 by editing
 - Replaced the old `Changes Since Previous Stable` section with `User-Visible Delta`.
 - Added bounded wording that describes the stable package cut as the visible
   release delta.
-- Linked the note to source planning issue [#78](https://github.com/attestplane/attestplane/issues/78)
-  and planned-task issue [#81](https://github.com/attestplane/attestplane/issues/81).
+- Linked the note to source planning issue [#78](https://github.com/attestplane/attestplaneissues78)
+  and planned-task issue [#81](https://github.com/attestplane/attestplaneissues81).
 
 ## Scope Check
 
