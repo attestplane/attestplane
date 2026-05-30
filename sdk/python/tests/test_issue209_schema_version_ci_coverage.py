@@ -40,6 +40,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     is_known_verify_reason_code,
+    resolve_verify_taxonomy_version,
     verify_reason_code_matches_format,
 )
 
@@ -129,6 +130,14 @@ def test_verify_reason_code_taxonomy_and_format_helpers() -> None:
 
     assert not is_known_verify_reason_code("att.verify.future_reason")
     assert not verify_reason_code_matches_format("bad-code")
+
+
+def test_verify_result_taxonomy_version_is_pinned_on_public_result_object() -> None:
+    result = verify_proof_bundle(_fixture("valid_signed_attestation.json"))
+
+    assert "taxonomy_version" in type(result).__dataclass_fields__
+    assert result.taxonomy_version == resolve_verify_taxonomy_version()
+    assert result.taxonomy_version == 1
 
 
 def test_signed_attestation_schema_reason_mapping() -> None:
