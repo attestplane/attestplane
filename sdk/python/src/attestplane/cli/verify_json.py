@@ -39,6 +39,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
     verify_reason_code_explanation,
+    verify_reason_code_remediation,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
@@ -148,12 +149,20 @@ def _explanation_entry(
     primary_reason: VerifyReasonCodeV1 | None,
     pointer: str,
     message: str,
+    *,
+    short: str | None = None,
+    remediation: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    entry: dict[str, Any] = {
         "primary_reason": primary_reason,
         "pointer": pointer,
         "message": message,
     }
+    if short is not None:
+        entry["short"] = short
+    if remediation is not None:
+        entry["remediation"] = remediation
+    return entry
 
 
 def _bundle_signer_subject(bundle: dict[str, Any]) -> str:
@@ -273,11 +282,14 @@ def _verify_explanations(
 
     explanations: list[dict[str, Any]] = []
     for reason in _bundle_failure_reason(result, explain=explain):
+        code = reason["code"]
         explanations.append(
             _explanation_entry(
-                reason["code"],
+                code,
                 reason["path"],
                 str(reason["message"]),
+                short=verify_reason_code_explanation(code),
+                remediation=verify_reason_code_remediation(code),
             )
         )
     return explanations

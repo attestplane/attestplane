@@ -13,7 +13,14 @@ from attestplane.cli.main import main
 from attestplane.verify_reason_codes import VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 ROOT = Path(__file__).resolve().parents[3]
-MATCHING_BUNDLE = ROOT / "tests" / "conformance" / "schema_version" / "additive_minor_ok" / "bundle.json"
+MATCHING_BUNDLE = (
+    ROOT
+    / "tests"
+    / "conformance"
+    / "schema_version"
+    / "additive_minor_ok"
+    / "bundle.json"
+)
 
 REQUIRE_TAXONOMY_VERSION_VECTORS = [
     {
@@ -50,7 +57,9 @@ def test_require_taxonomy_version_vector_set_is_complete() -> None:
     }
 
 
-@pytest.mark.parametrize("vector", REQUIRE_TAXONOMY_VERSION_VECTORS, ids=lambda vector: vector["case_id"])
+@pytest.mark.parametrize(
+    "vector", REQUIRE_TAXONOMY_VERSION_VECTORS, ids=lambda vector: vector["case_id"]
+)
 def test_require_taxonomy_version_vectors_pin_exit_code_and_reason(
     vector: dict[str, object],
     capsys: pytest.CaptureFixture[str],
@@ -70,11 +79,8 @@ def test_require_taxonomy_version_vectors_pin_exit_code_and_reason(
         return
 
     assert captured.out.startswith("FAIL: taxonomy version pin rejected")
-    assert (
-        captured.err
-        == (
-            "att.verify.schema_version_unsupported "
-            "/chain_metadata/evidence_taxonomy_version: "
-            "chain_metadata.evidence_taxonomy_version=1; this verifier requires 2\n"
-        )
+    assert captured.err == (
+        "att.verify.schema_version_unsupported "
+        "· /chain_metadata/evidence_taxonomy_version: "
+        "chain_metadata.evidence_taxonomy_version=1; this verifier requires 2\n"
     )

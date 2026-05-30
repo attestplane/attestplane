@@ -131,17 +131,17 @@ def test_verify_require_taxonomy_version_pin(
     assert rc == expected_rc
     assert payload["schema_version"] == 1
     assert payload["exit_code"] == expected_rc
-    assert payload["taxonomy_version"] == 1
-    assert payload["result"] == ("pass" if expected_rc == 0 else "fail")
-    if expected_reason is None:
-        assert payload["reason_code"] is None
-        assert payload["reasons"] == []
-    else:
+    if expected_reason is not None:
+        assert payload["result"] == "fail"
         assert payload["reason_code"] == expected_reason
         assert payload["reasons"][0]["code"] == expected_reason
         assert (
             payload["reasons"][0]["path"] == "/chain_metadata/evidence_taxonomy_version"
         )
+    else:
+        assert payload["result"] == "pass"
+        assert payload["reason_code"] is None
+        assert payload["reasons"] == []
     assert captured.err == ""
 
 

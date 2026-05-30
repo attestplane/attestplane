@@ -96,18 +96,27 @@ def _assert_rationale_lines(
         assert len(lines) >= 2
         assert lines[0] == expected_error_code
         rationale_line = lines[1]
-    assert rationale_line.startswith(f"{reason} {pointer}: ")
+    assert rationale_line.startswith(f"{reason} · ")
+    assert pointer in rationale_line
     for part in message_parts:
         assert part in rationale_line
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str,
+    *,
+    signer_subject: str,
+    schema_version: str,
+    anchor: str = "absent",
+    quarantine_reason: str | None = None,
 ) -> None:
-    assert stdout.strip() == (
+    expected = (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 anchor={anchor}"
     )
+    if quarantine_reason is not None:
+        expected += f" quarantine_reason={quarantine_reason}"
+    assert stdout.strip() == expected
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
@@ -124,7 +133,18 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
     schema_unsupported_bundle = _make_schema_version_unsupported_bundle(tmp_path)
     policy_trace_refs_empty_bundle = _make_policy_trace_refs_empty_bundle(tmp_path)
 
-    cases = [
+    cases: list[
+        tuple[
+            list[str],
+            int,
+            str,
+            str,
+            str | None,
+            str,
+            tuple[str, str, tuple[str, ...]],
+            dict[str, object] | None,
+        ]
+    ] = [
         (
             ["verify", "--explain", str(CANONICAL_FIXTURE)],
             1,
@@ -137,6 +157,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/events/0/event/payload/artifact_ref",
                 ("Unicode-NFC",),
             ),
+            None,
         ),
         (
             ["verify", "--require-non-empty", "--explain", str(empty_bundle)],
@@ -150,6 +171,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/events",
                 ("at least one event",),
             ),
+            {
+                "anchor": "quarantined",
+                "quarantine_reason": "att.verify.required_field_missing",
+            },
         ),
         (
             ["verify", "--strict-schema", "--explain", str(MISSING_SIGNATURES_FIXTURE)],
@@ -163,6 +188,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/signatures",
                 ("at least one signed attestation",),
             ),
+            {
+                "anchor": "quarantined",
+                "quarantine_reason": "att.verify.signature_missing",
+            },
         ),
         (
             ["verify", "--explain", str(schema_unsupported_bundle)],
@@ -176,6 +205,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/chain_metadata/schema_version",
                 ("chain_metadata.schema_version=2", "schema_version values (1,)"),
             ),
+            {
+                "anchor": "quarantined",
+                "quarantine_reason": "att.verify.schema_version_unsupported",
+            },
         ),
         (
             ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
@@ -189,6 +222,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/policy_trace_refs",
                 ("must be absent, not empty",),
             ),
+            None,
         ),
     ]
 
@@ -196,13 +230,16 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         reason,
         pointer,
         message_parts,
-    ) in cases:
+    ), summary_kwargs in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout,
+                signer_subject=signer_subject,
+                schema_version=schema_version,
+                **(summary_kwargs or {}),
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
@@ -227,9 +264,9 @@ def test_verify_explain_quarantine_summary_mentions_cause(
     assert stdout.startswith("FAIL signer_subject=")
     assert "quarantine_reason=att.verify.schema_unknown" in stdout
     assert "anchor=quarantined" in stdout
-    assert stderr.splitlines()[0].startswith(
-        f"{VERIFY_REASON_SCHEMA_UNKNOWN} /chain_metadata/critical_future_field: "
-    )
+    first_line = stderr.splitlines()[0]
+    assert first_line.startswith(f"{VERIFY_REASON_SCHEMA_UNKNOWN} · ")
+    assert "/chain_metadata/critical_future_field" in first_line
 
 
 def test_verify_explain_canonicalization_failure_summary_is_generic(
@@ -241,9 +278,9 @@ def test_verify_explain_canonicalization_failure_summary_is_generic(
 
     assert rc == 1
     assert stdout.startswith("FAIL: canonicalization error in ")
-    assert stderr.splitlines()[0].startswith(
-        f"{VERIFY_REASON_CANONICAL_MISMATCH} /events/0/event/payload/artifact_ref: "
-    )
+    first_line = stderr.splitlines()[0]
+    assert first_line.startswith(f"{VERIFY_REASON_CANONICAL_MISMATCH} · ")
+    assert "/events/0/event/payload/artifact_ref" in first_line
 
 
 def test_verify_explain_plain_text_emits_all_rejection_rationales(
@@ -264,7 +301,10 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
     assert len(explanations) > 1
 
     expected_lines = [
-        f"{entry['primary_reason'] or 'ok'} {entry['pointer']}: {entry['message']}"
+        (
+            f"{entry['primary_reason'] or 'ok'} · {entry.get('short', '')} · "
+            f"{entry['pointer']}: {entry['message']}"
+        )
         for entry in explanations
     ]
 

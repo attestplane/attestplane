@@ -78,6 +78,49 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
+VERIFY_REASON_CODE_REMEDIATIONS: Final[Mapping[VerifyReasonCodeV1, str]] = {
+    VERIFY_REASON_ANCHOR_INVALID: (
+        "Provide valid anchor material (RFC-3161 timestamp, CAdES) or remove the anchoring block. "
+        "Check TSA certificate chain and OCSP responses."
+    ),
+    VERIFY_REASON_CANONICAL_MISMATCH: (
+        "Re-generate the bundle using the attested canonical form (NFC-normalized UTF-8, "
+        "sorted object keys, minimal integers, no BOM or trailing whitespace)."
+    ),
+    VERIFY_REASON_REQUIRED_FIELD_MISSING: (
+        "Add the missing field. Consult the verifier schema for the complete field set; "
+        "ensure required top-level, nested, or signature fields are present."
+    ),
+    VERIFY_REASON_SCHEMA_INVALID: (
+        "Fix the malformed input shape to match the expected verifier schema. "
+        "Check field types, array lengths, and object structure."
+    ),
+    VERIFY_REASON_SCHEMA_UNKNOWN: (
+        "Remove or correctly name unknown schema families, verification methods, "
+        "or critical/required fields that are not part of the verifier schema."
+    ),
+    VERIFY_REASON_SCHEMA_VERSION_MISSING: (
+        "Add a schema_version field matching a supported version. "
+        "See the verifier documentation for valid schema_version values."
+    ),
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: (
+        "Update the schema_version to a supported value, or upgrade the verifier "
+        "to a version that handles the bundle's schema_version."
+    ),
+    VERIFY_REASON_SIGNATURE_INVALID: (
+        "Replace signature material with valid Ed25519 signatures. "
+        "Check signature_hex format, public_key_der_b64, and certificate chains."
+    ),
+    VERIFY_REASON_SIGNATURE_MISSING: (
+        "Sign the bundle with at least one valid signature record before verification. "
+        "Use the SDK's signing API to produce compliant signature material."
+    ),
+    VERIFY_REASON_STRUCTURE_INVALID: (
+        "Fix malformed, duplicated, dangling, or out-of-order bundle relationships. "
+        "Ensure policy_trace_refs, verification_report, and retention_proofs are consistent."
+    ),
+}
+
 _VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^att\.verify\.[a-z][a-z0-9_]*$")
 
 
@@ -94,6 +137,11 @@ def verify_reason_code_matches_format(value: str) -> bool:
 def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     """Return the stable human-readable explanation for a verify reason code."""
     return VERIFY_REASON_TAXONOMY[value]
+
+
+def verify_reason_code_remediation(value: VerifyReasonCodeV1) -> str:
+    """Return the stable remediation guidance for a verify reason code."""
+    return VERIFY_REASON_CODE_REMEDIATIONS[value]
 
 
 def resolve_verify_taxonomy_version() -> int:
@@ -113,6 +161,7 @@ __all__ = [
     "VERIFY_REASON_ANCHOR_INVALID",
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
+    "VERIFY_REASON_CODE_REMEDIATIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",
     "VERIFY_REASON_TAXONOMY",
     "VERIFY_REASON_TAXONOMY_VERSION",
@@ -130,4 +179,5 @@ __all__ = [
     "resolve_verify_taxonomy_version",
     "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
+    "verify_reason_code_remediation",
 ]

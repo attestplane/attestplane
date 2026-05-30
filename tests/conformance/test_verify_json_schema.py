@@ -231,6 +231,5 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     assert explain_reason_codes == json_reason_codes
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
-    assert captured.err.splitlines()[0].startswith(
-        f"{reason_code} {first_reason['path']}: "
-    )
+    assert captured.err.splitlines()[0].startswith(f"{reason_code} · ")
+    assert first_reason["path"] in captured.err.splitlines()[0]

@@ -265,8 +265,13 @@ def _write_verify_explanations(entries: list[dict[str, Any]]) -> None:
         primary_reason = entry.get("primary_reason")
         pointer = entry.get("pointer", "/")
         message = entry.get("message", "")
-        prefix = primary_reason if primary_reason is not None else "ok"
-        sys.stderr.write(f"{prefix} {pointer}: {message}\n")
+        short = entry.get("short")
+        remediation = entry.get("remediation")
+        code = primary_reason if primary_reason is not None else "ok"
+        if short and remediation:
+            sys.stderr.write(f"{code} · {short} · {pointer}: {message}\n")
+        else:
+            sys.stderr.write(f"{code} · {pointer}: {message}\n")
 
 
 _KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {
