@@ -100,8 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         description=VERIFY_SCOPE_NOTICE,
         epilog=(
-            "Exit codes: 0 success; 1 verification failure; 2 quarantine / "
-            "fail-closed bundle rejection; 3 usage, I/O, or malformed input."
+            "Exit codes: 0 success (pass); 1 verification failure (fail); 2 quarantine / "
+            "taxonomy mismatch / fail-closed bundle rejection; 3 usage, I/O, or malformed input."
         ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
@@ -202,7 +202,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _emit(payload: dict[str, Any], json_output: bool, *, human: str) -> None:
     if json_output:
-        sys.stdout.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        sys.stdout.write(json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
     else:
         sys.stdout.write(human + "\n")
 

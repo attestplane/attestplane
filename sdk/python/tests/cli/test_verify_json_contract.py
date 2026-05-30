@@ -32,14 +32,16 @@ from attestplane.verify_reason_codes import (
 
 ROOT = Path(__file__).resolve().parents[4]
 CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
-PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
+PASS_FIXTURE = CONFORMANCE_FIXTURES / "valid_bundle.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
-VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+GOLDEN_FIXTURE = ROOT / "fixtures" / "golden" / "verify_json_contract.json"
+VERIFY_JSON_GOLDEN_TEXT = GOLDEN_FIXTURE.read_text(encoding="utf-8")
+VERIFY_JSON_GOLDEN = json.loads(VERIFY_JSON_GOLDEN_TEXT)
+PASS_FIXTURE_PAYLOAD = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
 VERIFY_JSON_EXIT_CODES = {
     "accept": 0,
     "verification_failure": 1,
@@ -51,10 +53,10 @@ VERIFY_JSON_EXIT_CODES = {
 def _run_verify(
     argv: list[str],
     capsys: pytest.CaptureFixture[str],
-) -> tuple[int, dict[str, object], str]:
+) -> tuple[int, str, dict[str, object], str]:
     rc = main(argv)
     captured = capsys.readouterr()
-    return rc, json.loads(captured.out), captured.err
+    return rc, captured.out, json.loads(captured.out), captured.err
 
 
 def _assert_matches_verify_result_v1(
@@ -138,17 +140,19 @@ def _assert_matches_verify_result_v1(
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc, stdout, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["accept"]
     assert stderr == ""
+    assert stdout == VERIFY_JSON_GOLDEN_TEXT
     assert payload == VERIFY_JSON_GOLDEN
+    assert PASS_FIXTURE_PAYLOAD["anchor_status"] == "unanchored"
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(
+    rc, _, payload, stderr = _run_verify(
         ["verify", "--json", "--explain", str(SCHEMA_VERSION_ADDITIVE_FIXTURE)],
         capsys,
     )
@@ -176,7 +180,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["verification_failure"]
     assert stderr == ""
@@ -200,7 +204,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 def test_verify_json_unknown_required_field_fixture_is_quarantined(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == ""
@@ -217,7 +221,7 @@ def test_verify_json_unknown_required_field_fixture_is_quarantined(
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
 
     assert rc == 1
     assert stderr == ""
@@ -239,7 +243,7 @@ def test_verify_json_reports_invalid_json(
     bundle = tmp_path / "bad.json"
     bundle.write_text("{", encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -265,7 +269,7 @@ def test_verify_json_reports_invalid_utf8(
     bundle = tmp_path / "bad-utf8.json"
     bundle.write_bytes(b"\xff")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -286,7 +290,7 @@ def test_verify_json_rejects_duplicate_keys(
     bundle = tmp_path / "duplicate.json"
     bundle.write_text('{"chain_metadata": {}, "chain_metadata": {}}', encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", "--explain", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -307,7 +311,7 @@ def test_verify_json_rejects_non_object_root(
     bundle = tmp_path / "array.json"
     bundle.write_text("[]", encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
@@ -327,7 +331,7 @@ def test_verify_json_reports_missing_bundle_path(
 ) -> None:
     bundle = tmp_path / "missing.json"
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert stderr == f"{VERIFY_IO_ERROR}\n"
@@ -350,7 +354,7 @@ def test_verify_json_schema_error_maps_missing_version_path(
     del payload["chain_metadata"]["schema_version"]
     bundle.write_text(json.dumps(payload), encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == ""
@@ -369,7 +373,7 @@ def test_verify_json_unknown_required_field_reports_chain_metadata_path(
     payload["chain_metadata"]["critical_future_field"] = True
     bundle.write_text(json.dumps(payload), encoding="utf-8")
 
-    rc, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
+    rc, _, payload, stderr = _run_verify(["verify", "--json", str(bundle)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == ""
