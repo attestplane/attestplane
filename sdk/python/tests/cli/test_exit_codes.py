@@ -32,9 +32,7 @@ CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
 PASS_FIXTURE = CONFORMANCE_FIXTURES / "valid_bundle.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
-TAXONOMY_MISMATCH_FIXTURE = (
-    ROOT / "tests" / "conformance" / "schema_version" / "major_version_ahead" / "bundle.json"
-)
+TAXONOMY_MISMATCH_FIXTURE = ROOT / "tests" / "conformance" / "schema_version" / "major_version_ahead" / "bundle.json"
 
 
 def _run_verify(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, dict[str, object], str]:
