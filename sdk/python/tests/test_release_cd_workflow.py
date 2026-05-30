@@ -56,5 +56,6 @@ def test_architecture_audit_is_release_cd_sidecar_not_release_blocker() -> None:
     assert 'audit_args+=(--previous-audit-issue "$PREVIOUS_ISSUE")' in architecture_audit
     assert "${anchor:+--anchor-tag" not in architecture_audit
     assert "${PREVIOUS_ISSUE:+--previous-audit-issue" not in architecture_audit
+    assert "actions: write" in architecture_audit
     assert "issues: write" in architecture_audit
     assert "release-cd" not in architecture_audit.split("permissions:", 1)[1].split("jobs:", 1)[0]
