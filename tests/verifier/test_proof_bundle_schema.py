@@ -20,6 +20,7 @@ from attestplane.verify_reason_codes import (  # noqa: E402
 )
 
 FIXTURES = ROOT / "tests" / "fixtures" / "bundles"
+FORWARD_COMPAT_FIXTURE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
 
 
 def _load_fixture(name: str) -> dict:
@@ -114,6 +115,26 @@ def test_bundle_verifier_accepts_additive_unknown_fields() -> None:
     assert result.error_code == VERIFY_OK
     assert result.primary_reason is None
     assert result.secondary_reasons == ()
+
+
+def test_bundle_verifier_accepts_forward_compatible_fixture() -> None:
+    bundle = json.loads(FORWARD_COMPAT_FIXTURE.read_text(encoding="utf-8"))
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.error_code == VERIFY_OK
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
+    assert bundle["chain_metadata"]["future_metadata_field"] == "kept"
+
+
+def test_cli_verify_accepts_forward_compatible_fixture(capsys) -> None:
+    rc = main(["verify", str(FORWARD_COMPAT_FIXTURE)])
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "OK" in out
 
 
 def test_bundle_verifier_rejects_missing_schema_version() -> None:

@@ -28,6 +28,7 @@ from attestplane.verify_reason_codes import (
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures" / "bundles"
+FORWARD_COMPAT_FIXTURE = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
 UNKNOWN_SCHEMA_VERSION = ROOT / "tests" / "fixtures" / "unknown_schema_version.json"
 
 
@@ -149,4 +150,14 @@ def test_verify_json_reports_unknown_schema_version(
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result["reasons"][0]["path"] == "/chain_metadata/schema_version"
+    assert captured.err == ""
+
+
+def test_verify_accepts_forward_compat_additive_optional_fixture(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", str(FORWARD_COMPAT_FIXTURE)])
+    captured = capsys.readouterr()
+
+    assert rc == 0
     assert captured.err == ""
