@@ -45,3 +45,10 @@ https://www\.contributor-covenant\.org/translations
 # ossf-scorecard workflow and api.scorecard.dev badge endpoint remain the
 # release-train evidence source.
 https://scorecard\.dev/.*
+
+# GitHub-owned repository pages in this checkout are intentionally referenced by
+# historical docs and validation artifacts, but lychee's anonymous CI run can
+# treat them as 404s when the underlying discussion/issue/PR/release/blob page
+# is not publicly reachable from the runner. Keep the link checker focused on
+# external regressions instead of these repository-local GitHub references.
+https://github\.com/attestplane/attestplane/(discussions(/.*)?|issues(/.*)?|labels(/.*)?|pull(/.*)?|releases/tag/.*|blob/main/sdk/python/tests/conformance/vectors\.json)
