@@ -9,11 +9,15 @@ from types import SimpleNamespace
 from pathlib import Path
 
 from attestplane.cli.main import main
+import attestplane.cli.verify_json as verify_json_module
 from attestplane.cli.verify_json import _verify_explanations
+import attestplane.verify_reason_codes as reason_codes_module
 from attestplane.verify_reason_codes import (
+    VERIFY_REASON_TAXONOMY_VERSION,
     format_verify_taxonomy_version,
     resolve_verify_taxonomy_version,
 )
+import attestplane.verifier as verifier_module
 from attestplane.verifier import verify_proof_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,6 +44,48 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out
     assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"
+
+
+def test_taxonomy_version_surfaces_from_the_shared_constant(
+    monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(
+        verify_json_module,
+        "format_verify_taxonomy_version",
+        lambda value=None: "999",
+        raising=False,
+    )
+    monkeypatch.setattr(
+        verify_json_module,
+        "resolve_verify_taxonomy_version",
+        lambda: 999,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        verifier_module, "resolve_verify_taxonomy_version", lambda: 999, raising=False
+    )
+    monkeypatch.setattr(
+        reason_codes_module, "resolve_verify_taxonomy_version", lambda: 999
+    )
+
+    bundle = json.loads(BUNDLE_PATH.read_text(encoding="utf-8"))
+    sdk_result = verify_proof_bundle(bundle)
+
+    json_rc = main(["verify", "--json", str(BUNDLE_PATH)])
+    json_captured = capsys.readouterr()
+    explain_rc = main(["verify", "--explain", str(BUNDLE_PATH)])
+    explain_captured = capsys.readouterr()
+
+    json_payload = json.loads(json_captured.out)
+
+    assert json_rc == 0
+    assert explain_rc == 0
+    assert json_captured.err == ""
+    assert explain_captured.err == ""
+    assert sdk_result.taxonomy_version == VERIFY_REASON_TAXONOMY_VERSION
+    assert json_payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
+    assert sdk_result.taxonomy_version == json_payload["taxonomy_version"]
+    assert f"taxonomy_version={VERIFY_REASON_TAXONOMY_VERSION}" in explain_captured.out
 
 
 def test_missing_taxonomy_version_renders_stable_placeholder() -> None:

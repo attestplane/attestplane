@@ -93,7 +93,7 @@ export function resolveVerifyTaxonomyVersion(): typeof VERIFY_REASON_TAXONOMY_VE
 
 export function formatVerifyTaxonomyVersion(value: number | null | undefined = undefined): string {
   if (value === null || value === undefined) {
-    return String(resolveVerifyTaxonomyVersion());
+    return String(VERIFY_REASON_TAXONOMY_VERSION);
   }
   return String(value);
 }

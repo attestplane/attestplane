@@ -57,8 +57,8 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION,
     VerifyReasonCodeV1,
-    resolve_verify_taxonomy_version,
 )
 
 
@@ -711,7 +711,7 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
-        taxonomy_version=resolve_verify_taxonomy_version(),
+        taxonomy_version=VERIFY_REASON_TAXONOMY_VERSION,
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,
