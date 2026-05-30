@@ -196,9 +196,10 @@ jobs:
           # Write to temp file first to avoid SIGPIPE / pipefail interaction
           # when Python finishes reading before git log finishes writing.
           git log "${LATEST_TAG}..HEAD" --format='%s' 2>/dev/null > /tmp/commits.txt || true
-          level=$(python3 - < /tmp/commits.txt <<'PY'
-          import sys, re
-          lines = sys.stdin.read().splitlines()
+          level=$(python3 <<'PY'
+          import re
+          with open('/tmp/commits.txt') as f:
+              lines = f.read().splitlines()
           has_breaking = any(
               re.search(r'BREAKING[\s_-]CHANGE|feat!:|fix!:|refactor!:|chore!:', ln)
               for ln in lines
