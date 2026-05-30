@@ -25,7 +25,7 @@ pip install attestplane==1.4.6         # pinned to current pre-GA (recommended)
 **Pre-GA.** Pinned version recommended for reproducibility. Not GA. The exact
 tag at the time of reading may have advanced; see
 [CHANGELOG.md](../CHANGELOG.md) and the
-[GitHub releases](https://github.com/attestplane/attestplane/releases/) page.
+[GitHub releases](https://github.com/attestplane/attestplane/releases) page.
 
 ## Three minimal events
 

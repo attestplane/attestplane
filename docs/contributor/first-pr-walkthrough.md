@@ -244,12 +244,12 @@ Before you push, walk this checklist. It mirrors the PR template's
 
 ## 6. Where to ask
 
-- **GitHub Issues** — [issues](https://github.com/attestplane/attestplane/issues/)
+- **GitHub Issues** — [issues](https://github.com/attestplane/attestplane/issues)
   for bug reports and feature requests. Filter to
-  [`good first issue`](https://github.com/attestplane/attestplane/labels/good%20first%20issue/)
+  [`good first issue`](https://github.com/attestplane/attestplane/labels/good%20first%20issue)
   for newcomer-friendly work.
 - **GitHub Discussions** —
-  [discussions](https://github.com/attestplane/attestplane/discussions/) for
+  [discussions](https://github.com/attestplane/attestplane/discussions) for
   open-ended questions ("how should I approach X") and design conversations
   that are not yet a bug or feature.
 - **Stuck mid-PR?** Comment on the issue your PR closes, or push your

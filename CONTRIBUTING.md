@@ -59,13 +59,13 @@ possible while keeping the audit-chain discipline this project depends on.
   step-by-step from branch creation through merge, and is the canonical
   reference for the "small fix with proper discipline" shape.
 - Browse newcomer-friendly work under the
-  [`good first issue`](https://github.com/attestplane/attestplane/labels/good%20first%20issue/)
+  [`good first issue`](https://github.com/attestplane/attestplane/labels/good%20first%20issue)
   label.
 - The full label schema lives at
   [`.github/labels.yml`](.github/labels.yml) — it is the canonical source.
 - Stuck? Comment on the issue, open a draft PR with a question in the
   description, or start a
-  [GitHub Discussion](https://github.com/attestplane/attestplane/discussions/).
+  [GitHub Discussion](https://github.com/attestplane/attestplane/discussions).
 - **Security issues do not go through public issues.** Follow
   [`SECURITY.md`](SECURITY.md) and use the private channels documented
   there.
@@ -187,7 +187,7 @@ review and bisect.
 
 ## 6. Reporting Bugs
 
-For **general bugs**, open a [GitHub Issue](https://github.com/attestplane/attestplane/issues/)
+For **general bugs**, open a [GitHub Issue](https://github.com/attestplane/attestplane/issues)
 and include:
 
 - The minimal command sequence that reproduces the bug

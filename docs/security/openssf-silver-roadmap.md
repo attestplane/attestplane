@@ -136,7 +136,7 @@ applicable to this project's surface, with reason.
 
 | Criterion | State | Evidence or gap | Blocker |
 |---|---|---|---|
-| `report_tracker` | Met | [GitHub Issues](https://github.com/attestplane/attestplane/issues/) is the public bug tracker; referenced from [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`SECURITY.md`](../../SECURITY.md). | None. |
+| `report_tracker` | Met | [GitHub Issues](https://github.com/attestplane/attestplane/issues) is the public bug tracker; referenced from [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`SECURITY.md`](../../SECURITY.md). | None. |
 
 ### Reporting — Vulnerability report process
 
