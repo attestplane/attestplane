@@ -253,7 +253,9 @@ async def implement_activity(
         else:
             sha = ""
 
-        db.upsert_run(issue_number, stage="implemented", branch=branch)
+        _stage = "implemented" if has_changes else "failed"
+        _err = None if has_changes else "no changes produced by Codex"
+        db.upsert_run(issue_number, stage=_stage, branch=branch, error=_err)
         db.log_event(issue_number, "implement", "completed", f"has_changes={has_changes} sha={sha}")
         return {"branch": branch, "has_changes": has_changes, "sha": sha}
 
