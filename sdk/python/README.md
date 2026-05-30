@@ -62,6 +62,9 @@ assert sub.verify().ok      # True
   future SDKs must match the same conformance vector file shipped in this
   package.
 - Strong **GDPR pseudonymization typing** via `SubjectRef`.
+- A public verifier result object, `BundleVerificationResult`, whose stable
+  `taxonomy_version` field matches the `verify --json` and `verify --explain`
+  surfaces for successful verification results.
 
 ## What this SDK does NOT give you (yet)
 

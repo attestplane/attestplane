@@ -231,7 +231,7 @@ def _verify_human_summary(
 ) -> str:
     if bundle is None or result is None:
         return f"{status}"
-    return f"{status} {_verify_success_summary(bundle)}"
+    return f"{status} {_verify_success_summary(bundle, taxonomy_version=result.taxonomy_version)}"
 
 
 def _write_verify_explanations(entries: list[dict[str, Any]]) -> None:
