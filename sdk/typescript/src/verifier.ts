@@ -47,6 +47,7 @@ import {
   type VerifyErrorCode,
 } from './verify_errors.js';
 import {
+  resolveVerifyTaxonomyVersion,
   VERIFY_REASON_CANONICAL_MISMATCH,
   VERIFY_REASON_REQUIRED_FIELD_MISSING,
   VERIFY_REASON_SCHEMA_INVALID,
@@ -56,7 +57,6 @@ import {
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
   VERIFY_REASON_TAXONOMY_VERSION,
-  resolveVerifyTaxonomyVersion,
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
 

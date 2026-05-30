@@ -2,7 +2,7 @@ Fixes #125
 
 ## Summary
 
-Local Codex runner repair for: `[P2][docs] Summarize the v1.7.0 user-visible delta (non-empty + minimum-schema bundle contract)`
+Local Codex runner repair for: \[P2\]\[docs\] Summarize the v1.7.0 user-visible delta (non-empty + minimum-schema bundle contract)
 
 Labels: type:docs, area:docs, priority:P2, planned-task, auto-codex-approved
 

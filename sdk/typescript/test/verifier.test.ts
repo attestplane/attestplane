@@ -8,8 +8,8 @@ import { type ProofBundle, ProofBundleBuilder } from '../src/proof_bundle.js';
 import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
 import {
-  VERIFY_REASON_TAXONOMY_VERSION,
   resolveVerifyTaxonomyVersion,
+  VERIFY_REASON_TAXONOMY_VERSION,
 } from '../src/verify_reason_codes.js';
 import {
   VERIFY_REASON_REQUIRED_FIELD_MISSING,

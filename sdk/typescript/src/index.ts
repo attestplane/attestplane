@@ -102,9 +102,9 @@ export {
 } from './reason_codes.js';
 export {
   ALL_VERIFY_ERROR_CODES_V1,
+  isKnownVerifyErrorCode,
   VERIFY_ERROR_DESCRIPTIONS,
   VERIFY_ERROR_SCHEMA_VERSION,
-  isKnownVerifyErrorCode,
   type VerifyErrorCode,
 } from './verify_errors.js';
 export {
