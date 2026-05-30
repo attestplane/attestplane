@@ -244,7 +244,7 @@ Exit status: `0`
 Output:
 
 ```text
-docs/validation/local_codex_runner/issue-92/03_fix_ci_round_1.prompt.md:6:Issue URL: https://github.com/attestplane/attestplaneissues92
+docs/validation/local_codex_runner/issue-92/03_fix_ci_round_1.prompt.md:6:Issue URL: https://github.com/attestplane/attestplane/issues/92
 ```
 
 Result: the remaining Issue #92 URL is the issue URL from the prompt, not a

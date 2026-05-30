@@ -38,8 +38,8 @@ $ rg -n "v1\\.5\\.9|#91|#94|Opus|stable planning|User-Visible Delta|Explicit Bou
 5:## User-Visible Delta
 7:The single user-visible change in `v1.5.9` is release-planning integrity:
 8:suffix-free stable package cuts now require Opus consultation before the stable
-14:Planning context: [Issue #91](https://github.com/attestplane/attestplaneissues91);
-16:[Issue #94](https://github.com/attestplane/attestplaneissues94).
+14:Planning context: [Issue #91](https://github.com/attestplane/attestplane/issues/91);
+16:[Issue #94](https://github.com/attestplane/attestplane/issues/94).
 25:## Explicit Boundaries
 43:- `release/artifacts/v1.5.9/checksums.sha256`
 44:- `release/artifacts/v1.5.9/artifact-manifest.json`

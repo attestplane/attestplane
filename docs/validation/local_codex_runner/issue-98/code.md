@@ -16,8 +16,8 @@ delta as bounded release-planning test coverage:
 
 The note also links to the available local issue context:
 
-- Source planning issue: [#95](https://github.com/attestplane/attestplaneissues95)
-- Planned-task issue: [#98](https://github.com/attestplane/attestplaneissues98)
+- Source planning issue: [#95](https://github.com/attestplane/attestplane/issues/95)
+- Planned-task issue: [#98](https://github.com/attestplane/attestplane/issues/98)
 
 ## Scope Boundaries
 
