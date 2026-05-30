@@ -102,12 +102,20 @@ def _assert_rationale_lines(
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str,
+    *,
+    signer_subject: str,
+    schema_version: str,
+    anchor_state: str,
+    quarantine_reason: str | None = None,
 ) -> None:
-    assert stdout.strip() == (
+    expected = (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 anchor={anchor_state}"
     )
+    if quarantine_reason is not None:
+        expected = f"{expected} quarantine_reason={quarantine_reason}"
+    assert stdout.strip() == expected
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
@@ -132,6 +140,8 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             None,
             "generic",
+            "absent",
+            None,
             (
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 "/events/0/event/payload/artifact_ref",
@@ -145,6 +155,8 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             VERIFY_REQUIRED_FIELDS_MISSING,
             "compact",
+            "quarantined",
+            VERIFY_REASON_REQUIRED_FIELD_MISSING,
             (
                 VERIFY_REASON_REQUIRED_FIELD_MISSING,
                 "/events",
@@ -158,6 +170,8 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
             "compact",
+            "quarantined",
+            VERIFY_REASON_SIGNATURE_MISSING,
             (
                 VERIFY_REASON_SIGNATURE_MISSING,
                 "/signatures",
@@ -171,6 +185,8 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "2",
             None,
             "compact",
+            "quarantined",
+            VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
             (
                 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
                 "/chain_metadata/schema_version",
@@ -184,6 +200,8 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             None,
             "compact",
+            "absent",
+            None,
             (
                 VERIFY_REASON_STRUCTURE_INVALID,
                 "/policy_trace_refs",
@@ -192,17 +210,31 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
     ]
 
-    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
-        reason,
-        pointer,
-        message_parts,
+    for (
+        argv,
+        expected_rc,
+        signer_subject,
+        schema_version,
+        error_code,
+        stdout_kind,
+        anchor_state,
+        quarantine_reason,
+        (
+            reason,
+            pointer,
+            message_parts,
+        ),
     ) in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout,
+                signer_subject=signer_subject,
+                schema_version=schema_version,
+                anchor_state=anchor_state,
+                quarantine_reason=quarantine_reason,
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
