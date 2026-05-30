@@ -1,0 +1,73 @@
+{
+  "bundle_version": 1,
+  "chain_metadata": {
+    "chain_id": "p3-cli-proofbundle",
+    "schema_version": 1,
+    "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+    "head_hash_hex": "f1de4b3ccd0fcb072f5342f94489341159df5c3c54178b5b7ab15522561d2718",
+    "head_seq": 0,
+    "producer_runtime": "attestplane-sdk-minimal",
+    "evidence_taxonomy_version": 1,
+    "additive_config_flag": "forward_compat_enabled"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "prev_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "event_hash_hex": "f1de4b3ccd0fcb072f5342f94489341159df5c3c54178b5b7ab15522561d2718",
+      "event": {
+        "schema_version": 1,
+        "event_id": "f0f0f0f0-f0f0-4000-8000-00000000fc01",
+        "timestamp": "2026-05-30T12:00:00.000000Z",
+        "event_type": "evidence_event",
+        "actor": "attestplane.sdk",
+        "payload": {
+          "subject_digest": "add1add1add1add1add1add1add1add1add1add1add1add1add1add1add1add1"
+        },
+        "subject_ref": null,
+        "session_id": null,
+        "reference_db_ref": null,
+        "matched_input_ref": "add1add1add1add1add1add1add1add1add1add1add1add1add1add1add1add1",
+        "human_verifier": null
+      }
+    }
+  ],
+  "verification_report": {
+    "ok": true,
+    "first_bad_index": null,
+    "reason": null,
+    "verified_at": "2026-05-30T12:00:00.000000Z",
+    "verifier_version": "1.8.4",
+    "verification_method": "canonical-bytes-walk"
+  },
+  "framework_mappings": [],
+  "forbidden_fields": [
+    "customer_names",
+    "person_names",
+    "pii",
+    "raw_documents",
+    "contracts",
+    "scripts",
+    "tickets",
+    "emails",
+    "secrets",
+    "tokens",
+    "jwts",
+    "private_keys",
+    "raw_audit_payloads"
+  ],
+  "signatures": [
+    {
+      "signature_schema_version": 1,
+      "signed_seq": 0,
+      "signed_event_hash_hex": "f1de4b3ccd0fcb072f5342f94489341159df5c3c54178b5b7ab15522561d2718",
+      "signature_hex": "3847633bf504237d451d7ee58e8ac0b9e2affe8d71cc0190c489bcafd6c62a3556778715d5926a88005f3d8af5c42f3a66dc316c4e2d247c74361160932ad600",
+      "key_id": "4c1be2240f45cc7e65367dd9dcacd347",
+      "public_key_der_b64": "MCowBQYDK2VwAyEAX2cTKUw88agU6NjKCInbI+aCO3UkuvE0n7x9n1FSlFs=",
+      "signing_cert_chain_b64": [],
+      "signed_at": "2026-05-30T12:00:00.000000Z",
+      "signature_mode": "per_event",
+      "signed_payload_b64": "eyJhY3RvciI6ImF0dGVzdHBsYW5lLnNkayIsImV2ZW50X2lkIjoiZjBmMGYwZjAtZjBmMC00MDAwLTgwMDAtMDAwMDAwMDBmYzAxIiwiZXZlbnRfdHlwZSI6ImV2aWRlbmNlX2V2ZW50IiwiaHVtYW5fdmVyaWZpZXIiOm51bGwsIm1hdGNoZWRfaW5wdXRfcmVmIjoiYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMSIsInBheWxvYWQiOnsic3ViamVjdF9kaWdlc3QiOiJhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxYWRkMWFkZDFhZGQxIn0sInJlZmVyZW5jZV9kYl9yZWYiOm51bGwsInNjaGVtYV92ZXJzaW9uIjoxLCJzZXNzaW9uX2lkIjpudWxsLCJzdWJqZWN0X3JlZiI6bnVsbCwidGltZXN0YW1wIjoiMjAyNi0wNS0zMFQxMjowMDowMC4wMDAwMDBaIn0="
+    }
+  ]
+}

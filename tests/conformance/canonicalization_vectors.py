@@ -91,6 +91,7 @@ def emit_positive_canonicalization_bundle(vector: dict[str, Any]) -> dict[str, A
         vector["subject_digest"],
         signer_for_canonicalization_vector(vector),
         extra_payload=vector.get("extra_payload"),
+        extra_chain_metadata=vector.get("extra_chain_metadata"),
         now=parse_vector_utc(vector["now"]),
         event_id=vector["event_id"],
     )

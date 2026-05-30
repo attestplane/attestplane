@@ -93,3 +93,36 @@ def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_versio
     assert result.primary_reason != VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result.primary_reason is not None
     assert VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED in result.secondary_reasons
+
+
+def test_schema_version_additive_positive_forward_compat_fixture() -> None:
+    """The forward-compat additive-optional fixture must verify successfully.
+
+    This pins the positive forward-compatible path from #277 / #275:
+    a proof bundle with a known schema_version plus an unknown additive
+    optional field in chain_metadata verifies ok, and the canonicalization
+    treatment preserves the field in the digest path.
+    """
+    fixture_path = ROOT / "fixtures" / "forward-compat" / "additive-optional.json"
+    bundle = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
+    assert "additive_config_flag" in bundle["chain_metadata"]
+    assert bundle["chain_metadata"]["additive_config_flag"] == "forward_compat_enabled"
+    assert bundle["chain_metadata"]["schema_version"] == 1
+
+
+def test_schema_version_unknown_required_still_rejected() -> None:
+    """Regression guard: unknown required fields (critical_ prefix) must
+    still be rejected with att.verify.schema_unknown (#237 negative vector)."""
+    required_bundle = _bundle("unknown_required_field")
+
+    result = verify_proof_bundle(required_bundle, require_signed_attestation=True)
+
+    assert result.ok is False
+    assert result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert "critical_future_field" in (result.metadata_reason or "")

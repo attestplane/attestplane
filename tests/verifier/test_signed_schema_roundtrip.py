@@ -33,17 +33,25 @@ from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_errors import VERIFY_OK
 
 ROOT = Path(__file__).resolve().parents[2]
-SIGNED_FIXTURES = (ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",)
-CANONICALIZATION_VECTOR_HELPER = ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+SIGNED_FIXTURES = (
+    ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json",
+)
+CANONICALIZATION_VECTOR_HELPER = (
+    ROOT / "tests" / "conformance" / "canonicalization_vectors.py"
+)
 
 
 def _load_vector_manifest() -> Any:
     module_name = "attestplane_canonicalization_vectors"
     if module_name in sys.modules:
         return sys.modules[module_name]
-    spec = importlib.util.spec_from_file_location(module_name, CANONICALIZATION_VECTOR_HELPER)
+    spec = importlib.util.spec_from_file_location(
+        module_name, CANONICALIZATION_VECTOR_HELPER
+    )
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}")
+        raise RuntimeError(
+            f"could not load canonicalization vector helper from {CANONICALIZATION_VECTOR_HELPER}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -76,7 +84,9 @@ def _json_pointer(path: tuple[str, ...]) -> str:
     return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
 
 
-def first_json_diff(expected: Any, actual: Any, path: tuple[str, ...] = ()) -> str | None:
+def first_json_diff(
+    expected: Any, actual: Any, path: tuple[str, ...] = ()
+) -> str | None:
     """Return a JSON-pointer diagnostic for the first divergent field."""
     if type(expected) is not type(actual):
         return (
@@ -89,7 +99,9 @@ def first_json_diff(expected: Any, actual: Any, path: tuple[str, ...] = ()) -> s
         if expected_keys != actual_keys:
             missing = sorted(expected_keys - actual_keys)
             extra = sorted(actual_keys - expected_keys)
-            return f"{_json_pointer(path)} key mismatch: missing={missing}, extra={extra}"
+            return (
+                f"{_json_pointer(path)} key mismatch: missing={missing}, extra={extra}"
+            )
         for key in sorted(expected):
             diff = first_json_diff(expected[key], actual[key], (*path, str(key)))
             if diff is not None:
@@ -101,7 +113,9 @@ def first_json_diff(expected: Any, actual: Any, path: tuple[str, ...] = ()) -> s
                 f"{_json_pointer(path)} length mismatch: "
                 f"expected {len(expected)}, actual {len(actual)}"
             )
-        for index, (expected_item, actual_item) in enumerate(zip(expected, actual, strict=True)):
+        for index, (expected_item, actual_item) in enumerate(
+            zip(expected, actual, strict=True)
+        ):
             diff = first_json_diff(expected_item, actual_item, (*path, str(index)))
             if diff is not None:
                 return diff
@@ -155,7 +169,9 @@ def _framework_mappings(bundle: dict[str, Any]) -> list[FrameworkMapping]:
         FrameworkMapping(
             obligation_id=raw["obligation_id"],
             evidence_event_indexes=tuple(raw["evidence_event_indexes"]),
-            implementation_status_at_bundle_time=raw["implementation_status_at_bundle_time"],
+            implementation_status_at_bundle_time=raw[
+                "implementation_status_at_bundle_time"
+            ],
         )
         for raw in bundle.get("framework_mappings", [])
     ]
@@ -174,11 +190,30 @@ def rebuild_signed_schema_fixture(bundle: dict[str, Any]) -> dict[str, Any]:
     for event in events:
         rebuilt_records.extend(signer.sign_event(event))
 
+    # Preserve additive optional fields in chain_metadata that are not
+    # part of the known builder-managed set.
+    _KNOWN_CHAIN_METADATA = {
+        "chain_id",
+        "schema_version",
+        "genesis_hash_hex",
+        "head_hash_hex",
+        "head_seq",
+        "producer_runtime",
+        "evidence_taxonomy_version",
+        "anchor_ref",
+    }
+    extra_chain_metadata = {
+        key: value
+        for key, value in bundle["chain_metadata"].items()
+        if key not in _KNOWN_CHAIN_METADATA
+    } or None
+
     builder = ProofBundleBuilder(
         chain_id=bundle["chain_metadata"]["chain_id"],
         producer_runtime=bundle["chain_metadata"]["producer_runtime"],
         framework_mappings=_framework_mappings(bundle),
         forbidden_fields=tuple(bundle["forbidden_fields"]),
+        extra_chain_metadata=extra_chain_metadata,
     )
     builder.extend(events)
     builder.extend_signatures(rebuilt_records)
@@ -186,7 +221,9 @@ def rebuild_signed_schema_fixture(bundle: dict[str, Any]) -> dict[str, Any]:
     original_version = attestplane.__version__
     try:
         attestplane.__version__ = expected_version
-        return builder.build(now=_parse_utc(bundle["verification_report"]["verified_at"]))
+        return builder.build(
+            now=_parse_utc(bundle["verification_report"]["verified_at"])
+        )
     finally:
         attestplane.__version__ = original_version
 
@@ -196,7 +233,9 @@ def rebuild_signed_schema_fixture(bundle: dict[str, Any]) -> dict[str, Any]:
     tuple(_signed_schema_round_trip_cases()),
     ids=lambda case: case.case_id,
 )
-def test_signed_schema_fixture_round_trips_byte_identically(case: _RoundTripCase) -> None:
+def test_signed_schema_fixture_round_trips_byte_identically(
+    case: _RoundTripCase,
+) -> None:
     expected = case.load_expected()
     actual = rebuild_signed_schema_fixture(expected)
 
@@ -212,7 +251,9 @@ def test_signed_schema_fixture_round_trips_byte_identically(case: _RoundTripCase
     tuple(_signed_schema_round_trip_cases()),
     ids=lambda case: case.case_id,
 )
-def test_signed_schema_roundtrip_keeps_strict_verifier_contract(case: _RoundTripCase) -> None:
+def test_signed_schema_roundtrip_keeps_strict_verifier_contract(
+    case: _RoundTripCase,
+) -> None:
     expected = case.load_expected()
     actual = rebuild_signed_schema_fixture(expected)
 
@@ -247,7 +288,9 @@ def test_signed_schema_roundtrip_rejects_negative_edge_case_vectors(
             (vector_manifest.DuplicateKeyError, json.JSONDecodeError),
             match=".+",
         ):
-            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+            json.loads(
+                candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys
+            )
         return
 
     with pytest.raises(CanonicalizationError, match=".+"):

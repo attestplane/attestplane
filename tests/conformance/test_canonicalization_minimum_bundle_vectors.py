@@ -25,7 +25,9 @@ def _load_vector_manifest() -> Any:
     helper_path = Path(__file__).with_name("canonicalization_vectors.py")
     spec = importlib.util.spec_from_file_location(module_name, helper_path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"could not load canonicalization vector helper from {helper_path}")
+        raise RuntimeError(
+            f"could not load canonicalization vector helper from {helper_path}"
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -49,14 +51,18 @@ def _classify_negative_reason_code(vector: dict[str, Any], candidate: Any) -> st
     if expected_reason_code == "json.duplicate_key":
         assert isinstance(candidate, str)
         with pytest.raises(vector_manifest.DuplicateKeyError) as excinfo:
-            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+            json.loads(
+                candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys
+            )
         assert "duplicate JSON key" in str(excinfo.value)
         return expected_reason_code
 
     if expected_reason_code == "json.non_canonical_envelope":
         assert isinstance(candidate, str)
         with pytest.raises(json.JSONDecodeError) as excinfo:
-            json.loads(candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys)
+            json.loads(
+                candidate, object_pairs_hook=vector_manifest.reject_duplicate_keys
+            )
         assert excinfo.value.msg
         return expected_reason_code
 
@@ -67,8 +73,12 @@ def _classify_negative_reason_code(vector: dict[str, Any], candidate: Any) -> st
     return expected_reason_code
 
 
-@pytest.mark.parametrize("vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"])
-def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]) -> None:
+@pytest.mark.parametrize(
+    "vector", POSITIVE_VECTORS, ids=lambda vector: vector["case_id"]
+)
+def test_canonicalization_positive_minimum_bundle_vectors(
+    vector: dict[str, Any],
+) -> None:
     bundle = vector_manifest.emit_positive_canonicalization_bundle(vector)
     result = verify_proof_bundle(bundle, **vector["verify_options"])
     raw = vector_manifest.canonical_json_text(bundle)
@@ -87,12 +97,26 @@ def test_canonicalization_positive_minimum_bundle_vectors(vector: dict[str, Any]
         elif assertion == "int64_boundary_payload_is_accepted":
             value = bundle["events"][0]["event"]["payload"]["boundary_timestamp_us"]
             assert value == 9223372036854775807
+        elif assertion == "additive_optional_field_in_canonical_text":
+            extra = vector.get("extra_chain_metadata", {})
+            assert isinstance(extra, dict) and extra
+            for key, value in extra.items():
+                assert key in bundle["chain_metadata"], (
+                    f"extra_chain_metadata key {key!r} not found in chain_metadata"
+                )
+                assert f'"{key}":' in raw, (
+                    f"extra_chain_metadata key {key!r} not found in canonical JSON text"
+                )
         else:
             raise AssertionError(f"unknown assertion: {assertion}")
 
 
-@pytest.mark.parametrize("vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"])
-def test_canonicalization_minimum_bundle_negative_vectors(vector: dict[str, Any]) -> None:
+@pytest.mark.parametrize(
+    "vector", NEGATIVE_VECTORS, ids=lambda vector: vector["case_id"]
+)
+def test_canonicalization_minimum_bundle_negative_vectors(
+    vector: dict[str, Any],
+) -> None:
     candidate = vector_manifest.materialize_negative_canonicalization_candidate(vector)
     reason_code = _classify_negative_reason_code(vector, candidate)
     assert reason_code == vector["expected_reason_code"], vector["case_id"]

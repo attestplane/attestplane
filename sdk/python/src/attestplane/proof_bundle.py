@@ -225,6 +225,13 @@ class ProofBundleBuilder:
     These markers are strictly additive. They prove shape and references only;
     they do not claim GDPR compliance or legal sufficiency.
     """
+    extra_chain_metadata: dict[str, Any] | None = None
+    """Optional additive fields merged into ``chain_metadata``.
+
+    Unknown keys must be optional (not prefixed with ``critical_``).
+    The verifier preserves them and canonicalization includes them in
+    the deterministic digest path.
+    """
 
     @classmethod
     def minimal(
@@ -233,6 +240,7 @@ class ProofBundleBuilder:
         signer: Any,
         *,
         extra_payload: dict[str, Any] | None = None,
+        extra_chain_metadata: dict[str, Any] | None = None,
         now: datetime | None = None,
         event_id: str | None = None,
     ) -> dict[str, Any]:
@@ -273,6 +281,14 @@ class ProofBundleBuilder:
             raise IncompleteProofBundleError("extra_payload must be a JSON object")
         if extra_payload is not None and "subject_digest" in extra_payload:
             raise IncompleteProofBundleError("extra_payload must not override subject_digest")
+        if extra_chain_metadata is not None and not isinstance(extra_chain_metadata, dict):
+            raise IncompleteProofBundleError("extra_chain_metadata must be a JSON object")
+        if extra_chain_metadata is not None:
+            for key in extra_chain_metadata:
+                if not isinstance(key, str) or not key:
+                    raise IncompleteProofBundleError("extra_chain_metadata keys must be non-empty strings")
+                if key.startswith("critical_"):
+                    raise IncompleteProofBundleError(f"extra_chain_metadata key {key!r} is reserved (critical_ prefix)")
 
         actual_now = now if now is not None else datetime.now(UTC)
         payload = {"subject_digest": subject_digest, **(extra_payload or {})}
@@ -295,7 +311,11 @@ class ProofBundleBuilder:
             raise IncompleteProofBundleError("signer returned no signature records")
 
         chain_id = str(getattr(signer, "_chain_id", "attestplane-sdk-minimal"))
-        builder = cls(chain_id=chain_id, producer_runtime="attestplane-sdk-minimal")
+        builder = cls(
+            chain_id=chain_id,
+            producer_runtime="attestplane-sdk-minimal",
+            extra_chain_metadata=extra_chain_metadata,
+        )
         builder.extend([event])
         builder.extend_signatures(list(records))
         return builder.build(now=actual_now)
@@ -393,6 +413,7 @@ class ProofBundleBuilder:
                 "producer_runtime": self.producer_runtime,
                 "evidence_taxonomy_version": 1,
                 **({"anchor_ref": self.anchor_ref} if self.anchor_ref else {}),
+                **(self.extra_chain_metadata or {}),
             },
             "events": [_serialize_chained_event(ev) for ev in self.events],
             "verification_report": {

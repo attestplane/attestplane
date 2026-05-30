@@ -1,0 +1,22 @@
+{
+  "assertions": [
+    "recursive_unique_keys",
+    "additive_optional_field_in_canonical_text"
+  ],
+  "case_id": "canonicalization-positive-additive-optional-field",
+  "description": "Helper-emitted minimum bundle with an additive optional field in chain_metadata that is preserved in canonical form and verifies successfully.",
+  "event_id": "00000000-0000-7000-8000-000000137010",
+  "expected_ok": true,
+  "extra_chain_metadata": {
+    "future_metadata_field": "canonical_additive_value"
+  },
+  "helper": "ProofBundleBuilder.minimal",
+  "now": "2026-05-22T00:00:01.000000Z",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.positive.v1",
+  "seed_hex": "1370100000000000000000000000000000000000000000000000000000000002",
+  "subject_digest": "1370100000000000000000000000000000000000000000000000000000000002",
+  "verify_options": {
+    "require_non_empty": true,
+    "require_signed_attestation": true
+  }
+}
