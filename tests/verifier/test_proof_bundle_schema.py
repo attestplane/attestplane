@@ -6,6 +6,9 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -22,8 +25,8 @@ from attestplane.verify_reason_codes import (  # noqa: E402
 FIXTURES = ROOT / "tests" / "fixtures" / "bundles"
 
 
-def _load_fixture(name: str) -> dict:
-    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+def _load_fixture(name: str) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads((FIXTURES / name).read_text(encoding="utf-8")))
 
 
 def test_strict_verifier_accepts_bundle_with_signed_attestation_schema() -> None:
@@ -137,6 +140,7 @@ def test_bundle_verifier_rejects_unknown_schema_version_major() -> None:
     assert result.primary_reason == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 
+<<<<<<< Updated upstream
 def test_bundle_verifier_rejects_unknown_required_metadata_field() -> None:
     bundle = _load_fixture("valid_signed_attestation.json")
     bundle["chain_metadata"]["critical_future_field"] = True
@@ -149,6 +153,13 @@ def test_bundle_verifier_rejects_unknown_required_metadata_field() -> None:
 
 
 def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:
+||||||| Stash base
+def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:
+=======
+def test_cli_bundle_option_uses_strict_schema_mode(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+>>>>>>> Stashed changes
     rc = main(["verify", "--bundle", str(FIXTURES / "empty_attestations.json")])
     out = capsys.readouterr().out
 
