@@ -164,7 +164,7 @@ async def implement_activity(
         )
 
         # First attempt uses flash (fast/cheap); retries escalate to pro.
-        _impl_model = QWEN_MODEL if activity.info().attempt == 1 else "deepseek-v4-pro"
+        _impl_model = QWEN_MODEL
         activity.logger.info("implement_activity attempt=%d model=%s", activity.info().attempt, _impl_model)
         try:
             await asyncio.to_thread(
@@ -588,7 +588,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
             f"\n## CI Error Log\n{error_summary[:4000]}\n"
         )
 
-        _fix_model = QWEN_MODEL if activity.info().attempt == 1 else "deepseek-v4-pro"
+        _fix_model = QWEN_MODEL
         activity.logger.info("fix_ci_activity attempt=%d model=%s", activity.info().attempt, _fix_model)
         await asyncio.to_thread(
             _run,
