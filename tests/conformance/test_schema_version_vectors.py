@@ -8,46 +8,21 @@ from pathlib import Path
 from typing import Any, TypedDict, cast
 
 import pytest
-
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_VERSION_DIR = ROOT / "tests" / "conformance" / "schema_version"
-<<<<<<< Updated upstream
 SCHEMA_VERSION_README = SCHEMA_VERSION_DIR / "README.md"
 SCHEMA_VERSION_VECTORS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
 )["cases"]
 SCHEMA_VERSION_CASE_IDS = {str(vector["case_id"]) for vector in SCHEMA_VERSION_VECTORS}
-||||||| Stash base
 
-EXPECTED_CASES = {
-    "additive_minor_ok": {
-        "ok": True,
-        "primary_reason": None,
-        "extra_fields": (),
-    },
-    "additive_with_unknown_field_ok": {
-        "ok": True,
-        "primary_reason": None,
-        "extra_fields": ("future_bundle_field",),
-    },
-    "missing": {
-        "ok": False,
-        "primary_reason": VERIFY_REASON_SCHEMA_VERSION_MISSING,
-        "extra_fields": (),
-    },
-    "unknown_major": {
-        "ok": False,
-        "primary_reason": VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
-        "extra_fields": (),
-    },
-}
-=======
 
 class _ExpectedCase(TypedDict):
     ok: bool
@@ -77,24 +52,13 @@ EXPECTED_CASES: dict[str, _ExpectedCase] = {
         "extra_fields": (),
     },
 }
->>>>>>> Stashed changes
 
 
-<<<<<<< Updated upstream
-def _bundle(case: str) -> dict:
-    return json.loads(
-        (SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8")
-    )
-||||||| Stash base
-def _bundle(case: str) -> dict:
-    return json.loads((SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8"))
-=======
 def _bundle(case: str) -> dict[str, Any]:
     return cast(
         dict[str, Any],
         json.loads((SCHEMA_VERSION_DIR / case / "bundle.json").read_text(encoding="utf-8")),
     )
->>>>>>> Stashed changes
 
 
 @pytest.mark.parametrize("case", sorted(SCHEMA_VERSION_CASE_IDS))

@@ -16,7 +16,7 @@ No standalone P0 product task is proposed for this daily plan. The active FreeTS
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][typescript][verifier] Close the TypeScript SDK anchoring/quarantine parity gap
+### ISSUE 1 · [P1]\[typescript]\[verifier] Close the TypeScript SDK anchoring/quarantine parity gap
 
 **Owner**: typescript/verifier
 
@@ -51,7 +51,7 @@ No standalone P0 product task is proposed for this daily plan. The active FreeTS
 - Existing Python anchoring quarantine behavior is the reference; TS must match it exactly.
 - Do not introduce network dependencies in the TS test suite — use offline fixtures.
 
-### ISSUE 2 · [P1][verifier][cli] Reference existing `taxonomy_version` surfacing and `--require-taxonomy-version` pinning gate tasks
+### ISSUE 2 · [P1]\[verifier]\[cli] Reference existing `taxonomy_version` surfacing and `--require-taxonomy-version` pinning gate tasks
 
 **Owner**: verifier/cli
 
@@ -81,7 +81,7 @@ No standalone P0 product task is proposed for this daily plan. The active FreeTS
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][release] Document the v1.8.18 user-visible delta and record validation evidence
+### ISSUE 3 · [P2]\[docs]\[release] Document the v1.8.18 user-visible delta and record validation evidence
 
 **Owner**: docs/release
 

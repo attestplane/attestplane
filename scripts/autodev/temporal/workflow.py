@@ -10,12 +10,12 @@ from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from .activities import (
-        implement_activity,
         create_pr_activity,
         fix_ci_activity,
-        review_pr_activity,
-        post_review_activity,
+        implement_activity,
         merge_pr_activity,
+        post_review_activity,
+        review_pr_activity,
     )
 
 # implement + create_pr run on the main queue (Codex slots).
