@@ -1,0 +1,16 @@
+{
+  "anchoring": {
+    "quarantined": false,
+    "status": "absent"
+  },
+  "bundle": {
+    "digest": "d4d37025f7452ad2525d6b37c898bf08cd335db3e7983ce04e242e898b77b2cb",
+    "schema_version": 1
+  },
+  "exit_code": 0,
+  "reason_code": null,
+  "reasons": [],
+  "result": "pass",
+  "schema_version": 1,
+  "taxonomy_version": 1
+}
