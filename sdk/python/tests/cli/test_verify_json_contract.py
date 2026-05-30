@@ -44,6 +44,8 @@ SCHEMA_VERSION_ADDITIVE_FIXTURE = (
 )
 GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+FAIL_GOLDEN_FIXTURE = ROOT / "tests" / "conformance" / "fixtures" / "verify_json_fail.golden"
+VERIFY_JSON_FAIL_GOLDEN = json.loads(FAIL_GOLDEN_FIXTURE.read_text(encoding="utf-8"))
 VERIFY_JSON_EXIT_CODES = {
     "accept": VERIFY_JSON_EXIT_CODE_VERIFIED,
     "verification_failure": VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
@@ -147,6 +149,30 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert rc == VERIFY_JSON_EXIT_CODES["accept"]
     assert stderr == ""
     assert payload == VERIFY_JSON_GOLDEN
+
+
+def test_verify_json_pass_golden_fixture_is_shape_locked() -> None:
+    _assert_matches_verify_result_v1(VERIFY_JSON_GOLDEN)
+    assert VERIFY_JSON_GOLDEN["result"] == "pass"
+    assert VERIFY_JSON_GOLDEN["exit_code"] == VERIFY_JSON_EXIT_CODES["accept"]
+    assert VERIFY_JSON_GOLDEN["reason_code"] is None
+    assert VERIFY_JSON_GOLDEN["reasons"] == []
+    assert VERIFY_JSON_GOLDEN["anchoring"] == {"status": "unanchored", "quarantined": False}
+
+
+def test_verify_json_fail_golden_fixture_is_shape_locked() -> None:
+    _assert_matches_verify_result_v1(VERIFY_JSON_FAIL_GOLDEN)
+    assert VERIFY_JSON_FAIL_GOLDEN["result"] == "fail"
+    assert VERIFY_JSON_FAIL_GOLDEN["exit_code"] == VERIFY_JSON_EXIT_CODES["verification_failure"]
+    assert VERIFY_JSON_FAIL_GOLDEN["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert VERIFY_JSON_FAIL_GOLDEN["reasons"] == [
+        {
+            "code": VERIFY_REASON_CANONICAL_MISMATCH,
+            "message": "canonicalization failed",
+            "path": "/events/0/event/payload/artifact_ref",
+        },
+    ]
+    assert VERIFY_JSON_FAIL_GOLDEN["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
