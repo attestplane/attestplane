@@ -61,6 +61,8 @@ def _gh(args: list[str], **kwargs: Any) -> str:
 
 def _purge_whitespace_only_changes(worktree: str) -> None:
     """Reset files whose only changes are whitespace/formatting (no semantic diff)."""
+    if not Path(worktree).exists():
+        return  # qwen may have removed the worktree dir; skip silently
     all_changed = set(_run(["git", "diff", "--name-only"], cwd=worktree).splitlines())
     semantic_changed = set(
         _run(["git", "diff", "--ignore-all-space", "--name-only"], cwd=worktree).splitlines()
@@ -557,6 +559,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
         return {"ci_passed": False, "fixed": False}
 
     # ── run Qwen on a fresh worktree of the branch ───────────────────────────
+    import shutil as _shutil
     main = str(MAIN_REPO)
     worktree = str(MAIN_REPO.parent / f"attestplane-cifix-{issue_number}")
     try:
@@ -566,6 +569,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
                 _run(["git", "worktree", "remove", "--force", worktree], cwd=main)
             except RuntimeError:
                 pass
+            _shutil.rmtree(worktree, ignore_errors=True)
         _run(["git", "worktree", "add", "-B", branch, worktree, f"origin/{branch}"], cwd=main)
 
         fix_prompt = (
