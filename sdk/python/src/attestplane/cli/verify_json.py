@@ -32,6 +32,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
     VerifyReasonCodeV1,
     format_verify_taxonomy_version,
     resolve_verify_taxonomy_version,
@@ -528,6 +529,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -701,6 +703,30 @@ def build_verify_json_outcome(
             bundle=bundle,
             explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
+
+    if require_taxonomy_version is not None and result.ok:
+        current_taxonomy_version = resolve_verify_taxonomy_version()
+        if current_taxonomy_version != require_taxonomy_version:
+            path = "/"
+            message = (
+                f"current taxonomy_version={format_verify_taxonomy_version(current_taxonomy_version)} "
+                f"does not satisfy required v{require_taxonomy_version}"
+            )
+            return _json_failure(
+                bundle_digest=bundle_digest,
+                reason=_reason_entry(
+                    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
+                    path,
+                    summary="taxonomy version pin rejected",
+                    detail=message,
+                    explain=explain,
+                ),
+                exit_code=1,
+                bundle=bundle,
+                explanation=(
+                    [_explanation_entry(VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED, path, message)] if explain else None
+                ),
+            )
 
     if result.ok:
         return _json_pass(

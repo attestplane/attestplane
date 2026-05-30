@@ -60,6 +60,7 @@ def test_verify_help_declares_partial_scope(capsys: pytest.CaptureFixture[str]) 
     normalized = " ".join(out.split())
     assert "chain/report-oriented" in normalized
     assert "not a full verifier" in normalized
+    assert "--require-taxonomy-version" in normalized
     assert "policy_trace_refs closure" in normalized
     assert "signature verification" in normalized
     assert "anchor verification" in normalized
@@ -199,6 +200,24 @@ def test_verify_detects_tampered_bundle(tmp_path: Path, capsys: pytest.CaptureFi
     capsys.readouterr()
     rc = main(["verify", str(bundle_path)])
     assert rc == 1
+    out = capsys.readouterr().out
+    assert out.startswith("FAIL")
+
+
+def test_verify_require_taxonomy_version_honors_consumer_pin(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    chain_path = tmp_path / "chain.jsonl"
+    bundle_path = tmp_path / "bundle.json"
+    _seed_jsonl_chain(chain_path, n=2)
+    assert main(["export", str(chain_path), "--out", str(bundle_path)]) == 0
+    capsys.readouterr()
+
+    assert main(["verify", "--require-taxonomy-version", "v1", str(bundle_path)]) == 0
+    capsys.readouterr()
+
+    assert main(["verify", "--require-taxonomy-version", "v0", str(bundle_path)]) == 1
     out = capsys.readouterr().out
     assert out.startswith("FAIL")
 

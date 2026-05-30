@@ -41,6 +41,10 @@ The payload is fixed at schema version 1:
   CLI surfaces all resolve this value through the same public helper.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- `--require-taxonomy-version vN` turns that surfaced taxonomy version into a
+  consumer pin. When the current verifier taxonomy does not match the required
+  version, `verify` fails closed with `att.verify.taxonomy_version_unsupported`
+  and a non-zero exit code. When the flag is absent, behavior is unchanged.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.

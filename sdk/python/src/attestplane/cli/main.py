@@ -40,6 +40,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -79,6 +80,15 @@ def _add_explain_flag(p: argparse.ArgumentParser) -> None:
         action="store_true",
         help="include the derived reasons list in the verifier report",
     )
+
+
+def _require_taxonomy_version(value: str) -> int:
+    normalized = value.strip()
+    if normalized.startswith("v"):
+        normalized = normalized[1:]
+    if not normalized.isdigit():
+        raise argparse.ArgumentTypeError("taxonomy version must look like vN, for example v1")
+    return int(normalized)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -131,6 +141,13 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=_require_taxonomy_version,
+        metavar="vN",
+        help="fail closed unless the verifier taxonomy_version matches the required consumer pin",
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -430,12 +447,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
 
     if args.json_output:
         outcome = build_verify_json_outcome(
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -561,9 +580,49 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=require_taxonomy_version,
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
+        return 1
+
+    if require_taxonomy_version is not None and result.ok and result.taxonomy_version != require_taxonomy_version:
+        explain = getattr(args, "explain", False)
+        human = (
+            f"FAIL: verifier taxonomy_version v{result.taxonomy_version} does not satisfy required v"
+            f"{require_taxonomy_version}"
+        )
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+        _emit(
+            {
+                "ok": False,
+                "error": "taxonomy_version",
+                "error_code": VERIFY_SCHEMA_ERROR,
+                "primary_reason": VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
+                "secondary_reasons": [],
+                "detail": (
+                    f"current taxonomy_version=v{result.taxonomy_version} does not satisfy required "
+                    f"v{require_taxonomy_version}"
+                ),
+                **_verify_scope_metadata(),
+            },
+            args.json_output,
+            human=human,
+        )
+        if explain and not args.json_output:
+            _write_verify_explanations(
+                [
+                    {
+                        "primary_reason": VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED,
+                        "pointer": "/",
+                        "message": (
+                            f"current taxonomy_version=v{result.taxonomy_version} does not satisfy required "
+                            f"v{require_taxonomy_version}"
+                        ),
+                    }
+                ]
+            )
         return 1
 
     payload = {

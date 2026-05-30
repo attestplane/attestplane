@@ -912,6 +912,14 @@
       "documented": false,
       "kind": "constant",
       "module": "attestplane",
+      "name": "VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
       "name": "VERIFY_REASON_SIGNATURE_INVALID",
       "notes": "",
       "stability": "alpha_public"

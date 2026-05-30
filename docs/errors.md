@@ -87,6 +87,7 @@ The v1.7.x release-note delta names the same stability knob
 | `att.verify.schema_unknown` | The input declares an unknown schema family, verification method namespace, or fail-closed critical/required field. |
 | `att.verify.schema_version_missing` | A known bundle, payload, signature, or verifier schema version is missing. |
 | `att.verify.schema_version_unsupported` | A known bundle, payload, signature, or verifier schema version is unsupported. |
+| `att.verify.taxonomy_version_unsupported` | The current verifier taxonomy version does not satisfy a required consumer pin. |
 | `att.verify.signature_invalid` | Signature material is present but malformed or fails verifier checks. |
 | `att.verify.signature_missing` | Strict verification requires signature material but none is present. |
 | `att.verify.structure_invalid` | Known bundle relationships are malformed, duplicated, dangling, or out of order. |

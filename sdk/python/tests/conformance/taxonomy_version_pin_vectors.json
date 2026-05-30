@@ -1,0 +1,21 @@
+{
+  "cases": [
+    {
+      "case_id": "taxonomy-version-pin-match-v1",
+      "expected_exit_code": 0,
+      "expected_ok": true,
+      "expected_reason_code": null,
+      "path": "sdk/python/tests/conformance/free_tsa_anchored_bundle.json",
+      "require_taxonomy_version": "v1"
+    },
+    {
+      "case_id": "taxonomy-version-pin-mismatch-v0",
+      "expected_exit_code": 1,
+      "expected_ok": false,
+      "expected_reason_code": "att.verify.taxonomy_version_unsupported",
+      "path": "sdk/python/tests/conformance/free_tsa_anchored_bundle.json",
+      "require_taxonomy_version": "v0"
+    }
+  ],
+  "schema_version": "attestplane.verify.taxonomy_version_pin.v1"
+}

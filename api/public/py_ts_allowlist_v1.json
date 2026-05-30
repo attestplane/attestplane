@@ -1210,6 +1210,14 @@
     },
     {
       "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes the stable verifier taxonomy pinning constant; TypeScript parity is not yet shipped.",
+      "review_by": "v1.8.20",
+      "symbol": "VERIFY_REASON_TAXONOMY_VERSION_UNSUPPORTED",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": false,
       "reason": "Issue #172 verifier rejection reason-code helper uses idiomatic camelCase in TypeScript; Python exposes the equivalent snake_case helper.",
       "review_by": "v1.7.5",
