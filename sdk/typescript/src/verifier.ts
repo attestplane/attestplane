@@ -256,13 +256,19 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
     if (!isPlainObject(anchoring)) {
       throw new BundleSchemaError('anchoring must be a JSON object when present');
     }
-    const missingAnchoring = ['status', 'quarantined'].filter((k) => !(k in (anchoring as Record<string, unknown>)));
+    const missingAnchoring = ['status', 'quarantined'].filter(
+      (k) => !(k in (anchoring as Record<string, unknown>)),
+    );
     if (missingAnchoring.length > 0) {
-      throw new BundleSchemaError(`anchoring missing required fields: ${JSON.stringify(missingAnchoring)}`);
+      throw new BundleSchemaError(
+        `anchoring missing required fields: ${JSON.stringify(missingAnchoring)}`,
+      );
     }
     const anchoringRecord = anchoring as Record<string, unknown>;
     if (!ANCHORING_STATUS.has(String(anchoringRecord.status))) {
-      throw new BundleSchemaError(`anchoring.status must be one of ${JSON.stringify([...ANCHORING_STATUS].sort())}`);
+      throw new BundleSchemaError(
+        `anchoring.status must be one of ${JSON.stringify([...ANCHORING_STATUS].sort())}`,
+      );
     }
     if (typeof anchoringRecord.quarantined !== 'boolean') {
       throw new BundleSchemaError('anchoring.quarantined must be a boolean');
@@ -542,7 +548,10 @@ function resultIsQuarantined(
   errorCode: VerifyErrorCode,
   primaryReason: VerifyReasonCodeV1 | null,
 ): boolean {
-  if (errorCode === VERIFY_BUNDLE_SCHEMA_INCOMPLETE || errorCode === VERIFY_REQUIRED_FIELDS_MISSING) {
+  if (
+    errorCode === VERIFY_BUNDLE_SCHEMA_INCOMPLETE ||
+    errorCode === VERIFY_REQUIRED_FIELDS_MISSING
+  ) {
     return true;
   }
   return (
@@ -794,7 +803,8 @@ export function verifyProofBundle(
     retentionOk: retentionProofs.ok,
     explicitAnchoringQuarantine: explicitQuarantine,
   });
-  const anchoringQuarantined = explicitQuarantine || resultIsQuarantined(errorCode, reasons.primary);
+  const anchoringQuarantined =
+    explicitQuarantine || resultIsQuarantined(errorCode, reasons.primary);
   let anchoringStatus: 'verified' | 'quarantined' | 'absent';
   if (anchoringQuarantined) {
     anchoringStatus = 'quarantined';
@@ -811,7 +821,9 @@ export function verifyProofBundle(
   } else {
     anchoringStatus = 'absent';
   }
-  const quarantineReason: VerifyReasonCodeV1 | null = anchoringQuarantined ? (reasons.primary ?? null) : null;
+  const quarantineReason: VerifyReasonCodeV1 | null = anchoringQuarantined
+    ? (reasons.primary ?? null)
+    : null;
 
   return {
     ok:

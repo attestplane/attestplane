@@ -42,6 +42,7 @@ top-level field. A bundle containing an `anchoring` block passes Python
 `ALLOWED_TOP_LEVEL` does not include `"anchoring"`.
 
 Additionally, the TypeScript `BundleVerificationResult` lacks:
+
 - `anchoring_quarantined: boolean`
 - `quarantine_reason: VerifyReasonCodeV1 | null`
 - `anchoring_status: "verified" | "quarantined" | "absent"`

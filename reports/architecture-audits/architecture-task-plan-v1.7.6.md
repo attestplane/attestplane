@@ -23,7 +23,7 @@
 
 ## P0 Issues
 
-### ISSUE 1 · [P0][typescript][verifier] Close the TypeScript verifier anchoring parity gap
+### ISSUE 1 · [P0]\[typescript\]\[verifier\] Close the TypeScript verifier anchoring parity gap
 
 Owner: sdk/typescript
 
@@ -69,7 +69,7 @@ Rollout / migration notes:
 
 ## P1 Issues
 
-### ISSUE 2 · [P1][conformance] Audit and complete the negative-edge matrix for newly landed v1 vectors
+### ISSUE 2 · [P1]\[conformance\] Audit and complete the negative-edge matrix for newly landed v1 vectors
 
 Owner: conformance
 
@@ -102,7 +102,7 @@ Rollout / migration notes:
 - Add only missing edge rows; do not remove or rename existing rows.
 - Verify that the matrix asserts the same expected reason codes the vectors declare.
 
-### ISSUE 3 · [P1][typescript][conformance] Add TypeScript negative vector classifier matching Python SDK
+### ISSUE 3 · [P1]\[typescript\]\[conformance\] Add TypeScript negative vector classifier matching Python SDK
 
 Owner: sdk/typescript
 
@@ -136,7 +136,7 @@ Rollout / migration notes:
 - The classifier is additive — existing TS negative vector tests are not removed.
 - Keep the classification logic structurally similar to the Python SDK.
 
-### ISSUE 4 · [P1][conformance] Add 3 gap-closure negative vectors to on-disk corpus
+### ISSUE 4 · [P1]\[conformance\] Add 3 gap-closure negative vectors to on-disk corpus
 
 Owner: conformance
 
@@ -175,7 +175,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 5 · [P2][docs][release] Document the v1.7.6 user-visible delta: TypeScript anchoring fix
+### ISSUE 5 · [P2]\[docs\]\[release\] Document the v1.7.6 user-visible delta: TypeScript anchoring fix
 
 Owner: docs/release
 
