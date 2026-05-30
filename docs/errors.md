@@ -64,9 +64,9 @@ by `verify` paths. Issue #236 threads that same taxonomy through both
   results, and `secondary_reasons` is an ordered list of additional failed
   checks. Successful verifier results use `primary_reason: null` and
   `secondary_reasons: []`.
-- CLI JSON surfaces the same taxonomy with `reason_code` and
-  `taxonomy_version`, while `--explain` renders the same code set in human
-  form and adds a top-level `explanation[]` array with
+- CLI JSON surfaces the same taxonomy with `reason_code` and `reasons[]`,
+  while `--explain` renders the same code set in human form and adds a
+  top-level `explanation[]` array with
   `{primary_reason, pointer, message}` entries.
 
 These codes are namespaced under `att.verify.*`. The taxonomy is pinned by

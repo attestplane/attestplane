@@ -154,6 +154,10 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
         "quarantined",
         "unanchored",
     ]
+    assert schema["properties"]["taxonomy_version"]["anyOf"] == [
+        {"type": "integer"},
+        {"type": "null"},
+    ]
 
 
 def test_verify_json_output_contract_version_is_explicit() -> None:
