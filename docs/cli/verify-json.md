@@ -36,9 +36,10 @@ The payload is fixed at schema version 1:
   prevented verification.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
-- `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use. The Python SDK verifier result object and the
-  CLI surfaces all resolve this value through the same public helper.
+- `taxonomy_version` is copied from the verified proof bundle's
+  `chain_metadata.evidence_taxonomy_version` field and surfaced unchanged by
+  the Python SDK verifier result object, `verify --json`, and `verify
+  --explain`.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
@@ -79,8 +80,10 @@ attestplane verify --json --explain "$bundle"
 The flag is additive: it does not bump `schema_version`, it does not change
 the `verify --json` contract documented in #220, and it does not alter the
 bundle forward-compatibility rules documented in #217. It also does not alter
-`taxonomy_version`; the shared `att.verify.*` reason-code taxonomy lives in
-`docs/errors.md`.
+`taxonomy_version`; the verifier reads that value from the proof bundle's
+`chain_metadata.evidence_taxonomy_version` field and carries it through the
+SDK and CLI surfaces unchanged. The shared `att.verify.*` reason-code
+taxonomy lives in `docs/errors.md`.
 
 Within that taxonomy, additive unknown fields remain accepted, while
 unsupported major versions and fail-closed critical/required fields surface

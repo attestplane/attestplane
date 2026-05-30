@@ -45,7 +45,8 @@
     },
     "taxonomy_version": {
       "type": "integer",
-      "const": 1
+      "const": 1,
+      "description": "Mirrors the proof bundle's chain_metadata.evidence_taxonomy_version field."
     },
     "reasons": {
       "type": "array",

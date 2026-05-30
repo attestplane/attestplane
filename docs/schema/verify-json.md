@@ -23,8 +23,10 @@ accompanies the structured JSON contract.
   the verifier. They do not affect `ok` when the rest of the bundle is valid.
 - `schema_version` compatibility is independent from the verifier reason-code
   taxonomy version documented in `docs/errors.md`.
-- `taxonomy_version` pins the shared verifier rejection taxonomy used by both
-  `verify --json` and `verify --explain`.
+- `taxonomy_version` mirrors the proof bundle's
+  `chain_metadata.evidence_taxonomy_version` field and is surfaced
+  identically by `verify --json`, `verify --explain`, and the SDK verifier
+  result object.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `anchoring.status` is an additive status enum that consumers can branch on

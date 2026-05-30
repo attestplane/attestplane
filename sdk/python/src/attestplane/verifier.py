@@ -711,7 +711,7 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
-        taxonomy_version=resolve_verify_taxonomy_version(),
+        taxonomy_version=resolve_verify_taxonomy_version(bundle),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,

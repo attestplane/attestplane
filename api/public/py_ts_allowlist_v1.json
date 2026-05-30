@@ -266,6 +266,14 @@
     },
     {
       "classification": "language_specific",
+      "python": true,
+      "reason": "Python SDK exposes a typed anchoring-state wrapper; TypeScript keeps the same data inline on the verifier result object.",
+      "review_by": "v1.8.21",
+      "symbol": "VerifyAnchoringState",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": false,
       "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
       "review_by": "v0.0.3-alpha",
