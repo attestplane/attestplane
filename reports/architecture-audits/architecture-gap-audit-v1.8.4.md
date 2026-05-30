@@ -38,7 +38,7 @@ are P1—there is no unaddressed security, compliance, or migration blocker.
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][sdk][cli] Add TypeScript SDK cross-surface `taxonomy_version` parity regression and pin the verify output-contract fixture
+### ISSUE 1 · [P1][sdk]\[cli\] Add TypeScript SDK cross-surface `taxonomy_version` parity regression and pin the verify output-contract fixture
 
 **Owner:** sdk/typescript + conformance
 
@@ -79,7 +79,7 @@ are P1—there is no unaddressed security, compliance, or migration blocker.
 - Golden fixture updates must be reviewed for semantic correctness, not just
   hash freshness.
 
-### ISSUE 2 · [P1][conformance] Pin forward-compatible additive-optional acceptance vectors and the CI output-contract lock
+### ISSUE 2 · [P1]\[conformance\] Pin forward-compatible additive-optional acceptance vectors and the CI output-contract lock
 
 **Owner:** conformance
 
@@ -124,7 +124,7 @@ are P1—there is no unaddressed security, compliance, or migration blocker.
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][test][release] Expand release-gate product-delta regression coverage
+### ISSUE 3 · [P2][test]\[release\] Expand release-gate product-delta regression coverage
 
 **Owner:** release
 
@@ -154,7 +154,7 @@ are P1—there is no unaddressed security, compliance, or migration blocker.
 - New tests should be added to the existing `test_release_gate.py` file;
   do not create a new test module.
 
-### ISSUE 4 · [P2][docs] Document the v1.8.4 user-visible delta and claim-safety boundary
+### ISSUE 4 · [P2]\[docs\] Document the v1.8.4 user-visible delta and claim-safety boundary
 
 **Owner:** docs
 
