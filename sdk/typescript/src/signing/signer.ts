@@ -20,7 +20,7 @@
 import { sign as ed25519Sign } from 'node:crypto';
 
 import { canonicalize } from '../canonical.js';
-import { SCHEMA_VERSION as CHAIN_SCHEMA_VERSION, canonicalizeAuditEvent } from '../hashchain.js';
+import { canonicalizeAuditEvent, SCHEMA_VERSION as CHAIN_SCHEMA_VERSION } from '../hashchain.js';
 import type { AuditEvent, ChainHead, ChainedEvent } from '../types.js';
 
 import {

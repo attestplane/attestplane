@@ -19,19 +19,19 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { canonicalize } from '../../src/canonical.js';
-import { SCHEMA_VERSION, chainExtend, genesisHead } from '../../src/hashchain.js';
+import { chainExtend, genesisHead, SCHEMA_VERSION } from '../../src/hashchain.js';
 import {
+  buildPerEventPayload,
+  buildSegmentHeadPayload,
+  deserializeSignatureRecord,
+  deriveKeyId,
   InMemoryKeyProvider,
+  parseTrustRoots,
+  Signer,
   type SerializedSignatureRecord,
   type SignatureRecord,
   type SignatureStatus,
-  Signer,
   type TrustRoots,
-  buildPerEventPayload,
-  buildSegmentHeadPayload,
-  deriveKeyId,
-  deserializeSignatureRecord,
-  parseTrustRoots,
   verifyChainWithSignatures,
 } from '../../src/index.js';
 import { type ChainHead, type ChainedEvent, makeEventDraft } from '../../src/types.js';

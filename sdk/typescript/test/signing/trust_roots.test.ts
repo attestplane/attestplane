@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { InMemoryKeyProvider } from '../../src/signing/providers.js';
-import { TrustRootsError, loadTrustRoots, parseTrustRoots } from '../../src/signing/trust_roots.js';
+import { loadTrustRoots, parseTrustRoots, TrustRootsError } from '../../src/signing/trust_roots.js';
 
 function makeValidPayload() {
   const provider = new InMemoryKeyProvider({

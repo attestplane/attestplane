@@ -39,7 +39,7 @@
 
 import { readFileSync, statSync } from 'node:fs';
 
-import { SigningError, deriveKeyId } from './base.js';
+import { deriveKeyId, SigningError } from './base.js';
 
 const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024;
 const KEY_ID_PATTERN = /^[0-9a-f]{32}$/;

@@ -11,7 +11,7 @@
  * inputs produce the same proof-bundle dict.
  */
 
-import { SCHEMA_VERSION, headOf, verifyChain } from './hashchain.js';
+import { headOf, SCHEMA_VERSION, verifyChain } from './hashchain.js';
 import { VERSION as _SDK_VERSION } from './index_version.js';
 import { type RetentionProof, validateRetentionProof } from './retention.js';
 import {
