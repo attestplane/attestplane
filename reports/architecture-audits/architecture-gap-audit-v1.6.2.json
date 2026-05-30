@@ -1,0 +1,158 @@
+{
+  "schema": "attestplane_architecture_gap_audit.v1",
+  "generated_at": "2026-05-30T09:22:31+00:00",
+  "milestone_tag": "v1.6.2",
+  "anchor_tag": "v1.5.0",
+  "head_sha": "fa2ee99f9f893615ff9ae378342e7b882fa61c78",
+  "previous_audit_issue": null,
+  "action": "daily-plan",
+  "reason": "daily_small_upgrade",
+  "plan_level": "daily",
+  "stable_release_count": 13,
+  "real_commit_count": 20,
+  "release_prep_commit_count": 16,
+  "recent_real_commits": [
+    {
+      "sha": "f181c6d4af6d6b792e53b17c8d5426cb2c9d805f",
+      "time": "2026-05-22T01:41:03+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: fetch opus planned issues after creation",
+      "kind": "real"
+    },
+    {
+      "sha": "28127b79a1aad675bf2ca09e1f84cac34fd969d2",
+      "time": "2026-05-22T01:35:05+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "ci: proxy architecture audit runner network",
+      "kind": "real"
+    },
+    {
+      "sha": "b000b565c5ca5fe4c0c42f4ab4d66a5455c70076",
+      "time": "2026-05-22T01:26:27+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "ci: use local python on opus runner",
+      "kind": "real"
+    },
+    {
+      "sha": "0cf46605f5b293dd0b3b9e6c4aa5c9ab0bfb805f",
+      "time": "2026-05-22T01:22:08+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "ci: run architecture planning on opus runner",
+      "kind": "real"
+    },
+    {
+      "sha": "a029c06e9c6c79dce3d9adbb28a3540bdb9f9813",
+      "time": "2026-05-22T01:13:00+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "test: cover opus planning levels",
+      "kind": "real"
+    },
+    {
+      "sha": "fd35d105790643c32d8ea6afc21d194106cd888b",
+      "time": "2026-05-22T01:04:27+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: consult opus for stable planning",
+      "kind": "real"
+    },
+    {
+      "sha": "84150013415a62cfee0b63a2e0c30a1f14237601",
+      "time": "2026-05-22T00:34:16+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: make stable train git proxy strategy explicit",
+      "kind": "real"
+    },
+    {
+      "sha": "6b3e59a3de3bc902d768e741e460b10cbdca9bfd",
+      "time": "2026-05-21T23:28:24+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "ci: ignore transient scorecard link failures",
+      "kind": "real"
+    },
+    {
+      "sha": "ccc1e42769e52a45bab2014964216ce5bb97d673",
+      "time": "2026-05-21T23:18:42+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: reload planned issues from github",
+      "kind": "real"
+    },
+    {
+      "sha": "31aa211b069f9fb789e45b07241614f37b2db741",
+      "time": "2026-05-21T23:15:10+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: include open issues in release planning",
+      "kind": "real"
+    },
+    {
+      "sha": "dceefbd5ce256f8c1639ca95083471447b5d19ad",
+      "time": "2026-05-21T22:43:07+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: fan out daily architecture plans",
+      "kind": "real"
+    },
+    {
+      "sha": "4c43d96800d9bfbb67bb61ce4cb1c8bffa8b88f7",
+      "time": "2026-05-21T22:40:14+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: generate daily architecture audit plans",
+      "kind": "real"
+    },
+    {
+      "sha": "05c9cb26ddaeffe467f0f03e5cfb3b1266ef5eda",
+      "time": "2026-05-21T22:18:53+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: make release planning scripts importable in CI",
+      "kind": "real"
+    },
+    {
+      "sha": "42119e46507c18da0baf86e074c9a39294a4d5eb",
+      "time": "2026-05-21T22:09:49+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix: satisfy markdownlint and plan parser test",
+      "kind": "real"
+    },
+    {
+      "sha": "ba569a9fa5f0d7e5edb77460852557b37c84d3b5",
+      "time": "2026-05-21T20:22:51+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "Add structured autodev train events",
+      "kind": "real"
+    },
+    {
+      "sha": "5b5ec86fe0d013b4092fb2806263e1c4918ce23f",
+      "time": "2026-05-21T20:20:55+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "Unify release planning schema and fanout",
+      "kind": "real"
+    },
+    {
+      "sha": "8167261632feb8466a8028aa66a09f789364bc9f",
+      "time": "2026-05-21T19:33:51+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "Unify plan issuance across release tiers",
+      "kind": "real"
+    },
+    {
+      "sha": "3af24b1757e65923eb11c6c47d9a7280e41ddb07",
+      "time": "2026-05-21T18:44:24+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "ci: auto-accept major architecture plans",
+      "kind": "real"
+    },
+    {
+      "sha": "5c238d3e01610e185b6982a0f370effb93a81c5f",
+      "time": "2026-05-21T18:23:10+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "ci: convert accepted plans into task issues",
+      "kind": "real"
+    },
+    {
+      "sha": "df1f06239d7e5c1ead8a0e0815bf73d13712ea95",
+      "time": "2026-05-21T17:56:17+08:00",
+      "author": "merchloubna70-dot",
+      "subject": "fix(release): skip idle cadence before remote probe",
+      "kind": "real"
+    }
+  ],
+  "open_issue_count": 0,
+  "open_issues": []
+}
