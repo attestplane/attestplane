@@ -10,14 +10,17 @@ from pathlib import Path
 
 from attestplane.cli.main import main
 from attestplane.cli.verify_json import _verify_explanations
-from attestplane.verify_reason_codes import (
-    format_verify_taxonomy_version,
-    resolve_verify_taxonomy_version,
-)
+from attestplane.verify_reason_codes import format_verify_taxonomy_version
 from attestplane.verifier import verify_proof_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE_PATH = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+GOLDEN_FIXTURE = (
+    ROOT / "fixtures" / "conformance" / "golden" / "verify_json_v1.8.19.json"
+)
+EXPECTED_TAXONOMY_VERSION = int(
+    json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))["taxonomy_version"]
+)
 
 
 def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
@@ -35,11 +38,13 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert explain_rc == 0
     assert json_captured.err == ""
     assert explain_captured.err == ""
-    assert sdk_result.taxonomy_version == resolve_verify_taxonomy_version()
+    assert sdk_result.taxonomy_version == EXPECTED_TAXONOMY_VERSION
     assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
     assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out
-    assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"
+    assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == str(
+        EXPECTED_TAXONOMY_VERSION
+    )
 
 
 def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
@@ -51,7 +56,10 @@ def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=1 anchor=unknown",
+            "message": (
+                "signer_subject=unknown schema_version=unknown "
+                f"taxonomy_version={EXPECTED_TAXONOMY_VERSION} anchor=unknown"
+            ),
         }
     ]
-    assert format_verify_taxonomy_version(None) == "1"
+    assert format_verify_taxonomy_version(None) == str(EXPECTED_TAXONOMY_VERSION)

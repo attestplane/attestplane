@@ -223,13 +223,20 @@ def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict
     }
 
 
-def _verify_success_summary(bundle: dict[str, Any]) -> str:
+def _verify_success_summary(bundle: dict[str, Any], *, taxonomy_version: int | None = None) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
-        f"taxonomy_version={format_verify_taxonomy_version()} "
+        f"taxonomy_version={format_verify_taxonomy_version(taxonomy_version)} "
         f"anchor={_bundle_anchor_state(bundle)}"
     )
+
+
+def _result_taxonomy_version(result: Any | None) -> int:
+    taxonomy_version = getattr(result, "taxonomy_version", None)
+    if isinstance(taxonomy_version, int):
+        return taxonomy_version
+    return resolve_verify_taxonomy_version()
 
 
 def _verify_explanations(
@@ -247,10 +254,20 @@ def _verify_explanations(
                     None,
                     "/",
                     f"signer_subject=unknown schema_version=unknown "
-                    f"taxonomy_version={format_verify_taxonomy_version()} anchor=unknown",
+                    f"taxonomy_version={format_verify_taxonomy_version(_result_taxonomy_version(result))} "
+                    f"anchor=unknown",
                 )
             ]
-        return [_explanation_entry(None, "/", _verify_success_summary(bundle))]
+        return [
+            _explanation_entry(
+                None,
+                "/",
+                _verify_success_summary(
+                    bundle,
+                    taxonomy_version=_result_taxonomy_version(result),
+                ),
+            )
+        ]
 
     explanations: list[dict[str, Any]] = []
     for reason in _bundle_failure_reason(result, explain=explain):
@@ -348,13 +365,14 @@ def _json_failure(
     bundle: dict[str, Any] | None = None,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    taxonomy_version: int | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
         "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
         "result": "fail",
         "exit_code": exit_code,
         "reason_code": reason["code"],
-        "taxonomy_version": resolve_verify_taxonomy_version(),
+        "taxonomy_version": (taxonomy_version if taxonomy_version is not None else resolve_verify_taxonomy_version()),
         "reasons": [reason],
         "bundle": {
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -376,13 +394,14 @@ def _json_pass(
     bundle_digest: str,
     bundle: dict[str, Any] | None = None,
     explanation: list[dict[str, Any]] | None = None,
+    taxonomy_version: int | None = None,
 ) -> VerifyJsonOutcome:
     payload = {
         "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
         "result": "pass",
         "exit_code": 0,
         "reason_code": None,
-        "taxonomy_version": resolve_verify_taxonomy_version(),
+        "taxonomy_version": (taxonomy_version if taxonomy_version is not None else resolve_verify_taxonomy_version()),
         "reasons": [],
         "bundle": {
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -768,6 +787,7 @@ def build_verify_json_outcome(
             bundle_digest=bundle_digest,
             bundle=bundle,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
+            taxonomy_version=_result_taxonomy_version(result),
         )
 
     reasons = _bundle_failure_reason(result, explain=explain, bundle=bundle)
@@ -786,7 +806,7 @@ def build_verify_json_outcome(
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
-            "taxonomy_version": resolve_verify_taxonomy_version(),
+            "taxonomy_version": _result_taxonomy_version(result),
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,

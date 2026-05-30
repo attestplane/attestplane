@@ -247,7 +247,11 @@ def _verify_human_summary(
         anchor_state = "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
     if getattr(result, "anchoring_quarantined", False):
         anchor_state = getattr(result, "anchoring_status", anchor_state)
-    summary = f"{status} {_verify_success_summary(bundle).rsplit('anchor=', 1)[0]}anchor={anchor_state}"
+    summary_base = _verify_success_summary(
+        bundle,
+        taxonomy_version=getattr(result, "taxonomy_version", None),
+    ).rsplit("anchor=", 1)[0]
+    summary = f"{status} {summary_base}anchor={anchor_state}"
     if getattr(result, "anchoring_quarantined", False):
         summary = f"{summary} quarantine_reason={getattr(result, 'primary_reason', None) or 'unknown'}"
     return summary
