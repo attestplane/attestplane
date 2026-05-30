@@ -17,7 +17,7 @@ No standalone P0 product task is proposed for this daily plan. The active releas
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][sdk][verifier] Expose `verify_reason_taxonomy_version` in verify output and SDK result object
+### ISSUE 1 · \[P1\]\[sdk\]\[verifier\] Expose `verify_reason_taxonomy_version` in verify output and SDK result object
 
 Owner: sdk/verifier
 
@@ -50,7 +50,7 @@ Rollout / migration notes:
 - Do not remove or rename existing `taxonomy_version` or error fields.
 - The new field is additive-optional in the JSON output.
 
-### ISSUE 2 · [P1][conformance] Pin cross-SDK coverage for `verify_reason_taxonomy_version` exposure
+### ISSUE 2 · \[P1\]\[conformance\] Pin cross-SDK coverage for `verify_reason_taxonomy_version` exposure
 
 Owner: conformance
 
@@ -82,7 +82,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][api] Document the v1.5.10 user-visible `verify_reason_taxonomy_version` delta
+### ISSUE 3 · \[P2\]\[docs\]\[api\] Document the v1.5.10 user-visible `verify_reason_taxonomy_version` delta
 
 Owner: docs/api
 
