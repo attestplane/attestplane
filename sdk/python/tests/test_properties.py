@@ -24,6 +24,9 @@ import pytest
 
 pytest.importorskip("hypothesis")
 
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
 from attestplane import (
     AttestSubstrate,
     EventDraft,
@@ -37,8 +40,6 @@ from attestplane.hashchain import (
     head_of,
     verify_chain,
 )
-from hypothesis import HealthCheck, given, settings
-from hypothesis import strategies as st
 
 
 def _safe_text() -> st.SearchStrategy[str]:

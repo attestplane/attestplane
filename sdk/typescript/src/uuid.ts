@@ -15,8 +15,8 @@ export function uuidV7(now: Date = new Date()): string {
     bytes[i] = Number((timestamp >> BigInt((5 - i) * 8)) & 0xffn);
   }
 
-  bytes[6] = (bytes[6] & 0x0f) | 0x70;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  bytes[6] = (bytes[6]! & 0x0f) | 0x70;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
 
   const hex = Buffer.from(bytes).toString('hex');
   return (
