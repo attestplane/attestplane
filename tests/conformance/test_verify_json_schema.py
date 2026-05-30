@@ -22,6 +22,7 @@ GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 UNKNOWN_REQUIRED_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 ROOT_QUARANTINE_FIXTURE = ROOT / "fixtures" / "quarantined.bundle"
+FORWARD_COMPAT_ADDITIVE_FIXTURE = ROOT / "fixtures" / "forward_compat_additive.json"
 
 
 def _schema() -> dict[str, object]:
@@ -148,6 +149,19 @@ def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+
+
+def test_verify_json_forward_compat_additive_fixture_passes(capsys) -> None:
+    rc, payload = _payload(
+        ["verify", "--json", str(FORWARD_COMPAT_ADDITIVE_FIXTURE)], capsys
+    )
+    assert rc == 0
+    _assert_matches_verify_result_v1(payload)
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["reason_code"] is None
+    assert payload["reasons"] == []
+    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 
 def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
