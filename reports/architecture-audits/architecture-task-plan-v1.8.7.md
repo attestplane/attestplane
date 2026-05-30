@@ -12,7 +12,7 @@
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][sdk][verifier] Surface `taxonomy_version` in `BundleVerificationResult.short_summary()`
+### ISSUE 1 · [P1\][sdk\][verifier\] Surface `taxonomy_version` in `BundleVerificationResult.short_summary()`
 
 Owner: sdk/verifier
 
@@ -38,7 +38,7 @@ Rollout / migration notes:
 - Keep the current `short_summary()` format stable for the prefix match; only append `taxonomy_version=…` after the existing fields.
 - Do not change `BundleVerificationResult` field names or remove existing fields.
 
-### ISSUE 2 · [P1][cli][conformance] Pin `taxonomy_version` in `verify --explain` output and CI fixture
+### ISSUE 2 · [P1\][cli\][conformance\] Pin `taxonomy_version` in `verify --explain` output and CI fixture
 
 Owner: cli/conformance
 
@@ -69,7 +69,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][release] Document the v1.8.7 user-visible delta and verifier output contract
+### ISSUE 3 · [P2\][docs\][release\] Document the v1.8.7 user-visible delta and verifier output contract
 
 Owner: docs/release
 
