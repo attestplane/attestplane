@@ -73,6 +73,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchor",
         "anchoring",
     ]
 
@@ -84,6 +85,7 @@ def _assert_matches_verify_result_v1(
         "taxonomy_version",
         "reasons",
         "bundle",
+        "anchor",
         "anchoring",
     }
     if expect_explanation:
@@ -111,6 +113,11 @@ def _assert_matches_verify_result_v1(
     assert set(anchoring) == {"status", "quarantined"}
     assert anchoring["status"] in {"anchored", "quarantined", "unanchored"}
     assert isinstance(anchoring["quarantined"], bool)
+
+    anchor = payload["anchor"]
+    assert isinstance(anchor, dict)
+    assert set(anchor) == {"status"}
+    assert anchor["status"] in {"anchored", "failed", "unverified"}
 
     if expect_explanation:
         explanation = payload["explanation"]
@@ -166,10 +173,11 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
             "pointer": "/",
             "message": (
                 "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
-                "schema_version=1 taxonomy_version=1 anchor=absent"
+                "schema_version=1 taxonomy_version=1 anchor=unverified"
             ),
         }
     ]
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 
@@ -194,6 +202,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
             "path": "/events/0/event/payload/artifact_ref",
         },
     ]
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 
@@ -211,6 +220,7 @@ def test_verify_json_unknown_required_field_fixture_is_quarantined(
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
 
 

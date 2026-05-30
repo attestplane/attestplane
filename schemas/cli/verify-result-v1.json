@@ -13,6 +13,7 @@
     "taxonomy_version",
     "reasons",
     "bundle",
+    "anchor",
     "anchoring"
   ],
   "properties": {
@@ -125,6 +126,23 @@
         "digest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "anchored",
+            "failed",
+            "unverified"
+          ]
         }
       }
     },

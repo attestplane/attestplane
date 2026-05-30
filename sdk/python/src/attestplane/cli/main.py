@@ -24,6 +24,7 @@ from typing import Any
 
 from attestplane import __version__
 from attestplane.cli.verify_json import (
+    _anchor_payload,
     _anchoring_payload,
     _bundle_taxonomy_version_failure,
     _verify_explanations,
@@ -241,12 +242,8 @@ def _verify_human_summary(
     if bundle is None or result is None:
         return f"{status}"
     anchor_state = "unknown"
-    chain_metadata = bundle.get("chain_metadata")
-    if isinstance(chain_metadata, dict):
-        anchor_ref = chain_metadata.get("anchor_ref")
-        anchor_state = "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
-    if getattr(result, "anchoring_quarantined", False):
-        anchor_state = getattr(result, "anchoring_status", anchor_state)
+    anchor_payload = _anchor_payload(bundle, result=result, exit_code=0 if getattr(result, "ok", False) else 1)
+    anchor_state = anchor_payload["anchor"]["status"]
     summary = f"{status} {_verify_success_summary(bundle).rsplit('anchor=', 1)[0]}anchor={anchor_state}"
     if getattr(result, "anchoring_quarantined", False):
         summary = f"{summary} quarantine_reason={getattr(result, 'primary_reason', None) or 'unknown'}"
@@ -647,6 +644,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "retention_proofs_reason": result.retention_proofs_reason,
         "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
         "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
+        **_anchor_payload(
+            bundle,
+            result=result,
+            exit_code=verify_result_exit_code(result),
+        ),
         **_anchoring_payload(bundle, exit_code=verify_result_exit_code(result)),
         **_verify_scope_metadata(),
     }

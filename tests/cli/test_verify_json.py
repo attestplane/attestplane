@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att"
+ANCHORED_FIXTURE = ROOT / "fixtures" / "anchored_bundle.att"
 
 
 def _run_verify(
@@ -45,6 +46,7 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
         "schema_version": 1,
         "digest": payload["bundle"]["digest"],
     }
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
 
@@ -62,6 +64,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["taxonomy_version"] == 1
     assert payload["bundle"]["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
     assert payload["reasons"]
     reason = payload["reasons"][0]
@@ -81,6 +84,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert payload["result"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
     explanation = payload["explanation"]
     assert isinstance(explanation, list)
@@ -103,7 +107,20 @@ def test_verify_json_quarantine_fixture_reports_quarantined(
     assert rc == 2
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
+    assert payload["anchor"] == {"status": "unverified"}
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+
+
+def test_verify_json_anchored_fixture_reports_anchored(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload = _run_verify(["verify", "--json", str(ANCHORED_FIXTURE)], capsys)
+
+    assert rc == 0
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == 0
+    assert payload["anchor"] == {"status": "anchored"}
+    assert payload["anchoring"] == {"status": "anchored", "quarantined": False}
 
 
 def test_verify_json_explain_success_emits_compact_summary(
@@ -125,4 +142,4 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "signer_subject=" in summary["message"]
     assert "schema_version=1" in summary["message"]
     assert "taxonomy_version=1" in summary["message"]
-    assert "anchor=absent" in summary["message"]
+    assert "anchor=unverified" in summary["message"]

@@ -27,6 +27,10 @@ accompanies the structured JSON contract.
   `verify --json` and `verify --explain`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
+- `anchor.status` is the additive claim-safe anchor verdict. `anchored` is
+  the success value, `unverified` covers quarantine or no anchor claim, and
+  `failed` means the bundle claimed anchoring but the verifier did not accept
+  it.
 - `anchoring.status` is an additive status enum that consumers can branch on
   without parsing the free-form reason list.
 - `anchoring.quarantined` is the stable boolean companion to the exit code;

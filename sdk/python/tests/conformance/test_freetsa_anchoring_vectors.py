@@ -7,6 +7,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+from attestplane.cli.main import main
 from attestplane.verifier import verify_proof_bundle
 
 ROOT = Path(__file__).resolve().parent
@@ -35,8 +38,24 @@ def test_freetsa_anchored_fixture_verifies_as_anchored() -> None:
     assert result.anchoring_quarantined is False
 
 
+def test_freetsa_anchored_fixture_reports_anchor_status(capsys: pytest.CaptureFixture[str]) -> None:
+    rc = main(["verify", "--json", str(ANCHORED_FIXTURE)])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["anchor"] == {"status": "anchored"}
+
+
 def test_freetsa_quarantined_fixture_verifies_as_quarantined() -> None:
     result = verify_proof_bundle(_load(QUARANTINED_FIXTURE))
     assert result.ok is False
     assert result.anchoring_status == "quarantined"
     assert result.anchoring_quarantined is True
+
+
+def test_freetsa_quarantined_fixture_reports_unverified_anchor_status(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(["verify", "--json", str(QUARANTINED_FIXTURE)])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 2
+    assert payload["anchor"] == {"status": "unverified"}

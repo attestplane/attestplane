@@ -163,6 +163,9 @@ Don't tag a new release until all 3 are confirmed.
   `anchor_vectors.json` test_tsa_root_cert which is from the in-tree
   `TestTSAAuthority`, not FreeTSA. The substrate's integrity does not
   depend on this workflow.
+- **Claim-safe output**: if the live FreeTSA probe is unreachable or the
+  returned chain is untrusted/expired, the nightly report must be marked
+  `anchor.status=unverified` rather than claiming `anchored`.
 - **Concurrency**: the job is `cancel-in-progress: false`. Two
   overlapping runs (e.g., from `workflow_dispatch` interrupting the
   schedule) are allowed because they exercise the same code path

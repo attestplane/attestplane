@@ -20,6 +20,9 @@ The payload is fixed at schema version 1:
     "schema_version": 1,
     "digest": "..."
   },
+  "anchor": {
+    "status": "anchored"
+  },
   "anchoring": {
     "status": "unanchored",
     "quarantined": false
@@ -52,6 +55,10 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+- `anchor.status` is the claim-safe anchor verdict for the current bundle.
+  `anchored` means the bundle carries a valid anchor claim, `unverified`
+  means the bundle is quarantined or not anchored, and `failed` means the
+  bundle claims anchoring but verification failed.
 - `anchoring.status` is a stable additive field that reports whether the
   bundle is `anchored`, `quarantined`, or `unanchored`.
 - `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
@@ -109,12 +116,15 @@ reported as `unknown` rather than omitted.
     {
       "primary_reason": null,
       "pointer": "/",
-      "message": "signer_subject=key_id:... schema_version=1 anchor=absent"
+      "message": "signer_subject=key_id:... schema_version=1 anchor=unverified"
     }
   ],
   "bundle": {
     "schema_version": 1,
     "digest": "..."
+  },
+  "anchor": {
+    "status": "anchored"
   },
   "anchoring": {
     "status": "unanchored",

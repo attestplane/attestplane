@@ -102,17 +102,24 @@ def _assert_rationale_lines(
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str,
+    *,
+    signer_subject: str,
+    schema_version: str,
+    quarantine_reason: str | None = None,
 ) -> None:
-    assert stdout.strip() == (
+    expected = (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 anchor=unverified"
     )
+    if quarantine_reason is not None:
+        expected = f"{expected} quarantine_reason={quarantine_reason}"
+    assert stdout.strip() == expected
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
     assert stdout.strip() == (
-        f"OK signer_subject={signer_subject} schema_version=1 taxonomy_version=1 anchor=absent"
+        f"OK signer_subject={signer_subject} schema_version=1 taxonomy_version=1 anchor=unverified"
     )
 
 
@@ -132,6 +139,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             None,
             "generic",
+            None,
             (
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 "/events/0/event/payload/artifact_ref",
@@ -145,6 +153,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             VERIFY_REQUIRED_FIELDS_MISSING,
             "compact",
+            "att.verify.required_field_missing",
             (
                 VERIFY_REASON_REQUIRED_FIELD_MISSING,
                 "/events",
@@ -158,6 +167,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
             "compact",
+            "att.verify.signature_missing",
             (
                 VERIFY_REASON_SIGNATURE_MISSING,
                 "/signatures",
@@ -171,6 +181,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "2",
             None,
             "compact",
+            "att.verify.schema_version_unsupported",
             (
                 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
                 "/chain_metadata/schema_version",
@@ -184,6 +195,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             None,
             "compact",
+            None,
             (
                 VERIFY_REASON_STRUCTURE_INVALID,
                 "/policy_trace_refs",
@@ -192,17 +204,29 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
     ]
 
-    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
-        reason,
-        pointer,
-        message_parts,
+    for (
+        argv,
+        expected_rc,
+        signer_subject,
+        schema_version,
+        error_code,
+        stdout_kind,
+        quarantine_reason,
+        (
+            reason,
+            pointer,
+            message_parts,
+        ),
     ) in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout,
+                signer_subject=signer_subject,
+                schema_version=schema_version,
+                quarantine_reason=quarantine_reason,
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
@@ -226,7 +250,7 @@ def test_verify_explain_quarantine_summary_mentions_cause(
     assert rc == 2
     assert stdout.startswith("FAIL signer_subject=")
     assert "quarantine_reason=att.verify.schema_unknown" in stdout
-    assert "anchor=quarantined" in stdout
+    assert "anchor=unverified" in stdout
     assert stderr.splitlines()[0].startswith(
         f"{VERIFY_REASON_SCHEMA_UNKNOWN} /chain_metadata/critical_future_field: "
     )
@@ -306,7 +330,7 @@ def test_verify_explain_json_emits_explanation_array_for_success(
     assert summary["primary_reason"] is None
     assert summary["pointer"] == "/"
     assert summary["message"] == (
-        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy_version=1 anchor=absent"
+        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy_version=1 anchor=unverified"
     )
 
 

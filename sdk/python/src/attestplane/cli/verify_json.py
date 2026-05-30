@@ -223,12 +223,44 @@ def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict
     }
 
 
+def _anchor_payload(
+    bundle: dict[str, Any] | None,
+    *,
+    result: Any | None = None,
+    exit_code: int | None = None,
+) -> dict[str, Any]:
+    """Return the additive claim-safe anchor verdict for ``verify --json``.
+
+    ``anchoring`` remains the backward-compatible compatibility surface.
+    ``anchor.status`` is the new claim-safe state machine:
+
+    - ``anchored``: the bundle carries anchor metadata and verification passed.
+    - ``unverified``: the bundle is unanchored or quarantined.
+    - ``failed``: the bundle claims anchoring, but verification failed.
+    """
+    has_anchor_ref = _bundle_anchor_ref_present(bundle)
+    if exit_code == 0:
+        status = "anchored" if has_anchor_ref else "unverified"
+    elif result is not None and getattr(result, "anchoring_quarantined", False):
+        status = "unverified"
+    elif has_anchor_ref:
+        status = "failed"
+    else:
+        status = "unverified"
+    return {
+        "anchor": {
+            "status": status,
+        }
+    }
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
+    anchor_state = _anchor_payload(bundle, exit_code=0)["anchor"]["status"]
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
         f"taxonomy_version={format_verify_taxonomy_version()} "
-        f"anchor={_bundle_anchor_state(bundle)}"
+        f"anchor={anchor_state}"
     )
 
 
@@ -361,6 +393,7 @@ def _json_failure(
             "digest": bundle_digest,
         },
         **_anchoring_payload(bundle, exit_code=exit_code),
+        **_anchor_payload(bundle, exit_code=exit_code),
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -389,6 +422,7 @@ def _json_pass(
             "digest": bundle_digest,
         },
         **_anchoring_payload(bundle, exit_code=0),
+        **_anchor_payload(bundle, exit_code=0),
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -793,6 +827,7 @@ def build_verify_json_outcome(
                 "digest": bundle_digest,
             },
             **_anchoring_payload(bundle, exit_code=exit_code),
+            **_anchor_payload(bundle, result=result, exit_code=exit_code),
             **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,
