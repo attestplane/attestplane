@@ -11,7 +11,7 @@
 
 ## P0 Issues
 
-### ISSUE 1 · [P0][autodev][worktree] Eliminate worktree cross-deletion by enforcing per-job directory isolation
+### ISSUE 1 · \[P0\]\[autodev\]\[worktree\] Eliminate worktree cross-deletion by enforcing per-job directory isolation
 
 Owner: autodev
 
@@ -38,7 +38,7 @@ Rollout / migration notes:
 
 ## P1 Issues
 
-### ISSUE 2 · [P1][conformance][cli] Pin consensus `taxonomy_version` formatting across `verify --json` and `verify --explain` output surfaces
+### ISSUE 2 · \[P1\]\[conformance\]\[cli\] Pin consensus `taxonomy_version` formatting across `verify --json` and `verify --explain` output surfaces
 
 Owner: cli/conformance
 
@@ -65,7 +65,7 @@ Rollout / migration notes:
 - Update locked fixture hashes only for the intentionally added taxonomy_version assertion.
 - Do not regenerate unrelated fixtures.
 
-### ISSUE 3 · [P1][autodev][release] Replace cooldown band-aid with idempotent tag push
+### ISSUE 3 · \[P1\]\[autodev\]\[release\] Replace cooldown band-aid with idempotent tag push
 
 Owner: autodev
 
@@ -90,7 +90,7 @@ Rollout / migration notes:
 - Keep the cooldown gate in code for one release cycle as a rollback path.
 - Do not change any existing tag format or signing behavior.
 
-### ISSUE 4 · [P1][autodev][auto-loop] Converge mergeability state machine into a single tested function
+### ISSUE 4 · \[P1\]\[autodev\]\[auto-loop\] Converge mergeability state machine into a single tested function
 
 Owner: autodev
 
@@ -117,7 +117,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 5 · [P2][autodev][observability] Add fix-ci circuit breaker and structured autodev metrics
+### ISSUE 5 · \[P2\]\[autodev\]\[observability\] Add fix-ci circuit breaker and structured autodev metrics
 
 Owner: autodev
 
