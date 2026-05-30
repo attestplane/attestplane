@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -46,6 +47,21 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     }
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
+
+
+def test_verify_json_legacy_bundle_without_taxonomy_version_emits_null(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    legacy_bundle = json.loads(PASS_FIXTURE.read_text(encoding="utf-8"))
+    legacy_bundle = deepcopy(legacy_bundle)
+    legacy_bundle["chain_metadata"].pop("evidence_taxonomy_version", None)
+    legacy_path = tmp_path / "legacy_bundle.json"
+    legacy_path.write_text(json.dumps(legacy_bundle), encoding="utf-8")
+
+    rc, payload = _run_verify(["verify", "--json", str(legacy_path)], capsys)
+
+    assert rc == 0
+    assert payload["taxonomy_version"] is None
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(

@@ -111,4 +111,17 @@ describe('verifyProofBundle strict schema options', () => {
     expect(result.taxonomy_version).toBe(resolveVerifyTaxonomyVersion());
     expect(String(result.taxonomy_version)).toBe('1');
   });
+
+  it('returns null taxonomy_version for legacy bundles without the field', () => {
+    const bundle = JSON.parse(JSON.stringify(bundleWithOneEvent())) as Record<string, unknown>;
+    const chainMetadata = bundle.chain_metadata as Record<string, unknown> | undefined;
+    if (chainMetadata === undefined) {
+      throw new Error('expected chain metadata');
+    }
+    delete chainMetadata.evidence_taxonomy_version;
+
+    const result = verifyProofBundle(bundle as never);
+
+    expect(result.taxonomy_version).toBeNull();
+  });
 });

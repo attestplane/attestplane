@@ -97,6 +97,8 @@ class BundleVerificationResult:
       or ``"unanchored"``.
     - ``anchoring_quarantined``: ``True`` iff the verifier quarantined
       the bundle instead of treating it as a normal verification failure.
+    - ``taxonomy_version``: the declared verifier taxonomy version, or
+      ``None`` for legacy bundles that do not declare it.
     """
 
     ok: bool
@@ -106,7 +108,7 @@ class BundleVerificationResult:
     """``True`` iff the bundle's embedded report agrees with the independent re-verification."""
     event_count: int
     bundle_version: int
-    taxonomy_version: int
+    taxonomy_version: int | None
     chain_id: str
     head_hash_hex: str
     metadata_ok: bool
@@ -696,7 +698,7 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
-        taxonomy_version=resolve_verify_taxonomy_version(),
+        taxonomy_version=resolve_verify_taxonomy_version(bundle),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,

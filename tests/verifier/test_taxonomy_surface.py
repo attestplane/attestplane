@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -35,15 +36,40 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert explain_rc == 0
     assert json_captured.err == ""
     assert explain_captured.err == ""
-    assert sdk_result.taxonomy_version == resolve_verify_taxonomy_version()
+    assert sdk_result.taxonomy_version == resolve_verify_taxonomy_version(bundle)
     assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
     assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out
     assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"
 
 
+def test_legacy_bundle_without_taxonomy_version_is_null_safe(tmp_path, capsys) -> None:
+    bundle = json.loads(BUNDLE_PATH.read_text(encoding="utf-8"))
+    legacy_bundle = deepcopy(bundle)
+    legacy_bundle["chain_metadata"].pop("evidence_taxonomy_version", None)
+    legacy_path = tmp_path / "legacy_bundle.json"
+    legacy_path.write_text(json.dumps(legacy_bundle), encoding="utf-8")
+
+    sdk_result = verify_proof_bundle(legacy_bundle)
+    json_rc = main(["verify", "--json", str(legacy_path)])
+    json_captured = capsys.readouterr()
+    explain_rc = main(["verify", "--explain", str(legacy_path)])
+    explain_captured = capsys.readouterr()
+
+    json_payload = json.loads(json_captured.out)
+
+    assert resolve_verify_taxonomy_version(legacy_bundle) is None
+    assert sdk_result.taxonomy_version is None
+    assert json_rc == 0
+    assert explain_rc == 0
+    assert json_payload["taxonomy_version"] is None
+    assert "taxonomy_version=unknown" in explain_captured.out
+
+
 def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
-    explanation = _verify_explanations(SimpleNamespace(ok=True), bundle=None, explain=True)
+    explanation = _verify_explanations(
+        SimpleNamespace(ok=True), bundle=None, explain=True
+    )
 
     assert explanation == [
         {

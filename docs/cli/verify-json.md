@@ -39,8 +39,10 @@ The payload is fixed at schema version 1:
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use. The Python SDK verifier result object and the
   CLI surfaces all resolve this value through the same public helper.
-- Consumer pinning: `taxonomy_version` is always present at the top level,
-  including successful `verify --json` results.
+- Consumer pinning: `taxonomy_version` is always present at the top level.
+  Bundles that declare `chain_metadata.evidence_taxonomy_version` surface its
+  integer value; legacy bundles without that field surface `null`, and the
+  human summary renders `taxonomy_version=unknown` instead of failing.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.

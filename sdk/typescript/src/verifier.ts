@@ -55,7 +55,6 @@ import {
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
   VERIFY_REASON_STRUCTURE_INVALID,
-  VERIFY_REASON_TAXONOMY_VERSION,
   resolveVerifyTaxonomyVersion,
   type VerifyReasonCodeV1,
 } from './verify_reason_codes.js';
@@ -81,7 +80,11 @@ export interface BundleVerificationResult {
   readonly agreement: boolean;
   readonly event_count: number;
   readonly bundle_version: number;
-  readonly taxonomy_version: typeof VERIFY_REASON_TAXONOMY_VERSION;
+  /**
+   * Declared verifier taxonomy version for the bundle, or `null` for legacy
+   * bundles that do not carry `chain_metadata.evidence_taxonomy_version`.
+   */
+  readonly taxonomy_version: number | null;
   readonly chain_id: string;
   readonly head_hash_hex: string;
   readonly metadata_ok: boolean;
@@ -729,7 +732,7 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
-    taxonomy_version: resolveVerifyTaxonomyVersion(),
+    taxonomy_version: resolveVerifyTaxonomyVersion(bundle),
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,

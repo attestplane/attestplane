@@ -44,8 +44,15 @@
       ]
     },
     "taxonomy_version": {
-      "type": "integer",
-      "const": 1
+      "anyOf": [
+        {
+          "type": "integer",
+          "const": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "reasons": {
       "type": "array",

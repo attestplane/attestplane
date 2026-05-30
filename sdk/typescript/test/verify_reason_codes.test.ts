@@ -29,6 +29,11 @@ describe('verify reason codes', () => {
   it('pins the v1 namespaced verifier rejection taxonomy', () => {
     expect(VERIFY_REASON_TAXONOMY_VERSION).toBe(1);
     expect(resolveVerifyTaxonomyVersion()).toBe(1);
+    expect(
+      resolveVerifyTaxonomyVersion({
+        chain_metadata: {},
+      } as never),
+    ).toBeNull();
     expect(formatVerifyTaxonomyVersion(1)).toBe('1');
     expect(formatVerifyTaxonomyVersion(undefined)).toBe('unknown');
     expect(VERIFY_REASON_CODE_DESCRIPTIONS).toBe(VERIFY_REASON_TAXONOMY);

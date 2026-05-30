@@ -24,7 +24,9 @@ accompanies the structured JSON contract.
 - `schema_version` compatibility is independent from the verifier reason-code
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
-  `verify --json` and `verify --explain`.
+  `verify --json` and `verify --explain`. Bundles that declare
+  `chain_metadata.evidence_taxonomy_version` surface that integer; legacy
+  bundles without the field surface `null`.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `anchoring.status` is an additive status enum that consumers can branch on

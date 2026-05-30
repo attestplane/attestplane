@@ -87,8 +87,24 @@ export function verifyReasonCodeExplanation(value: VerifyReasonCodeV1): string {
   return VERIFY_REASON_TAXONOMY[value];
 }
 
-export function resolveVerifyTaxonomyVersion(): typeof VERIFY_REASON_TAXONOMY_VERSION {
-  return VERIFY_REASON_TAXONOMY_VERSION;
+export function resolveVerifyTaxonomyVersion(
+  bundle: Record<string, unknown> | null = null,
+): number | null {
+  if (bundle === null) {
+    return VERIFY_REASON_TAXONOMY_VERSION;
+  }
+  const chainMetadata = bundle.chain_metadata;
+  if (
+    typeof chainMetadata !== 'object' ||
+    chainMetadata === null ||
+    Array.isArray(chainMetadata)
+  ) {
+    return null;
+  }
+  const taxonomyVersion = chainMetadata.evidence_taxonomy_version;
+  return typeof taxonomyVersion === 'number' && Number.isInteger(taxonomyVersion)
+    ? taxonomyVersion
+    : null;
 }
 
 export function formatVerifyTaxonomyVersion(value: number | null | undefined = undefined): string {

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 VERIFY_REASON_TAXONOMY_VERSION: Final[int] = 1
 VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
@@ -96,9 +96,24 @@ def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     return VERIFY_REASON_TAXONOMY[value]
 
 
-def resolve_verify_taxonomy_version() -> int:
-    """Return the canonical public verifier taxonomy version."""
-    return VERIFY_REASON_TAXONOMY_VERSION
+def resolve_verify_taxonomy_version(bundle: Mapping[str, Any] | None = None) -> int | None:
+    """Return the verifier taxonomy version declared by ``bundle``.
+
+    The resolver preserves the public v1 default when no bundle context is
+    supplied, but it returns ``None`` for legacy bundles that do not declare
+    ``chain_metadata.evidence_taxonomy_version``.
+    """
+    if bundle is None:
+        return VERIFY_REASON_TAXONOMY_VERSION
+
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, Mapping):
+        return None
+
+    taxonomy_version = chain_metadata.get("evidence_taxonomy_version")
+    if isinstance(taxonomy_version, int):
+        return taxonomy_version
+    return None
 
 
 def format_verify_taxonomy_version(value: int | None = None) -> str:
