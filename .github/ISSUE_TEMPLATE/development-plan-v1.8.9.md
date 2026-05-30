@@ -25,7 +25,7 @@ without touching CHANGELOG.md or release workflows.
 
 ## P1 Issues
 
-### ISSUE 1 · **[P1][sdk][verifier] Add `schema_version` to Python `BundleVerificationResult` for bundle chain-metadata schema parity**
+### ISSUE 1 · **\[P1\]\[sdk\]\[verifier\] Add `schema_version` to Python `BundleVerificationResult` for bundle chain-metadata schema parity**
 
 Owner: sdk/verifier
 
@@ -53,7 +53,7 @@ Rollout / migration notes:
 - Do not change the `verify --json` output contract (`bundle.schema_version` remains `VERIFY_BUNDLE_SCHEMA_VERSION` = 1).
 - The new field is the bundle's *internal* `chain_metadata.schema_version`, not the output contract version.
 
-### ISSUE 2 · **[P1][conformance] Add verifier conformance vector for `evidence_taxonomy_version` rejection path**
+### ISSUE 2 · **\[P1\]\[conformance\] Add verifier conformance vector for `evidence_taxonomy_version` rejection path**
 
 Owner: conformance
 
@@ -80,7 +80,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · **[P2][docs][release] Document the v1.8.9 user-visible delta and the `schema_version` SDK surface**
+### ISSUE 3 · **\[P2\]\[docs\]\[release\] Document the v1.8.9 user-visible delta and the `schema_version` SDK surface**
 
 Owner: docs/release
 
