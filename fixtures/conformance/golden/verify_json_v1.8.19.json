@@ -12,5 +12,6 @@
   "reasons": [],
   "result": "pass",
   "schema_version": 1,
+  "required_taxonomy_version": null,
   "taxonomy_version": 1
 }

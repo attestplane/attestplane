@@ -15,6 +15,7 @@ The payload is fixed at schema version 1:
   "exit_code": 0,
   "reason_code": null,
   "taxonomy_version": 1,
+  "required_taxonomy_version": null,
   "reasons": [],
   "bundle": {
     "schema_version": 1,
@@ -39,8 +40,13 @@ The payload is fixed at schema version 1:
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
   `--json` and `--explain` use. The Python SDK verifier result object and the
   CLI surfaces all resolve this value through the same public helper.
+- `required_taxonomy_version` echoes the consumer pin passed through
+  `--require-taxonomy-version`, or `null` when the flag is absent.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- When `--require-taxonomy-version` is set, a mismatch against the surfaced
+  bundle taxonomy version fails closed with exit code `2` and the stable
+  reason code `att.verify.schema_version_unsupported`.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.
@@ -105,6 +111,7 @@ reported as `unknown` rather than omitted.
   "result": "pass",
   "exit_code": 0,
   "reasons": [],
+  "required_taxonomy_version": 1,
   "explanation": [
     {
       "primary_reason": null,
@@ -132,6 +139,7 @@ reported as `unknown` rather than omitted.
   "exit_code": 2,
   "reason_code": "att.verify.schema_version_unsupported",
   "taxonomy_version": 1,
+  "required_taxonomy_version": 2,
   "explanation": [
     {
       "primary_reason": "att.verify.schema_version_unsupported",

@@ -11,6 +11,7 @@
     "exit_code",
     "reason_code",
     "taxonomy_version",
+    "required_taxonomy_version",
     "reasons",
     "bundle",
     "anchoring"
@@ -46,6 +47,16 @@
     "taxonomy_version": {
       "type": "integer",
       "const": 1
+    },
+    "required_taxonomy_version": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "reasons": {
       "type": "array",

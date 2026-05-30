@@ -356,6 +356,7 @@ def _json_failure(
     bundle_digest: str,
     reason: dict[str, Any],
     exit_code: int,
+    required_taxonomy_version: int | None = None,
     bundle: dict[str, Any] | None = None,
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
@@ -366,6 +367,7 @@ def _json_failure(
         "exit_code": exit_code,
         "reason_code": reason["code"],
         "taxonomy_version": resolve_verify_taxonomy_version(),
+        "required_taxonomy_version": required_taxonomy_version,
         "reasons": [reason],
         "bundle": {
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -385,6 +387,7 @@ def _json_failure(
 def _json_pass(
     *,
     bundle_digest: str,
+    required_taxonomy_version: int | None = None,
     bundle: dict[str, Any] | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
@@ -394,6 +397,7 @@ def _json_pass(
         "exit_code": 0,
         "reason_code": None,
         "taxonomy_version": resolve_verify_taxonomy_version(),
+        "required_taxonomy_version": required_taxonomy_version,
         "reasons": [],
         "bundle": {
             "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
@@ -599,6 +603,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=None,
             stderr_code=VERIFY_IO_ERROR,
             explanation=(
@@ -626,6 +631,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -650,6 +656,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(VERIFY_REASON_STRUCTURE_INVALID, path, message)] if explain else None),
@@ -665,6 +672,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -685,6 +693,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=bundle if isinstance(bundle, dict) else None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -713,6 +722,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=bundle,
             explanation=([_explanation_entry(code, path, detail)] if explain else None),
         )
@@ -730,6 +740,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=bundle,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
@@ -741,6 +752,7 @@ def build_verify_json_outcome(
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=require_signed_attestation,
+            require_taxonomy_version=require_taxonomy_version,
         )
     except BundleSchemaError as exc:
         code, path = _schema_reason_for_bundle_error(exc)
@@ -754,6 +766,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=bundle,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
@@ -770,6 +783,7 @@ def build_verify_json_outcome(
                 explain=explain,
             ),
             exit_code=VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=bundle,
             explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )
@@ -777,6 +791,7 @@ def build_verify_json_outcome(
     if result.ok:
         return _json_pass(
             bundle_digest=bundle_digest,
+            required_taxonomy_version=require_taxonomy_version,
             bundle=bundle,
             explanation=_verify_explanations(result, bundle=bundle, explain=explain) or None,
         )
@@ -798,6 +813,7 @@ def build_verify_json_outcome(
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
             "taxonomy_version": resolve_verify_taxonomy_version(),
+            "required_taxonomy_version": require_taxonomy_version,
             "reasons": reasons,
             "bundle": {
                 "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,

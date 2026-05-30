@@ -138,6 +138,7 @@ def test_export_then_verify_json_output(tmp_path: Path, capsys: pytest.CaptureFi
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
     assert payload["taxonomy_version"] == 1
+    assert payload["required_taxonomy_version"] is None
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
     assert payload["bundle"]["digest"]
@@ -159,6 +160,7 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload["taxonomy_version"] == 1
+    assert payload["required_taxonomy_version"] is None
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
 
 
@@ -202,6 +204,7 @@ def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(
     assert result["schema_version"] == 1
     assert result["exit_code"] == expected_rc
     assert result["taxonomy_version"] == 1
+    assert result["required_taxonomy_version"] == taxonomy_version
     assert result["result"] == ("pass" if expected_rc == 0 else "fail")
     if expected_reason is None:
         assert result["reason_code"] is None
@@ -228,6 +231,7 @@ def test_verify_bundle_option_rejects_unsigned_bundle(tmp_path: Path, capsys: py
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["taxonomy_version"] == 1
+    assert payload["required_taxonomy_version"] is None
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
 
 

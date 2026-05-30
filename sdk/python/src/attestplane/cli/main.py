@@ -503,6 +503,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
         )
     except FileNotFoundError as exc:
         explain = getattr(args, "explain", False)

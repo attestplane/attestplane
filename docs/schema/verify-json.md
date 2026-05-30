@@ -25,6 +25,8 @@ accompanies the structured JSON contract.
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
   `verify --json` and `verify --explain`.
+- `required_taxonomy_version` echoes the `--require-taxonomy-version` pin
+  used for consumer-side gating, or `null` when no pin is requested.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `anchoring.status` is an additive status enum that consumers can branch on
@@ -45,6 +47,10 @@ accompanies the structured JSON contract.
 - Quarantined bundles map to exit code `2`. Hard verifier failures continue
   to map to exit code `1`, and malformed input that cannot be parsed or read
   continues to map to exit code `3`.
+- `--require-taxonomy-version` uses the same quarantine exit code `2` when
+  the surfaced bundle taxonomy version does not match the requested pin, and
+  it reports `att.verify.schema_version_unsupported` in `reason_code` and the
+  first `reasons[]` entry.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.

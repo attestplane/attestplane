@@ -23,6 +23,7 @@ BUNDLE_PATH = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestatio
 def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     bundle = json.loads(BUNDLE_PATH.read_text(encoding="utf-8"))
     sdk_result = verify_proof_bundle(bundle)
+    pinned_result = verify_proof_bundle(bundle, require_taxonomy_version=1)
 
     json_rc = main(["verify", "--json", str(BUNDLE_PATH)])
     json_captured = capsys.readouterr()
@@ -36,7 +37,10 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert json_captured.err == ""
     assert explain_captured.err == ""
     assert sdk_result.taxonomy_version == resolve_verify_taxonomy_version()
+    assert sdk_result.required_taxonomy_version is None
+    assert pinned_result.required_taxonomy_version == 1
     assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
+    assert json_payload["required_taxonomy_version"] is None
     assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out
     assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"

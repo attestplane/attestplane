@@ -75,6 +75,7 @@ def _assert_matches_verify_result_v1(
         "exit_code",
         "reason_code",
         "taxonomy_version",
+        "required_taxonomy_version",
         "reasons",
         "bundle",
         "anchoring",
@@ -86,6 +87,7 @@ def _assert_matches_verify_result_v1(
         "exit_code",
         "reason_code",
         "taxonomy_version",
+        "required_taxonomy_version",
         "reasons",
         "bundle",
         "anchoring",
@@ -98,6 +100,7 @@ def _assert_matches_verify_result_v1(
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] in set(VERIFY_JSON_EXIT_CODES.values())
     assert payload["taxonomy_version"] == 1
+    assert payload["required_taxonomy_version"] is None or isinstance(payload["required_taxonomy_version"], int)
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
@@ -164,6 +167,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
     assert payload["reasons"] == []
+    assert payload["required_taxonomy_version"] is None
     assert payload["explanation"] == [
         {
             "primary_reason": None,
@@ -189,6 +193,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["verification_failure"]
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
+    assert payload["required_taxonomy_version"] is None
     assert payload["bundle"]["schema_version"] == 1
     assert payload["bundle"]["digest"] == "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd"
     assert payload["reasons"] == [
@@ -213,6 +218,7 @@ def test_verify_json_unknown_required_field_fixture_is_quarantined(
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["taxonomy_version"] == 1
+    assert payload["required_taxonomy_version"] is None
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
@@ -227,6 +233,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert stderr == ""
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["required_taxonomy_version"] is None
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert explanation["pointer"].startswith("/events/")
@@ -250,6 +257,7 @@ def test_verify_json_reports_invalid_json(
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
+    assert payload["required_taxonomy_version"] is None
     explanation = payload["explanation"][0]  # type: ignore[index]
     assert explanation["primary_reason"] == VERIFY_REASON_SCHEMA_INVALID
     assert explanation["pointer"] == "/"

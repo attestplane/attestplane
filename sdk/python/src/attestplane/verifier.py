@@ -105,6 +105,8 @@ class BundleVerificationResult:
       or ``"unanchored"``.
     - ``anchoring_quarantined``: ``True`` iff the verifier quarantined
       the bundle instead of treating it as a normal verification failure.
+    - ``required_taxonomy_version``: optional consumer pin echoed from the
+      caller when taxonomy-version gating is requested.
     """
 
     ok: bool
@@ -115,6 +117,7 @@ class BundleVerificationResult:
     event_count: int
     bundle_version: int
     taxonomy_version: int
+    required_taxonomy_version: int | None
     chain_id: str
     head_hash_hex: str
     metadata_ok: bool
@@ -616,6 +619,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -712,6 +716,7 @@ def verify_proof_bundle(
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
         taxonomy_version=resolve_verify_taxonomy_version(),
+        required_taxonomy_version=require_taxonomy_version,
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,
@@ -735,6 +740,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -748,6 +754,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 
