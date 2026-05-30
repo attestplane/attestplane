@@ -76,4 +76,33 @@ def test_quarantined_bundle_surfaces_in_verify_json(tmp_path: Path, capsys: pyte
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
+    assert payload["anchor_status"] == "quarantined"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+
+
+def test_verify_json_anchor_status_branches_are_distinguishable(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    anchored = _bundle(status="anchored")
+    tampered = json.loads(json.dumps(anchored))
+    tampered["events"][0]["event"]["payload"] = {"score": 999}
+    quarantined = _bundle(status="quarantined")
+
+    cases = [
+        ("anchored.json", anchored, 0, "anchored"),
+        ("tampered.json", tampered, 1, "anchored"),
+        ("quarantined.json", quarantined, 2, "quarantined"),
+    ]
+
+    for filename, bundle, expected_rc, expected_anchor_status in cases:
+        bundle_path = tmp_path / filename
+        bundle_path.write_text(json.dumps(bundle, indent=2), encoding="utf-8")
+
+        rc = main(["verify", "--json", str(bundle_path)])
+        payload = json.loads(capsys.readouterr().out)
+
+        assert rc == expected_rc
+        assert payload["anchor_status"] == expected_anchor_status
+        assert payload["anchoring"]["status"] == expected_anchor_status
+        assert payload["anchoring"]["quarantined"] is (expected_anchor_status == "quarantined")

@@ -204,21 +204,21 @@ def _bundle_anchor_ref_present(bundle: dict[str, Any] | None) -> bool:
     return isinstance(anchor_ref, str) and bool(anchor_ref)
 
 
-def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict[str, Any]:
+def _bundle_anchor_status(bundle: dict[str, Any] | None, *, exit_code: int) -> str:
     if exit_code == 2:
-        status = "quarantined"
-        quarantined = True
-    else:
-        explicit = _bundle_explicit_anchoring_state(bundle)
-        if explicit is not None:
-            status = explicit
-        else:
-            status = "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
-        quarantined = False
+        return "quarantined"
+    explicit = _bundle_explicit_anchoring_state(bundle)
+    if explicit is not None:
+        return explicit
+    return "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
+
+
+def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict[str, Any]:
+    status = _bundle_anchor_status(bundle, exit_code=exit_code)
     return {
         "anchoring": {
             "status": status,
-            "quarantined": quarantined,
+            "quarantined": status == "quarantined",
         }
     }
 
@@ -311,6 +311,7 @@ def _json_failure(
         "result": "fail",
         "exit_code": exit_code,
         "reason_code": reason["code"],
+        "anchor_status": _bundle_anchor_status(bundle, exit_code=exit_code),
         "taxonomy_version": resolve_verify_taxonomy_version(),
         "reasons": [reason],
         "bundle": {
@@ -339,6 +340,7 @@ def _json_pass(
         "result": "pass",
         "exit_code": 0,
         "reason_code": None,
+        "anchor_status": _bundle_anchor_status(bundle, exit_code=0),
         "taxonomy_version": resolve_verify_taxonomy_version(),
         "reasons": [],
         "bundle": {
@@ -725,6 +727,7 @@ def build_verify_json_outcome(
             "result": "fail",
             "exit_code": exit_code,
             "reason_code": result.primary_reason,
+            "anchor_status": _bundle_anchor_status(bundle, exit_code=exit_code),
             "taxonomy_version": resolve_verify_taxonomy_version(),
             "reasons": reasons,
             "bundle": {

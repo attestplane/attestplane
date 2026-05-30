@@ -10,6 +10,7 @@
     "result",
     "exit_code",
     "reason_code",
+    "anchor_status",
     "taxonomy_version",
     "reasons",
     "bundle",
@@ -41,6 +42,14 @@
         {
           "type": "null"
         }
+      ]
+    },
+    "anchor_status": {
+      "type": "string",
+      "enum": [
+        "anchored",
+        "quarantined",
+        "unanchored"
       ]
     },
     "taxonomy_version": {
