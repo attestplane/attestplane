@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_REQUIRED_FIELDS_MISSING,
@@ -131,7 +132,10 @@ def test_verify_require_taxonomy_version_pin(
     assert rc == expected_rc
     assert payload["schema_version"] == 1
     assert payload["exit_code"] == expected_rc
-    assert payload["taxonomy_version"] == 1
+    if mutate == "remove":
+        assert payload["taxonomy_version"] is None
+    else:
+        assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["result"] == ("pass" if expected_rc == 0 else "fail")
     if expected_reason is None:
         assert payload["reason_code"] is None
@@ -166,6 +170,6 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert payload["schema_version"] == 1
     assert payload["result"] == "pass"
     assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1

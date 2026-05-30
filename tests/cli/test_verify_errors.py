@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import EventDraft
@@ -55,7 +56,7 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
@@ -81,7 +82,7 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
 
@@ -106,7 +107,7 @@ def test_verify_json_includes_reasons_list_for_schema_version_failures(
     assert result["result"] == "fail"
     assert result["exit_code"] == 2
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
-    assert result["taxonomy_version"] == 1
+    assert result["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
     assert captured.err == ""
 

@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -39,7 +40,7 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert payload["result"] == "pass"
     assert payload["exit_code"] == 0
     assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["reasons"] == []
     assert payload["bundle"] == {
         "schema_version": 1,
@@ -59,7 +60,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 1
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["bundle"]["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
     assert payload["anchoring"] == {"status": "absent", "quarantined": False}
@@ -80,7 +81,7 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert rc == 1
     assert payload["result"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == EVIDENCE_TAXONOMY_VERSION
     assert payload["anchoring"] == {"status": "absent", "quarantined": False}
     explanation = payload["explanation"]
     assert isinstance(explanation, list)

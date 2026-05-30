@@ -10,6 +10,7 @@ from pathlib import Path
 
 from attestplane.cli.main import main
 from attestplane.cli.verify_json import _verify_explanations
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION
 from attestplane.verify_reason_codes import (
     format_verify_taxonomy_version,
     resolve_verify_taxonomy_version,
@@ -39,7 +40,9 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
     assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out
-    assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"
+    assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == str(
+        EVIDENCE_TAXONOMY_VERSION
+    )
 
 
 def test_missing_taxonomy_version_renders_stable_placeholder() -> None:

@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
@@ -106,13 +107,13 @@ def _assert_failure_summary(
 ) -> None:
     assert stdout.strip() == (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version={EVIDENCE_TAXONOMY_VERSION} anchor=absent"
     )
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
     assert stdout.strip() == (
-        f"OK signer_subject={signer_subject} schema_version=1 taxonomy_version=1 anchor=absent"
+        f"OK signer_subject={signer_subject} schema_version=1 taxonomy_version={EVIDENCE_TAXONOMY_VERSION} anchor=absent"
     )
 
 
@@ -275,7 +276,7 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
     assert rc == 2
     assert stdout.startswith("FAIL signer_subject=")
     assert "schema_version=999" in stdout
-    assert "taxonomy_version=1" in stdout
+    assert f"taxonomy_version={EVIDENCE_TAXONOMY_VERSION}" in stdout
     assert stderr.splitlines() == expected_lines
 
 
@@ -306,7 +307,7 @@ def test_verify_explain_json_emits_explanation_array_for_success(
     assert summary["primary_reason"] is None
     assert summary["pointer"] == "/"
     assert summary["message"] == (
-        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy_version=1 anchor=absent"
+        f"signer_subject={FIXED_SIGNER_SUBJECT} schema_version=1 taxonomy_version={EVIDENCE_TAXONOMY_VERSION} anchor=absent"
     )
 
 
