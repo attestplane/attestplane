@@ -102,11 +102,20 @@ def _assert_rationale_lines(
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str,
+    *,
+    signer_subject: str,
+    schema_version: str,
+    quarantine_reason: str | None = None,
 ) -> None:
+    suffix = (
+        f"anchor=quarantined quarantine_reason={quarantine_reason}"
+        if quarantine_reason
+        else "anchor=absent"
+    )
     assert stdout.strip() == (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 {suffix}"
     )
 
 
@@ -124,7 +133,18 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
     schema_unsupported_bundle = _make_schema_version_unsupported_bundle(tmp_path)
     policy_trace_refs_empty_bundle = _make_policy_trace_refs_empty_bundle(tmp_path)
 
-    cases = [
+    cases: list[
+        tuple[
+            list[str],
+            int,
+            str,
+            str,
+            str | None,
+            str,
+            tuple[str, str, tuple[str, ...]],
+            str | None,
+        ]
+    ] = [
         (
             ["verify", "--explain", str(CANONICAL_FIXTURE)],
             1,
@@ -137,6 +157,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/events/0/event/payload/artifact_ref",
                 ("Unicode-NFC",),
             ),
+            None,
         ),
         (
             ["verify", "--require-non-empty", "--explain", str(empty_bundle)],
@@ -150,6 +171,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/events",
                 ("at least one event",),
             ),
+            VERIFY_REASON_REQUIRED_FIELD_MISSING,
         ),
         (
             ["verify", "--strict-schema", "--explain", str(MISSING_SIGNATURES_FIXTURE)],
@@ -163,6 +185,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/signatures",
                 ("at least one signed attestation",),
             ),
+            VERIFY_REASON_SIGNATURE_MISSING,
         ),
         (
             ["verify", "--explain", str(schema_unsupported_bundle)],
@@ -176,6 +199,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/chain_metadata/schema_version",
                 ("chain_metadata.schema_version=2", "schema_version values (1,)"),
             ),
+            VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
         ),
         (
             ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
@@ -189,6 +213,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
                 "/policy_trace_refs",
                 ("must be absent, not empty",),
             ),
+            None,
         ),
     ]
 
@@ -196,13 +221,16 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         reason,
         pointer,
         message_parts,
-    ) in cases:
+    ), quarantine_reason in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout,
+                signer_subject=signer_subject,
+                schema_version=schema_version,
+                quarantine_reason=quarantine_reason,
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")

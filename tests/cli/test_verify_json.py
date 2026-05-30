@@ -10,6 +10,10 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.cli.verify_json import (
+    VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
+    VERIFY_JSON_EXIT_CODE_VERIFIED,
+)
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_CODE_DESCRIPTIONS,
@@ -19,6 +23,9 @@ ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att"
+OUTPUT_CONTRACT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures"
+PASS_GOLDEN_FIXTURE = OUTPUT_CONTRACT_FIXTURES / "verify_json_pass.golden"
+FAIL_GOLDEN_FIXTURE = OUTPUT_CONTRACT_FIXTURES / "verify_json_fail.golden"
 
 
 def _run_verify(
@@ -126,3 +133,71 @@ def test_verify_json_explain_success_emits_compact_summary(
     assert "schema_version=1" in summary["message"]
     assert "taxonomy_version=1" in summary["message"]
     assert "anchor=absent" in summary["message"]
+
+
+def test_verify_json_contract_pass_fixture_pins_exit_code_zero_and_golden_output(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Pins the pass exit-code (0) and golden output for CI gating.
+
+    Schema-shape diff test: an unannounced field change to the JSON
+    contract will break this test.
+    """
+    golden = json.loads(PASS_GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+    rc, payload = _run_verify(
+        ["verify", "--json", str(ROOT / "fixtures" / "conformance" / "baseline.att")],
+        capsys,
+    )
+
+    assert rc == VERIFY_JSON_EXIT_CODE_VERIFIED
+    assert payload == golden
+
+    # Schema-shape guard: every expected top-level key must be present.
+    assert set(payload) == {
+        "schema_version",
+        "result",
+        "exit_code",
+        "reason_code",
+        "taxonomy_version",
+        "reasons",
+        "bundle",
+        "anchoring",
+    }
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "pass"
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODE_VERIFIED
+    assert payload["reason_code"] is None
+    assert payload["reasons"] == []
+    assert payload["bundle"]["schema_version"] == 1
+    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
+    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+
+
+def test_verify_json_contract_fail_fixture_pins_non_zero_exit_code_and_golden_output(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Pins the fail exit-code (1) and golden output for CI gating."""
+    golden = json.loads(FAIL_GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+    rc, payload = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+
+    assert rc == VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
+    assert payload == golden
+
+    # Schema-shape guard: expected shape for a fail verdict.
+    assert set(payload) == {
+        "schema_version",
+        "result",
+        "exit_code",
+        "reason_code",
+        "taxonomy_version",
+        "reasons",
+        "bundle",
+        "anchoring",
+    }
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
+    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["reasons"]
+    assert all(set(r) == {"code", "path", "message"} for r in payload["reasons"])

@@ -131,7 +131,7 @@ def test_verify_require_taxonomy_version_pin(
     assert rc == expected_rc
     assert payload["schema_version"] == 1
     assert payload["exit_code"] == expected_rc
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == (None if mutate == "remove" else 1)
     assert payload["result"] == ("pass" if expected_rc == 0 else "fail")
     if expected_reason is None:
         assert payload["reason_code"] is None
