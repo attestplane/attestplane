@@ -261,12 +261,26 @@ def _verify_human_summary(
 
 
 def _write_verify_explanations(entries: list[dict[str, Any]]) -> None:
-    for entry in entries:
-        primary_reason = entry.get("primary_reason")
+    sorted_entries = sorted(
+        [e for e in entries if e.get("primary_reason") is not None],
+        key=lambda e: e["primary_reason"],
+    )
+    success_entries = [e for e in entries if e.get("primary_reason") is None]
+
+    for entry in success_entries:
         pointer = entry.get("pointer", "/")
         message = entry.get("message", "")
-        prefix = primary_reason if primary_reason is not None else "ok"
-        sys.stderr.write(f"{prefix} {pointer}: {message}\n")
+        sys.stderr.write(f"ok {pointer}: {message}\n")
+
+    for entry in sorted_entries:
+        reason = entry["primary_reason"]
+        pointer = entry.get("pointer", "/")
+        message = entry.get("message", "")
+        explanation = entry.get("explanation", "")
+        remediation = entry.get("remediation", "")
+        sys.stderr.write(f"{reason} {pointer}: {message}\n")
+        sys.stderr.write(f"  {explanation}\n")
+        sys.stderr.write(f"  REMEDIATION: {remediation}\n")
 
 
 _KNOWN_BUNDLE_TOP_LEVEL_FIELDS = {

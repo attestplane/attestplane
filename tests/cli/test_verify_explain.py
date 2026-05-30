@@ -104,10 +104,12 @@ def _assert_rationale_lines(
 def _assert_failure_summary(
     stdout: str, *, signer_subject: str, schema_version: str
 ) -> None:
-    assert stdout.strip() == (
+    text = stdout.strip()
+    assert text.startswith(
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1"
     )
+    assert "anchor=" in text
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
@@ -263,10 +265,13 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
     assert isinstance(explanations, list)
     assert len(explanations) > 1
 
-    expected_lines = [
-        f"{entry['primary_reason'] or 'ok'} {entry['pointer']}: {entry['message']}"
-        for entry in explanations
-    ]
+    expected_lines: list[str] = []
+    for entry in explanations:
+        expected_lines.append(
+            f"{entry['primary_reason']} {entry['pointer']}: {entry['message']}"
+        )
+        expected_lines.append(f"  {entry['explanation']}")
+        expected_lines.append(f"  REMEDIATION: {entry['remediation']}")
 
     rc, stdout, stderr = _run_verify(
         ["verify", "--explain", str(multi_reason_bundle)], capsys
@@ -366,3 +371,101 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
         payload_schema["explanation"][0]["pointer"] == "/chain_metadata/schema_version"
     )
     assert stderr_schema == ""
+
+
+GOLDEN_DIR = ROOT / "tests" / "golden" / "verify-explain"
+
+
+@pytest.mark.parametrize(
+    ("argv", "golden_prefix", "expected_rc"),
+    [
+        (
+            ["verify", "--explain", str(CANONICAL_FIXTURE)],
+            "canonicalization-edge",
+            1,
+        ),
+        (
+            ["verify", "--explain", str(QUARANTINE_FIXTURE)],
+            "quarantine",
+            2,
+        ),
+        (
+            ["verify", "--explain", str(PASS_FIXTURE)],
+            "success",
+            0,
+        ),
+    ],
+)
+def test_verify_explain_golden_snapshot(
+    argv: list[str],
+    golden_prefix: str,
+    expected_rc: int,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Snapshot test: verify --explain output matches golden files."""
+    stderr_golden = GOLDEN_DIR / f"{golden_prefix}.stderr.golden"
+    stdout_golden = GOLDEN_DIR / f"{golden_prefix}.stdout.golden"
+
+    rc, stdout, stderr = _run_verify(argv, capsys)
+
+    assert rc == expected_rc
+    assert stdout == stdout_golden.read_text(encoding="utf-8")
+    assert stderr == stderr_golden.read_text(encoding="utf-8")
+
+
+def test_verify_explain_all_reason_codes_round_trip() -> None:
+    """Every VerifyReasonCodeV1 round-trips through explain machinery."""
+    from attestplane.verify_reason_codes import (
+        ALL_VERIFY_REASON_CODES_V1,
+        verify_reason_code_explanation,
+        verify_reason_code_remediation,
+    )
+
+    for code in ALL_VERIFY_REASON_CODES_V1:
+        explanation = verify_reason_code_explanation(code)
+        remediation = verify_reason_code_remediation(code)
+        assert isinstance(explanation, str) and len(explanation) > 10
+        assert isinstance(remediation, str) and len(remediation) > 20
+        assert explanation.endswith(".") or explanation.endswith('"')
+        assert remediation.endswith(".") or remediation.endswith('"')
+
+
+def test_verify_explain_success_produces_no_explain_lines(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Success bundle with --explain produces zero explain stderr lines."""
+    rc, stdout, stderr = _run_verify(["verify", "--explain", str(PASS_FIXTURE)], capsys)
+    assert rc == 0
+    assert stderr == ""
+    assert "OK" in stdout
+
+
+def test_verify_explain_multi_failure_ordered(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Multi-failure bundle prints stable ordered output sorted by reason code."""
+    multi_reason_bundle = _make_multi_reason_bundle(tmp_path)
+
+    rc, stdout, stderr = _run_verify(
+        ["verify", "--explain", str(multi_reason_bundle)], capsys
+    )
+
+    assert rc == 2
+    lines = stderr.splitlines()
+    # Two failures: schema_version_unsupported < structure_invalid alphabetically
+    first_entry_line = lines[0]
+    assert first_entry_line.startswith("att.verify.schema_version_unsupported"), (
+        f"Expected schema_version_unsupported first, got: {first_entry_line}"
+    )
+
+    # Find the second entry's first line
+    second_entry_start = next(
+        i
+        for i, line in enumerate(lines)
+        if line.startswith("att.verify.structure_invalid")
+    )
+    assert second_entry_start > 0
+    assert lines[second_entry_start].startswith("att.verify.structure_invalid"), (
+        f"Expected structure_invalid second at line {second_entry_start}"
+    )

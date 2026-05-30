@@ -1,0 +1,3 @@
+att.verify.canonical_mismatch /events/0/event/payload/artifact_ref: $.payload.artifact_ref: string is not Unicode-NFC normalized; normalize before passing to the substrate
+  Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree.
+  REMEDIATION: Recompute the chain hash using NFC-normalized Unicode strings and sorted JSON object keys. Ensure all events are canonicalized with the same algorithm before embedding verification reports.

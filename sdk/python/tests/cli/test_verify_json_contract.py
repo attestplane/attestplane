@@ -122,7 +122,18 @@ def _assert_matches_verify_result_v1(
         assert explanation
         for item in explanation:
             assert isinstance(item, dict)
-            assert set(item) == {"primary_reason", "pointer", "message"}
+            if item["primary_reason"] is not None:
+                assert set(item) == {
+                    "primary_reason",
+                    "pointer",
+                    "message",
+                    "explanation",
+                    "remediation",
+                }
+                assert isinstance(item["explanation"], str) and item["explanation"]
+                assert isinstance(item["remediation"], str) and item["remediation"]
+            else:
+                assert set(item) == {"primary_reason", "pointer", "message"}
             assert item["pointer"]
             assert item["message"]
 

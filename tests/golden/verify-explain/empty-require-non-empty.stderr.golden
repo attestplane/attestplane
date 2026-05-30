@@ -1,0 +1,7 @@
+VERIFY_REQUIRED_FIELDS_MISSING
+att.verify.required_field_missing /events: events must contain at least one event before signed-attestation schema can pass
+  A required top-level, nested, signature, or verifier-envelope field is absent.
+  REMEDIATION: Check that the proof bundle contains all mandatory top-level and nested fields per the schema. Add the missing fields or use a compatible bundle generator.
+att.verify.structure_invalid /verification_report: events must contain at least one event when require_non_empty=True
+  Known bundle relationships are malformed, duplicated, dangling, or out of order.
+  REMEDIATION: Inspect the bundle for malformed relationships: dangling references, duplicate entries, out-of-order events, or empty arrays that should be absent. Rebuild the bundle from a conformant generator.

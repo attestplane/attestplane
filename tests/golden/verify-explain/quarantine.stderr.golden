@@ -1,0 +1,3 @@
+att.verify.schema_unknown /chain_metadata/critical_future_field: chain_metadata.critical_future_field is an unknown required field
+  The input declares an unknown schema family, verification method namespace, or fail-closed critical/required field.
+  REMEDIATION: The input declares a schema family, verification method, or required field that this verifier does not recognise. Upgrade the verifier or remove the unknown element.

@@ -78,6 +78,59 @@ VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
 }
 VERIFY_REASON_CODE_DESCRIPTIONS: Final[Mapping[VerifyReasonCodeV1, str]] = VERIFY_REASON_TAXONOMY
 
+VERIFY_REASON_REMEDIATION: Final[Mapping[VerifyReasonCodeV1, str]] = {
+    VERIFY_REASON_ANCHOR_INVALID: (
+        "Verify that the anchoring material (RFC-3161 timestamps, OCSP responses, "
+        "certificate chains) is present and valid. Regenerate anchor records if the "
+        "TSA certificate has expired or OCSP responses are unavailable."
+    ),
+    VERIFY_REASON_CANONICAL_MISMATCH: (
+        "Recompute the chain hash using NFC-normalized Unicode strings and "
+        "sorted JSON object keys. Ensure all events are canonicalized with the "
+        "same algorithm before embedding verification reports."
+    ),
+    VERIFY_REASON_REQUIRED_FIELD_MISSING: (
+        "Check that the proof bundle contains all mandatory top-level and "
+        "nested fields per the schema. Add the missing fields or use a "
+        "compatible bundle generator."
+    ),
+    VERIFY_REASON_SCHEMA_INVALID: (
+        "Inspect the input structure for malformed JSON, incorrect field "
+        "types, or invalid values. Correct the shape to match the expected "
+        "verifier schema."
+    ),
+    VERIFY_REASON_SCHEMA_UNKNOWN: (
+        "The input declares a schema family, verification method, or "
+        "required field that this verifier does not recognise. Upgrade "
+        "the verifier or remove the unknown element."
+    ),
+    VERIFY_REASON_SCHEMA_VERSION_MISSING: (
+        "A required schema version field (e.g. chain_metadata.schema_version) "
+        "is absent. Add the missing version field to match the verifier's "
+        "expected schema."
+    ),
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: (
+        "The declared schema version is not supported by this verifier. "
+        "Upgrade the verifier or regenerate the bundle with a compatible "
+        "schema version."
+    ),
+    VERIFY_REASON_SIGNATURE_INVALID: (
+        "Verify the signing key, payload, and signature format. Ensure "
+        "the signature was produced with a trusted key and matches the "
+        "canonicalised payload."
+    ),
+    VERIFY_REASON_SIGNATURE_MISSING: (
+        "Strict verification requires at least one signed attestation. "
+        "Add a signature record covering the chain events or relax the "
+        "verification policy."
+    ),
+    VERIFY_REASON_STRUCTURE_INVALID: (
+        "Inspect the bundle for malformed relationships: dangling references, "
+        "duplicate entries, out-of-order events, or empty arrays that should "
+        "be absent. Rebuild the bundle from a conformant generator."
+    ),
+}
+
 _VERIFY_REASON_CODE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^att\.verify\.[a-z][a-z0-9_]*$")
 
 
@@ -94,6 +147,11 @@ def verify_reason_code_matches_format(value: str) -> bool:
 def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     """Return the stable human-readable explanation for a verify reason code."""
     return VERIFY_REASON_TAXONOMY[value]
+
+
+def verify_reason_code_remediation(value: VerifyReasonCodeV1) -> str:
+    """Return the stable remediation hint for a verify reason code."""
+    return VERIFY_REASON_REMEDIATION[value]
 
 
 def resolve_verify_taxonomy_version() -> int:
@@ -114,6 +172,7 @@ __all__ = [
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",
+    "VERIFY_REASON_REMEDIATION",
     "VERIFY_REASON_TAXONOMY",
     "VERIFY_REASON_TAXONOMY_VERSION",
     "VERIFY_REASON_REQUIRED_FIELD_MISSING",
@@ -130,4 +189,5 @@ __all__ = [
     "resolve_verify_taxonomy_version",
     "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
+    "verify_reason_code_remediation",
 ]

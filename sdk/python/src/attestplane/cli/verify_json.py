@@ -39,6 +39,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
     verify_reason_code_explanation,
+    verify_reason_code_remediation,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
@@ -149,11 +150,15 @@ def _explanation_entry(
     pointer: str,
     message: str,
 ) -> dict[str, Any]:
-    return {
+    entry: dict[str, Any] = {
         "primary_reason": primary_reason,
         "pointer": pointer,
         "message": message,
     }
+    if primary_reason is not None:
+        entry["explanation"] = verify_reason_code_explanation(primary_reason)
+        entry["remediation"] = verify_reason_code_remediation(primary_reason)
+    return entry
 
 
 def _bundle_signer_subject(bundle: dict[str, Any]) -> str:
