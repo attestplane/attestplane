@@ -1,1 +1,1 @@
-FAIL: canonicalization error in /private/tmp/aw-impl-207/fixtures/reject/canonicalization-edge.json: $.payload.artifact_ref: string is not Unicode-NFC normalized; normalize before passing to the substrate
+FAIL: canonicalization error in /private/tmp/aw-cifix-207/fixtures/reject/canonicalization-edge.json: $.payload.artifact_ref: string is not Unicode-NFC normalized; normalize before passing to the substrate
