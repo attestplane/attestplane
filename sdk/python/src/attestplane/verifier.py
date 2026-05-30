@@ -93,8 +93,9 @@ class BundleVerificationResult:
 
     Stable additive fields:
 
-    - ``anchoring_status``: one of ``"anchored"``, ``"quarantined"``,
-      or ``"unanchored"``.
+    - ``anchoring_status``: one of ``"verified"``, ``"quarantined"``,
+      or ``"absent"``.
+    - ``quarantine_reason``: human-readable quarantine cause, or ``None``.
     - ``anchoring_quarantined``: ``True`` iff the verifier quarantined
       the bundle instead of treating it as a normal verification failure.
     """
@@ -121,7 +122,8 @@ class BundleVerificationResult:
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
     anchoring_quarantined: bool
-    anchoring_status: Literal["anchored", "quarantined", "unanchored"]
+    anchoring_status: Literal["verified", "quarantined", "absent"]
+    quarantine_reason: str | None
 
     def short_summary(self) -> str:
         if self.ok:
@@ -514,6 +516,40 @@ def _result_is_quarantined(
     }
 
 
+def _quarantine_reason(
+    *,
+    quarantined: bool,
+    explicit_quarantine: bool,
+    chain_result: VerificationResult,
+    primary_reason: VerifyReasonCodeV1 | None,
+    metadata_ok: bool,
+    metadata_reason: str | None,
+    signed_attestation_schema_ok: bool,
+    signed_attestation_schema_reason: str | None,
+    policy_trace_refs_ok: bool,
+    policy_trace_refs_reason: str | None,
+    retention_proofs_ok: bool,
+    retention_proofs_reason: str | None,
+) -> str | None:
+    if not quarantined:
+        return None
+    if explicit_quarantine:
+        return "bundle.anchoring.status=quarantined"
+    if not metadata_ok and metadata_reason is not None:
+        return metadata_reason
+    if not signed_attestation_schema_ok and signed_attestation_schema_reason is not None:
+        return signed_attestation_schema_reason
+    if not policy_trace_refs_ok and policy_trace_refs_reason is not None:
+        return policy_trace_refs_reason
+    if not retention_proofs_ok and retention_proofs_reason is not None:
+        return retention_proofs_reason
+    if not chain_result.ok and chain_result.reason is not None:
+        return chain_result.reason
+    if primary_reason is not None:
+        return str(primary_reason)
+    return "bundle.anchoring.status=quarantined"
+
+
 def _verify_metadata_closure(
     bundle: dict[str, Any],
     events: list[ChainedEvent],
@@ -668,19 +704,33 @@ def verify_proof_bundle(
         error_code=error_code,
         primary_reason=primary_reason,
     )
+    quarantine_reason = _quarantine_reason(
+        quarantined=anchoring_quarantined,
+        explicit_quarantine=explicit_quarantine,
+        chain_result=chain_result,
+        primary_reason=primary_reason,
+        metadata_ok=metadata_ok,
+        metadata_reason=metadata_reason,
+        signed_attestation_schema_ok=signed_schema_ok,
+        signed_attestation_schema_reason=signed_schema_reason,
+        policy_trace_refs_ok=policy_ok,
+        policy_trace_refs_reason=policy_reason,
+        retention_proofs_ok=retention_result.ok,
+        retention_proofs_reason=retention_result.reason,
+    )
     if anchoring_quarantined:
-        anchoring_status: Literal["anchored", "quarantined", "unanchored"] = "quarantined"
+        anchoring_status: Literal["verified", "quarantined", "absent"] = "quarantined"
     elif bundle_anchoring_status is not None:
         if bundle_anchoring_status == "anchored":
-            anchoring_status = "anchored"
+            anchoring_status = "verified"
         elif bundle_anchoring_status == "quarantined":
             anchoring_status = "quarantined"
         else:
-            anchoring_status = "unanchored"
+            anchoring_status = "absent"
     elif _bundle_anchor_ref_present(bundle):
-        anchoring_status = "anchored"
+        anchoring_status = "verified"
     else:
-        anchoring_status = "unanchored"
+        anchoring_status = "absent"
     return BundleVerificationResult(
         ok=(
             chain_result.ok
@@ -712,6 +762,7 @@ def verify_proof_bundle(
         secondary_reasons=secondary_reasons,
         anchoring_quarantined=anchoring_quarantined,
         anchoring_status=anchoring_status,
+        quarantine_reason=quarantine_reason,
     )
 
 

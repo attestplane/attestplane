@@ -4,6 +4,8 @@
     "schema_version": 1
   },
   "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null,
     "quarantined": false,
     "status": "unanchored"
   },

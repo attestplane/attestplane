@@ -14,7 +14,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
 import pytest
 
 _SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "schemas" / "v1"
@@ -22,6 +21,9 @@ _SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "schemas" / "v1"
 
 def _load(name: str) -> dict[str, Any]:
     return json.loads((_SCHEMAS_DIR / name).read_text(encoding="utf-8"))
+
+
+jsonschema = pytest.importorskip("jsonschema")
 
 
 def test_schemas_dir_exists() -> None:

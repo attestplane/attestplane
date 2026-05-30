@@ -11,7 +11,6 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
-import jsonschema
 import pytest
 
 from attestplane.hashchain import chain_extend, genesis_head, hash_event
@@ -30,6 +29,8 @@ from attestplane.verifier import (
     verify_proof_bundle_file,
 )
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE
+
+jsonschema = pytest.importorskip("jsonschema")
 
 _SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "schemas" / "v1"
 

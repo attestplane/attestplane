@@ -44,7 +44,12 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
         "schema_version": 1,
         "digest": payload["bundle"]["digest"],
     }
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {
+        "status": "unanchored",
+        "quarantined": False,
+        "anchoring_status": "absent",
+        "quarantine_reason": None,
+    }
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
 
 
@@ -61,7 +66,12 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
     assert payload["taxonomy_version"] == 1
     assert payload["bundle"]["schema_version"] == 1
     assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {
+        "status": "unanchored",
+        "quarantined": False,
+        "anchoring_status": "absent",
+        "quarantine_reason": None,
+    }
     assert payload["reasons"]
     reason = payload["reasons"][0]
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
@@ -80,7 +90,12 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert payload["result"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {
+        "status": "unanchored",
+        "quarantined": False,
+        "anchoring_status": "absent",
+        "quarantine_reason": None,
+    }
     explanation = payload["explanation"]
     assert isinstance(explanation, list)
     assert explanation

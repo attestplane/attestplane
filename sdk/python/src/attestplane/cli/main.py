@@ -132,6 +132,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
+    p_verify.add_argument(
+        "--strict-anchoring",
+        dest="strict_anchoring",
+        action="store_true",
+        help="treat quarantined anchoring as a hard verification failure instead of an advisory result",
+    )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
 
@@ -430,6 +436,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    strict_anchoring = getattr(args, "strict_anchoring", False)
 
     if args.json_output:
         outcome = build_verify_json_outcome(
@@ -437,6 +444,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
             explain=getattr(args, "explain", False),
+            strict_anchoring=strict_anchoring,
         )
         _emit(outcome.payload, True, human="")
         if outcome.stderr_code is not None:
@@ -562,6 +570,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
                 explain=True,
+                strict_anchoring=strict_anchoring,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
         return 1
@@ -591,7 +600,11 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "retention_proofs_reason": result.retention_proofs_reason,
         "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
         "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
-        **_anchoring_payload(bundle, exit_code=verify_result_exit_code(result)),
+        **_anchoring_payload(
+            bundle,
+            exit_code=verify_result_exit_code(result, strict_anchoring=strict_anchoring),
+            result=result,
+        ),
         **_verify_scope_metadata(),
     }
     explain = getattr(args, "explain", False)
@@ -612,7 +625,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _emit(payload, args.json_output, human=human)
     if explain and not args.json_output and not result.ok:
         _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True))
-    return verify_result_exit_code(result)
+    return verify_result_exit_code(result, strict_anchoring=strict_anchoring)
 
 
 def cmd_verify_proofbundle(args: argparse.Namespace) -> int:

@@ -58,10 +58,15 @@ def test_bundle_anchoring_field_is_schema_compatible(
     result = verify_proof_bundle(bundle)
 
     assert result.ok is expected_ok
-    assert result.anchoring_status == status
+    assert result.anchoring_status == (
+        "verified" if status == "anchored" else ("quarantined" if status == "quarantined" else "absent")
+    )
     assert result.anchoring_quarantined is expected_quarantined
     if status == "quarantined":
         assert result.primary_reason == VERIFY_REASON_ANCHOR_INVALID
+        assert result.quarantine_reason == "bundle.anchoring.status=quarantined"
+    else:
+        assert result.quarantine_reason is None
 
 
 def test_quarantined_bundle_surfaces_in_verify_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -76,4 +81,9 @@ def test_quarantined_bundle_surfaces_in_verify_json(tmp_path: Path, capsys: pyte
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    assert payload["anchoring"] == {
+        "status": "quarantined",
+        "quarantined": True,
+        "anchoring_status": "quarantined",
+        "quarantine_reason": "bundle.anchoring.status=quarantined",
+    }

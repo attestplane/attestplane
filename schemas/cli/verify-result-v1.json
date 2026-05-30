@@ -133,7 +133,9 @@
       "additionalProperties": false,
       "required": [
         "status",
-        "quarantined"
+        "quarantined",
+        "anchoring_status",
+        "quarantine_reason"
       ],
       "properties": {
         "status": {
@@ -146,6 +148,25 @@
         },
         "quarantined": {
           "type": "boolean"
+        },
+        "anchoring_status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "quarantined",
+            "absent"
+          ]
+        },
+        "quarantine_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     }

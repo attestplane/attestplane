@@ -90,9 +90,18 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
 
     anchoring = payload["anchoring"]
     assert isinstance(anchoring, dict)
-    assert set(anchoring) == {"status", "quarantined"}
+    assert set(anchoring) == {
+        "status",
+        "quarantined",
+        "anchoring_status",
+        "quarantine_reason",
+    }
     assert anchoring["status"] in {"anchored", "quarantined", "unanchored"}
     assert isinstance(anchoring["quarantined"], bool)
+    assert anchoring["anchoring_status"] in {"verified", "quarantined", "absent"}
+    assert anchoring["quarantine_reason"] is None or isinstance(
+        anchoring["quarantine_reason"], str
+    )
 
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
@@ -117,10 +126,30 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["additionalProperties"] is False
+    assert schema["properties"]["anchoring"]["required"] == [
+        "status",
+        "quarantined",
+        "anchoring_status",
+        "quarantine_reason",
+    ]
+    assert schema["properties"]["anchoring"]["properties"]["anchoring_status"][
+        "enum"
+    ] == [
+        "verified",
+        "quarantined",
+        "absent",
+    ]
     assert schema["properties"]["anchoring"]["properties"]["status"]["enum"] == [
         "anchored",
         "quarantined",
         "unanchored",
+    ]
+    assert schema["properties"]["anchoring"]["properties"]["anchoring_status"][
+        "enum"
+    ] == [
+        "verified",
+        "quarantined",
+        "absent",
     ]
 
 
@@ -129,7 +158,12 @@ def test_verify_json_output_contract_matches_versioned_golden_fixture(capsys) ->
     assert rc == 0
     expected = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
     assert payload == expected
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {
+        "status": "unanchored",
+        "quarantined": False,
+        "anchoring_status": "absent",
+        "quarantine_reason": None,
+    }
 
 
 def test_verify_json_fail_payload_matches_schema(capsys) -> None:
@@ -147,7 +181,12 @@ def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    assert payload["anchoring"] == {
+        "status": "quarantined",
+        "quarantined": True,
+        "anchoring_status": "quarantined",
+        "quarantine_reason": "chain_metadata.critical_future_field is an unknown required field",
+    }
 
 
 def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(

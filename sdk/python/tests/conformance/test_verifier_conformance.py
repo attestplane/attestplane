@@ -105,17 +105,20 @@ def test_minimum_schema_negative_conformance_vectors(case: dict) -> None:
 def test_verifier_result_exposes_stable_anchoring_fields() -> None:
     bundle = _base_bundle()
     result = verify_proof_bundle(bundle)
-    assert result.anchoring_status == "unanchored"
+    assert result.anchoring_status == "absent"
     assert result.anchoring_quarantined is False
+    assert result.quarantine_reason is None
 
     anchored_bundle = _base_bundle()
     anchored_bundle["chain_metadata"]["anchor_ref"] = "anchor://test/anchored"
     anchored_result = verify_proof_bundle(anchored_bundle)
-    assert anchored_result.anchoring_status == "anchored"
+    assert anchored_result.anchoring_status == "verified"
     assert anchored_result.anchoring_quarantined is False
+    assert anchored_result.quarantine_reason is None
 
     quarantined_bundle = _base_bundle()
     quarantined_bundle["chain_metadata"]["critical_future_field"] = True
     quarantined_result = verify_proof_bundle(quarantined_bundle)
     assert quarantined_result.anchoring_status == "quarantined"
     assert quarantined_result.anchoring_quarantined is True
+    assert quarantined_result.quarantine_reason == "chain_metadata.critical_future_field is an unknown required field"

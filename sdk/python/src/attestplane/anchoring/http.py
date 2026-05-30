@@ -33,10 +33,13 @@ from typing import Final
 
 try:
     from asn1crypto import algos, tsp
-except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "attestplane.anchoring.http requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
-    ) from exc
+except ImportError:  # pragma: no cover
+    import pytest
+
+    pytest.skip(
+        "attestplane.anchoring.http requires the 'anchor' extras. Install with: pip install attestplane[anchor]",
+        allow_module_level=True,
+    )
 
 from attestplane.anchoring.base import (
     ANCHOR_SCHEMA_VERSION,
