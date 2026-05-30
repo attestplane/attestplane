@@ -193,8 +193,10 @@ jobs:
           LATEST_TAG: ${{ steps.batch.outputs.latest_tag }}
         run: |
           set -euo pipefail
-          level=$(git log "${LATEST_TAG}..HEAD" --format='%s' 2>/dev/null \
-            | python3 - <<'PY'
+          # Write to temp file first to avoid SIGPIPE / pipefail interaction
+          # when Python finishes reading before git log finishes writing.
+          git log "${LATEST_TAG}..HEAD" --format='%s' 2>/dev/null > /tmp/commits.txt || true
+          level=$(python3 - < /tmp/commits.txt <<'PY'
           import sys, re
           lines = sys.stdin.read().splitlines()
           has_breaking = any(
