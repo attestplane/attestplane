@@ -97,7 +97,7 @@ submission until after v1.0 GA (target 2026-08-15).**
 | Public point of contact (institutional) | **Met** | `security@attestplane.com` — non-personal, routed to maintainer queue |
 | Coordinated-disclosure handling commitment | **Met** | 90-day default embargo, severity tiers, response SLA published |
 | Response SLA published (acknowledge / triage / fix) | **Met** | 7-day acknowledge / 14-day triage / 30-day Critical fix per `SECURITY.md` — exceeds the CNA Operational Rules' minimum of "acknowledge within a reasonable period" |
-| Apache-2.0 / open-source / community project | **Met** | Apache-2.0; OpenSSF Best Practices passing badge ([project 12924](https://www.bestpractices.dev/projects/12924/)) |
+| Apache-2.0 / open-source / community project | **Met** | Apache-2.0; OpenSSF Best Practices passing badge ([project 12924](https://www.bestpractices.dev/en/projects/12924/passing)) |
 | English-language coordination | **Met** | All security correspondence and advisories in English |
 | Willingness to follow CNA Operational Rules | **Met (commitment)** | Maintainer commits to follow current rules at submission time |
 
@@ -213,7 +213,7 @@ project answers regardless of label wording.
 | Disclosure policy URL | `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` |
 | Public repository URL | `https://github.com/attestplane/attestplane/` |
 | License | Apache-2.0 |
-| OpenSSF Best Practices badge | `https://www.bestpractices.dev/projects/12924/` (passing) |
+| OpenSSF Best Practices badge | `https://www.bestpractices.dev/en/projects/12924/passing` (passing) |
 | Threat model | [`docs/security/threat-model-v1.md`](threat-model-v1.md) |
 | GPG key fingerprint (post-GA) | (filled in at submission, after M5 W6 publication; pre-GA submission would mark "to be published at v1.0 GA cut, target 2026-08-15") |
 

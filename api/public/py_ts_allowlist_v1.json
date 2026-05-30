@@ -1,6 +1,14 @@
 {
   "allowed_asymmetries": [
     {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python verifier exposes a typed anchoring-state enum at the root export surface; the TypeScript verifier surface does not ship a matching root enum.",
+      "review_by": "v1.8.4",
+      "symbol": "VerifyAnchoringState",
+      "typescript": false
+    },
+    {
       "classification": "roadmap",
       "python": true,
       "reason": "Python JSONL storage surface is public; TypeScript storage parity is not shipped in v0.0.2-alpha.",

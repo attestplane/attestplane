@@ -282,7 +282,7 @@ All official Attestplane consulting engagements and commercial contracts must in
 
 ### 11.1 Standards
 
-The project adopts the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). Community spaces include the GitHub repository, issue tracker, Discord/Discourse, and any official mailing lists.
+The project adopts the [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html). Community spaces include the GitHub repository, issue tracker, Discord/Discourse, and any official mailing lists.
 
 ### 11.2 Reporting
 

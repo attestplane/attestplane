@@ -73,6 +73,9 @@ def test_freetsa_live_mode_rejects_transport_override() -> None:
         FreeTSAProvider(live=True, transport=RecordedHttpTransport(b"ignored"))
 
 
-def test_freetsa_recorded_mode_requires_transport() -> None:
+def test_freetsa_recorded_mode_requires_transport(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv(FREETSA_LIVE_ENV_VAR, raising=False)
     with pytest.raises(ValueError, match="recorded-fixture mode requires a transport"):
         FreeTSAProvider()
