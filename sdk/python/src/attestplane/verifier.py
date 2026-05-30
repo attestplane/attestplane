@@ -101,6 +101,8 @@ class BundleVerificationResult:
 
     Stable additive fields:
 
+    - ``taxonomy_version``: canonical public verifier-taxonomy version for
+      the rejection reason surface and verify output contract.
     - ``anchoring_status``: one of ``"anchored"``, ``"quarantined"``,
       or ``"unanchored"``.
     - ``anchoring_quarantined``: ``True`` iff the verifier quarantined

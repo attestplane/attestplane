@@ -20,8 +20,9 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from hypothesis import HealthCheck, given, settings
-from hypothesis import strategies as st
+import pytest
+
+pytest.importorskip("hypothesis")
 
 from attestplane import (
     AttestSubstrate,
@@ -36,6 +37,8 @@ from attestplane.hashchain import (
     head_of,
     verify_chain,
 )
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 
 def _safe_text() -> st.SearchStrategy[str]:

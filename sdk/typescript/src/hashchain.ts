@@ -8,9 +8,9 @@
  */
 
 import { createHash } from 'node:crypto';
-import { v7 as uuidv7 } from 'uuid';
 
 import { canonicalize } from './canonical.js';
+import { uuidV7 } from './uuid.js';
 import type { AuditEvent, ChainHead, ChainedEvent, EventDraft } from './types.js';
 
 export const SUPPORTED_SCHEMA_VERSIONS = [1] as const;
@@ -48,7 +48,7 @@ export function chainExtend(
   if (Number.isNaN(options.now.getTime())) {
     throw new Error('chainExtend requires a valid Date for now');
   }
-  const event_id = options.event_id ?? uuidv7();
+  const event_id = options.event_id ?? uuidV7();
   const event: AuditEvent = {
     schema_version: SCHEMA_VERSION,
     event_id,

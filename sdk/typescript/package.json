@@ -42,7 +42,7 @@
     "lint": "biome check src test",
     "lint:fix": "biome check --write src test",
     "format": "biome format --write src test",
-    "test": "vitest run",
+    "test": "node ./scripts/run-vitest.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

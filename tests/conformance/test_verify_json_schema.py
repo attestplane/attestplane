@@ -146,6 +146,7 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
         schema["properties"]["exit_code"]["maximum"]
         == VERIFY_JSON_EXIT_CODE_USAGE_ERROR
     )
+    assert "verify --json" in schema["properties"]["taxonomy_version"]["description"]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["additionalProperties"] is False

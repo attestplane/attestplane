@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 import pytest
 
 pytest.importorskip("cryptography")
+pytest.importorskip("asn1crypto")
 
 from attestplane.anchoring import (
     AnchorVerificationError,
