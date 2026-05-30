@@ -115,7 +115,7 @@ describe('verifyProofBundle strict schema options', () => {
   it('surfaces null taxonomy_version for legacy bundles without the field', () => {
     const bundle = JSON.parse(JSON.stringify(bundleWithOneEvent())) as Record<string, unknown>;
     const chainMetadata = bundle.chain_metadata as Record<string, unknown>;
-    delete chainMetadata.evidence_taxonomy_version;
+    chainMetadata.evidence_taxonomy_version = undefined;
 
     const result = verifyProofBundle(bundle as unknown);
 
