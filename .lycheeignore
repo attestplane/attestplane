@@ -44,4 +44,17 @@ https://www\.contributor-covenant\.org/translations
 # viewer can fail GitHub-hosted runner TCP connection checks while the pinned
 # ossf-scorecard workflow and api.scorecard.dev badge endpoint remain the
 # release-train evidence source.
+https://api\.scorecard\.dev/projects/github\.com/attestplane/attestplane/badge
+https://scorecard\.dev/viewer/\?uri=github\.com/attestplane/attestplane
 https://scorecard\.dev/.*
+
+# Badge endpoints frequently redirect to generated images and lychee reports
+# those redirects as warnings. These are status surfaces, not content links.
+https://img\.shields\.io/.*
+https://github\.com/attestplane/attestplane/actions/workflows/ci\.yml
+https://github\.com/attestplane/attestplane/actions/workflows/ci\.yml/badge\.svg\?branch=main
+
+# Contributor Covenant canonical URLs redirect between the short and .html
+# forms on the upstream site.
+https://www\.contributor-covenant\.org/version/2/1/code_of_conduct(?:\.html|/)
+https://www\.contributor-covenant\.org/faq
