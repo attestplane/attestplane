@@ -209,7 +209,7 @@ def load_trust_roots(path: str | os.PathLike[str]) -> TrustRoots:
         raise TrustRootsError(f"cannot read TrustRoots file {p}: {exc}") from exc
 
     try:
-        import yaml
+        import yaml  # type: ignore[import-untyped]
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
             "attestplane.signing.trust_roots.load_trust_roots() requires the "

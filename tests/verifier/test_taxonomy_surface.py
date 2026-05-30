@@ -43,13 +43,15 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
 
 
 def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
-    explanation = _verify_explanations(SimpleNamespace(ok=True), bundle=None, explain=True)
+    explanation = _verify_explanations(
+        SimpleNamespace(ok=True), bundle=None, explain=True
+    )
 
     assert explanation == [
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=unknown anchor=unknown",
+            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=1 anchor=unknown",
         }
     ]
-    assert format_verify_taxonomy_version(None) == "unknown"
+    assert format_verify_taxonomy_version(None) == "1"

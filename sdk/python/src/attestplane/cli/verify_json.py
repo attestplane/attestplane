@@ -227,7 +227,7 @@ def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
         f"schema_version={_bundle_schema_version(bundle)} "
-        f"taxonomy_version={format_verify_taxonomy_version(resolve_verify_taxonomy_version())} "
+        f"taxonomy_version={format_verify_taxonomy_version()} "
         f"anchor={_bundle_anchor_state(bundle)}"
     )
 
