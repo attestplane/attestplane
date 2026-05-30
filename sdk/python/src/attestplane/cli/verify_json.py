@@ -225,9 +225,14 @@ def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict
     else:
         explicit = _bundle_explicit_anchoring_state(bundle)
         if explicit is not None:
-            status = explicit
+            if explicit == "anchored":
+                status = "verified"
+            elif explicit == "quarantined":
+                status = "quarantined"
+            else:
+                status = "absent"
         else:
-            status = "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
+            status = "verified" if _bundle_anchor_ref_present(bundle) else "absent"
         quarantined = False
     return {
         "anchoring": {

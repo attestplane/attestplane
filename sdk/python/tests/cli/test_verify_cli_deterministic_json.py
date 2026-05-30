@@ -47,4 +47,4 @@ def test_verify_json_is_deterministic_and_machine_readable(tmp_path: Path, capsy
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}

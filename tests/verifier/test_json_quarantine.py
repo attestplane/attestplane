@@ -27,19 +27,23 @@ def _write_bundle(tmp_path: Path, name: str, bundle: dict) -> Path:
     return path
 
 
-def test_verify_json_unanchored_bundle_reports_unanchored(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_verify_json_unanchored_bundle_reports_unanchored(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     bundle_path = PASS_FIXTURE
     rc = main(["verify", "--json", str(bundle_path)])
     payload = json.loads(capsys.readouterr().out)
     result = verify_proof_bundle(_load_bundle(bundle_path))
 
     assert rc == 0
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
-    assert result.anchoring_status == "unanchored"
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
+    assert result.anchoring_status == "absent"
     assert result.anchoring_quarantined is False
 
 
-def test_verify_json_anchored_bundle_reports_anchored(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_verify_json_anchored_bundle_reports_anchored(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     bundle = _load_bundle(PASS_FIXTURE)
     bundle["chain_metadata"]["anchor_ref"] = "anchor://test/quarantine"
     bundle_path = _write_bundle(tmp_path, "anchored.json", bundle)
@@ -49,12 +53,14 @@ def test_verify_json_anchored_bundle_reports_anchored(tmp_path: Path, capsys: py
     result = verify_proof_bundle(_load_bundle(bundle_path))
 
     assert rc == 0
-    assert payload["anchoring"] == {"status": "anchored", "quarantined": False}
-    assert result.anchoring_status == "anchored"
+    assert payload["anchoring"] == {"status": "verified", "quarantined": False}
+    assert result.anchoring_status == "verified"
     assert result.anchoring_quarantined is False
 
 
-def test_verify_json_quarantined_bundle_reports_quarantined(capsys: pytest.CaptureFixture[str]) -> None:
+def test_verify_json_quarantined_bundle_reports_quarantined(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     rc = main(["verify", "--json", str(QUARANTINE_FIXTURE)])
     payload = json.loads(capsys.readouterr().out)
     result = verify_proof_bundle(_load_bundle(QUARANTINE_FIXTURE))
@@ -63,4 +69,3 @@ def test_verify_json_quarantined_bundle_reports_quarantined(capsys: pytest.Captu
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
     assert result.anchoring_status == "quarantined"
     assert result.anchoring_quarantined is True
-

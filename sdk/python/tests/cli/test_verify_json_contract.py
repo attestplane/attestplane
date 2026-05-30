@@ -113,7 +113,7 @@ def _assert_matches_verify_result_v1(
     anchoring = payload["anchoring"]
     assert isinstance(anchoring, dict)
     assert set(anchoring) == {"status", "quarantined"}
-    assert anchoring["status"] in {"anchored", "quarantined", "unanchored"}
+    assert anchoring["status"] in {"verified", "quarantined", "absent"}
     assert isinstance(anchoring["quarantined"], bool)
 
     if expect_explanation:
@@ -201,7 +201,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
             ),
         }
     ]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
@@ -225,7 +225,7 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
             "path": "/events/0/event/payload/artifact_ref",
         },
     ]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_unknown_required_field_fixture_is_quarantined(
@@ -286,7 +286,7 @@ def test_verify_json_reports_invalid_json(
     assert reason["path"] == "/"
     assert str(bundle) in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_reports_invalid_utf8(
@@ -307,7 +307,7 @@ def test_verify_json_reports_invalid_utf8(
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
     assert reason["message"] == "bundle is not valid UTF-8"
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_rejects_duplicate_keys(
@@ -328,7 +328,7 @@ def test_verify_json_rejects_duplicate_keys(
     assert reason["code"] == VERIFY_REASON_STRUCTURE_INVALID
     assert reason["path"] == "/chain_metadata"
     assert "duplicate JSON key: chain_metadata" in reason["message"]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_rejects_non_object_root(
@@ -369,7 +369,7 @@ def test_verify_json_reports_missing_bundle_path(
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
     assert "cannot read" in reason["message"]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_schema_error_maps_missing_version_path(

@@ -120,7 +120,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     anchoring = payload["anchoring"]
     assert isinstance(anchoring, dict)
     assert set(anchoring) == {"status", "quarantined"}
-    assert anchoring["status"] in {"anchored", "quarantined", "unanchored"}
+    assert anchoring["status"] in {"verified", "quarantined", "absent"}
     assert isinstance(anchoring["quarantined"], bool)
 
     for reason in payload["reasons"]:
@@ -150,9 +150,9 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["bundle"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["properties"]["status"]["enum"] == [
-        "anchored",
+        "verified",
         "quarantined",
-        "unanchored",
+        "absent",
     ]
     assert schema["properties"]["taxonomy_version"]["anyOf"] == [
         {"type": "integer"},
@@ -177,7 +177,7 @@ def test_verify_json_output_contract_matches_versioned_golden_fixture(capsys) ->
     assert stdout == PASS_GOLDEN_FIXTURE.read_text(encoding="utf-8")
     payload = json.loads(stdout)
     _assert_matches_verify_result_v1(payload)
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
 
 
 def test_verify_json_fail_payload_matches_schema(capsys) -> None:

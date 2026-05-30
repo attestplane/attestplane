@@ -1,7 +1,7 @@
 {
   "anchoring": {
     "quarantined": false,
-    "status": "unanchored"
+    "status": "absent"
   },
   "bundle": {
     "digest": "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd",

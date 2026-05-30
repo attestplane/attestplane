@@ -145,9 +145,9 @@
         "status": {
           "type": "string",
           "enum": [
-            "anchored",
+            "verified",
             "quarantined",
-            "unanchored"
+            "absent"
           ]
         },
         "quarantined": {
