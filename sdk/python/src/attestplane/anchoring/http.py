@@ -226,20 +226,28 @@ class Rfc3161HttpProvider(TSAProvider):
         # If trust roots were configured, verify the signature before
         # producing an AnchorRecord — fail fast at request time.
         if self._trust_roots_der is not None:
+            # Pass intermediates from the response so the verifier can
+            # walk the cert chain even when the TSA includes intermediate
+            # CA certs. This is critical for production TSAs such as
+            # FreeTSA which often include intermediates alongside the
+            # leaf in the CMS SignedData certificates field.
             verify_timestamp_token(
                 parsed,
                 expected_digest=request.digest,
                 trust_roots_der=self._trust_roots_der,
                 verification_time=now or datetime.now(UTC),
+                intermediates_der=list(parsed.all_certs_der),
             )
 
         gen_time = parsed.gen_time
-        # cert chain: at minimum the leaf cert extracted from the
-        # response. Production deployments may extend this with
-        # intermediates captured from elsewhere (eIDAS Trusted List, the
-        # TSA's published chain page, etc.); for v0.0.2-alpha we ship
-        # just the leaf from the response, callers extend via subclass.
+        # cert chain: leaf + response intermediates + configured trust
+        # roots. Including the response's intermediate CA certs is
+        # critical for downstream verifiers: production TSAs such as
+        # FreeTSA often include intermediates in the CMS SignedData
+        # that the chain walk requires to reach a trust root.
         cert_chain: tuple[bytes, ...] = (parsed.leaf_cert_der,)
+        if parsed.all_certs_der:
+            cert_chain = cert_chain + parsed.all_certs_der
         if self._trust_roots_der:
             # Append configured roots so downstream verifiers find them.
             cert_chain = cert_chain + tuple(self._trust_roots_der)

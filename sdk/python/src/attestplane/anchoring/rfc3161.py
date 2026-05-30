@@ -54,6 +54,21 @@ class ParsedTimestamp:
     serial_number: int
     nonce: int | None
     leaf_cert_der: bytes
+    all_certs_der: tuple[bytes, ...]
+    """All DER certificates from the TSA response (leaf + intermediates).
+
+    Unlike :attr:`leaf_cert_der` which contains only the signer cert
+    matched via SignerInfo.sid, this field captures every certificate
+    present in the CMS SignedData ``certificates`` field. This is
+    critical for chain-building: production TSAs such as FreeTSA
+    often include intermediate CA certs in the response that must be
+    present for the verifier to walk from the leaf to a configured
+    trust root.
+
+    The leaf cert is the first entry; remaining entries are
+    intermediate CA certs (if any). Trust roots are NOT included
+    here — they are supplied by the caller via ``trust_roots_der``.
+    """
     signed_attrs_der: bytes
     signature: bytes
     digest_algorithm_oid: str
@@ -134,6 +149,22 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
     leaf_asn1 = _select_signer_cert(certs, signer_info)
     leaf_cert_der = leaf_asn1.dump()
 
+    # Capture all certs from the response (leaf + any intermediates).
+    # Production TSAs such as FreeTSA often include intermediate CA
+    # certs alongside the leaf in signed_data["certificates"]; the
+    # verifier's chain walk needs them to build the path to a trust
+    # root.
+    all_certs_der: list[bytes] = []
+    for cert_choice in certs:
+        candidate = cert_choice.chosen if hasattr(cert_choice, "chosen") else cert_choice
+        if not isinstance(candidate, asn1_x509.Certificate):
+            continue
+        c_der = candidate.dump()
+        # Skip the leaf itself (already captured via leaf_cert_der).
+        if c_der == leaf_cert_der:
+            continue
+        all_certs_der.append(c_der)
+
     signed_attrs = signer_info["signed_attrs"]
     if signed_attrs is None or len(signed_attrs) == 0:
         raise AnchorVerificationError("SignerInfo has no signed attributes")
@@ -163,6 +194,7 @@ def parse_timestamp_response(response_der: bytes) -> ParsedTimestamp:
         serial_number=int(tst_info["serial_number"].native),
         nonce=nonce,
         leaf_cert_der=leaf_cert_der,
+        all_certs_der=tuple(all_certs_der),
         signed_attrs_der=signed_attrs_der,
         signature=signature,
         digest_algorithm_oid=digest_algo_oid,

@@ -69,6 +69,24 @@ def test_authority_issues_parseable_response() -> None:
     assert parsed.message_imprint == digest
     assert parsed.gen_time == _NOW
     assert parsed.serial_number == 1
+    # When the TSA response contains only the leaf cert (the test
+    # authority's default), all_certs_der captures no extras.
+    assert parsed.all_certs_der == ()
+
+
+def test_authority_response_all_certs_der() -> None:
+    """Verify all_certs_der captures only non-leaf certs from the response.
+
+    The test authority's sign_timestamp_response includes only the leaf
+    cert in the CMS certificates field, so all_certs_der must be empty.
+    """
+    authority = TestTSAAuthority(now=_NOW)
+    digest = hashlib.sha256(b"all-certs").digest()
+    der = authority.sign_timestamp_response(digest, gen_time=_NOW)
+    parsed = parse_timestamp_response(der)
+    assert isinstance(parsed.all_certs_der, tuple)
+    # The test authority includes only the leaf in the CMS response.
+    assert len(parsed.all_certs_der) == 0
 
 
 def test_authority_round_trip_verifies() -> None:
