@@ -7,6 +7,8 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
 from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
@@ -21,6 +23,7 @@ PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
 GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 UNKNOWN_REQUIRED_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
+EMPTY_BUNDLE_FIXTURE = ROOT / "fixtures" / "empty_bundle.json"
 ROOT_QUARANTINE_FIXTURE = ROOT / "fixtures" / "quarantined.bundle"
 
 
@@ -30,7 +33,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> tuple[int, dict[str, object]]:
     rc = main(argv)
-    assert rc in {0, 1, 2, 3}
+    assert rc in {0, 2, 3, 4}
     return rc, json.loads(capsys.readouterr().out)
 
 
@@ -66,7 +69,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
-    assert payload["exit_code"] in {0, 1, 2, 3}
+    assert payload["exit_code"] in {0, 2, 3, 4}
     assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
@@ -113,7 +116,7 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["schema_version"]["const"] == 1
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
     assert schema["properties"]["exit_code"]["minimum"] == 0
-    assert schema["properties"]["exit_code"]["maximum"] == 3
+    assert schema["properties"]["exit_code"]["maximum"] == 4
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["additionalProperties"] is False
@@ -132,18 +135,57 @@ def test_verify_json_output_contract_matches_versioned_golden_fixture(capsys) ->
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 
+@pytest.mark.parametrize(
+    ("argv", "expected_exit_code", "expected_anchoring"),
+    [
+        (
+            ["verify", "--json", str(PASS_FIXTURE)],
+            0,
+            {"status": "unanchored", "quarantined": False},
+        ),
+        (
+            ["verify", "--json", str(FAIL_FIXTURE)],
+            2,
+            {"status": "unanchored", "quarantined": False},
+        ),
+        (
+            ["verify", "--json", "--require-events", str(EMPTY_BUNDLE_FIXTURE)],
+            3,
+            {"status": "unanchored", "quarantined": False},
+        ),
+        (
+            ["verify", "--json", str(ROOT_QUARANTINE_FIXTURE)],
+            4,
+            {"status": "quarantined", "quarantined": True},
+        ),
+    ],
+)
+def test_verify_json_exit_code_matrix(
+    argv: list[str],
+    expected_exit_code: int,
+    expected_anchoring: dict[str, object],
+    capsys,
+) -> None:
+    rc, payload = _payload(argv, capsys)
+
+    assert rc == expected_exit_code
+    assert payload["exit_code"] == expected_exit_code
+    assert payload["result"] == ("pass" if expected_exit_code == 0 else "fail")
+    assert payload["anchoring"] == expected_anchoring
+
+
 def test_verify_json_fail_payload_matches_schema(capsys) -> None:
     rc, payload = _payload(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
-    assert rc == 1
+    assert rc == 2
     _assert_matches_verify_result_v1(payload)
 
 
 def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
     rc, payload = _payload(["verify", "--json", str(ROOT_QUARANTINE_FIXTURE)], capsys)
-    assert rc == 2
+    assert rc == 4
     _assert_matches_verify_result_v1(payload)
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 4
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
@@ -154,7 +196,7 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     capsys,
 ) -> None:
     rc, payload = _payload(["verify", "--json", str(FAIL_FIXTURE)], capsys)
-    assert rc == 1
+    assert rc == 2
     _assert_matches_verify_result_v1(payload)
     json_reason_codes = [reason["code"] for reason in payload["reasons"]]
     assert json_reason_codes
@@ -166,7 +208,7 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     rc = main(["verify", "--explain", str(FAIL_FIXTURE)])
     captured = capsys.readouterr()
 
-    assert rc == 1
+    assert rc == 2
     assert captured.out.startswith("FAIL")
     explain_reason_codes = [line.split(" ", 1)[0] for line in captured.err.splitlines()]
     assert explain_reason_codes == json_reason_codes

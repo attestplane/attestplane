@@ -49,11 +49,11 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     rc = main(["verify", "--bundle", str(path), "--json"])
     captured = capsys.readouterr()
 
-    assert rc == 2
+    assert rc == 3
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 3
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
@@ -75,11 +75,11 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     rc = main(["verify", str(path), "--require-events", "--json"])
     captured = capsys.readouterr()
 
-    assert rc == 2
+    assert rc == 3
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 3
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
@@ -101,10 +101,10 @@ def test_verify_json_includes_reasons_list_for_schema_version_failures(
     captured = capsys.readouterr()
     result = json.loads(captured.out)
 
-    assert rc == 2
+    assert rc == 4
     assert result["schema_version"] == 1
     assert result["result"] == "fail"
-    assert result["exit_code"] == 2
+    assert result["exit_code"] == 4
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
     assert result["taxonomy_version"] == 1
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
@@ -126,10 +126,10 @@ def test_verify_json_reports_unknown_required_metadata_field(
     captured = capsys.readouterr()
     result = json.loads(captured.out)
 
-    assert rc == 2
+    assert rc == 4
     assert result["schema_version"] == 1
     assert result["result"] == "fail"
-    assert result["exit_code"] == 2
+    assert result["exit_code"] == 4
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert result["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
     assert captured.err == ""
@@ -142,10 +142,10 @@ def test_verify_json_reports_unknown_schema_version(
     captured = capsys.readouterr()
     result = json.loads(captured.out)
 
-    assert rc == 2
+    assert rc == 4
     assert result["schema_version"] == 1
     assert result["result"] == "fail"
-    assert result["exit_code"] == 2
+    assert result["exit_code"] == 4
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result["reasons"][0]["path"] == "/chain_metadata/schema_version"

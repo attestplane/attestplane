@@ -152,11 +152,11 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     capsys.readouterr()
 
     rc = main(["verify", str(bundle_path), "--require-events", "--json"])
-    assert rc == 2
+    assert rc == 3
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 3
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
@@ -166,8 +166,8 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
     [
         (1, None, 0, None),
-        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
-        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+        (2, None, 4, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", 4, VERIFY_REASON_SCHEMA_VERSION_MISSING),
     ],
 )
 def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(
@@ -221,11 +221,11 @@ def test_verify_bundle_option_rejects_unsigned_bundle(tmp_path: Path, capsys: py
 
     rc = main(["verify", "--bundle", str(bundle_path), "--json"])
 
-    assert rc == 2
+    assert rc == 3
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 3
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
@@ -253,7 +253,7 @@ def test_verify_detects_tampered_bundle(tmp_path: Path, capsys: pytest.CaptureFi
 
     capsys.readouterr()
     rc = main(["verify", str(bundle_path)])
-    assert rc == 1
+    assert rc == 2
     out = capsys.readouterr().out
     assert out.startswith("FAIL")
 

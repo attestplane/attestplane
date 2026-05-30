@@ -32,12 +32,12 @@ SIGNED_BUNDLE = (
     ("flags", "valid_rc", "invalid_rc", "invalid_code"),
     [
         ([], 0, 0, None),
-        (["--require-non-empty"], 0, 2, VERIFY_REQUIRED_FIELDS_MISSING),
-        (["--strict-schema"], 0, 2, VERIFY_BUNDLE_SCHEMA_INCOMPLETE),
+        (["--require-non-empty"], 0, 3, VERIFY_REQUIRED_FIELDS_MISSING),
+        (["--strict-schema"], 0, 3, VERIFY_BUNDLE_SCHEMA_INCOMPLETE),
         (
             ["--require-non-empty", "--strict-schema"],
             0,
-            2,
+            3,
             VERIFY_REQUIRED_FIELDS_MISSING,
         ),
     ],
@@ -89,17 +89,17 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
-    assert "1 verification failure" in out
-    assert "2 quarantine" in out
-    assert "3 usage" in out
+    assert "2 verification failure" in out
+    assert "3 schema" in out
+    assert "4 quarantined" in out
 
 
 @pytest.mark.parametrize(
     ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
     [
         (1, None, 0, None),
-        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
-        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+        (2, None, 4, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", 4, VERIFY_REASON_SCHEMA_VERSION_MISSING),
     ],
 )
 def test_verify_require_taxonomy_version_pin(

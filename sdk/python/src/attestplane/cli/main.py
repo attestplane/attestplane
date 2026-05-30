@@ -4,7 +4,7 @@
 
 Subcommands::
 
-    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/1/2/3
+    verify <bundle.json>           — chain/report-oriented proof-bundle check, exit 0/2/3/4
     verify-proofbundle <file.json> — alpha local ProofBundle verifier, JSON report, exit 0/1/2
     inspect <chain.jsonl>          — print a chain summary, exit 0/1
     export <chain.jsonl> --out OUT — build a proof bundle from a JSONL chain
@@ -101,8 +101,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         description=VERIFY_SCOPE_NOTICE,
         epilog=(
-            "Exit codes: 0 success; 1 verification failure; 2 quarantine / "
-            "fail-closed bundle rejection; 3 usage, I/O, or malformed input."
+            "Exit codes: 0 success; 2 verification failure; 3 schema, usage, "
+            "I/O, or malformed input; 4 quarantined / anchor-unverifiable."
         ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
@@ -443,7 +443,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     bundle_path = getattr(args, "bundle_option", None) or getattr(args, "bundle", None)
     if bundle_path is None:
         sys.stderr.write("attestplane verify: error: bundle path is required\n")
-        return 2
+        return 3
     strict_bundle_mode = getattr(args, "bundle_option", None) is not None
     require_non_empty = (
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
@@ -498,7 +498,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                         }
                     ]
                 )
-            return 2
+            return 4
         result = verify_proof_bundle(
             bundle,
             require_non_empty=require_non_empty,
@@ -593,7 +593,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 2
+        return 3
     except CanonicalizationError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: canonicalization error in {bundle_path}: {exc}"
@@ -620,7 +620,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
-        return 1
+        return 2
 
     payload = {
         "ok": result.ok,

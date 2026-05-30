@@ -102,12 +102,20 @@ def _assert_rationale_lines(
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str,
+    *,
+    signer_subject: str,
+    schema_version: str,
+    anchor: str,
+    quarantine_reason: str | None = None,
 ) -> None:
-    assert stdout.strip() == (
+    expected = (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 anchor={anchor}"
     )
+    if quarantine_reason is not None:
+        expected = f"{expected} quarantine_reason={quarantine_reason}"
+    assert stdout.strip() == expected
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
@@ -127,9 +135,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
     cases = [
         (
             ["verify", "--explain", str(CANONICAL_FIXTURE)],
-            1,
+            2,
             FIXED_SIGNER_SUBJECT,
             "1",
+            "absent",
             None,
             "generic",
             (
@@ -140,9 +149,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
         (
             ["verify", "--require-non-empty", "--explain", str(empty_bundle)],
-            2,
+            3,
             "none",
             "1",
+            "quarantined",
             VERIFY_REQUIRED_FIELDS_MISSING,
             "compact",
             (
@@ -153,9 +163,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
         (
             ["verify", "--strict-schema", "--explain", str(MISSING_SIGNATURES_FIXTURE)],
-            2,
+            3,
             "none",
             "1",
+            "quarantined",
             VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
             "compact",
             (
@@ -166,9 +177,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
         (
             ["verify", "--explain", str(schema_unsupported_bundle)],
-            2,
+            4,
             FIXED_SIGNER_SUBJECT,
             "2",
+            "quarantined",
             None,
             "compact",
             (
@@ -179,9 +191,10 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
         (
             ["verify", "--explain", str(policy_trace_refs_empty_bundle)],
-            1,
+            2,
             FIXED_SIGNER_SUBJECT,
             "1",
+            "absent",
             None,
             "compact",
             (
@@ -192,17 +205,30 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
     ]
 
-    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
-        reason,
-        pointer,
-        message_parts,
+    for (
+        argv,
+        expected_rc,
+        signer_subject,
+        schema_version,
+        anchor,
+        error_code,
+        stdout_kind,
+        (
+            reason,
+            pointer,
+            message_parts,
+        ),
     ) in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout,
+                signer_subject=signer_subject,
+                schema_version=schema_version,
+                anchor=anchor,
+                quarantine_reason=None if anchor == "absent" else reason,
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
@@ -223,7 +249,7 @@ def test_verify_explain_quarantine_summary_mentions_cause(
         capsys,
     )
 
-    assert rc == 2
+    assert rc == 4
     assert stdout.startswith("FAIL signer_subject=")
     assert "quarantine_reason=att.verify.schema_unknown" in stdout
     assert "anchor=quarantined" in stdout
@@ -239,7 +265,7 @@ def test_verify_explain_canonicalization_failure_summary_is_generic(
         ["verify", "--explain", str(CANONICAL_FIXTURE)], capsys
     )
 
-    assert rc == 1
+    assert rc == 2
     assert stdout.startswith("FAIL: canonicalization error in ")
     assert stderr.splitlines()[0].startswith(
         f"{VERIFY_REASON_CANONICAL_MISMATCH} /events/0/event/payload/artifact_ref: "
@@ -258,7 +284,7 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
     )
     payload = json.loads(stdout_json)
     explanations = payload["explanation"]
-    assert rc_json == 2
+    assert rc_json == 4
     assert stderr_json == ""
     assert isinstance(explanations, list)
     assert len(explanations) > 1
@@ -272,7 +298,7 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
         ["verify", "--explain", str(multi_reason_bundle)], capsys
     )
 
-    assert rc == 2
+    assert rc == 4
     assert stdout.startswith("FAIL signer_subject=")
     assert "schema_version=999" in stdout
     assert "taxonomy_version=1" in stdout
@@ -322,7 +348,7 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
         capsys,
     )
     payload_non_empty = json.loads(stdout_non_empty)
-    assert rc_non_empty == 2
+    assert rc_non_empty == 3
     assert payload_non_empty["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert (
         payload_non_empty["explanation"][0]["primary_reason"]
@@ -342,7 +368,7 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
         capsys,
     )
     payload_strict = json.loads(stdout_strict)
-    assert rc_strict == 2
+    assert rc_strict == 3
     assert payload_strict["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert (
         payload_strict["explanation"][0]["primary_reason"]
@@ -356,7 +382,7 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
         capsys,
     )
     payload_schema = json.loads(stdout_schema)
-    assert rc_schema == 2
+    assert rc_schema == 4
     assert payload_schema["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert (
         payload_schema["explanation"][0]["primary_reason"]

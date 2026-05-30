@@ -39,11 +39,11 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     rc = main(["verify", "--bundle", str(path), "--json"])
     captured = capsys.readouterr()
 
-    assert rc == 2
+    assert rc == 3
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 3
     assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
@@ -63,11 +63,11 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     rc = main(["verify", str(path), "--require-events", "--json"])
     captured = capsys.readouterr()
 
-    assert rc == 2
+    assert rc == 3
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 3
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING

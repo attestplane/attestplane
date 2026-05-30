@@ -205,7 +205,7 @@ def _bundle_anchor_ref_present(bundle: dict[str, Any] | None) -> bool:
 
 
 def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict[str, Any]:
-    if exit_code == 2:
+    if exit_code == 4:
         status = "quarantined"
         quarantined = True
     else:
@@ -403,17 +403,29 @@ def verify_result_exit_code(result: Any | None) -> int:
     """Map a verifier result to the stable CLI exit-code contract.
 
     - 0: success
-    - 1: verification failure
-    - 2: quarantine / fail-closed bundle contract rejection
-    - 3: usage, I/O, or malformed-input failure
+    - 2: verification failure
+    - 3: schema / output-contract / malformed-input failure
+    - 4: quarantined / anchor-unverifiable failure
     """
     if result is None:
-        return 1
+        return 2
     if getattr(result, "ok", False):
         return 0
-    if getattr(result, "anchoring_quarantined", False):
-        return 2
-    return 1
+    error_code = getattr(result, "error_code", None)
+    if error_code in {VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING}:
+        return 3
+    primary_reason = getattr(result, "primary_reason", None)
+    if primary_reason in {
+        VERIFY_REASON_SCHEMA_UNKNOWN,
+        VERIFY_REASON_SCHEMA_VERSION_MISSING,
+        VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+        VERIFY_REASON_SCHEMA_INVALID,
+        VERIFY_REASON_REQUIRED_FIELD_MISSING,
+        VERIFY_REASON_SIGNATURE_MISSING,
+        VERIFY_REASON_ANCHOR_INVALID,
+    }:
+        return 4
+    return 2
 
 
 def _bundle_digest(raw_bytes: bytes) -> str:
@@ -673,7 +685,7 @@ def build_verify_json_outcome(
                 detail=f"bundle must be a JSON object, got {type(bundle).__name__}",
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=3,
             bundle=bundle if isinstance(bundle, dict) else None,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=(
@@ -701,7 +713,7 @@ def build_verify_json_outcome(
                 detail=detail,
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=4,
             bundle=bundle,
             explanation=([_explanation_entry(code, path, detail)] if explain else None),
         )
@@ -718,7 +730,7 @@ def build_verify_json_outcome(
                 detail=str(canonical_exc),
                 explain=explain,
             ),
-            exit_code=1,
+            exit_code=2,
             bundle=bundle,
             explanation=(
                 [_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(canonical_exc))] if explain else None
@@ -742,7 +754,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=3,
             bundle=bundle,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
@@ -758,7 +770,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=1,
+            exit_code=2,
             bundle=bundle,
             explanation=([_explanation_entry(VERIFY_REASON_CANONICAL_MISMATCH, path, str(exc))] if explain else None),
         )

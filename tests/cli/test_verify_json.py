@@ -54,10 +54,10 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 ) -> None:
     rc, payload = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
 
-    assert rc == 1
+    assert rc == 2
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 1
+    assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
     assert payload["bundle"]["schema_version"] == 1
@@ -77,7 +77,7 @@ def test_verify_json_and_explain_keep_json_parseable(
         ["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys
     )
 
-    assert rc == 1
+    assert rc == 2
     assert payload["result"] == "fail"
     assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert payload["taxonomy_version"] == 1
@@ -100,9 +100,9 @@ def test_verify_json_quarantine_fixture_reports_quarantined(
 ) -> None:
     rc, payload = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
 
-    assert rc == 2
+    assert rc == 4
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
+    assert payload["exit_code"] == 4
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
 
 

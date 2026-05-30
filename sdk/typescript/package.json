@@ -41,6 +41,7 @@
     "build": "tsc",
     "lint": "biome check src test",
     "lint:fix": "biome check --write src test",
+    "conformance": "node ./scripts/run-conformance.mjs",
     "format": "biome format --write src test",
     "test": "vitest run",
     "test:watch": "vitest",

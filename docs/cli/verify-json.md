@@ -30,10 +30,10 @@ The payload is fixed at schema version 1:
 - `schema_version` is the CLI result schema version.
 - `result` is `pass` or `fail`.
 - `exit_code` is the process exit code that callers should gate on. In v1,
-  `0` means accept, `1` means the verifier rejected the bundle, `2`
-  means the bundle was quarantined by a fail-closed schema or contract
-  rejection, and `3` means a usage, I/O, or malformed-input problem
-  prevented verification.
+  `0` means accept, `2` means the verifier rejected the bundle, `3`
+  means a schema, output-contract, usage, I/O, or malformed-input problem
+  prevented verification, and `4` means the bundle was quarantined or its
+  anchor could not be verified.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -55,8 +55,9 @@ The payload is fixed at schema version 1:
 - `anchoring.status` is a stable additive field that reports whether the
   bundle is `anchored`, `quarantined`, or `unanchored`.
 - `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
-- In v1, `anchoring.quarantined=true` maps to exit code `2`, while normal
-  verification failures continue to use exit code `1`.
+- In v1, `anchoring.quarantined=true` maps to exit code `4`, while normal
+  verification failures use exit code `2` and schema/output-contract
+  problems use exit code `3`.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
@@ -129,7 +130,7 @@ reported as `unknown` rather than omitted.
 {
   "schema_version": 1,
   "result": "fail",
-  "exit_code": 2,
+  "exit_code": 3,
   "reason_code": "att.verify.schema_version_unsupported",
   "taxonomy_version": 1,
   "explanation": [
