@@ -104,7 +104,7 @@ def resolve_verify_taxonomy_version() -> int:
 def format_verify_taxonomy_version(value: int | None = None) -> str:
     """Render a verifier taxonomy version for human-facing output."""
     if value is None:
-        return "unknown"
+        return str(resolve_verify_taxonomy_version())
     return str(value)
 
 
