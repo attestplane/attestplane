@@ -144,8 +144,13 @@ class BundleVerificationResult:
         )
 
     def short_summary(self) -> str:
+        tv = (
+            f"taxonomy_version={self.taxonomy_version}"
+            if self.taxonomy_version is not None
+            else "taxonomy_version=unknown"
+        )
         if self.ok:
-            return f"OK chain_id={self.chain_id!r} events={self.event_count} head={self.head_hash_hex[:16]}…"
+            return f"OK chain_id={self.chain_id!r} events={self.event_count} head={self.head_hash_hex[:16]}… {tv}"
         bad = self.chain_result.first_bad_index
         return (
             f"FAIL chain_id={self.chain_id!r} events={self.event_count} "
@@ -154,7 +159,7 @@ class BundleVerificationResult:
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
             f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
-            f"error_code={self.error_code} primary_reason={self.primary_reason}"
+            f"error_code={self.error_code} primary_reason={self.primary_reason} {tv}"
         )
 
 
