@@ -8,14 +8,16 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "sdk" / "python" / "src"))
 
-from attestplane import AttestSubstrate, EventDraft  # noqa: E402
 from attestplane.proof_bundle import ProofBundleBuilder  # noqa: E402
+from attestplane.substrate import AttestSubstrate  # noqa: E402
+from attestplane.types import EventDraft  # noqa: E402
 from attestplane.verifier import (  # noqa: E402
     BundleSchemaError,
     classify_bundle_schema_error,
@@ -40,7 +42,7 @@ from attestplane.verify_reason_codes import (  # noqa: E402
 )
 
 
-def _bundle() -> dict:
+def _bundle() -> dict[str, Any]:
     substrate = AttestSubstrate()
     event = substrate.append(
         EventDraft(event_type="eval_event", actor="agent", payload={"ok": True}),
@@ -51,7 +53,7 @@ def _bundle() -> dict:
     return builder.build(now=datetime(2026, 5, 22, tzinfo=UTC))
 
 
-def _signed_bundle() -> dict:
+def _signed_bundle() -> dict[str, Any]:
     bundle = _bundle()
     event_hash = bundle["events"][0]["event_hash_hex"]
     bundle["signatures"] = [

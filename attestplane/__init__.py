@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 _SDK_PACKAGE = Path(__file__).resolve().parents[1] / "sdk" / "python" / "src" / "attestplane"
-__path__.insert(0, str(_SDK_PACKAGE))  # type: ignore[name-defined]
+__path__.insert(0, str(_SDK_PACKAGE))
 
 _SDK_INIT = _SDK_PACKAGE / "__init__.py"
 exec(compile(_SDK_INIT.read_text(encoding="utf-8"), str(_SDK_INIT), "exec"))  # noqa: S102
