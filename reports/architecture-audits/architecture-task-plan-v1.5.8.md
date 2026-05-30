@@ -14,7 +14,7 @@
 
 ## P1 Issues
 
-### ISSUE 1 · [P1][verifier][conformance] Pin `verify --json` output‑contract fixture for CI
+### ISSUE 1 · \[P1\]\[verifier\]\[conformance\] Pin `verify --json` output‑contract fixture for CI
 
 Owner: verifier/conformance
 
@@ -44,7 +44,7 @@ Rollout / migration notes:
 - The fixture must be forward‑compatible: additive‑optional `schema_version` fields should not invalidate it.
 - Do not regenerate unrelated fixture hashes.
 
-### ISSUE 2 · [P1][test][conformance] Validate the daily‑plan cross‑SDK output contract
+### ISSUE 2 · \[P1\]\[test\]\[conformance\] Validate the daily‑plan cross‑SDK output contract
 
 Owner: conformance
 
@@ -75,7 +75,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][runbook] Document the daily‑plan workflow for v1.5.x
+### ISSUE 3 · \[P2\]\[docs\]\[runbook\] Document the daily‑plan workflow for v1.5.x
 
 Owner: docs/release
 
