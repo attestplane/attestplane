@@ -19,7 +19,8 @@ from . import db
 REPO_URL = "https://github.com/attestplane/attestplane.git"
 REPO_SLUG = "attestplane/attestplane"
 MAIN_REPO = Path(os.environ.get("AUTODEV_MAIN_REPO", Path.home() / "projects/attestplane"))
-CODEX_HOME = os.environ.get("CODEX_HOME", str(Path.home() / "codex-home"))
+QWEN_MODEL = os.environ.get("QWEN_MODEL", "deepseek-v4-flash")
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 BOT_NAME = "autodev-bot"
 BOT_EMAIL = "258170091+merchloubna70-dot@users.noreply.github.com"
 GFW_PROXY = "http://127.0.0.1:7897"
@@ -77,7 +78,7 @@ async def implement_activity(
     issue_title: str,
     issue_body: str,
 ) -> dict:
-    """Checkout worktree, run codex exec, commit & push. Idempotent."""
+    """Checkout worktree, run qwen (DeepSeek), commit & push. Idempotent."""
     run = db.get_run(issue_number)
     if run and run["stage"] in ("implemented", "pr_created", "reviewing", "approved", "merged"):
         activity.logger.info("issue #%d already implemented, skipping", issue_number)
@@ -153,31 +154,39 @@ async def implement_activity(
             "10. 若验证命令持续失败超过 3 次，停止并输出 'VERIFICATION_FAILED: <原因>'。\n"
         )
 
-        # Codex blocks for up to 45 min; run in thread so the asyncio event
-        # loop stays free for Temporal heartbeats and other workflow tasks.
+        # First attempt uses flash (fast/cheap); retries escalate to pro.
+        _impl_model = QWEN_MODEL if activity.info().attempt == 1 else "deepseek-v4-pro"
+        activity.logger.info("implement_activity attempt=%d model=%s", activity.info().attempt, _impl_model)
         try:
             await asyncio.to_thread(
                 _run,
-                ["codex", "exec", "--sandbox", "workspace-write", prompt],
+                [
+                    "qwen",
+                    "-m", _impl_model,
+                    "--auth-type", "openai",
+                    "--openai-base-url", DEEPSEEK_BASE_URL,
+                    "--approval-mode", "yolo",
+                    prompt,
+                ],
                 cwd=worktree,
                 env={
-                    "CODEX_HOME": CODEX_HOME,
+                    **os.environ,
                     "HOME": str(Path.home()),
                     "PATH": os.environ["PATH"],
+                    "OPENAI_API_KEY": os.environ.get("DEEPSEEK_API_KEY", ""),
                     "https_proxy": GFW_PROXY,
                     "http_proxy": GFW_PROXY,
                 },
                 timeout=2700,
             )
         except RuntimeError as exc:
-            # Save full Codex output for debugging
             import time as _t
-            log_dir = MAIN_REPO / "data" / "codex-runs"
+            log_dir = MAIN_REPO / "data" / "qwen-runs"
             log_dir.mkdir(parents=True, exist_ok=True)
             log_path = log_dir / f"issue-{issue_number}-attempt-{int(_t.time())}.log"
             log_path.write_text(str(exc))
             activity.logger.error(
-                "Codex failed for issue #%d — full log at %s", issue_number, log_path
+                "Qwen failed for issue #%d — full log at %s", issue_number, log_path
             )
             raise
 
@@ -349,15 +358,19 @@ async def review_pr_activity(issue_number: int, pr_number: int) -> dict:
     )
 
     deepseek_key = os.environ.get("DEEPSEEK_API_KEY", "")
-    _review_model = os.environ.get("DEEPSEEK_REVIEW_MODEL", "deepseek-chat")
+    _review_model = (
+        os.environ.get("DEEPSEEK_REVIEW_MODEL", QWEN_MODEL)
+        if activity.info().attempt == 1
+        else "deepseek-v4-pro"
+    )
+    activity.logger.info("review_pr_activity attempt=%d model=%s", activity.info().attempt, _review_model)
     try:
-        # Qwen/DeepSeek review can take several minutes; run in thread.
         output = await asyncio.to_thread(
             _run,
             [
                 "qwen", prompt,
                 "--openai-api-key", deepseek_key,
-                "--openai-base-url", "https://api.deepseek.com/v1",
+                "--openai-base-url", DEEPSEEK_BASE_URL,
                 "--auth-type", "openai",
                 "--model", _review_model,
                 "-y",
@@ -562,21 +575,31 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
             f"\n## CI Error Log\n{error_summary[:4000]}\n"
         )
 
+        _fix_model = QWEN_MODEL if activity.info().attempt == 1 else "deepseek-v4-pro"
+        activity.logger.info("fix_ci_activity attempt=%d model=%s", activity.info().attempt, _fix_model)
         await asyncio.to_thread(
             _run,
-            ["codex", "exec", "--sandbox", "workspace-write", fix_prompt],
+            [
+                "qwen",
+                "-m", _fix_model,
+                "--auth-type", "openai",
+                "--openai-base-url", DEEPSEEK_BASE_URL,
+                "--approval-mode", "yolo",
+                fix_prompt,
+            ],
             cwd=worktree,
             env={
-                "CODEX_HOME": CODEX_HOME,
+                **os.environ,
                 "HOME": str(Path.home()),
                 "PATH": os.environ["PATH"],
+                "OPENAI_API_KEY": os.environ.get("DEEPSEEK_API_KEY", ""),
                 "https_proxy": GFW_PROXY,
                 "http_proxy": GFW_PROXY,
             },
             timeout=1800,
         )
 
-        # Post-Codex ruff cleanup
+        # Post-Qwen ruff cleanup
         sdk_py = str(Path(worktree) / "sdk" / "python")
         for ruff_cmd in [
             ["python3.11", "-m", "ruff", "check", "--fix", "--unsafe-fixes", "."],
