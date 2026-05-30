@@ -38,6 +38,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
+    format_verify_taxonomy_version,
     verify_reason_code_explanation,
 )
 
@@ -262,11 +263,13 @@ def _verify_explanations(
         return []
     if result.ok:
         if bundle is None:
+            taxonomy_placeholder = format_verify_taxonomy_version(None)
             return [
                 _explanation_entry(
                     None,
                     "/",
-                    "signer_subject=unknown schema_version=unknown taxonomy_version=unknown anchor=unknown",
+                    f"signer_subject=unknown schema_version=unknown "
+                    f"taxonomy_version={taxonomy_placeholder} anchor=unknown",
                 )
             ]
         return [_explanation_entry(None, "/", _verify_success_summary(bundle))]

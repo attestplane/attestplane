@@ -80,6 +80,7 @@ export interface BundleVerificationResult {
   readonly event_count: number;
   readonly bundle_version: number;
   readonly taxonomy_version: number | null;
+  readonly schemaVersion: number | null;
   readonly chain_id: string;
   readonly head_hash_hex: string;
   readonly metadata_ok: boolean;
@@ -609,6 +610,11 @@ function resolveBundleTaxonomyVersion(bundle: ProofBundle): number | null {
   return typeof taxonomyVersion === 'number' ? taxonomyVersion : null;
 }
 
+function resolveBundleSchemaVersion(bundle: ProofBundle): number | null {
+  const schemaVersion = bundle.chain_metadata.schema_version;
+  return typeof schemaVersion === 'number' ? schemaVersion : null;
+}
+
 function verifyPolicyTraceRefs(
   bundle: ProofBundle,
   events: readonly ChainedEvent[],
@@ -733,6 +739,7 @@ export function verifyProofBundle(
     event_count: events.length,
     bundle_version: bundle.bundle_version,
     taxonomy_version: resolveBundleTaxonomyVersion(bundle),
+    schemaVersion: resolveBundleSchemaVersion(bundle),
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,

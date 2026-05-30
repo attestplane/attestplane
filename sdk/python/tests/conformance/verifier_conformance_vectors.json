@@ -42,6 +42,11 @@
       "verify_options": {
         "require_non_empty": true
       }
+    },
+    {
+      "case_id": "evidence_taxonomy_version_skew",
+      "expected_error_code": "VERIFY_METADATA_CLOSURE_FAILED",
+      "expected_ok": false
     }
   ],
   "schema_version": "attestplane.verifier_conformance.v1.2"

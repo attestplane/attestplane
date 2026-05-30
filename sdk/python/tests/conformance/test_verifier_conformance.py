@@ -71,6 +71,9 @@ def _case_bundle(case_id: str) -> dict:
         return ProofBundleBuilder(chain_id="empty-conf", producer_runtime="test").build(
             now=datetime(2026, 5, 19, tzinfo=UTC)
         )
+    if case_id == "evidence_taxonomy_version_skew":
+        bundle["chain_metadata"]["evidence_taxonomy_version"] = 999
+        return bundle
     raise AssertionError(f"unknown case_id={case_id}")
 
 

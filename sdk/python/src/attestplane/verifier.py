@@ -109,6 +109,9 @@ class BundleVerificationResult:
     - ``taxonomy_version``: copied from
       ``chain_metadata.evidence_taxonomy_version`` when the bundle
       declares it, otherwise ``None`` for legacy bundles.
+    - ``schema_version``: copied from
+      ``chain_metadata.schema_version`` when the bundle declares it,
+      otherwise ``None`` for legacy bundles.
     """
 
     ok: bool
@@ -119,6 +122,7 @@ class BundleVerificationResult:
     event_count: int
     bundle_version: int
     taxonomy_version: int | None
+    schema_version: int | None
     chain_id: str
     head_hash_hex: str
     metadata_ok: bool
@@ -203,6 +207,19 @@ def _resolve_bundle_taxonomy_version(bundle: dict[str, Any] | None) -> int | Non
     taxonomy_version = chain_metadata.get("evidence_taxonomy_version")
     if isinstance(taxonomy_version, int):
         return taxonomy_version
+    return None
+
+
+def _resolve_bundle_schema_version(bundle: dict[str, Any] | None) -> int | None:
+    """Extract the bundle's ``chain_metadata.schema_version``, or ``None`` if absent."""
+    if not isinstance(bundle, dict):
+        return None
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return None
+    schema_version = chain_metadata.get("schema_version")
+    if isinstance(schema_version, int):
+        return schema_version
     return None
 
 
@@ -730,6 +747,7 @@ def verify_proof_bundle(
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
         taxonomy_version=_resolve_bundle_taxonomy_version(bundle),
+        schema_version=_resolve_bundle_schema_version(bundle),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,

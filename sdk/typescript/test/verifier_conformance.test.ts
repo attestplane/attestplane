@@ -104,6 +104,11 @@ function caseBundle(caseId: string): Record<string, unknown> {
       unknown
     >;
   }
+  if (caseId === 'evidence_taxonomy_version_skew') {
+    const metadata = bundle.chain_metadata as Record<string, unknown>;
+    metadata.evidence_taxonomy_version = 999;
+    return bundle;
+  }
   throw new Error(`unknown caseId=${caseId}`);
 }
 
