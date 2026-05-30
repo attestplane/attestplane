@@ -57,6 +57,11 @@ The payload is fixed at schema version 1:
 - `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
 - In v1, `anchoring.quarantined=true` maps to exit code `2`, while normal
   verification failures continue to use exit code `1`.
+- The versioned golden fixture for CI pinning lives at
+  [`fixtures/golden/verify_json_v1.json`](../../fixtures/golden/verify_json_v1.json)
+  and is generated from [`fixtures/valid_bundle.att`](../../fixtures/valid_bundle.att).
+  Intentional contract changes must update that fixture in the same change and
+  re-run the output-contract and exit-code tests before merging.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
@@ -167,6 +172,25 @@ if [ "$rc" -ne 0 ] || [ "$result" != "pass" ]; then
   exit "$rc"
 fi
 ```
+
+### Pinned Fixture Gate
+
+The output-contract fixture is a separate CI gate from the verifier's own
+`exit_code` field. Treat the combined gate as:
+
+- `0` when `attestplane verify --json fixtures/valid_bundle.att` succeeds and
+  the payload exactly matches `fixtures/golden/verify_json_v1.json`.
+- `1` when the verifier rejects the bundle.
+- `2` when the bundle is quarantined or otherwise anchor-unverified.
+- `3` when the bundle cannot be parsed or read.
+- `4` when the verifier succeeds but the pinned JSON fixture drifts.
+
+To update the golden intentionally:
+
+1. Re-run `attestplane verify --json fixtures/valid_bundle.att`.
+2. Replace `fixtures/golden/verify_json_v1.json` with the new stdout.
+3. Re-run `pytest tests/conformance -k output_contract` and
+   `pytest tests/cli -k exit_code_contract`.
 
 ## See Also
 

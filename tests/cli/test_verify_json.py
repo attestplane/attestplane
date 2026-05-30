@@ -16,7 +16,8 @@ from attestplane.verify_reason_codes import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
+PASS_FIXTURE = ROOT / "fixtures" / "valid_bundle.att"
+GOLDEN_FIXTURE = ROOT / "fixtures" / "golden" / "verify_json_v1.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 
 
@@ -34,18 +35,8 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     rc, payload = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
     assert rc == 0
-    assert payload["schema_version"] == 1
-    assert payload["result"] == "pass"
-    assert payload["exit_code"] == 0
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"] == []
-    assert payload["bundle"] == {
-        "schema_version": 1,
-        "digest": payload["bundle"]["digest"],
-    }
+    assert payload == json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
-    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(

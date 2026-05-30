@@ -17,8 +17,8 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "schemas" / "cli" / "verify-result-v1.json"
 CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
-PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
+PASS_FIXTURE = ROOT / "fixtures" / "valid_bundle.att"
+GOLDEN_FIXTURE = ROOT / "fixtures" / "golden" / "verify_json_v1.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 UNKNOWN_REQUIRED_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 ROOT_QUARANTINE_FIXTURE = ROOT / "fixtures" / "quarantined.bundle"

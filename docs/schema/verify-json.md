@@ -45,6 +45,10 @@ accompanies the structured JSON contract.
 - Quarantined bundles map to exit code `2`. Hard verifier failures continue
   to map to exit code `1`, and malformed input that cannot be parsed or read
   continues to map to exit code `3`.
+- The versioned CI golden for the v1 contract lives at
+  [`fixtures/golden/verify_json_v1.json`](../../fixtures/golden/verify_json_v1.json).
+  Update that file in the same change whenever the v1 output contract changes
+  intentionally, then re-run the output-contract and exit-code tests.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.

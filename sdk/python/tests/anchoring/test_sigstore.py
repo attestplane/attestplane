@@ -10,12 +10,15 @@ signatures, no live network.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 from datetime import UTC, datetime
 
 import pytest
 
 pytest.importorskip("cryptography")
+if importlib.util.find_spec("asn1crypto") is None:
+    pytest.skip("requires asn1crypto optional dependency", allow_module_level=True)
 
 from attestplane.anchoring import (
     AnchorVerificationError,

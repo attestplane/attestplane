@@ -31,13 +31,6 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from typing import Final
 
-try:
-    from asn1crypto import algos, tsp
-except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "attestplane.anchoring.http requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
-    ) from exc
-
 from attestplane.anchoring.base import (
     ANCHOR_SCHEMA_VERSION,
     AnchorRecord,
@@ -45,10 +38,6 @@ from attestplane.anchoring.base import (
     TimestampRequest,
     TSAProvider,
     TSAUnavailableError,
-)
-from attestplane.anchoring.rfc3161 import (
-    parse_timestamp_response,
-    verify_timestamp_token,
 )
 
 RFC3161_CONTENT_TYPE_REQUEST: Final[str] = "application/timestamp-query"
@@ -135,6 +124,13 @@ def _resolve_freetsa_live_mode(live: bool) -> bool:
 
 def _build_request_der(digest: bytes, *, nonce: bytes | None = None) -> bytes:
     """Build a DER-encoded :class:`asn1crypto.tsp.TimeStampReq` payload."""
+    try:
+        from asn1crypto import algos, tsp
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "attestplane.anchoring.http requires the 'anchor' extras. Install with: pip install attestplane[anchor]"
+        ) from exc
+
     body: dict[str, object] = {
         "version": "v1",
         "message_imprint": tsp.MessageImprint(
@@ -203,6 +199,8 @@ class Rfc3161HttpProvider(TSAProvider):
         anchored_seq: int = 0,
         now: datetime | None = None,
     ) -> AnchorRecord:
+        from attestplane.anchoring.rfc3161 import parse_timestamp_response, verify_timestamp_token
+
         request_der = _build_request_der(request.digest, nonce=request.nonce)
         response_der = self._transport.submit(
             self._url,
