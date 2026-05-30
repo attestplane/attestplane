@@ -5,15 +5,12 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 from attestplane.cli.main import main
 from attestplane.cli.verify_json import _verify_explanations
-from attestplane.verify_reason_codes import (
-    format_verify_taxonomy_version,
-    resolve_verify_taxonomy_version,
-)
+from attestplane.verify_reason_codes import format_verify_taxonomy_version
 from attestplane.verifier import verify_proof_bundle
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -35,7 +32,7 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert explain_rc == 0
     assert json_captured.err == ""
     assert explain_captured.err == ""
-    assert sdk_result.taxonomy_version == resolve_verify_taxonomy_version()
+    assert bundle["chain_metadata"]["evidence_taxonomy_version"] == sdk_result.taxonomy_version
     assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
     assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out

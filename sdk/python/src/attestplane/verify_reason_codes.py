@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 VERIFY_REASON_TAXONOMY_VERSION: Final[int] = 1
 VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
@@ -96,8 +96,19 @@ def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     return VERIFY_REASON_TAXONOMY[value]
 
 
-def resolve_verify_taxonomy_version() -> int:
-    """Return the canonical public verifier taxonomy version."""
+def resolve_verify_taxonomy_version(bundle: Mapping[str, Any] | None = None) -> int:
+    """Return the canonical public verifier taxonomy version.
+
+    When a proof bundle is available, read the version from
+    ``chain_metadata.evidence_taxonomy_version`` so the verifier core and
+    all output surfaces share the same source of truth.
+    """
+    if bundle is not None:
+        chain_metadata = bundle.get("chain_metadata")
+        if isinstance(chain_metadata, Mapping):
+            value = chain_metadata.get("evidence_taxonomy_version")
+            if isinstance(value, int):
+                return value
     return VERIFY_REASON_TAXONOMY_VERSION
 
 

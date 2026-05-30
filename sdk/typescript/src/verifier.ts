@@ -729,7 +729,7 @@ export function verifyProofBundle(
     agreement,
     event_count: events.length,
     bundle_version: bundle.bundle_version,
-    taxonomy_version: resolveVerifyTaxonomyVersion(),
+    taxonomy_version: resolveVerifyTaxonomyVersion(bundle),
     chain_id: bundle.chain_metadata.chain_id,
     head_hash_hex: bundle.chain_metadata.head_hash_hex,
     metadata_ok: metadata.ok,

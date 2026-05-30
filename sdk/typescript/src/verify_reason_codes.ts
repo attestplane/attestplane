@@ -8,6 +8,8 @@
  * rejected an otherwise parsed input.
  */
 
+import type { ProofBundle } from './proof_bundle.js';
+
 export const VERIFY_REASON_TAXONOMY_VERSION = 1 as const;
 export const VERIFY_REASON_CODE_SCHEMA_VERSION = VERIFY_REASON_TAXONOMY_VERSION;
 
@@ -87,7 +89,15 @@ export function verifyReasonCodeExplanation(value: VerifyReasonCodeV1): string {
   return VERIFY_REASON_TAXONOMY[value];
 }
 
-export function resolveVerifyTaxonomyVersion(): typeof VERIFY_REASON_TAXONOMY_VERSION {
+export function resolveVerifyTaxonomyVersion(
+  bundle: Pick<ProofBundle, 'chain_metadata'> | null | undefined = undefined,
+): typeof VERIFY_REASON_TAXONOMY_VERSION {
+  if (bundle !== null && bundle !== undefined) {
+    const value = bundle.chain_metadata.evidence_taxonomy_version;
+    if (typeof value === 'number') {
+      return value as typeof VERIFY_REASON_TAXONOMY_VERSION;
+    }
+  }
   return VERIFY_REASON_TAXONOMY_VERSION;
 }
 
