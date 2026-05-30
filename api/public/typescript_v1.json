@@ -204,6 +204,14 @@
     {
       "documented": false,
       "kind": "class",
+      "name": "VerifyAnchoringState",
+      "notes": "",
+      "source": "src/verifier.ts",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
       "name": "CanonicalTextError",
       "notes": "",
       "source": "src/canonical_text.ts",

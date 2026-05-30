@@ -34,6 +34,9 @@ def test_negative_canonicalization_vector_set_is_complete() -> None:
         "canonicalization-negative-non-sorted-object-keys-v1",
         "canonicalization-negative-schema-version-mismatch-v1",
         "canonicalization-negative-trailing-whitespace-v1",
+        "canonicalization-negative-nested-array-order-v1",
+        "canonicalization-negative-deep-nfc-string-v1",
+        "canonicalization-negative-nested-float-prohibition-v1",
     }
 
 

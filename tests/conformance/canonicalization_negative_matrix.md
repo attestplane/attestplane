@@ -5,18 +5,21 @@ Y means the landed vector covers the edge case; - means it does not.
 
 ## Edge coverage
 
-| Edge case | Description | bom-trailing-bytes-raw.json | duplicate-json-keys-raw.json | int64-overflow-timestamp-payload.json | nfd-payload-string.json | v1/duplicate-json-keys.json | v1/embedded-nul-string.json | v1/invalid-surrogate-pair-string.json | v1/leading-zero-number.json | v1/non-minimal-number.json | v1/non-nfc-string.json | v1/non-sorted-object-keys.json | v1/schema-version-mismatch.json | v1/trailing-whitespace.json |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| dup-keys | Duplicate JSON keys must fail closed before a dict collapse hides the duplicate. | - | Y | - | - | Y | - | - | - | - | - | - | - | - |
-| embedded-nul | A raw text input containing U+0000 must fail the text canonicalizer. | - | - | - | - | - | Y | - | - | - | - | - | - | - |
-| surrogate | A raw text input containing an unpaired surrogate must fail the text canonicalizer. | - | - | - | - | - | - | Y | - | - | - | - | - | - |
-| int-canon | Integer and number edge cases must reject non-canonical encodings. | - | - | Y | - | - | - | - | Y | Y | - | - | - | - |
-| nfc | A decomposed Unicode string must fail canonicalization. | - | - | - | - | - | - | - | - | - | Y | - | - | - |
-| nfd | A helper-emitted NFC payload rewritten as NFD must fail canonicalization. | - | - | - | Y | - | - | - | - | - | - | - | - | - |
-| bom | A raw JSON envelope with a UTF-8 BOM prefix and trailing bytes must fail. | Y | - | - | - | - | - | - | - | - | - | - | - | - |
-| key-order | Object keys must remain in canonical sorted order. | - | - | - | - | - | - | - | - | - | - | Y | - | - |
-| schema-version | A bundle-like object declaring the wrong schema_version must be rejected. | - | - | - | - | - | - | - | - | - | - | - | Y | - |
-| trailing-whitespace | Trailing whitespace after a JSON value is not part of the canonical bytes. | - | - | - | - | - | - | - | - | - | - | - | - | Y |
+| Edge case | Description | bom-trailing-bytes-raw.json | duplicate-json-keys-raw.json | int64-overflow-timestamp-payload.json | nfd-payload-string.json | v1/duplicate-json-keys.json | v1/embedded-nul-string.json | v1/invalid-surrogate-pair-string.json | v1/leading-zero-number.json | v1/non-minimal-number.json | v1/non-nfc-string.json | v1/non-sorted-object-keys.json | v1/schema-version-mismatch.json | v1/trailing-whitespace.json | v1/nested-array-order.json | v1/deep-nfc-string.json | v1/nested-float-prohibition.json |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| dup-keys | Duplicate JSON keys must fail closed before a dict collapse hides the duplicate. | - | Y | - | - | Y | - | - | - | - | - | - | - | - | - | - | - |
+| embedded-nul | A raw text input containing U+0000 must fail the text canonicalizer. | - | - | - | - | - | Y | - | - | - | - | - | - | - | - | - | - |
+| surrogate | A raw text input containing an unpaired surrogate must fail the text canonicalizer. | - | - | - | - | - | - | Y | - | - | - | - | - | - | - | - | - |
+| int-canon | Integer and number edge cases must reject non-canonical encodings. | - | - | Y | - | - | - | - | Y | Y | - | - | - | - | - | - | - |
+| nfc | A decomposed Unicode string must fail canonicalization. | - | - | - | - | - | - | - | - | - | Y | - | - | - | - | - | - |
+| nfd | A helper-emitted NFC payload rewritten as NFD must fail canonicalization. | - | - | - | Y | - | - | - | - | - | - | - | - | - | - | - | - |
+| bom | A raw JSON envelope with a UTF-8 BOM prefix and trailing bytes must fail. | Y | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - |
+| key-order | Object keys must remain in canonical sorted order. | - | - | - | - | - | - | - | - | - | - | Y | - | - | - | - | - |
+| schema-version | A bundle-like object declaring the wrong schema_version must be rejected. | - | - | - | - | - | - | - | - | - | - | - | Y | - | - | - | - |
+| trailing-whitespace | Trailing whitespace after a JSON value is not part of the canonical bytes. | - | - | - | - | - | - | - | - | - | - | - | - | Y | - | - | - |
+| nested-array-order | An array with unsorted inner object keys must fail canonicalization. | - | - | - | - | - | - | - | - | - | - | - | - | - | Y | - | - |
+| deep-nfc | An NFD string in a deeply nested path must fail canonicalization. | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Y | - |
+| nested-float | A float value in a nested JSON path must fail canonicalization as non-canonical restricted JSON. | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Y |
 
 ## Vector inventory
 
@@ -35,6 +38,9 @@ Y means the landed vector covers the edge case; - means it does not.
 | `tests/conformance/vectors/canonicalization/negative/v1/non-sorted-object-keys.json` | `canonicalization-negative-non-sorted-object-keys-v1` | `json` | `att.verify.canonical_mismatch` | `canonicalization-positive-canonical-json-no-bom-trailing` | `af873a8349d965d30b0ab77710338090f3d3979417d284e38f29258d0c3fb348` |
 | `tests/conformance/vectors/canonicalization/negative/v1/schema-version-mismatch.json` | `canonicalization-negative-schema-version-mismatch-v1` | `json` | `att.verify.schema_version_unsupported` | `canonicalization-positive-canonical-json-no-bom-trailing` | `7935f935840d61f9b798a56a32ca3f4523b23232b4f3a60b7c4ae18581e1fe63` |
 | `tests/conformance/vectors/canonicalization/negative/v1/trailing-whitespace.json` | `canonicalization-negative-trailing-whitespace-v1` | `json` | `att.verify.canonical_mismatch` | `canonicalization-positive-canonical-json-no-bom-trailing` | `3928181a98c72b68a00081f06777f8d7405311d8a9852397ce1c4e0ca101df6c` |
+| `tests/conformance/vectors/canonicalization/negative/v1/nested-array-order.json` | `canonicalization-negative-nested-array-order-v1` | `json` | `att.verify.canonical_mismatch` | `canonicalization-positive-canonical-json-no-bom-trailing` | `74c0c0ac1981e012fa619262addee5c9a86320f1c93133a7b3f5d56b012925de` |
+| `tests/conformance/vectors/canonicalization/negative/v1/deep-nfc-string.json` | `canonicalization-negative-deep-nfc-string-v1` | `json` | `att.verify.canonical_mismatch` | `canonicalization-positive-nfc-payload-string` | `e23e55d9b6d8d3af957ef715ce1125ff3c116ab01f69f8a4db7cbca654a5bc38` |
+| `tests/conformance/vectors/canonicalization/negative/v1/nested-float-prohibition.json` | `canonicalization-negative-nested-float-prohibition-v1` | `json` | `att.verify.canonical_mismatch` | `canonicalization-positive-int64-boundary-timestamp-payload` | `b923b4af3979b397c7b4152f4108ce0811b7b52b1c830b0bbf17ba580cbf9983` |
 
 ## Notes
 

@@ -12,7 +12,9 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-NEGATIVE_ROOT = ROOT / "tests" / "conformance" / "vectors" / "canonicalization" / "negative"
+NEGATIVE_ROOT = (
+    ROOT / "tests" / "conformance" / "vectors" / "canonicalization" / "negative"
+)
 MATRIX_PATH = ROOT / "tests" / "conformance" / "canonicalization_negative_matrix.md"
 VERIFY_REASON_CODES_V1: tuple[str, ...] = (
     "att.verify.anchor_invalid",
@@ -131,6 +133,24 @@ VECTOR_SPECS: tuple[VectorSpec, ...] = (
         case_id="canonicalization-negative-trailing-whitespace-v1",
         expected_reason_code="att.verify.canonical_mismatch",
     ),
+    VectorSpec(
+        label="v1/nested-array-order.json",
+        path=NEGATIVE_ROOT / "v1" / "nested-array-order.json",
+        case_id="canonicalization-negative-nested-array-order-v1",
+        expected_reason_code="att.verify.canonical_mismatch",
+    ),
+    VectorSpec(
+        label="v1/deep-nfc-string.json",
+        path=NEGATIVE_ROOT / "v1" / "deep-nfc-string.json",
+        case_id="canonicalization-negative-deep-nfc-string-v1",
+        expected_reason_code="att.verify.canonical_mismatch",
+    ),
+    VectorSpec(
+        label="v1/nested-float-prohibition.json",
+        path=NEGATIVE_ROOT / "v1" / "nested-float-prohibition.json",
+        case_id="canonicalization-negative-nested-float-prohibition-v1",
+        expected_reason_code="att.verify.canonical_mismatch",
+    ),
 )
 
 
@@ -189,6 +209,21 @@ EDGE_ROWS: tuple[EdgeRow, ...] = (
         description="Trailing whitespace after a JSON value is not part of the canonical bytes.",
         covered_labels=("v1/trailing-whitespace.json",),
     ),
+    EdgeRow(
+        edge_id="nested-array-order",
+        description="An array with unsorted inner object keys must fail canonicalization.",
+        covered_labels=("v1/nested-array-order.json",),
+    ),
+    EdgeRow(
+        edge_id="deep-nfc",
+        description="An NFD string in a deeply nested path must fail canonicalization.",
+        covered_labels=("v1/deep-nfc-string.json",),
+    ),
+    EdgeRow(
+        edge_id="nested-float",
+        description="A float value in a nested JSON path must fail canonicalization as non-canonical restricted JSON.",
+        covered_labels=("v1/nested-float-prohibition.json",),
+    ),
 )
 
 
@@ -197,7 +232,9 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _canonical_sha256(value: Any) -> str:
-    canonical = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(canonical.encode("utf-8", "surrogatepass")).hexdigest()
 
 
@@ -211,8 +248,7 @@ def _field(value: dict[str, Any], path: tuple[str, ...]) -> Any:
 
 def load_vector_inventory() -> list[dict[str, Any]]:
     actual_paths = {
-        path.relative_to(ROOT).as_posix()
-        for path in NEGATIVE_ROOT.rglob("*.json")
+        path.relative_to(ROOT).as_posix() for path in NEGATIVE_ROOT.rglob("*.json")
     }
     expected_paths = {spec.path.relative_to(ROOT).as_posix() for spec in VECTOR_SPECS}
     assert actual_paths == expected_paths, {
@@ -269,14 +305,12 @@ def render_negative_coverage_matrix() -> str:
         covered = set(row.covered_labels)
         assert covered <= label_set, row.edge_id
         cells = ["Y" if label in covered else "-" for label in labels]
-        lines.append(
-            "| "
-            + " | ".join([row.edge_id, row.description, *cells])
-            + " |"
-        )
+        lines.append("| " + " | ".join([row.edge_id, row.description, *cells]) + " |")
 
     uncovered_labels = [
-        label for label in labels if not any(label in row.covered_labels for row in EDGE_ROWS)
+        label
+        for label in labels
+        if not any(label in row.covered_labels for row in EDGE_ROWS)
     ]
     assert not uncovered_labels, uncovered_labels
 

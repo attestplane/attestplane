@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-deep-nfc-string-v1",
+  "description": "An NFD string in a deeply nested path must fail canonicalization.",
+  "expected": {
+    "pointer": "/deep/nested/payload_text",
+    "reason_code": "att.verify.canonical_mismatch"
+  },
+  "raw_json": "{\"deep\":{\"nested\":{\"payload_text\":\"cafe\u0301\"}}}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-nfc-payload-string",
+  "surface": "json"
+}

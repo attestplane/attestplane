@@ -39,6 +39,7 @@ import type { AuditEvent, ChainedEvent, SubjectRef } from './types.js';
 import {
   VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
   VERIFY_CHAIN_RECOMPUTE_FAILED,
+  VERIFY_EXTENSION_FAILED,
   VERIFY_METADATA_CLOSURE_FAILED,
   VERIFY_OK,
   VERIFY_POLICY_TRACE_REFS_FAILED,
@@ -47,10 +48,12 @@ import {
   type VerifyErrorCode,
 } from './verify_errors.js';
 import {
+  VERIFY_REASON_ANCHOR_INVALID,
   VERIFY_REASON_CANONICAL_MISMATCH,
   VERIFY_REASON_REQUIRED_FIELD_MISSING,
   VERIFY_REASON_SCHEMA_INVALID,
   VERIFY_REASON_SCHEMA_UNKNOWN,
+  VERIFY_REASON_SCHEMA_VERSION_MISSING,
   VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
   VERIFY_REASON_SIGNATURE_INVALID,
   VERIFY_REASON_SIGNATURE_MISSING,
@@ -69,6 +72,16 @@ export class BundleSchemaError extends BundleVerificationError {
   constructor(message: string) {
     super(message);
     this.name = 'BundleSchemaError';
+  }
+}
+
+export class VerifyAnchoringState {
+  readonly status: 'verified' | 'quarantined' | 'absent';
+  readonly quarantined: boolean;
+
+  constructor(status: 'verified' | 'quarantined' | 'absent', quarantined: boolean) {
+    this.status = status;
+    this.quarantined = quarantined;
   }
 }
 
@@ -93,6 +106,9 @@ export interface BundleVerificationResult {
   readonly error_code: VerifyErrorCode;
   readonly primary_reason: VerifyReasonCodeV1 | null;
   readonly secondary_reasons: readonly VerifyReasonCodeV1[];
+  readonly anchoring_quarantined: boolean;
+  readonly quarantine_reason: VerifyReasonCodeV1 | null;
+  readonly anchoring_status: 'verified' | 'quarantined' | 'absent';
 }
 
 export interface VerifyProofBundleOptions {
@@ -150,11 +166,13 @@ const ALLOWED_TOP_LEVEL = new Set([
   'policy_trace_refs',
   'signatures',
   'retention_proofs',
+  'anchoring',
 ]);
 const ALLOWED_VERIFICATION_METHODS = new Set([
   'canonical-bytes-walk',
   'canonical-bytes-walk+anchor',
 ]);
+const ANCHORING_STATUS = new Set(['anchored', 'quarantined', 'unanchored']);
 const HEX64 = /^[0-9a-f]{64}$/;
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -232,6 +250,23 @@ function validateShape(raw: unknown): asserts raw is ProofBundle {
   }
   if ('retention_proofs' in raw && !Array.isArray(raw.retention_proofs)) {
     throw new BundleSchemaError('retention_proofs must be an array when present');
+  }
+  if ('anchoring' in raw) {
+    const anchoring = raw.anchoring;
+    if (!isPlainObject(anchoring)) {
+      throw new BundleSchemaError('anchoring must be a JSON object when present');
+    }
+    const missingAnchoring = ['status', 'quarantined'].filter((k) => !(k in (anchoring as Record<string, unknown>)));
+    if (missingAnchoring.length > 0) {
+      throw new BundleSchemaError(`anchoring missing required fields: ${JSON.stringify(missingAnchoring)}`);
+    }
+    const anchoringRecord = anchoring as Record<string, unknown>;
+    if (!ANCHORING_STATUS.has(String(anchoringRecord.status))) {
+      throw new BundleSchemaError(`anchoring.status must be one of ${JSON.stringify([...ANCHORING_STATUS].sort())}`);
+    }
+    if (typeof anchoringRecord.quarantined !== 'boolean') {
+      throw new BundleSchemaError('anchoring.quarantined must be a boolean');
+    }
   }
 }
 
@@ -486,6 +521,40 @@ function dedupeReasons(reasons: VerifyReasonCodeV1[]): {
   };
 }
 
+function bundleAnchoringStatus(bundle: ProofBundle): string | null {
+  const anchoring = bundle.anchoring as Record<string, unknown> | undefined;
+  if (!isPlainObject(anchoring)) return null;
+  const status = anchoring.status;
+  if (typeof status !== 'string') return null;
+  if (!ANCHORING_STATUS.has(status)) return null;
+  const quarantined = anchoring.quarantined;
+  if (typeof quarantined !== 'boolean') return null;
+  return status;
+}
+
+function bundleAnchorRefPresent(bundle: ProofBundle): boolean {
+  const cm = bundle.chain_metadata as Record<string, unknown>;
+  const anchorRef = cm.anchor_ref;
+  return typeof anchorRef === 'string' && anchorRef.length > 0;
+}
+
+function resultIsQuarantined(
+  errorCode: VerifyErrorCode,
+  primaryReason: VerifyReasonCodeV1 | null,
+): boolean {
+  if (errorCode === VERIFY_BUNDLE_SCHEMA_INCOMPLETE || errorCode === VERIFY_REQUIRED_FIELDS_MISSING) {
+    return true;
+  }
+  return (
+    primaryReason === VERIFY_REASON_SCHEMA_INVALID ||
+    primaryReason === VERIFY_REASON_SCHEMA_UNKNOWN ||
+    primaryReason === VERIFY_REASON_SCHEMA_VERSION_MISSING ||
+    primaryReason === VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED ||
+    primaryReason === VERIFY_REASON_REQUIRED_FIELD_MISSING ||
+    primaryReason === VERIFY_REASON_SIGNATURE_MISSING
+  );
+}
+
 function verificationReasons(input: {
   chainResult: VerificationResult;
   agreement: boolean;
@@ -497,6 +566,7 @@ function verificationReasons(input: {
   metadataReason: string | null;
   policyOk: boolean;
   retentionOk: boolean;
+  explicitAnchoringQuarantine: boolean;
 }): { primary: VerifyReasonCodeV1 | null; secondary: readonly VerifyReasonCodeV1[] } {
   const reasons: VerifyReasonCodeV1[] = [];
   if (!input.chainResult.ok || !input.agreement) reasons.push(VERIFY_REASON_CANONICAL_MISMATCH);
@@ -518,6 +588,7 @@ function verificationReasons(input: {
   }
   if (!input.policyOk) reasons.push(VERIFY_REASON_STRUCTURE_INVALID);
   if (!input.retentionOk) reasons.push(VERIFY_REASON_STRUCTURE_INVALID);
+  if (input.explicitAnchoringQuarantine) reasons.push(VERIFY_REASON_ANCHOR_INVALID);
   return dedupeReasons(reasons);
 }
 
@@ -692,6 +763,8 @@ export function verifyProofBundle(
     bundle.retention_proofs,
     new Set(events.map((event) => bytesToHex(event.event_hash))),
   );
+  const bundleAnchoringStatusValue = bundleAnchoringStatus(bundle);
+  const explicitQuarantine = bundleAnchoringStatusValue === 'quarantined';
   let errorCode: VerifyErrorCode = VERIFY_OK;
   if (!chainResult.ok || !agreement) {
     errorCode = VERIFY_CHAIN_RECOMPUTE_FAILED;
@@ -705,6 +778,8 @@ export function verifyProofBundle(
     errorCode = VERIFY_POLICY_TRACE_REFS_FAILED;
   } else if (!retentionProofs.ok) {
     errorCode = VERIFY_RETENTION_PROOF_FAILED;
+  } else if (explicitQuarantine) {
+    errorCode = VERIFY_EXTENSION_FAILED;
   }
   const reasons = verificationReasons({
     chainResult,
@@ -717,7 +792,26 @@ export function verifyProofBundle(
     metadataReason: metadata.reason,
     policyOk: policyTraceRefs.ok,
     retentionOk: retentionProofs.ok,
+    explicitAnchoringQuarantine: explicitQuarantine,
   });
+  const anchoringQuarantined = explicitQuarantine || resultIsQuarantined(errorCode, reasons.primary);
+  let anchoringStatus: 'verified' | 'quarantined' | 'absent';
+  if (anchoringQuarantined) {
+    anchoringStatus = 'quarantined';
+  } else if (bundleAnchoringStatusValue !== null) {
+    if (bundleAnchoringStatusValue === 'anchored') {
+      anchoringStatus = 'verified';
+    } else if (bundleAnchoringStatusValue === 'quarantined') {
+      anchoringStatus = 'quarantined';
+    } else {
+      anchoringStatus = 'absent';
+    }
+  } else if (bundleAnchorRefPresent(bundle)) {
+    anchoringStatus = 'verified';
+  } else {
+    anchoringStatus = 'absent';
+  }
+  const quarantineReason: VerifyReasonCodeV1 | null = anchoringQuarantined ? (reasons.primary ?? null) : null;
 
   return {
     ok:
@@ -726,7 +820,8 @@ export function verifyProofBundle(
       metadata.ok &&
       policyTraceRefs.ok &&
       retentionProofs.ok &&
-      signedAttestationSchema.ok,
+      signedAttestationSchema.ok &&
+      !anchoringQuarantined,
     chain_result: chainResult,
     bundle_reported_ok: bundleReportedOk,
     agreement,
@@ -746,6 +841,9 @@ export function verifyProofBundle(
     error_code: errorCode,
     primary_reason: reasons.primary,
     secondary_reasons: reasons.secondary,
+    anchoring_quarantined: anchoringQuarantined,
+    quarantine_reason: quarantineReason,
+    anchoring_status: anchoringStatus,
   };
 }
 

@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-nested-float-prohibition-v1",
+  "description": "A float value in a deeply nested path must fail canonicalization as non-canonical restricted JSON.",
+  "expected": {
+    "pointer": "/deep/nested/value",
+    "reason_code": "att.verify.canonical_mismatch"
+  },
+  "raw_json": "{\"deep\":{\"nested\":{\"value\":1.5}}}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-int64-boundary-timestamp-payload",
+  "surface": "json"
+}

@@ -98,6 +98,14 @@ export interface ProofBundle {
    * shape and references only; they do not claim GDPR compliance.
    */
   readonly retention_proofs?: readonly RetentionProof[];
+  /**
+   * Additive anchoring state. When present, includes ``status`` (one of
+   * ``anchored``, ``quarantined``, ``unanchored``) and ``quarantined`` (boolean).
+   */
+  readonly anchoring?: {
+    readonly status: string;
+    readonly quarantined: boolean;
+  };
 }
 
 /**

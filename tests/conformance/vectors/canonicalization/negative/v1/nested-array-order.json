@@ -1,0 +1,12 @@
+{
+  "case_id": "canonicalization-negative-nested-array-order-v1",
+  "description": "An array with unsorted inner object keys must fail canonicalization.",
+  "expected": {
+    "pointer": "/data",
+    "reason_code": "att.verify.canonical_mismatch"
+  },
+  "raw_json": "{\"data\":[{\"b\":2,\"a\":1}]}",
+  "schema_version": "attestplane.proof_bundle.minimum_bundle.canonicalization.negative.v1",
+  "source_positive_case": "canonicalization-positive-canonical-json-no-bom-trailing",
+  "surface": "json"
+}

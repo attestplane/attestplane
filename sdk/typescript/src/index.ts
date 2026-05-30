@@ -231,6 +231,7 @@ export {
   BundleSchemaError,
   BundleVerificationError,
   shortSummary,
+  VerifyAnchoringState,
   verifyProofBundle,
   verifyProofBundleFile,
   type BundleVerificationResult,
