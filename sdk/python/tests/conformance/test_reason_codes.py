@@ -11,7 +11,6 @@ Exercises:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from attestplane.cli.main import main
@@ -94,7 +93,7 @@ def test_verify_explain_accepted_stable_output() -> None:
 def test_verify_explain_rejected_golden_files() -> None:
     """Every rejected bundle with a golden file produces matching stdout."""
     for golden_path in sorted(GOLDEN_DIR.iterdir()):
-        if not golden_path.suffix == ".txt":
+        if golden_path.suffix != ".txt":
             continue
         fixture_name = golden_path.stem
         fixture_path = REJECTED_DIR / f"{fixture_name}.json"
@@ -117,17 +116,14 @@ def test_verify_explain_rejected_golden_files() -> None:
 
         expected = golden_path.read_text(encoding="utf-8")
         assert stdout == expected, (
-            f"Mismatch for {fixture_name}:\n"
-            f"  stdout:  {stdout!r}\n"
-            f"  golden:  {expected!r}\n"
-            f"  exit:    {rc}"
+            f"Mismatch for {fixture_name}:\n  stdout:  {stdout!r}\n  golden:  {expected!r}\n  exit:    {rc}"
         )
 
 
 def test_verify_explain_stderr_contains_reason_code_and_pointer() -> None:
     """Each rejected bundle explains reasons to stderr with code + pointer."""
     for fixture_path in sorted(REJECTED_DIR.iterdir()):
-        if not fixture_path.suffix == ".json":
+        if fixture_path.suffix != ".json":
             continue
 
         import sys

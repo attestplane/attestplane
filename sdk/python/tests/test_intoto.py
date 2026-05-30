@@ -175,6 +175,37 @@ def test_dsse_envelope_rejects_non_object_payload() -> None:
         )
 
 
+def test_dsse_envelope_rejects_non_dict_envelope() -> None:
+    """dsse_envelope_to_statement rejects a non-dict input."""
+    with pytest.raises(IntotoError, match="must be a dict"):
+        dsse_envelope_to_statement("not a dict")  # type: ignore[arg-type]
+
+
+def test_dsse_envelope_rejects_non_string_payload() -> None:
+    """dsse_envelope_to_statement rejects envelope with non-string payload."""
+    with pytest.raises(IntotoError, match="base64 string"):
+        dsse_envelope_to_statement(
+            {
+                "payloadType": DSSE_PAYLOAD_TYPE,
+                "payload": 12345,
+                "signatures": [],
+            }
+        )
+
+
+def test_dsse_envelope_rejects_malformed_json_payload() -> None:
+    """dsse_envelope_to_statement rejects envelope whose payload is not valid JSON."""
+    payload = base64.standard_b64encode(b"not valid json").decode("ascii")
+    with pytest.raises(IntotoError, match="not valid JSON"):
+        dsse_envelope_to_statement(
+            {
+                "payloadType": DSSE_PAYLOAD_TYPE,
+                "payload": payload,
+                "signatures": [],
+            }
+        )
+
+
 def test_canonical_json_is_deterministic() -> None:
     a = canonical_json_bytes({"b": 1, "a": 2})
     b = canonical_json_bytes({"a": 2, "b": 1})

@@ -14,7 +14,13 @@ from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import EventDraft
-from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
+from attestplane.verify_errors import (
+    ALL_VERIFY_ERROR_CODES_V1,
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    VERIFY_OK,
+    VERIFY_REQUIRED_FIELDS_MISSING,
+    is_known_verify_error_code,
+)
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SIGNATURE_MISSING,
@@ -72,3 +78,17 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
+
+
+def test_is_known_verify_error_code_returns_true_for_known() -> None:
+    """Known error codes return True."""
+    assert is_known_verify_error_code(VERIFY_OK)
+    for code in ALL_VERIFY_ERROR_CODES_V1:
+        assert is_known_verify_error_code(code)
+
+
+def test_is_known_verify_error_code_returns_false_for_unknown() -> None:
+    """Unknown error code strings return False."""
+    assert not is_known_verify_error_code("NONEXISTENT_CODE")
+    assert not is_known_verify_error_code("")
+    assert not is_known_verify_error_code("VERIFY_UNKNOWN_FUTURE_ERROR")
