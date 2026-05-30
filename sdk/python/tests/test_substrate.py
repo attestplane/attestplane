@@ -25,6 +25,7 @@ def test_empty_substrate_state() -> None:
     assert sub.tip().event_hash == GENESIS_HASH
     assert sub.verify().ok is True
     assert list(sub) == []
+    assert "AttestSubstrate" in repr(sub)
 
 
 def test_append_assigns_chain_fields() -> None:

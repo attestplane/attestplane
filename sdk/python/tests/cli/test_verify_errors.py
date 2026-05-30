@@ -14,7 +14,11 @@ from attestplane.cli.main import main
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.proof_bundle import ProofBundleBuilder
 from attestplane.types import EventDraft
-from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_REQUIRED_FIELDS_MISSING
+from attestplane.verify_errors import (
+    VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
+    VERIFY_REQUIRED_FIELDS_MISSING,
+    is_known_verify_error_code,
+)
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SIGNATURE_MISSING,
@@ -66,3 +70,25 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert payload["result"] == "reject"
     assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
+
+
+def test_is_known_verify_error_code_returns_true_for_known_codes() -> None:
+    assert is_known_verify_error_code("VERIFY_OK")
+    assert is_known_verify_error_code("VERIFY_IO_ERROR")
+    assert is_known_verify_error_code("VERIFY_SCHEMA_ERROR")
+    assert is_known_verify_error_code("bundle.schema.incomplete")
+    assert is_known_verify_error_code("VERIFY_CHAIN_RECOMPUTE_FAILED")
+    assert is_known_verify_error_code("VERIFY_METADATA_CLOSURE_FAILED")
+    assert is_known_verify_error_code("VERIFY_POLICY_TRACE_REFS_FAILED")
+    assert is_known_verify_error_code("VERIFY_RETENTION_PROOF_FAILED")
+    assert is_known_verify_error_code("VERIFY_ARTIFACT_HASH_FAILED")
+    assert is_known_verify_error_code("VERIFY_REQUIRED_FIELDS_MISSING")
+    assert is_known_verify_error_code("VERIFY_EXTENSION_INVALID_INPUT")
+    assert is_known_verify_error_code("VERIFY_EXTENSION_UNSUPPORTED")
+    assert is_known_verify_error_code("VERIFY_EXTENSION_FAILED")
+
+
+def test_is_known_verify_error_code_returns_false_for_unknown_code() -> None:
+    assert not is_known_verify_error_code("VERIFY_NOT_A_REAL_CODE")
+    assert not is_known_verify_error_code("")
+    assert not is_known_verify_error_code("unknown.string")
