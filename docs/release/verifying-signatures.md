@@ -155,7 +155,7 @@ cosign bundles and SLSA Build L3 provenance — attached to a single
 release. The release was tagged at 2026-05-20T21:32:20Z, after both
 [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) and the
 SLSA generator pin fix
-([PR #32](https://github.com/attestplane/attestplane/pull/32),
+(PR #32,
 merged 2026-05-20T21:55:37Z) landed, so it is the first tag the
 corrected workflow could populate end-to-end.
 
@@ -233,7 +233,7 @@ to any single branch or tag form.
 Tag `v1.0.8` was the project's first cosign-signed release
 ([`sign-release.yml` execute run `26191173510`](https://github.com/attestplane/attestplane/actions/runs/26191173510)),
 but it carries cosign bundles **only**. The SLSA generator pin fix
-in [PR #32](https://github.com/attestplane/attestplane/pull/32)
+in PR #32
 (reconciling ADR-0018 §"Tag-ref vs SHA-pin caveat") merged after
 `v1.0.8` was signed, so the SLSA leg was never attempted in execute
 mode against that tag. `v1.0.9` is the first tag with the complete

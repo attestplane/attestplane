@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Related**: [ADR-0006](0006-sigstore-rekor-redundant-anchor.md),
   [ADR-0017](0017-github-actions-release-cd.md),
   [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md),
-  [issue #18](https://github.com/attestplane/attestplane/issues/18)
+  issue #18
 
 ## Context
 

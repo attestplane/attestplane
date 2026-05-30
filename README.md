@@ -401,7 +401,7 @@ This combination of legal precision and direct engineering ownership is the subs
 
 ## Community and Support
 
-- **GitHub Discussions** — [github.com/attestplane/attestplane/discussions](https://github.com/attestplane/attestplane/discussions/) — architecture questions, deployment guidance, framework mapping discussions
+- **GitHub Discussions** — architecture questions, deployment guidance, framework mapping discussions
 - **Discord** — coming M6 (2026-09); link will appear here
 - **Mailing list** — TBD; announcements will be posted in GitHub Discussions until then
 - **Compliance consulting engagements** — M5-M7 limited availability; contact via GitHub Discussions or the maintainer entity below

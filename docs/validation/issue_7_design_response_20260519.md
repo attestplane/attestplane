@@ -8,8 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 ## Scope
 
 This note records the conservative design response for
-[#7](https://github.com/attestplane/attestplane/issues/7): EU AI Act
-Article 12 specificity, independent verifier expectations, and
+Issue #7: EU AI Act Article 12 specificity, independent verifier expectations, and
 retention/deletion-proof handling.
 
 This is a design response, not an implementation pass. It does not

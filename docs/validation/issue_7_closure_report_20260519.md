@@ -8,8 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 ## Scope
 
 This report records the formal documentation work for
-[#7](https://github.com/attestplane/attestplane/issues/7): EU AI Act Article
-12 surface, verifier independence, and retention/deletion proof handling.
+Issue #7: EU AI Act Article 12 surface, verifier independence, and
+retention/deletion proof handling.
 
 It converts the earlier conservative design response into project docs and an
 ADR. It does not implement new verifier behavior and does not expand public

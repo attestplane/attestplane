@@ -54,9 +54,9 @@ Manual live FreeTSA verification:
 
 ### Still Open
 
-- [#7](https://github.com/attestplane/attestplane/issues/7)
+- issue #7
   remains open. A conservative design response was posted:
-  <https://github.com/attestplane/attestplane/issues/7#issuecomment-4485790505>
+  issue comment for #7
 
 Keeping #7 open is intentional. It requires owner confirmation before
 turning the response into implementation work or public-facing claims.

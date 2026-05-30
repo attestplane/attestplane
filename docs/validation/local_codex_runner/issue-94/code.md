@@ -10,9 +10,8 @@ Implemented in this runner phase:
   release-consumer wording: suffix-free stable package cuts now require Opus
   consultation before the stable planning flow proceeds.
 - Linked the source planning issue
-  [Issue #91](https://github.com/attestplane/attestplane/issues/91) and this
-  planned docs task
-  [Issue #94](https://github.com/attestplane/attestplane/issues/94).
+  Issue #91 and this planned docs task
+  Issue #94.
 
 Content decisions:
 

@@ -47,9 +47,9 @@ services.
 
 2. Add issue cross-links in the release note.
    - Link source planning issue
-     [#91](https://github.com/attestplane/attestplane/issues/91).
+     #91.
    - Link this planned-task issue
-     [#94](https://github.com/attestplane/attestplane/issues/94).
+     #94.
    - If local evidence identifies additional task issues from the same plan,
      link them. If no local-only evidence identifies them, do not invent task
      issue numbers; record the limitation in implementation evidence.

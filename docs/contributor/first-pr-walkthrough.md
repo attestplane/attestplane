@@ -15,8 +15,7 @@ read alongside those documents.
 
 ## 1. What this walkthrough covers
 
-The canonical example is
-[PR #32](https://github.com/attestplane/attestplane/pull/32) — a small,
+The canonical example is PR #32 — a small,
 recent, well-scoped release-tooling fix that exercises every part of the
 contribution flow: a feature-branch worktree, a touch into a workflow file,
 a paired ADR caveat update, the ADR frozen-blocks lock refresh, lint, DCO
@@ -32,9 +31,8 @@ tag ref `@v2.1.0` and recorded the commit SHA as an audit-anchor comment,
 with [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) updated to
 document why a tag ref is acceptable here.
 
-For a documentation-only shape, see
-[PR #27](https://github.com/attestplane/attestplane/pull/27) as a secondary
-reference; the discipline below applies to both.
+For a documentation-only shape, see PR #27 as a secondary reference; the
+discipline below applies to both.
 
 ## 2. Prerequisites
 
@@ -244,12 +242,12 @@ Before you push, walk this checklist. It mirrors the PR template's
 
 ## 6. Where to ask
 
-- **GitHub Issues** — [issues](https://github.com/attestplane/attestplane/issues/)
+- **GitHub Issues** — issues
   for bug reports and feature requests. Filter to
-  [`good first issue`](https://github.com/attestplane/attestplane/labels/good%20first%20issue/)
+  `good first issue`
   for newcomer-friendly work.
 - **GitHub Discussions** —
-  [discussions](https://github.com/attestplane/attestplane/discussions/) for
+  discussions for
   open-ended questions ("how should I approach X") and design conversations
   that are not yet a bug or feature.
 - **Stuck mid-PR?** Comment on the issue your PR closes, or push your
