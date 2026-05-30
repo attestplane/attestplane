@@ -14,6 +14,7 @@ from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_REQUIRED_FIELDS_MISSING,
 )
+from attestplane.verify_reason_codes import VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -81,12 +82,44 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "1 verification failure" in out
     assert "2 quarantine" in out
+    assert "consumer-contract rejection" in out
     assert "3 usage" in out
+
+
+def test_verify_require_taxonomy_version_gates_match_and_mismatch(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(
+        ["verify", "--json", "--require-taxonomy-version", "1", str(VALID_SIGNED)]
+    )
+    valid = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert valid["result"] == "pass"
+    assert valid["exit_code"] == 0
+    assert valid["reason_code"] is None
+    assert valid["taxonomy_version"] == 1
+
+    rc = main(
+        ["verify", "--json", "--require-taxonomy-version", "2", str(VALID_SIGNED)]
+    )
+    captured = capsys.readouterr()
+    invalid = json.loads(captured.out)
+
+    assert rc == 2
+    assert invalid["result"] == "fail"
+    assert invalid["exit_code"] == 2
+    assert invalid["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert invalid["taxonomy_version"] == 1
+    assert invalid["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert invalid["reasons"][0]["path"] == "/taxonomy_version"
+    assert captured.err == ""
 
 
 def test_verify_explain_surfaces_reserved_reason_for_additive_fields(

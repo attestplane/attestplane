@@ -101,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
         description=VERIFY_SCOPE_NOTICE,
         epilog=(
             "Exit codes: 0 success; 1 verification failure; 2 quarantine / "
-            "fail-closed bundle rejection; 3 usage, I/O, or malformed input."
+            "fail-closed bundle or consumer-contract rejection; 3 usage, I/O, or malformed input."
         ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
@@ -131,6 +131,16 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        metavar="V",
+        help=(
+            "fail closed when the verifier taxonomy version does not match V; "
+            "mismatch exits 2 with a quarantined rejection"
+        ),
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -430,12 +440,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
 
     if args.json_output:
         outcome = build_verify_json_outcome(
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -449,6 +461,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
         )
     except FileNotFoundError as exc:
         explain = getattr(args, "explain", False)
@@ -561,6 +574,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=require_taxonomy_version,
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))

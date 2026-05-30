@@ -404,6 +404,17 @@ def _bundle_failure_reason(
 
     reasons: list[dict[str, str]] = []
 
+    if not getattr(result, "taxonomy_version_ok", True):
+        reasons.append(
+            _reason_entry(
+                VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                "/taxonomy_version",
+                summary="taxonomy version pin failed",
+                detail=getattr(result, "taxonomy_version_reason", None),
+                explain=explain,
+            )
+        )
+
     if not result.chain_result.ok or not result.agreement:
         reasons.append(
             _reason_entry(
@@ -528,6 +539,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -669,6 +681,7 @@ def build_verify_json_outcome(
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=require_signed_attestation,
+            require_taxonomy_version=require_taxonomy_version,
         )
     except BundleSchemaError as exc:
         code, path = _schema_reason_for_bundle_error(exc)

@@ -63,6 +63,8 @@ def test_verify_help_declares_partial_scope(capsys: pytest.CaptureFixture[str]) 
     assert "policy_trace_refs closure" in normalized
     assert "signature verification" in normalized
     assert "anchor verification" in normalized
+    assert "--require-taxonomy-version" in normalized
+    assert "consumer-contract rejection" in normalized
 
 
 def test_doctor_command(capsys: pytest.CaptureFixture[str]) -> None:

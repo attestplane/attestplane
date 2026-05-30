@@ -39,6 +39,7 @@ from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_CHAIN_RECOMPUTE_FAILED,
     VERIFY_EXTENSION_FAILED,
+    VERIFY_EXTENSION_UNSUPPORTED,
     VERIFY_METADATA_CLOSURE_FAILED,
     VERIFY_OK,
     VERIFY_POLICY_TRACE_REFS_FAILED,
@@ -117,6 +118,8 @@ class BundleVerificationResult:
     retention_proofs_reason: str | None
     signed_attestation_schema_ok: bool
     signed_attestation_schema_reason: str | None
+    taxonomy_version_ok: bool
+    taxonomy_version_reason: str | None
     error_code: VerifyErrorCode
     primary_reason: VerifyReasonCodeV1 | None
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
@@ -134,6 +137,7 @@ class BundleVerificationResult:
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
             f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
+            f"taxonomy_version_reason={self.taxonomy_version_reason!r} "
             f"error_code={self.error_code} primary_reason={self.primary_reason}"
         )
 
@@ -458,6 +462,7 @@ def _verification_reasons(
     chain_result: VerificationResult,
     agreement: bool,
     require_non_empty: bool,
+    taxonomy_version_ok: bool,
     events: list[ChainedEvent],
     signed_schema_ok: bool,
     signed_schema_reason: str | None,
@@ -468,6 +473,8 @@ def _verification_reasons(
     explicit_anchoring_quarantine: bool,
 ) -> tuple[VerifyReasonCodeV1 | None, tuple[VerifyReasonCodeV1, ...]]:
     reasons: list[VerifyReasonCodeV1] = []
+    if not taxonomy_version_ok:
+        reasons.append(VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED)
     if not chain_result.ok or not agreement:
         reasons.append(VERIFY_REASON_CANONICAL_MISMATCH)
     if require_non_empty and not events:
@@ -601,6 +608,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -613,6 +621,13 @@ def verify_proof_bundle(
     _validate_shape(bundle)
     events = _rehydrate_events(bundle["events"])
     effective_require_signed_attestation = require_signed_attestation or require_non_empty
+    taxonomy_version = resolve_verify_taxonomy_version()
+    taxonomy_version_ok = require_taxonomy_version is None or taxonomy_version == require_taxonomy_version
+    taxonomy_version_reason = (
+        None
+        if taxonomy_version_ok
+        else (f"verify taxonomy_version={taxonomy_version} does not match required {require_taxonomy_version}")
+    )
     if effective_require_signed_attestation:
         signed_schema_ok, signed_schema_reason = _validate_minimum_signed_attestation_schema(
             bundle,
@@ -637,7 +652,9 @@ def verify_proof_bundle(
     bundle_anchoring_status = _bundle_anchoring_status(bundle)
     explicit_quarantine = bundle_anchoring_status == "quarantined"
     error_code: VerifyErrorCode = VERIFY_OK
-    if not chain_result.ok or not agreement:
+    if not taxonomy_version_ok:
+        error_code = VERIFY_EXTENSION_UNSUPPORTED
+    elif not chain_result.ok or not agreement:
         error_code = VERIFY_CHAIN_RECOMPUTE_FAILED
     elif require_non_empty and not events:
         error_code = VERIFY_REQUIRED_FIELDS_MISSING
@@ -655,6 +672,7 @@ def verify_proof_bundle(
         chain_result=chain_result,
         agreement=agreement,
         require_non_empty=require_non_empty,
+        taxonomy_version_ok=taxonomy_version_ok,
         events=events,
         signed_schema_ok=signed_schema_ok,
         signed_schema_reason=signed_schema_reason,
@@ -689,6 +707,7 @@ def verify_proof_bundle(
             and policy_ok
             and retention_result.ok
             and signed_schema_ok
+            and taxonomy_version_ok
             and not anchoring_quarantined
         ),
         chain_result=chain_result,
@@ -707,6 +726,8 @@ def verify_proof_bundle(
         retention_proofs_reason=retention_result.reason,
         signed_attestation_schema_ok=signed_schema_ok,
         signed_attestation_schema_reason=signed_schema_reason,
+        taxonomy_version_ok=taxonomy_version_ok,
+        taxonomy_version_reason=taxonomy_version_reason,
         error_code=error_code,
         primary_reason=primary_reason,
         secondary_reasons=secondary_reasons,
@@ -720,6 +741,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -733,6 +755,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 
