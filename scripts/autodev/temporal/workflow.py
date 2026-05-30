@@ -64,7 +64,7 @@ class AutodevPipeline:
         pr = await workflow.execute_activity(
             create_pr_activity,
             args=[n, impl["branch"]],
-            task_queue=_TASK_QUEUE,
+            task_queue=_REVIEW_QUEUE,
             start_to_close_timeout=timedelta(minutes=10),
             retry_policy=_retry_5,
         )

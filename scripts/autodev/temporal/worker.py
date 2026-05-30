@@ -136,7 +136,7 @@ async def _main() -> None:
     review_worker = Worker(
         client,
         task_queue=REVIEW_QUEUE,
-        activities=[review_pr_activity, post_review_activity, merge_pr_activity],
+        activities=[create_pr_activity, review_pr_activity, post_review_activity, merge_pr_activity],
         activity_executor=review_pool,
         max_concurrent_activities=MAX_REVIEW,
         max_concurrent_workflow_tasks=MAX_REVIEW,
