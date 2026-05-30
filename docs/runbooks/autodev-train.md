@@ -248,6 +248,47 @@ before dispatching a real RC or GA publication.
 The 2026-05-20 audit is recorded in
 [`autodev_train_permission_audit_20260520.md`](../validation/autodev_train_permission_audit_20260520.md).
 
+## Opus Planning Telemetry
+
+Every Opus consultation emitted by the architecture-audit workflow produces
+a single JSON event line on stdout with event type ``autodev.plan.consult``.
+The event stream is captured in CI workflow logs and in the autodev train
+log file under ``release/alpha-train/reports/``.
+
+### Querying sampled events
+
+Filter the autodev train log for consultation events:
+
+```bash
+grep '"autodev.plan.consult"' release/alpha-train/reports/*.log
+```
+
+In CI, check the ``architecture-audit`` workflow run log for JSON lines
+containing ``autodev.plan.consult``.
+
+### Event schema (one line)
+
+```json
+{"event":"autodev.plan.consult","milestone":"v1.6.0","plan_level":"daily","anchor":"v1.5.9","head_sha":"<sha>","duration_ms":1234,"exit_code":0,"fallback_used":false,"prompt_hash":"<redacted-16-chars>","plan_source":"opus-live"}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| ``milestone`` | string | Milestone tag being planned |
+| ``plan_level`` | string | ``daily``, ``medium``, or ``architecture`` |
+| ``anchor`` | string | Prior anchor tag or ``repository start`` |
+| ``head_sha`` | string | Full commit SHA of the milestone |
+| ``duration_ms`` | integer | Wall-clock consultation duration |
+| ``exit_code`` | integer | ``0`` = plan accepted, ``1`` = fallback used |
+| ``fallback_used`` | boolean | ``true`` when deterministic-template was substituted |
+| ``prompt_hash`` | string | First 16 hex chars of SHA-256(prompt); prompt body is never logged |
+| ``plan_source`` | string | ``opus-live``, ``opus-fake-response``, or ``deterministic-template`` |
+
+Deterministic-fallback plans (``plan_source: "deterministic-template"``) are
+tagged so dashboards can separate them from Opus-authored plans by filtering
+on that field. Failure paths from ``fd35d105`` are observable as events where
+``exit_code`` is ``1`` and ``fallback_used`` is ``true``.
+
 ## Compatibility Names
 
 | Name | Status | Meaning |
