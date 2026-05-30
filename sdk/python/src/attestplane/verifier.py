@@ -17,7 +17,7 @@ import json
 import re
 import sys
 from base64 import b64decode
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -44,6 +44,7 @@ from attestplane.verify_errors import (
     VERIFY_POLICY_TRACE_REFS_FAILED,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_RETENTION_PROOF_FAILED,
+    VERIFY_TAXONOMY_VERSION_MISMATCH,
     VerifyErrorCode,
 )
 from attestplane.verify_reason_codes import (
@@ -57,6 +58,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     VerifyReasonCodeV1,
     resolve_verify_taxonomy_version,
 )
@@ -111,6 +113,8 @@ class BundleVerificationResult:
     head_hash_hex: str
     metadata_ok: bool
     metadata_reason: str | None
+    taxonomy_version_ok: bool
+    taxonomy_version_reason: str | None
     policy_trace_refs_ok: bool
     policy_trace_refs_reason: str | None
     retention_proofs_ok: bool
@@ -131,6 +135,7 @@ class BundleVerificationResult:
             f"FAIL chain_id={self.chain_id!r} events={self.event_count} "
             f"first_bad_index={bad} reason={self.chain_result.reason!r} "
             f"agreement={self.agreement} metadata_reason={self.metadata_reason!r} "
+            f"taxonomy_version_reason={self.taxonomy_version_reason!r} "
             f"policy_trace_refs_reason={self.policy_trace_refs_reason!r} "
             f"retention_proofs_reason={self.retention_proofs_reason!r} "
             f"signed_attestation_schema_reason={self.signed_attestation_schema_reason!r} "
@@ -260,6 +265,13 @@ def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | Non
     if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     return None
+
+
+def _taxonomy_version_mismatch_reason(
+    actual: int,
+    required: int,
+) -> str:
+    return f"taxonomy_version={actual!r} does not match required taxonomy_version={required!r}"
 
 
 def _unknown_required_field_reason(
@@ -601,6 +613,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -681,7 +694,7 @@ def verify_proof_bundle(
         anchoring_status = "anchored"
     else:
         anchoring_status = "unanchored"
-    return BundleVerificationResult(
+    result = BundleVerificationResult(
         ok=(
             chain_result.ok
             and agreement
@@ -701,6 +714,8 @@ def verify_proof_bundle(
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,
         metadata_reason=metadata_reason,
+        taxonomy_version_ok=True,
+        taxonomy_version_reason=None,
         policy_trace_refs_ok=policy_ok,
         policy_trace_refs_reason=policy_reason,
         retention_proofs_ok=retention_result.ok,
@@ -713,6 +728,21 @@ def verify_proof_bundle(
         anchoring_quarantined=anchoring_quarantined,
         anchoring_status=anchoring_status,
     )
+    if require_taxonomy_version is not None and result.ok and result.taxonomy_version != require_taxonomy_version:
+        result = replace(
+            result,
+            ok=False,
+            taxonomy_version_ok=False,
+            taxonomy_version_reason=_taxonomy_version_mismatch_reason(
+                result.taxonomy_version,
+                require_taxonomy_version,
+            ),
+            error_code=VERIFY_TAXONOMY_VERSION_MISMATCH,
+            primary_reason=VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+            secondary_reasons=(),
+            anchoring_quarantined=False,
+        )
+    return result
 
 
 def verify_proof_bundle_file(
@@ -720,6 +750,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -733,6 +764,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 

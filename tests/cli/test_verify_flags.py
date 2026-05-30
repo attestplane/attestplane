@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
 VALID_SIGNED = FIXTURES / "v1.7.0_signed.json"
 EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
+TAXONOMY_V1_FIXTURE = ROOT / "fixtures" / "conformance" / "taxonomy_v1.att"
 SIGNED_BUNDLE = (
     ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
 )
@@ -81,12 +82,55 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "1 verification failure" in out
     assert "2 quarantine" in out
     assert "3 usage" in out
+
+
+def test_verify_taxonomy_version_pin_is_enforced(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(
+        [
+            "verify",
+            "--require-taxonomy-version",
+            "1",
+            str(TAXONOMY_V1_FIXTURE),
+            "--json",
+        ]
+    )
+    ok_captured = capsys.readouterr()
+    ok_payload = json.loads(ok_captured.out)
+
+    assert rc == 0
+    assert ok_payload["result"] == "pass"
+    assert ok_payload["reason_code"] is None
+    assert ok_payload["taxonomy_version"] == 1
+    assert ok_captured.err == ""
+
+    rc = main(
+        [
+            "verify",
+            "--require-taxonomy-version",
+            "2",
+            str(TAXONOMY_V1_FIXTURE),
+            "--json",
+        ]
+    )
+    captured = capsys.readouterr()
+    fail_payload = json.loads(captured.out)
+
+    assert rc == 1
+    assert fail_payload["result"] == "fail"
+    assert fail_payload["reason_code"] == "att.verify.taxonomy_version_mismatch"
+    assert fail_payload["reasons"][0]["code"] == "att.verify.taxonomy_version_mismatch"
+    assert fail_payload["reasons"][0]["path"] == "/taxonomy_version"
+    assert fail_payload["reasons"][0]["message"] == "taxonomy version pinning failed"
+    assert captured.err == "VERIFY_TAXONOMY_VERSION_MISMATCH\n"
 
 
 def test_verify_explain_surfaces_reserved_reason_for_additive_fields(

@@ -20,6 +20,7 @@ from attestplane.verify_errors import (
     VERIFY_IO_ERROR,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
+    VERIFY_TAXONOMY_VERSION_MISMATCH,
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_ANCHOR_INVALID,
@@ -32,6 +33,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_INVALID,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
     VerifyReasonCodeV1,
     format_verify_taxonomy_version,
     resolve_verify_taxonomy_version,
@@ -415,6 +417,19 @@ def _bundle_failure_reason(
             )
         )
 
+    if not result.taxonomy_version_ok:
+        detail = result.taxonomy_version_reason or "taxonomy version pinning failed"
+        reasons.append(
+            _reason_entry(
+                VERIFY_REASON_TAXONOMY_VERSION_MISMATCH,
+                "/taxonomy_version",
+                summary="taxonomy version pinning failed",
+                detail=detail,
+                explain=explain,
+            )
+        )
+        return reasons
+
     if not result.signed_attestation_schema_ok:
         code = result.primary_reason or VERIFY_REASON_SIGNATURE_INVALID
         if code not in {
@@ -528,6 +543,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -669,6 +685,7 @@ def build_verify_json_outcome(
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=require_signed_attestation,
+            require_taxonomy_version=require_taxonomy_version,
         )
     except BundleSchemaError as exc:
         code, path = _schema_reason_for_bundle_error(exc)
@@ -714,6 +731,7 @@ def build_verify_json_outcome(
     if result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
         VERIFY_REQUIRED_FIELDS_MISSING,
+        VERIFY_TAXONOMY_VERSION_MISMATCH,
     }:
         stderr_code = result.error_code
     else:

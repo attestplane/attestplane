@@ -28,6 +28,7 @@ VerifyErrorCode = Literal[
     "VERIFY_EXTENSION_INVALID_INPUT",
     "VERIFY_EXTENSION_UNSUPPORTED",
     "VERIFY_EXTENSION_FAILED",
+    "VERIFY_TAXONOMY_VERSION_MISMATCH",
 ]
 
 VERIFY_OK: Final[VerifyErrorCode] = "VERIFY_OK"
@@ -43,6 +44,7 @@ VERIFY_REQUIRED_FIELDS_MISSING: Final[VerifyErrorCode] = "VERIFY_REQUIRED_FIELDS
 VERIFY_EXTENSION_INVALID_INPUT: Final[VerifyErrorCode] = "VERIFY_EXTENSION_INVALID_INPUT"
 VERIFY_EXTENSION_UNSUPPORTED: Final[VerifyErrorCode] = "VERIFY_EXTENSION_UNSUPPORTED"
 VERIFY_EXTENSION_FAILED: Final[VerifyErrorCode] = "VERIFY_EXTENSION_FAILED"
+VERIFY_TAXONOMY_VERSION_MISMATCH: Final[VerifyErrorCode] = "VERIFY_TAXONOMY_VERSION_MISMATCH"
 
 ALL_VERIFY_ERROR_CODES_V1: Final[tuple[VerifyErrorCode, ...]] = (
     VERIFY_OK,
@@ -58,6 +60,7 @@ ALL_VERIFY_ERROR_CODES_V1: Final[tuple[VerifyErrorCode, ...]] = (
     VERIFY_EXTENSION_INVALID_INPUT,
     VERIFY_EXTENSION_UNSUPPORTED,
     VERIFY_EXTENSION_FAILED,
+    VERIFY_TAXONOMY_VERSION_MISMATCH,
 )
 
 VERIFY_ERROR_DESCRIPTIONS: Final[dict[VerifyErrorCode, str]] = {
@@ -78,6 +81,7 @@ VERIFY_ERROR_DESCRIPTIONS: Final[dict[VerifyErrorCode, str]] = {
     VERIFY_EXTENSION_INVALID_INPUT: "Requested signature or anchor extension input is malformed.",
     VERIFY_EXTENSION_UNSUPPORTED: "Requested signature or anchor extension input uses an unsupported mode.",
     VERIFY_EXTENSION_FAILED: "Requested signature or anchor extension verification failed.",
+    VERIFY_TAXONOMY_VERSION_MISMATCH: "The consumer-pinned verifier taxonomy version does not match.",
 }
 
 
@@ -103,6 +107,7 @@ __all__ = [
     "VERIFY_REQUIRED_FIELDS_MISSING",
     "VERIFY_RETENTION_PROOF_FAILED",
     "VERIFY_SCHEMA_ERROR",
+    "VERIFY_TAXONOMY_VERSION_MISMATCH",
     "VerifyErrorCode",
     "is_known_verify_error_code",
 ]

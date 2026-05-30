@@ -35,6 +35,7 @@ from attestplane.verify_errors import (
     VERIFY_IO_ERROR,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
+    VERIFY_TAXONOMY_VERSION_MISMATCH,
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
@@ -131,6 +132,12 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        help="fail closed unless the verifier taxonomy version matches the pinned value",
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -430,12 +437,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
 
     if args.json_output:
         outcome = build_verify_json_outcome(
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -449,6 +458,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
         )
     except FileNotFoundError as exc:
         explain = getattr(args, "explain", False)
@@ -561,6 +571,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=require_taxonomy_version,
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
@@ -598,6 +609,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     if not result.ok and result.error_code in {
         VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
         VERIFY_REQUIRED_FIELDS_MISSING,
+        VERIFY_TAXONOMY_VERSION_MISMATCH,
     }:
         sys.stderr.write(f"{result.error_code}\n")
     human = result.short_summary()

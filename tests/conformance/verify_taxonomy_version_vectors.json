@@ -1,0 +1,21 @@
+{
+  "cases": [
+    {
+      "bundle_path": "fixtures/conformance/taxonomy_v1.att",
+      "case_id": "require-taxonomy-version-match",
+      "expected_rc": 0,
+      "expected_result": "pass",
+      "expected_stderr": "",
+      "require_taxonomy_version": 1
+    },
+    {
+      "bundle_path": "fixtures/conformance/taxonomy_v1.att",
+      "case_id": "require-taxonomy-version-mismatch",
+      "expected_rc": 1,
+      "expected_result": "fail",
+      "expected_stderr": "VERIFY_TAXONOMY_VERSION_MISMATCH\n",
+      "require_taxonomy_version": 2
+    }
+  ],
+  "schema_version": "attestplane.verify_taxonomy_version.v1"
+}
