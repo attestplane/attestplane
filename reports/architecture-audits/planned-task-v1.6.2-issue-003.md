@@ -1,14 +1,14 @@
 <!-- SPDX-FileCopyrightText: 2026 The Attestplane Authors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# [P2][docs][api] Document the user-visible product delta for v1.6.2
+# [P2]\[docs\]\[api\] Document the user-visible product delta for v1.6.2
 
 Source planning issue: #113
 Plan schema: `attestplane.plan.v1`
 Plan ID: `8ffcf15c3da1d588`
 Priority: P2
 
-Title: [P2][docs][api] Document the user-visible product delta for v1.6.2
+Title: [P2]\[docs\]\[api\] Document the user-visible product delta for v1.6.2
 
 Affected modules:
 

@@ -1,14 +1,14 @@
 <!-- SPDX-FileCopyrightText: 2026 The Attestplane Authors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# [P1][test][conformance] Pin cross-SDK coverage for the daily product change
+# [P1]\[test\]\[conformance\] Pin cross-SDK coverage for the daily product change
 
 Source planning issue: #113
 Plan schema: `attestplane.plan.v1`
 Plan ID: `8ffcf15c3da1d588`
 Priority: P1
 
-Title: [P1][test][conformance] Pin cross-SDK coverage for the daily product change
+Title: [P1]\[test\]\[conformance\] Pin cross-SDK coverage for the daily product change
 
 Affected modules:
 

@@ -3,6 +3,7 @@
 
 > Plan source: deterministic-template
 > Opus consultation fallback reason: opus_command_not_configured
+
 ## Auto-Generated Daily Plan
 
 Milestone: `v1.6.2`
@@ -35,7 +36,8 @@ Open GitHub issues considered:
 
 - none
 
-**ISSUE 1 · [P1][sdk][verifier] Add a verifier-facing product increment for v1.6.2**
+**ISSUE 1 · [P1]\[sdk\]\[verifier\] Add a verifier-facing product increment for v1.6.2**
+
 - Priority: P1
 - Affected modules: Python SDK verifier, TypeScript SDK verifier, proof bundle fixtures
 - Acceptance criteria:
@@ -48,7 +50,8 @@ Open GitHub issues considered:
   - `git diff --check`
 - Rollout / migration notes: Daily work should land a real Attestplane product delta before any release-train-only task.
 
-**ISSUE 2 · [P1][test][conformance] Pin cross-SDK coverage for the daily product change**
+**ISSUE 2 · [P1]\[test\]\[conformance\] Pin cross-SDK coverage for the daily product change**
+
 - Priority: P1
 - Affected modules: Python SDK tests, TypeScript SDK tests, conformance fixtures
 - Acceptance criteria:
@@ -61,7 +64,8 @@ Open GitHub issues considered:
   - `git diff --check`
 - Rollout / migration notes: Coverage must follow the product change, not release metadata churn.
 
-**ISSUE 3 · [P2][docs][api] Document the user-visible product delta for v1.6.2**
+**ISSUE 3 · [P2]\[docs\]\[api\] Document the user-visible product delta for v1.6.2**
+
 - Priority: P2
 - Affected modules: docs, SDK API docs, release notes
 - Acceptance criteria:

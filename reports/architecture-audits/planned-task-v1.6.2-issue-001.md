@@ -1,14 +1,14 @@
 <!-- SPDX-FileCopyrightText: 2026 The Attestplane Authors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# [P1][sdk][verifier] Add a verifier-facing product increment for v1.6.2
+# [P1]\[sdk\]\[verifier\] Add a verifier-facing product increment for v1.6.2
 
 Source planning issue: #113
 Plan schema: `attestplane.plan.v1`
 Plan ID: `8ffcf15c3da1d588`
 Priority: P1
 
-Title: [P1][sdk][verifier] Add a verifier-facing product increment for v1.6.2
+Title: [P1]\[sdk\]\[verifier\] Add a verifier-facing product increment for v1.6.2
 
 Affected modules:
 
