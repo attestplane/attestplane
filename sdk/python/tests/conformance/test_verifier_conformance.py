@@ -122,11 +122,11 @@ def test_verifier_result_exposes_stable_anchoring_fields() -> None:
     assert quarantined_result.anchoring_quarantined is True
 
 
-def test_verifier_result_surfaces_missing_bundle_taxonomy_version_as_none() -> None:
+def test_verifier_result_surfaces_stable_taxonomy_version_when_bundle_omits_it() -> None:
     bundle = _base_bundle()
     del bundle["chain_metadata"]["evidence_taxonomy_version"]
 
     result = verify_proof_bundle(bundle)
 
     assert result.ok is True
-    assert result.taxonomy_version is None
+    assert result.taxonomy_version == 1

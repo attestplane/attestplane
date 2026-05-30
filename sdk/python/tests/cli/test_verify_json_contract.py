@@ -149,7 +149,7 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert payload == VERIFY_JSON_GOLDEN
 
 
-def test_verify_json_legacy_bundle_surfaces_null_taxonomy_version(
+def test_verify_json_legacy_bundle_surfaces_stable_taxonomy_version(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -163,14 +163,14 @@ def test_verify_json_legacy_bundle_surfaces_null_taxonomy_version(
 
     assert rc == 0
     assert stderr == ""
-    assert payload["taxonomy_version"] is None
+    assert payload["taxonomy_version"] == 1
     assert payload["explanation"] == [
         {
             "primary_reason": None,
             "pointer": "/",
             "message": (
                 "signer_subject=key_id:4bf5122f344554c53bde2ebb8cd2b7e3 "
-                "schema_version=1 taxonomy_version=unknown anchor=absent"
+                "schema_version=1 taxonomy_version=1 anchor=absent"
             ),
         }
     ]
@@ -302,7 +302,7 @@ def test_verify_json_reports_invalid_utf8(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
-    assert payload["taxonomy_version"] is None
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -323,7 +323,7 @@ def test_verify_json_rejects_duplicate_keys(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_STRUCTURE_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
-    assert payload["taxonomy_version"] is None
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_STRUCTURE_INVALID
     assert reason["path"] == "/chain_metadata"
@@ -344,7 +344,7 @@ def test_verify_json_rejects_non_object_root(
     assert stderr == f"{VERIFY_SCHEMA_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
-    assert payload["taxonomy_version"] is None
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"
@@ -364,7 +364,7 @@ def test_verify_json_reports_missing_bundle_path(
     assert stderr == f"{VERIFY_IO_ERROR}\n"
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_INVALID
     assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["usage_error"]
-    assert payload["taxonomy_version"] is None
+    assert payload["taxonomy_version"] == 1
     reason = payload["reasons"][0]  # type: ignore[index]
     assert reason["code"] == VERIFY_REASON_SCHEMA_INVALID
     assert reason["path"] == "/"

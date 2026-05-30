@@ -58,6 +58,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
+    resolve_verify_taxonomy_version,
 )
 
 
@@ -106,9 +107,11 @@ class BundleVerificationResult:
       the bundle instead of treating it as a normal verification failure.
     - ``quarantine_reason``: the :class:`~attestplane.verify_reason_codes.VerifyReasonCodeV1`
       that triggered quarantine, or ``None`` when not quarantined.
-    - ``taxonomy_version``: copied from
-      ``chain_metadata.evidence_taxonomy_version`` when the bundle
-      declares it, otherwise ``None`` for legacy bundles.
+    - ``taxonomy_version``: the stable verifier reason-code taxonomy
+      version, sourced from the canonical
+      ``VERIFY_REASON_TAXONOMY_VERSION`` constant.  This is always
+      ``1`` for v1 verify reason codes; it is NOT the bundle's
+      ``evidence_taxonomy_version``.
     """
 
     ok: bool
@@ -729,7 +732,7 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
-        taxonomy_version=_resolve_bundle_taxonomy_version(bundle),
+        taxonomy_version=resolve_verify_taxonomy_version(),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,

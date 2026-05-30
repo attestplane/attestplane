@@ -143,7 +143,7 @@ def test_export_then_verify_json_output(tmp_path: Path, capsys: pytest.CaptureFi
     assert payload["bundle"]["digest"]
 
 
-def test_verify_explain_legacy_bundle_reports_unknown_taxonomy_version(
+def test_verify_explain_legacy_bundle_reports_stable_taxonomy_version(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -157,7 +157,7 @@ def test_verify_explain_legacy_bundle_reports_unknown_taxonomy_version(
     captured = capsys.readouterr()
 
     assert rc == 0
-    assert "taxonomy_version=unknown" in captured.out
+    assert "taxonomy_version=1" in captured.out
     assert captured.err == ""
 
 
@@ -219,7 +219,7 @@ def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(
     assert captured.err == ""
     assert result["schema_version"] == 1
     assert result["exit_code"] == expected_rc
-    assert result["taxonomy_version"] == (1 if mutate is None else None)
+    assert result["taxonomy_version"] == 1
     assert result["result"] == ("pass" if expected_rc == 0 else "fail")
     if expected_reason is None:
         assert result["reason_code"] is None

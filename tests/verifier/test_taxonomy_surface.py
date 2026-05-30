@@ -42,6 +42,15 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"
 
 
+def test_taxonomy_version_consistency() -> None:
+    """Assert that the taxonomy_version constant, SDK result, and
+    format helper all agree on the canonical value."""
+    assert resolve_verify_taxonomy_version() == 1
+    assert format_verify_taxonomy_version() == "1"
+    assert format_verify_taxonomy_version(None) == "1"
+    assert format_verify_taxonomy_version(1) == "1"
+
+
 def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
     explanation = _verify_explanations(
         SimpleNamespace(ok=True), bundle=None, explain=True
