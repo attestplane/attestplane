@@ -87,7 +87,7 @@ async def implement_activity(
     branch = f"autodev/issue-{issue_number}"
 
     # If previous attempt ended in conflict/failure, delete the stale branch so
-    # Codex re-implements from the current main rather than reusing broken code.
+    # Qwen re-implements from the current main rather than reusing broken code.
     if run and run.get("stage") == "failed":
         activity.logger.info("issue #%d previously failed — purging stale branch to re-implement", issue_number)
         try:
@@ -96,7 +96,7 @@ async def implement_activity(
             pass
         db.upsert_run(issue_number, stage="pending", pr_number=None, branch=None)
 
-    # On retry: if the branch already exists on remote, skip Codex re-run.
+    # On retry: if the branch already exists on remote, skip Qwen re-run.
     # This prevents a retry from overwriting an in-progress CI/review with a new SHA.
     attempt = activity.info().attempt
     if attempt > 1:
@@ -105,12 +105,12 @@ async def implement_activity(
                             cwd=str(MAIN_REPO))
             if existing.strip():
                 activity.logger.info(
-                    "Retry attempt %d for issue #%d — branch exists, skipping Codex",
+                    "Retry attempt %d for issue #%d — branch exists, skipping Qwen",
                     attempt, issue_number,
                 )
                 return {"branch": branch, "has_changes": True, "skipped": True}
         except RuntimeError:
-            pass  # ls-remote failed → proceed with normal Codex run
+            pass  # ls-remote failed → proceed with normal Qwen run
 
     worktree = str(MAIN_REPO.parent / f"attestplane-wt-{issue_number}")
     main = str(MAIN_REPO)
@@ -137,7 +137,7 @@ async def implement_activity(
             _shutil.rmtree(worktree, ignore_errors=True)
         _run(["git", "worktree", "add", "-B", branch, worktree, "origin/main"], cwd=main)
 
-        # Build Codex prompt
+        # Build Qwen prompt
         prompt = (
             f"按照 AGENTS.md 和项目规范实现以下任务。\n\n"
             f"任务标题：{issue_title}\n\n"
@@ -196,7 +196,7 @@ async def implement_activity(
             raise
 
         # Purge files whose only changes are whitespace/formatting so the PR diff
-        # stays focused on real implementation changes. Codex sometimes runs
+        # stays focused on real implementation changes. Qwen sometimes runs
         # ruff format on the whole repo, creating a noisy 30+ file diff.
         _purge_whitespace_only_changes(worktree)
 
@@ -470,7 +470,7 @@ async def post_review_activity(
 
 @activity.defn(name="fix_ci")
 async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
-    """Wait for CI on a freshly-created PR; if it fails, run Codex to fix the errors.
+    """Wait for CI on a freshly-created PR; if it fails, run Qwen to fix the errors.
 
     Returns {"ci_passed": bool, "fixed": bool}.
     Called once between create_pr and review_pr. merge_pr_activity re-checks CI
@@ -506,7 +506,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
 
         if not pending:
             # All checks completed but not CLEAN → CI failed
-            activity.logger.info("CI failed for PR #%d (state=%s) — will attempt Codex fix", pr_number, merge_state)
+            activity.logger.info("CI failed for PR #%d (state=%s) — will attempt Qwen fix", pr_number, merge_state)
             break
 
         if _time.monotonic() > ci_wait_deadline:
@@ -553,10 +553,10 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
             error_summary += f"\n### {check_name}\n(log unavailable)\n"
 
     if not error_summary.strip():
-        activity.logger.warning("No extractable CI errors for PR #%d — skipping Codex fix", pr_number)
+        activity.logger.warning("No extractable CI errors for PR #%d — skipping Qwen fix", pr_number)
         return {"ci_passed": False, "fixed": False}
 
-    # ── run Codex on a fresh worktree of the branch ───────────────────────────
+    # ── run Qwen on a fresh worktree of the branch ───────────────────────────
     main = str(MAIN_REPO)
     worktree = str(MAIN_REPO.parent / f"attestplane-cifix-{issue_number}")
     try:
@@ -635,7 +635,7 @@ async def fix_ci_activity(issue_number: int, pr_number: int) -> dict:
             db.log_event(issue_number, "fix_ci", "completed", f"pr={pr_number} fixed=True")
             return {"ci_passed": False, "fixed": True}
         else:
-            activity.logger.warning("Codex produced no changes for CI fix on PR #%d", pr_number)
+            activity.logger.warning("Qwen produced no changes for CI fix on PR #%d", pr_number)
             db.log_event(issue_number, "fix_ci", "completed", f"pr={pr_number} fixed=False")
             return {"ci_passed": False, "fixed": False}
 
