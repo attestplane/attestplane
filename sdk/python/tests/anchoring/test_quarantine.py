@@ -19,6 +19,7 @@ from attestplane.verify_reason_codes import VERIFY_REASON_ANCHOR_INVALID
 
 ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_PATH = ROOT / "schemas" / "v1" / "proof_bundle.schema.json"
+ANCHORING_FIXTURE_DIR = ROOT / "fixtures" / "anchoring"
 NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
 
 
@@ -70,6 +71,23 @@ def test_quarantined_bundle_surfaces_in_verify_json(tmp_path: Path, capsys: pyte
     bundle_path.write_text(json.dumps(bundle, indent=2), encoding="utf-8")
 
     rc = main(["verify", "--json", str(bundle_path)])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 2
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
+    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+
+
+@pytest.mark.parametrize("fixture_path", sorted(ANCHORING_FIXTURE_DIR.glob("quarantine_*.json")))
+def test_free_tsa_quarantine_fixtures_surface_quarantined(
+    fixture_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert fixture_path.exists()
+
+    rc = main(["verify", "--json", str(fixture_path)])
     payload = json.loads(capsys.readouterr().out)
 
     assert rc == 2

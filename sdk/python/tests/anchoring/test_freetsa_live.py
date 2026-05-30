@@ -47,6 +47,25 @@ def test_freetsa_live_mode_uses_stdlib_transport(monkeypatch: pytest.MonkeyPatch
     assert parsed.message_imprint == digest
 
 
+def test_freetsa_live_mode_can_be_enabled_by_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    authority = TestTSAAuthority(now=NOW)
+    digest = hashlib.sha256(b"chain-head").digest()
+    response_der = authority.sign_timestamp_response(digest, gen_time=NOW)
+    fake_transport = RecordedHttpTransport(response_der)
+
+    monkeypatch.setenv("ATTESTPLANE_FREETSA_LIVE", "1")
+    monkeypatch.setattr("attestplane.anchoring.http.UrllibHttpTransport", lambda: fake_transport)
+
+    provider = FreeTSAProvider(
+        trust_roots_der=[authority.materials().root_cert_der],
+        ocsp_responses_der=[b"ocsp"],
+    )
+    anchor = provider.request_timestamp(TimestampRequest(digest=digest), now=NOW)
+
+    assert anchor.tsa_provider_id == "freetsa.org"
+    assert anchor.tsa_token == response_der
+
+
 def test_freetsa_live_mode_rejects_transport_override() -> None:
     with pytest.raises(ValueError, match="live mode does not accept"):
         FreeTSAProvider(live=True, transport=RecordedHttpTransport(b"ignored"))

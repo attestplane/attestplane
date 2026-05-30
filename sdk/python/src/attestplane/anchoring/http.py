@@ -26,6 +26,7 @@ response.
 
 from __future__ import annotations
 
+import os
 import urllib.request
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -129,8 +130,11 @@ def make_replay_transport(response_der: bytes) -> HttpTransport:
 
 
 def _resolve_freetsa_live_mode(live: bool) -> bool:
-    """Resolve the claim-safe FreeTSA mode from the explicit flag."""
-    return live
+    """Resolve the claim-safe FreeTSA mode from the explicit flag or env."""
+    if live:
+        return True
+    env_value = os.getenv("ATTESTPLANE_FREETSA_LIVE", "")
+    return env_value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _build_request_der(digest: bytes, *, nonce: bytes | None = None) -> bytes:
