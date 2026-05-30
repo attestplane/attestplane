@@ -944,6 +944,14 @@
       "documented": false,
       "kind": "class",
       "module": "attestplane",
+      "name": "VerifyAnchoringState",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
       "name": "VerifyErrorCode",
       "notes": "",
       "stability": "alpha_public"
