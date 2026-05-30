@@ -319,7 +319,8 @@ def test_fault_matrix_python_valid_anchor_still_passes() -> None:
         anchored_seq=0,
     )
     result = verify_chain_with_anchors(chain, [anchor])
-    assert result.ok is True
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
 
 
 @pytest.mark.parametrize(

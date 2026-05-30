@@ -102,7 +102,11 @@ def test_unavailable_reschedules_and_eventually_succeeds() -> None:
     # First call: unavailable, requeued with next_attempt_at = now+1s.
     assert anchorer.step_once() is None
     assert anchorer.pending_count() == 1
+    with anchorer._lock:
+        pending = anchorer._queue[0]
+    assert pending.status == "quarantined"
     assert anchorer.stats().retries_after_unavailable == 1
+    assert anchorer.stats().quarantined == 1
 
     # Without advancing time, the item is not yet eligible for retry.
     assert anchorer.step_once() is None  # rotated back to tail
@@ -164,6 +168,7 @@ def test_verification_error_quarantines_immediately() -> None:
     assert result.pending.status == "failed_permanent"
     assert "malformed token" in (result.pending.last_error or "")
     assert anchorer.stats().failed_permanent == 1
+    assert anchorer.stats().quarantined == 0
     # No retry: queue is now empty.
     assert anchorer.pending_count() == 0
 
