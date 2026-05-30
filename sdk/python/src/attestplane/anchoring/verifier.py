@@ -40,7 +40,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 from attestplane.anchoring.base import (
     ANCHOR_SCHEMA_VERSION,
@@ -49,6 +49,9 @@ from attestplane.anchoring.base import (
 )
 from attestplane.hashchain import verify_chain
 from attestplane.types import ChainedEvent
+
+ANCHOR_REASON_INVALID: Final[str] = "anchor.invalid"
+ANCHOR_REASON_UNVERIFIABLE: Final[str] = "anchor.unverifiable"
 
 CertStatus = Literal[
     "VALID",
@@ -67,6 +70,7 @@ class SingleAnchorResult:
     seq: int
     provider: str
     valid: bool
+    reason_code: str | None
     cert_status: CertStatus
     ltv_artifacts_present: bool
     reason: str | None
@@ -98,6 +102,17 @@ class AnchorVerificationResult:
     def ok(self) -> bool:
         """True iff chain verifies AND at least one supplied anchor verifies."""
         return self.chain_ok and self.verification_status == "verified"
+
+    @property
+    def reason_code(self) -> str | None:
+        """Machine-readable aggregate anchor verification reason."""
+        if self.verification_status == "verified":
+            return None
+        if any(result.reason_code == ANCHOR_REASON_INVALID for result in self.anchor_results):
+            return ANCHOR_REASON_INVALID
+        if any(result.reason_code == ANCHOR_REASON_UNVERIFIABLE for result in self.anchor_results):
+            return ANCHOR_REASON_UNVERIFIABLE
+        return None
 
 
 def verify_chain_with_anchors(
@@ -133,9 +148,9 @@ def verify_chain_with_anchors(
       ``verification_time`` (defaults to "now").
 
     When ``trust_roots_der`` is ``None``, cross-reference-correct
-    anchors are reported with ``cert_status="VALID_UNVERIFIED"`` —
-    this is the v1 substrate-only behaviour preserved for callers who
-    have not installed the anchor extras.
+    anchors are reported with ``cert_status="VALID_UNVERIFIED"`` but
+    are not counted as verified. This keeps the substrate-only caller
+    path claim-safe without emitting a positive cryptographic claim.
     """
     chain_result = verify_chain(events)
     seqs_in_chain = {ev.seq for ev in events}
@@ -171,6 +186,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
+                    reason_code=ANCHOR_REASON_INVALID,
                     cert_status="MISSING_LTV_ARTIFACTS",
                     ltv_artifacts_present=False,
                     reason=(
@@ -187,6 +203,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
+                    reason_code=ANCHOR_REASON_INVALID,
                     cert_status="MISSING_LTV_ARTIFACTS",
                     ltv_artifacts_present=bool(anchor.tsa_cert_chain),
                     reason=f"anchored_seq={anchor.anchored_seq} not in chain",
@@ -201,6 +218,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
+                    reason_code=ANCHOR_REASON_INVALID,
                     cert_status="MISSING_LTV_ARTIFACTS",
                     ltv_artifacts_present=bool(anchor.tsa_cert_chain),
                     reason=(f"anchored_event_hash mismatch at seq {anchor.anchored_seq}"),
@@ -214,6 +232,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
+                    reason_code=ANCHOR_REASON_INVALID,
                     cert_status="MISSING_LTV_ARTIFACTS",
                     ltv_artifacts_present=bool(anchor.tsa_cert_chain),
                     reason="issued_at_claimed is naive datetime",
@@ -226,6 +245,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
+                    reason_code=ANCHOR_REASON_INVALID,
                     cert_status="MISSING_LTV_ARTIFACTS",
                     ltv_artifacts_present=bool(anchor.tsa_cert_chain),
                     reason="issued_at_claimed is not UTC",
@@ -240,6 +260,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=False,
+                    reason_code=ANCHOR_REASON_UNVERIFIABLE,
                     cert_status="MISSING_LTV_ARTIFACTS",
                     ltv_artifacts_present=False,
                     reason=("tsa_cert_chain or ocsp_responses is empty; CAdES-A long-term validation requires both"),
@@ -269,6 +290,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
+                        reason_code=ANCHOR_REASON_INVALID,
                         cert_status="MISSING_LTV_ARTIFACTS",
                         ltv_artifacts_present=True,
                         reason=str(exc),
@@ -280,6 +302,7 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=True,
+                    reason_code=None,
                     cert_status="VALID",
                     ltv_artifacts_present=True,
                     reason=None,
@@ -308,6 +331,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
+                        reason_code=ANCHOR_REASON_INVALID,
                         cert_status="MISSING_LTV_ARTIFACTS",
                         ltv_artifacts_present=True,
                         reason=str(exc),
@@ -369,6 +393,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
+                        reason_code=ANCHOR_REASON_UNVERIFIABLE,
                         cert_status="MISSING_LTV_ARTIFACTS",
                         ltv_artifacts_present=True,
                         reason=f"OCSP: {ocsp_failure}",
@@ -381,6 +406,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
+                        reason_code=ANCHOR_REASON_INVALID,
                         cert_status="REVOKED",
                         ltv_artifacts_present=True,
                         reason="OCSP responder reports the TSA leaf cert is revoked",
@@ -393,6 +419,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
+                        reason_code=ANCHOR_REASON_UNVERIFIABLE,
                         cert_status="MISSING_LTV_ARTIFACTS",
                         ltv_artifacts_present=True,
                         reason="OCSP responder reports cert status unknown",
@@ -405,31 +432,35 @@ def verify_chain_with_anchors(
                     seq=anchor.anchored_seq,
                     provider=provider,
                     valid=True,
+                    reason_code=None,
                     cert_status="VALID",
                     ltv_artifacts_present=True,
                     reason=None,
                 )
             )
+            anchored_seqs.add(anchor.anchored_seq)
         else:
             anchor_results.append(
                 SingleAnchorResult(
                     seq=anchor.anchored_seq,
                     provider=provider,
-                    valid=True,
+                    valid=False,
+                    reason_code=ANCHOR_REASON_UNVERIFIABLE,
                     cert_status="VALID_UNVERIFIED",
                     ltv_artifacts_present=True,
-                    reason=None,
+                    reason="anchor could not be cryptographically verified without trust_roots_der",
                 )
             )
-        anchored_seqs.add(anchor.anchored_seq)
 
     unanchored_seqs = seqs_in_chain - anchored_seqs
     if not anchor_results:
         verification_status: AnchorVerificationStatus = "not_performed"
     elif all(a.valid for a in anchor_results):
         verification_status = "verified"
-    else:
+    elif any(a.reason_code == ANCHOR_REASON_INVALID for a in anchor_results):
         verification_status = "failed"
+    else:
+        verification_status = "not_performed"
 
     return AnchorVerificationResult(
         chain_ok=chain_result.ok,

@@ -10,8 +10,11 @@ enabled.
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -20,10 +23,15 @@ pytest.importorskip("asn1crypto")
 
 from attestplane.anchoring import TimestampRequest
 from attestplane.anchoring.http import FreeTSAProvider, RecordedHttpTransport
-from attestplane.anchoring.rfc3161 import parse_timestamp_response
+from attestplane.anchoring.rfc3161 import parse_timestamp_response, verify_timestamp_token
 from attestplane.anchoring.testing import TestTSAAuthority
 
 NOW = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
+VECTORS_PATH = Path(__file__).resolve().parents[1] / "conformance" / "anchor_vectors.json"
+
+
+def _load_vectors() -> dict[str, object]:
+    return json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
 
 
 def test_freetsa_live_mode_uses_stdlib_transport(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -45,6 +53,35 @@ def test_freetsa_live_mode_uses_stdlib_transport(monkeypatch: pytest.MonkeyPatch
     assert anchor.tsa_token == response_der
     parsed = parse_timestamp_response(anchor.tsa_token)
     assert parsed.message_imprint == digest
+
+
+def test_freetsa_recorded_fixture_replays_offline() -> None:
+    vectors = _load_vectors()
+    entry = vectors["entries"][0]
+    assert isinstance(entry, dict)
+
+    response_der = base64.b64decode(entry["tsa_token_b64"])
+    root_der = base64.b64decode(vectors["test_tsa_root_cert_b64"])
+    ocsp_responses_der = [base64.b64decode(ocsp) for ocsp in entry["ocsp_responses_b64"]]
+    digest = bytes.fromhex(entry["anchored_event_hash_hex"])
+
+    provider = FreeTSAProvider(
+        transport=RecordedHttpTransport(response_der),
+        trust_roots_der=[root_der],
+        ocsp_responses_der=ocsp_responses_der,
+    )
+    anchor = provider.request_timestamp(TimestampRequest(digest=digest), anchored_seq=entry["anchored_seq"], now=NOW)
+
+    assert anchor.tsa_provider_id == "freetsa.org"
+    assert anchor.tsa_token == response_der
+    parsed = parse_timestamp_response(anchor.tsa_token)
+    assert parsed.message_imprint == digest
+    verify_timestamp_token(
+        parsed,
+        expected_digest=digest,
+        trust_roots_der=[root_der],
+        verification_time=NOW,
+    )
 
 
 def test_freetsa_live_mode_rejects_transport_override() -> None:

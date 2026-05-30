@@ -46,6 +46,22 @@
     },
     {
       "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ANCHOR_REASON_INVALID",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "constant",
+      "module": "attestplane",
+      "name": "ANCHOR_REASON_UNVERIFIABLE",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
       "kind": "class",
       "module": "attestplane",
       "name": "AbstractStorageBackend",

@@ -18,6 +18,22 @@
     },
     {
       "classification": "language_specific",
+      "python": true,
+      "reason": "Python anchoring reason-code constants are exported; TypeScript parity is not shipped yet.",
+      "review_by": "v1.8.7",
+      "symbol": "ANCHOR_REASON_INVALID",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
+      "python": true,
+      "reason": "Python anchoring reason-code constants are exported; TypeScript parity is not shipped yet.",
+      "review_by": "v1.8.7",
+      "symbol": "ANCHOR_REASON_UNVERIFIABLE",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": false,
       "reason": "TypeScript exports structural type aliases/interfaces that do not have Python root equivalents.",
       "review_by": "v0.0.3-alpha",

@@ -317,13 +317,15 @@ def test_verify_chain_with_one_good_anchor() -> None:
     chain = _build_chain(3)
     anchors = [_good_anchor(chain, 2)]  # anchor the tip
     result = verify_chain_with_anchors(chain, anchors)
-    assert result.ok is True
-    assert result.verification_status == "verified"
-    assert result.anchor_results[0].valid is True
+    assert result.ok is False
+    assert result.verification_status == "not_performed"
+    assert result.reason_code == "anchor.unverifiable"
+    assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].reason_code == "anchor.unverifiable"
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
     assert result.anchor_results[0].ltv_artifacts_present is True
-    assert result.anchored_seqs == frozenset({2})
-    assert result.unanchored_seqs == frozenset({0, 1})
+    assert result.anchored_seqs == frozenset()
+    assert result.unanchored_seqs == frozenset({0, 1, 2})
 
 
 def test_verify_chain_with_multi_anchor_per_seq() -> None:
@@ -337,10 +339,13 @@ def test_verify_chain_with_multi_anchor_per_seq() -> None:
         anchored_seq=1,
     )
     result = verify_chain_with_anchors(chain, anchors)
-    assert result.ok is True
+    assert result.ok is False
+    assert result.verification_status == "not_performed"
+    assert result.reason_code == "anchor.unverifiable"
     assert len(result.anchor_results) == 2
-    assert all(a.valid for a in result.anchor_results)
-    assert result.anchored_seqs == frozenset({1})
+    assert not any(a.valid for a in result.anchor_results)
+    assert all(a.reason_code == "anchor.unverifiable" for a in result.anchor_results)
+    assert result.anchored_seqs == frozenset()
 
 
 def test_verify_detects_hash_mismatch() -> None:
@@ -359,6 +364,7 @@ def test_verify_detects_hash_mismatch() -> None:
     result = verify_chain_with_anchors(chain, [bad])
     assert result.ok is False
     assert result.verification_status == "failed"
+    assert result.reason_code == "anchor.invalid"
     assert result.anchor_results[0].valid is False
     assert "anchored_event_hash mismatch" in (result.anchor_results[0].reason or "")
 
@@ -377,6 +383,7 @@ def test_verify_detects_seq_out_of_range() -> None:
     )
     result = verify_chain_with_anchors(chain, [bad])
     assert result.ok is False
+    assert result.reason_code == "anchor.invalid"
     assert "not in chain" in (result.anchor_results[0].reason or "")
 
 
@@ -394,6 +401,7 @@ def test_verify_detects_missing_ltv_artifacts() -> None:
     )
     result = verify_chain_with_anchors(chain, [bad])
     assert result.ok is False
+    assert result.reason_code == "anchor.unverifiable"
     assert result.anchor_results[0].cert_status == "MISSING_LTV_ARTIFACTS"
     assert "long-term validation" in (result.anchor_results[0].reason or "")
 
@@ -412,6 +420,7 @@ def test_verify_detects_non_utc_timestamp() -> None:
     )
     result = verify_chain_with_anchors(chain, [bad])
     assert result.ok is False
+    assert result.reason_code == "anchor.invalid"
     assert "not UTC" in (result.anchor_results[0].reason or "")
 
 
@@ -426,14 +435,21 @@ def test_verify_propagates_chain_failure() -> None:
     result = verify_chain_with_anchors(chain, [anchor])
     assert result.chain_ok is False
     assert result.ok is False
-    # The anchor itself is still cross-reference-valid for seq=0.
-    assert result.anchor_results[0].valid is True
+    assert result.reason_code == "anchor.unverifiable"
+    # The anchor itself is cross-reference-valid, but without trust roots
+    # it remains an unverifiable claim rather than a positive anchor.
+    assert result.anchor_results[0].valid is False
 
 
 def test_v1_cert_status_is_unverified() -> None:
-    """v1 anchors with full LTV artifacts are 'VALID_UNVERIFIED' pending M5 ASN.1 work."""
+    """v1 anchors without trust roots stay unverifiable, not positively verified."""
     chain = _build_chain(1)
     result = verify_chain_with_anchors(chain, [_good_anchor(chain, 0)])
+    assert result.ok is False
+    assert result.verification_status == "not_performed"
+    assert result.reason_code == "anchor.unverifiable"
+    assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].reason_code == "anchor.unverifiable"
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
 
 
@@ -443,6 +459,6 @@ def test_verify_chain_with_anchors_is_read_only() -> None:
     before_chain = list(chain)
     before_anchors = list(anchors)
     result = verify_chain_with_anchors(chain, anchors)
-    assert result.ok is True
+    assert result.ok is False
     assert chain == before_chain
     assert anchors == before_anchors

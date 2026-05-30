@@ -270,6 +270,7 @@ def test_verify_chain_with_anchors_detects_token_tampering() -> None:
         verification_time=_NOW,
     )
     assert result.ok is False
+    assert result.reason_code == "anchor.invalid"
     assert result.anchor_results[0].valid is False
 
 
@@ -292,6 +293,7 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
         verification_time=_NOW,
     )
     assert result.ok is False
+    assert result.reason_code == "anchor.invalid"
     # Both roots have the same CN, so the chain walker finds B's root
     # by DN match then fails the signature step.
     reason = result.anchor_results[0].reason or ""
@@ -299,8 +301,7 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
 
 
 def test_verify_chain_without_trust_roots_remains_unverified() -> None:
-    """When trust_roots_der is None, cross-reference-correct anchors stay
-    at cert_status=VALID_UNVERIFIED (preserves the substrate-only contract)."""
+    """When trust_roots_der is None, cross-reference-correct anchors are not a positive claim."""
     chain = _build_chain(1)
     authority = TestTSAAuthority(now=_NOW)
     provider = TestTSAProvider(authority)
@@ -310,7 +311,11 @@ def test_verify_chain_without_trust_roots_remains_unverified() -> None:
         now=_NOW,
     )
     result = verify_chain_with_anchors(chain, [anchor])
-    assert result.ok is True
+    assert result.ok is False
+    assert result.verification_status == "not_performed"
+    assert result.reason_code == "anchor.unverifiable"
+    assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].reason_code == "anchor.unverifiable"
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
 
 
@@ -402,10 +407,15 @@ def test_ec_leaf_provider_anchor_record_verifies() -> None:
         now=_NOW,
     )
     result = verify_chain_with_anchors(chain, [anchor])
-    assert result.ok is True
-    # Absent OCSP material the cert_status stays VALID_UNVERIFIED — same
-    # convention as the RSA leaf path. Leaf-key-class branch is exercised
-    # via the verify_timestamp_token path inside verify_chain_with_anchors.
+    assert result.ok is False
+    assert result.verification_status == "not_performed"
+    assert result.reason_code == "anchor.unverifiable"
+    # Absent trust roots the cert_status stays VALID_UNVERIFIED, but the
+    # anchor remains unverifiable rather than positively verified.
+    # Leaf-key-class branch is exercised via the verify_timestamp_token
+    # path inside verify_chain_with_anchors.
+    assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].reason_code == "anchor.unverifiable"
     assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
 
 

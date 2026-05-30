@@ -14,7 +14,8 @@ The real RFC-3161 / ASN.1 / OCSP-backed providers (``FreeTSAProvider``,
 ``DigiCertProvider``) ship in a follow-up PR alongside
 ``anchor_vectors.json``. Until then, the verifier reports
 ``cert_status="VALID_UNVERIFIED"`` for cross-reference-correct
-anchors with non-empty cert chains.
+anchors with non-empty cert chains, but does not count them as
+verified without trust roots.
 
 This module does NOT modify the substrate's
 :func:`~attestplane.hashchain.verify_chain` or any v0.0.1 surface. The
@@ -37,6 +38,8 @@ from attestplane.anchoring.base import (
 from attestplane.anchoring.composite import MultiTSAProvider
 from attestplane.anchoring.mock import MockTSAProvider
 from attestplane.anchoring.verifier import (
+    ANCHOR_REASON_INVALID,
+    ANCHOR_REASON_UNVERIFIABLE,
     AnchorVerificationResult,
     CertStatus,
     SingleAnchorResult,
@@ -96,6 +99,8 @@ from attestplane.anchoring.eidas import (
 
 __all__ = [
     "ANCHOR_SCHEMA_VERSION",
+    "ANCHOR_REASON_INVALID",
+    "ANCHOR_REASON_UNVERIFIABLE",
     "ETSI_QTST_URI",
     "ETSI_TSA_URI",
     "AnchorBoundaryError",

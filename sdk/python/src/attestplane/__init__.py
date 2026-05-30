@@ -24,6 +24,8 @@ from attestplane.adapters import (
     RuntimeEvent,
 )
 from attestplane.anchoring import (
+    ANCHOR_REASON_INVALID,
+    ANCHOR_REASON_UNVERIFIABLE,
     ANCHOR_SCHEMA_VERSION,
     AnchorError,
     AnchorPolicy,
@@ -255,6 +257,8 @@ __all__ = [
     "ChainedEvent",
     "EventDraft",
     "ANCHOR_SCHEMA_VERSION",
+    "ANCHOR_REASON_INVALID",
+    "ANCHOR_REASON_UNVERIFIABLE",
     "AbstractStorageBackend",
     "AnchorError",
     "AnchorPolicy",
