@@ -36,11 +36,12 @@ The payload is fixed at schema version 1:
   prevented verification.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
-- `taxonomy_version` pins the shared verifier rejection taxonomy that both
-  `--json` and `--explain` use. The Python SDK verifier result object and the
-  CLI surfaces all resolve this value through the same public helper.
-- Consumer pinning: `taxonomy_version` is always present at the top level,
-  including successful `verify --json` results.
+- `taxonomy_version` is surfaced through the same bundle resolver in
+  `--json`, `--explain`, and the Python SDK verifier result object.
+- Consumer pinning: `taxonomy_version` is always present at the top level.
+  Bundles that declare `chain_metadata.evidence_taxonomy_version` surface
+  that integer value; legacy bundles without the field surface `null`
+  rather than raising.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.

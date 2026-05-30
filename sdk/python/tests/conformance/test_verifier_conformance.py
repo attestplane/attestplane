@@ -107,6 +107,7 @@ def test_verifier_result_exposes_stable_anchoring_fields() -> None:
     result = verify_proof_bundle(bundle)
     assert result.anchoring_status == "unanchored"
     assert result.anchoring_quarantined is False
+    assert result.taxonomy_version == 1
 
     anchored_bundle = _base_bundle()
     anchored_bundle["chain_metadata"]["anchor_ref"] = "anchor://test/anchored"
@@ -119,3 +120,13 @@ def test_verifier_result_exposes_stable_anchoring_fields() -> None:
     quarantined_result = verify_proof_bundle(quarantined_bundle)
     assert quarantined_result.anchoring_status == "quarantined"
     assert quarantined_result.anchoring_quarantined is True
+
+
+def test_verifier_result_surfaces_missing_bundle_taxonomy_version_as_none() -> None:
+    bundle = _base_bundle()
+    del bundle["chain_metadata"]["evidence_taxonomy_version"]
+
+    result = verify_proof_bundle(bundle)
+
+    assert result.ok is True
+    assert result.taxonomy_version is None

@@ -58,7 +58,6 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
-    resolve_verify_taxonomy_version,
 )
 
 
@@ -105,6 +104,9 @@ class BundleVerificationResult:
       or ``"unanchored"``.
     - ``anchoring_quarantined``: ``True`` iff the verifier quarantined
       the bundle instead of treating it as a normal verification failure.
+    - ``taxonomy_version``: copied from
+      ``chain_metadata.evidence_taxonomy_version`` when the bundle
+      declares it, otherwise ``None`` for legacy bundles.
     """
 
     ok: bool
@@ -114,7 +116,7 @@ class BundleVerificationResult:
     """``True`` iff the bundle's embedded report agrees with the independent re-verification."""
     event_count: int
     bundle_version: int
-    taxonomy_version: int
+    taxonomy_version: int | None
     chain_id: str
     head_hash_hex: str
     metadata_ok: bool
@@ -187,6 +189,18 @@ _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS = {"proof_type"}
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _ANCHORING_STATUS = {"anchored", "quarantined", "unanchored"}
+
+
+def _resolve_bundle_taxonomy_version(bundle: dict[str, Any] | None) -> int | None:
+    if not isinstance(bundle, dict):
+        return None
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return None
+    taxonomy_version = chain_metadata.get("evidence_taxonomy_version")
+    if isinstance(taxonomy_version, int):
+        return taxonomy_version
+    return None
 
 
 def _validate_shape(bundle: Any) -> None:
@@ -711,7 +725,7 @@ def verify_proof_bundle(
         agreement=agreement,
         event_count=len(events),
         bundle_version=int(bundle["bundle_version"]),
-        taxonomy_version=resolve_verify_taxonomy_version(),
+        taxonomy_version=_resolve_bundle_taxonomy_version(bundle),
         chain_id=str(bundle["chain_metadata"]["chain_id"]),
         head_hash_hex=str(bundle["chain_metadata"]["head_hash_hex"]),
         metadata_ok=metadata_ok,
