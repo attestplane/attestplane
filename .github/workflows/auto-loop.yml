@@ -74,6 +74,28 @@ jobs:
             echo "✅ All autodev PRs merged — evaluating version bump."
           fi
 
+      # ── Queue sentinel: refill planned-task issues when queue runs dry ──────
+      - name: Queue sentinel — trigger architecture-audit if issue queue low
+        if: steps.guard.outputs.open_autodev_prs == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open_planned=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label planned-task \
+            --state open \
+            --json number \
+            --jq 'length')
+          echo "Open planned-task issues: ${open_planned}"
+          if [ "${open_planned}" -lt 5 ]; then
+            echo "⚡ Queue low (${open_planned} < 5) — triggering architecture-audit"
+            gh workflow run architecture-audit.yml \
+              --repo "${{ github.repository }}" || true
+          else
+            echo "✅ Queue healthy (${open_planned} open planned-task issues)"
+          fi
+
       # ── Batch gate: count PRs merged since last tag ───────────────────────
       - name: Count autodev PRs merged since last tag
         id: batch
