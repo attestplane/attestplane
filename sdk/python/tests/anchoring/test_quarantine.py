@@ -76,4 +76,9 @@ def test_quarantined_bundle_surfaces_in_verify_json(tmp_path: Path, capsys: pyte
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    assert payload["anchoring"] == {
+        "anchoring_status": "quarantined",
+        "quarantine_reason": VERIFY_REASON_ANCHOR_INVALID,
+        "status": "quarantined",
+        "quarantined": True,
+    }

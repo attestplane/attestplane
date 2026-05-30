@@ -21,6 +21,8 @@ The payload is fixed at schema version 1:
     "digest": "..."
   },
   "anchoring": {
+    "anchoring_status": "absent",
+    "quarantine_reason": null,
     "status": "unanchored",
     "quarantined": false
   }
@@ -52,11 +54,15 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
-- `anchoring.status` is a stable additive field that reports whether the
-  bundle is `anchored`, `quarantined`, or `unanchored`.
-- `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
-- In v1, `anchoring.quarantined=true` maps to exit code `2`, while normal
-  verification failures continue to use exit code `1`.
+- `anchoring.anchoring_status` is a stable additive field that reports
+  whether the bundle is `verified`, `quarantined`, or `absent`.
+- `anchoring.quarantine_reason` is nullable and only populated when the
+  bundle is quarantined.
+- `anchoring.status` and `anchoring.quarantined` remain as legacy aliases
+  for older consumers.
+- In v1, quarantined bundles map to exit code `2`, while the optional
+  `--strict-anchoring` flag upgrades that advisory quarantine to exit code
+  `1`.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.
@@ -94,6 +100,7 @@ When `--explain` is used without `--json`, stdout prints a compact
 `OK|FAIL signer_subject=... schema_version=... anchor=...` summary and
 stderr prints one rationale line per rejection reason in the same order as
 the structured payload.
+The `anchor` slot reports `verified`, `quarantined`, or `absent`.
 If the summary is rendered without bundle context, the taxonomy slot is
 reported as `unknown` rather than omitted.
 
@@ -112,16 +119,18 @@ reported as `unknown` rather than omitted.
       "message": "signer_subject=key_id:... schema_version=1 anchor=absent"
     }
   ],
-  "bundle": {
-    "schema_version": 1,
-    "digest": "..."
-  },
-  "anchoring": {
-    "status": "unanchored",
-    "quarantined": false
+    "bundle": {
+      "schema_version": 1,
+      "digest": "..."
+    },
+    "anchoring": {
+      "anchoring_status": "absent",
+      "quarantine_reason": null,
+      "status": "unanchored",
+      "quarantined": false
+    }
   }
-}
-```
+  ```
 
 ### Fail Example
 

@@ -134,6 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
     p_verify.add_argument(
+        "--strict-anchoring",
+        dest="strict_anchoring",
+        action="store_true",
+        help="treat quarantined anchoring as a hard verification failure",
+    )
+    p_verify.add_argument(
         "--require-taxonomy-version",
         dest="require_taxonomy_version",
         type=int,
@@ -240,16 +246,17 @@ def _verify_human_summary(
 ) -> str:
     if bundle is None or result is None:
         return f"{status}"
-    anchor_state = "unknown"
+    anchor_state = "absent"
     chain_metadata = bundle.get("chain_metadata")
     if isinstance(chain_metadata, dict):
         anchor_ref = chain_metadata.get("anchor_ref")
-        anchor_state = "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
-    if getattr(result, "anchoring_quarantined", False):
-        anchor_state = getattr(result, "anchoring_status", anchor_state)
+        anchor_state = "verified" if isinstance(anchor_ref, str) and anchor_ref else "absent"
+    if getattr(result, "anchoring_status", None) == "quarantined":
+        anchor_state = "quarantined"
     summary = f"{status} {_verify_success_summary(bundle).rsplit('anchor=', 1)[0]}anchor={anchor_state}"
-    if getattr(result, "anchoring_quarantined", False):
-        summary = f"{summary} quarantine_reason={getattr(result, 'primary_reason', None) or 'unknown'}"
+    quarantine_reason = getattr(result, "quarantine_reason", None)
+    if quarantine_reason is not None:
+        summary = f"{summary} quarantine_reason={quarantine_reason}"
     return summary
 
 
@@ -456,6 +463,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
             require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
+            strict_anchoring=getattr(args, "strict_anchoring", False),
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -647,7 +655,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         "retention_proofs_reason": result.retention_proofs_reason,
         "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
         "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
-        **_anchoring_payload(bundle, exit_code=verify_result_exit_code(result)),
+        **_anchoring_payload(bundle, result=result),
         **_verify_scope_metadata(),
     }
     explain = getattr(args, "explain", False)
@@ -668,7 +676,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     _emit(payload, args.json_output, human=human)
     if explain and not args.json_output and not result.ok:
         _write_verify_explanations(_verify_explanations(result, bundle=bundle, explain=True))
-    return verify_result_exit_code(result)
+    return verify_result_exit_code(result, strict_anchoring=getattr(args, "strict_anchoring", False))
 
 
 def cmd_verify_proofbundle(args: argparse.Namespace) -> int:

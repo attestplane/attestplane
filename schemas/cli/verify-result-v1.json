@@ -132,10 +132,31 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "anchoring_status",
+        "quarantine_reason",
         "status",
         "quarantined"
       ],
       "properties": {
+        "anchoring_status": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "quarantined",
+            "absent"
+          ]
+        },
+        "quarantine_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "status": {
           "type": "string",
           "enum": [
