@@ -21,7 +21,7 @@
 
 ## P0 Issues
 
-### ISSUE 1 · [P0][verifier][cli] Close the `reason_code` / `taxonomy_version` / `anchoring` gap in verify --json output
+### ISSUE 1 · \[P0\]\[verifier\]\[cli\] Close the `reason_code` / `taxonomy_version` / `anchoring` gap in verify --json output
 
 Owner: verifier/CLI
 
@@ -64,7 +64,7 @@ Rollout / migration notes:
 
 ## P1 Issues
 
-### ISSUE 2 · [P1][sdk] Add `VERIFY_REASON_TAXONOMY_VERSION` and taxonomy helpers to verify_reason_codes
+### ISSUE 2 · \[P1\]\[sdk\] Add `VERIFY_REASON_TAXONOMY_VERSION` and taxonomy helpers to verify_reason_codes
 
 Owner: SDK
 
@@ -99,7 +99,7 @@ Rollout / migration notes:
 - The TypeScript SDK parity should be tracked separately as a follow-up if the
   taxonomy helpers are not yet ported.
 
-### ISSUE 3 · [P1][conformance] Create golden fixture and schema validation for verify --json output
+### ISSUE 3 · \[P1\]\[conformance\] Create golden fixture and schema validation for verify --json output
 
 Owner: conformance
 
@@ -134,7 +134,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 4 · [P2][docs] Update v1.7.x user-visible delta with `reason_code` / `taxonomy_version` / `anchoring` surface
+### ISSUE 4 · \[P2\]\[docs\] Update v1.7.x user-visible delta with `reason_code` / `taxonomy_version` / `anchoring` surface
 
 Owner: docs/release
 
