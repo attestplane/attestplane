@@ -144,6 +144,14 @@
       "documented": false,
       "kind": "class",
       "module": "attestplane",
+      "name": "VerifyAnchoringState",
+      "notes": "",
+      "stability": "alpha_public"
+    },
+    {
+      "documented": false,
+      "kind": "class",
+      "module": "attestplane",
       "name": "AuditEvent",
       "notes": "",
       "stability": "alpha_public"
