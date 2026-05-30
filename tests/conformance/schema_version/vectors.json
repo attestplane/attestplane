@@ -7,7 +7,7 @@
       "ok": true
     },
     {
-      "case_id": "additive_with_unknown_field_ok",
+      "case_id": "additive_optional",
       "chain_metadata_fields": [
         "future_metadata_field"
       ],

@@ -36,7 +36,7 @@ PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
-    ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
+    ROOT / "tests" / "conformance" / "schema_version" / "additive_optional" / "bundle.json"
 )
 GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
