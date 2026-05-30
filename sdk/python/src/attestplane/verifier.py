@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from attestplane.event_types import POLICY_CHECK_EVENT
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION, POLICY_CHECK_EVENT
 from attestplane.hashchain import (
     GENESIS_HASH,
     SUPPORTED_SCHEMA_VERSIONS,
@@ -578,8 +578,8 @@ def _verify_metadata_closure(
         return False, report_unknown_required_field
     if metadata["genesis_hash_hex"] != GENESIS_HASH.hex():
         return False, "chain_metadata.genesis_hash_hex does not match substrate genesis hash"
-    if "evidence_taxonomy_version" in metadata and metadata["evidence_taxonomy_version"] != 1:
-        return False, "chain_metadata.evidence_taxonomy_version must be 1 when present"
+    if "evidence_taxonomy_version" in metadata and metadata["evidence_taxonomy_version"] != EVIDENCE_TAXONOMY_VERSION:
+        return False, (f"chain_metadata.evidence_taxonomy_version must be {EVIDENCE_TAXONOMY_VERSION} when present")
 
     head = head_of(events)
     if metadata["head_seq"] != head.seq:

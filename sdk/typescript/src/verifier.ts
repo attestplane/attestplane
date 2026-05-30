@@ -17,7 +17,7 @@
 
 import { promises as fs } from 'node:fs';
 
-import { POLICY_CHECK_EVENT } from './event_types.js';
+import { EVIDENCE_TAXONOMY_VERSION, POLICY_CHECK_EVENT } from './event_types.js';
 import {
   GENESIS_HASH,
   SUPPORTED_SCHEMA_VERSIONS,
@@ -563,9 +563,9 @@ function verifyMetadataClosure(
   }
   if (
     metadata.evidence_taxonomy_version !== undefined &&
-    metadata.evidence_taxonomy_version !== 1
+    metadata.evidence_taxonomy_version !== EVIDENCE_TAXONOMY_VERSION
   ) {
-    return { ok: false, reason: 'chain_metadata.evidence_taxonomy_version must be 1 when present' };
+    return { ok: false, reason: `chain_metadata.evidence_taxonomy_version must be ${EVIDENCE_TAXONOMY_VERSION} when present` };
   }
   const head = headOf(events);
   if (metadata.head_seq !== head.seq) {

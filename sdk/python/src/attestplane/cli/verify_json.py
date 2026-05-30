@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from attestplane.canonical import CanonicalizationError
+from attestplane.event_types import EVIDENCE_TAXONOMY_VERSION
 from attestplane.hashchain import hash_event
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
 from attestplane.verifier import (
@@ -266,7 +267,11 @@ def _verify_explanations(
                 _explanation_entry(
                     None,
                     "/",
-                    "signer_subject=unknown schema_version=unknown taxonomy_version=unknown anchor=unknown",
+                    (
+                        "signer_subject=unknown schema_version=unknown "
+                        f"taxonomy_version={EVIDENCE_TAXONOMY_VERSION} "
+                        "anchor=unknown"
+                    ),
                 )
             ]
         return [_explanation_entry(None, "/", _verify_success_summary(bundle))]
