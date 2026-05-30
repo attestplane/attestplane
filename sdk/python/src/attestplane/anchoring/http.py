@@ -26,6 +26,7 @@ response.
 
 from __future__ import annotations
 
+import os
 import urllib.request
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
@@ -53,6 +54,7 @@ from attestplane.anchoring.rfc3161 import (
 
 RFC3161_CONTENT_TYPE_REQUEST: Final[str] = "application/timestamp-query"
 RFC3161_CONTENT_TYPE_RESPONSE: Final[str] = "application/timestamp-reply"
+FREETSA_LIVE_ENV_VAR: Final[str] = "ATTESTPLANE_FREETSA_LIVE"
 
 
 class HttpTransport(ABC):
@@ -128,9 +130,17 @@ def make_replay_transport(response_der: bytes) -> HttpTransport:
     return RecordedHttpTransport(response_der)
 
 
-def _resolve_freetsa_live_mode(live: bool) -> bool:
-    """Resolve the claim-safe FreeTSA mode from the explicit flag."""
-    return live
+def _env_truthy(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _resolve_freetsa_live_mode(live: bool | None) -> bool:
+    """Resolve the claim-safe FreeTSA mode from an explicit flag or env opt-in."""
+    if live is not None:
+        return live
+    return _env_truthy(os.environ.get(FREETSA_LIVE_ENV_VAR))
 
 
 def _build_request_der(digest: bytes, *, nonce: bytes | None = None) -> bytes:
@@ -273,7 +283,7 @@ class FreeTSAProvider(Rfc3161HttpProvider):
     def __init__(
         self,
         *,
-        live: bool = False,
+        live: bool | None = None,
         transport: HttpTransport | None = None,
         trust_roots_der: list[bytes] | None = None,
         ocsp_responses_der: list[bytes] | None = None,

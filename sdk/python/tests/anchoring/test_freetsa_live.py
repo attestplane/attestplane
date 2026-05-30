@@ -19,7 +19,7 @@ pytest.importorskip("cryptography")
 pytest.importorskip("asn1crypto")
 
 from attestplane.anchoring import TimestampRequest
-from attestplane.anchoring.http import FreeTSAProvider, RecordedHttpTransport
+from attestplane.anchoring.http import FREETSA_LIVE_ENV_VAR, FreeTSAProvider, RecordedHttpTransport
 from attestplane.anchoring.rfc3161 import parse_timestamp_response
 from attestplane.anchoring.testing import TestTSAAuthority
 
@@ -45,6 +45,27 @@ def test_freetsa_live_mode_uses_stdlib_transport(monkeypatch: pytest.MonkeyPatch
     assert anchor.tsa_token == response_der
     parsed = parse_timestamp_response(anchor.tsa_token)
     assert parsed.message_imprint == digest
+
+
+def test_freetsa_live_mode_can_be_enabled_via_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority = TestTSAAuthority(now=NOW)
+    digest = hashlib.sha256(b"chain-head").digest()
+    response_der = authority.sign_timestamp_response(digest, gen_time=NOW)
+    fake_transport = RecordedHttpTransport(response_der)
+
+    monkeypatch.setenv(FREETSA_LIVE_ENV_VAR, "1")
+    monkeypatch.setattr("attestplane.anchoring.http.UrllibHttpTransport", lambda: fake_transport)
+
+    provider = FreeTSAProvider(
+        trust_roots_der=[authority.materials().root_cert_der],
+        ocsp_responses_der=[b"ocsp"],
+    )
+    anchor = provider.request_timestamp(TimestampRequest(digest=digest), now=NOW)
+
+    assert anchor.tsa_provider_id == "freetsa.org"
+    assert anchor.tsa_token == response_der
 
 
 def test_freetsa_live_mode_rejects_transport_override() -> None:
