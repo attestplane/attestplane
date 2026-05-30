@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { verifyProofBundle } from '../../src/verifier.js';
+import { VERIFY_REASON_TAXONOMY_VERSION } from '../../src/verify_reason_codes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..', '..', '..', '..');
@@ -46,6 +47,6 @@ describe('verifyProofBundle taxonomy version', () => {
 
     expect(sdkResult.ok).toBe(true);
     expect(sdkResult.taxonomy_version).toBe(cliResult.taxonomy_version);
-    expect(sdkResult.taxonomy_version).toBe(1);
+    expect(sdkResult.taxonomy_version).toBe(VERIFY_REASON_TAXONOMY_VERSION);
   });
 });

@@ -7,7 +7,10 @@ import { chainExtend, genesisHead } from '../src/hashchain.js';
 import { type ProofBundle, ProofBundleBuilder } from '../src/proof_bundle.js';
 import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
-import { resolveVerifyTaxonomyVersion } from '../src/verify_reason_codes.js';
+import {
+  VERIFY_REASON_TAXONOMY_VERSION,
+  resolveVerifyTaxonomyVersion,
+} from '../src/verify_reason_codes.js';
 import {
   VERIFY_REASON_REQUIRED_FIELD_MISSING,
   VERIFY_REASON_SIGNATURE_MISSING,
@@ -109,6 +112,7 @@ describe('verifyProofBundle strict schema options', () => {
     const result = verifyProofBundle(bundleWithOneEvent());
 
     expect(result.taxonomy_version).toBe(resolveVerifyTaxonomyVersion());
-    expect(String(result.taxonomy_version)).toBe('1');
+    expect(result.taxonomy_version).toBe(VERIFY_REASON_TAXONOMY_VERSION);
+    expect(String(result.taxonomy_version)).toBe(String(VERIFY_REASON_TAXONOMY_VERSION));
   });
 });
