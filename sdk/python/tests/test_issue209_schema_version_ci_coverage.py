@@ -54,6 +54,10 @@ def _fixture(name: str) -> dict:
 
 
 def _schema_case(name: str) -> dict:
+    vector = next(item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == name)
+    path = vector.get("path")
+    if path is not None:
+        return json.loads((REPO_ROOT / str(path)).read_text(encoding="utf-8"))
     return json.loads((SCHEMA_VERSION_DIR / name / "bundle.json").read_text(encoding="utf-8"))
 
 
@@ -111,9 +115,11 @@ def test_major_version_ahead_keeps_canonical_mismatch_primary() -> None:
     assert VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED in result.secondary_reasons
 
 
-def test_unknown_required_field_maps_to_schema_unknown() -> None:
-    vector = next(item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "unknown_required_field")
-    bundle = _schema_case("unknown_required_field")
+def test_forward_compatible_additive_required_guard_maps_to_schema_unknown() -> None:
+    vector = next(
+        item for item in SCHEMA_VERSION_VECTORS if item["case_id"] == "forward_compatible_additive_required_guard"
+    )
+    bundle = _schema_case("forward_compatible_additive_required_guard")
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)
 

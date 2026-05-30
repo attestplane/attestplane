@@ -1,7 +1,7 @@
 {
   "bundle_version": 1,
   "chain_metadata": {
-    "chain_id": "p3-cli-proofbundle",
+    "chain_id": "forward-compatible-additive-pass",
     "evidence_taxonomy_version": 1,
     "future_metadata_field": "kept",
     "genesis_hash_hex": "0000000000000000000000000000000000000000000000000000000000000000",
