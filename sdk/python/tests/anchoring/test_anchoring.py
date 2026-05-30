@@ -16,6 +16,8 @@ from attestplane.anchoring import (
     AnchorRecord,
     MockTSAProvider,
     MultiTSAProvider,
+    TestTSAAuthority,
+    TestTSAProvider,
     TimestampRequest,
     TSAProvider,
     TSAUnavailableError,
@@ -413,6 +415,31 @@ def test_verify_detects_non_utc_timestamp() -> None:
     result = verify_chain_with_anchors(chain, [bad])
     assert result.ok is False
     assert "not UTC" in (result.anchor_results[0].reason or "")
+
+
+def test_verify_detects_expired_cert_quarantines() -> None:
+    chain = _build_chain(1)
+    now = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
+    authority = TestTSAAuthority(now=now, cert_validity_days=1)
+    provider = TestTSAProvider(authority)
+    anchor = provider.request_timestamp(
+        TimestampRequest(digest=chain[0].event_hash),
+        anchored_seq=0,
+        now=now,
+    )
+    materials = authority.materials()
+    future = now + timedelta(days=30)
+    result = verify_chain_with_anchors(
+        chain,
+        [anchor],
+        trust_roots_der=[materials.root_cert_der],
+        verification_time=future,
+    )
+    assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
+    assert "not_after" in (result.anchor_results[0].reason or "")
 
 
 def test_verify_propagates_chain_failure() -> None:

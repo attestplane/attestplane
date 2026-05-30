@@ -292,6 +292,9 @@ def test_verify_chain_with_anchors_unknown_trust_root_fails() -> None:
         verification_time=_NOW,
     )
     assert result.ok is False
+    assert result.verification_status == "quarantined"
+    assert result.anchor_results[0].valid is False
+    assert result.anchor_results[0].cert_status == "VALID_UNVERIFIED"
     # Both roots have the same CN, so the chain walker finds B's root
     # by DN match then fails the signature step.
     reason = result.anchor_results[0].reason or ""

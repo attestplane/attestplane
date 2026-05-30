@@ -34,7 +34,7 @@ ANCHOR_SCHEMA_VERSION: Final[int] = 1
 """Anchor schema version. Independent of ``chain.schema_version`` per ADR-0003 § 7."""
 
 
-AnchorStatus = Literal["unanchored", "pending", "anchored", "failed_permanent"]
+AnchorStatus = Literal["unanchored", "pending", "anchored", "quarantined", "failed_permanent"]
 
 
 class AnchorError(Exception):
@@ -224,8 +224,9 @@ class TSAProvider(ABC):
           the :class:`AnchorRecord`. Malformed responses raise
           :class:`AnchorVerificationError`, not
           :class:`TSAUnavailableError` — the distinction matters because
-          the Anchorer worker retries on the former and quarantines on
-          the latter (ADR-0003 § 4 failure-mode table).
+          the Anchorer worker retries on :class:`TSAUnavailableError`
+          and quarantines or marks permanent failure on
+          :class:`AnchorVerificationError` (ADR-0003 § 4 failure-mode table).
         - Capture ``tsa_cert_chain`` and ``ocsp_responses`` at request
           time. A provider that returns an empty cert chain or empty
           OCSP list is non-conforming.

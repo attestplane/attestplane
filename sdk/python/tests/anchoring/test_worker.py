@@ -40,6 +40,15 @@ class _PoisonProvider(MockTSAProvider):
         raise AnchorVerificationError("simulated malformed token")
 
 
+class _QuarantineProvider(MockTSAProvider):
+    """Raises a trust-path failure that should be quarantined."""
+
+    def request_timestamp(self, request: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+        raise AnchorVerificationError(
+            "verification_time 2026-05-17 12:00:00+00:00 exceeds leaf cert not_after 2026-05-16 00:00:00+00:00"
+        )
+
+
 # --- Basic flow ---
 
 
@@ -164,7 +173,24 @@ def test_verification_error_quarantines_immediately() -> None:
     assert result.pending.status == "failed_permanent"
     assert "malformed token" in (result.pending.last_error or "")
     assert anchorer.stats().failed_permanent == 1
+    assert anchorer.stats().quarantined == 0
     # No retry: queue is now empty.
+    assert anchorer.pending_count() == 0
+
+
+def test_trust_path_verification_error_quarantines() -> None:
+    fixed = datetime(2026, 5, 17, 12, 0, 0, tzinfo=UTC)
+    anchorer = Anchorer(_QuarantineProvider(), now=lambda: fixed)
+
+    anchorer.enqueue(b"\x07" * 32, seq=0)
+    result = anchorer.step_once()
+
+    assert result is not None
+    assert result.record is None
+    assert result.pending.status == "quarantined"
+    assert "verification_time" in (result.pending.last_error or "")
+    assert anchorer.stats().quarantined == 1
+    assert anchorer.stats().failed_permanent == 0
     assert anchorer.pending_count() == 0
 
 

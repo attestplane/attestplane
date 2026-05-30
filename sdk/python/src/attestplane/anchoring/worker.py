@@ -26,8 +26,9 @@ Retry policy (ADR-0003 § 4 failure-mode table)
 - :class:`TSAUnavailableError` → exponential backoff
   (1 s, 2 s, 4 s, 8 s, 16 s, capped at :attr:`max_backoff_seconds`).
   Re-queue at tail.
-- :class:`AnchorVerificationError` → quarantine. Item moves to
-  ``failed_permanent`` state and is not retried automatically.
+- :class:`AnchorVerificationError` → quarantine for trust-path /
+  freshness failures; malformed or structurally invalid responses stay
+  ``failed_permanent``. Neither path is retried automatically.
 - Successful anchor → store result, transition to ``anchored``.
 
 Clock-skew tracking
@@ -59,6 +60,22 @@ from attestplane.anchoring.base import (
 )
 
 
+def _is_quarantine_anchor_error(exc: AnchorVerificationError) -> bool:
+    message = str(exc)
+    quarantine_markers = (
+        "signature does not verify against leaf cert",
+        "verification_time ",
+        "no parseable trust roots provided",
+        "not in trust roots or intermediates",
+        "chain depth exceeded",
+        "issuer DN does not match any configured trust root",
+        "OCSP responder reports the TSA leaf cert is revoked",
+        "OCSP responder reports cert status unknown",
+        "not valid at issuance",
+    )
+    return any(marker in message for marker in quarantine_markers)
+
+
 @dataclass
 class PendingAnchor:
     """One entry in the anchorer's work queue."""
@@ -78,6 +95,7 @@ class WorkerStats:
 
     enqueued: int = 0
     anchored: int = 0
+    quarantined: int = 0
     failed_permanent: int = 0
     retries_after_unavailable: int = 0
     clock_skew_warnings: int = 0
@@ -172,6 +190,7 @@ class Anchorer:
             return WorkerStats(
                 enqueued=self._stats.enqueued,
                 anchored=self._stats.anchored,
+                quarantined=self._stats.quarantined,
                 failed_permanent=self._stats.failed_permanent,
                 retries_after_unavailable=self._stats.retries_after_unavailable,
                 clock_skew_warnings=self._stats.clock_skew_warnings,
@@ -223,6 +242,7 @@ class Anchorer:
             record = self._provider.request_timestamp(
                 request,
                 anchored_seq=pending.seq,  # type: ignore[call-arg]
+                now=now,
             )
         except TSAUnavailableError as exc:
             pending.attempts += 1
@@ -235,10 +255,14 @@ class Anchorer:
             return None
         except AnchorVerificationError as exc:
             pending.attempts += 1
-            pending.status = "failed_permanent"
+            quarantine = _is_quarantine_anchor_error(exc)
+            pending.status = "quarantined" if quarantine else "failed_permanent"
             pending.last_error = f"AnchorVerificationError: {exc}"
             with self._lock:
-                self._stats.failed_permanent += 1
+                if quarantine:
+                    self._stats.quarantined += 1
+                else:
+                    self._stats.failed_permanent += 1
                 result = AnchorerResult(pending=pending, record=None, clock_skew_seconds=0.0)
                 self._results.append(result)
             return result

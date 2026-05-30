@@ -12,7 +12,9 @@ authoritative ``genTime``. The ASN.1 parsing arrives in a follow-up
 PR alongside ``anchor_vectors.json``; until then,
 :attr:`SingleAnchorResult.cert_status` is reported as
 ``"VALID_UNVERIFIED"`` for anchors with non-empty cert chains and
-``"MISSING_LTV_ARTIFACTS"`` otherwise.
+``"MISSING_LTV_ARTIFACTS"`` otherwise. Trust-path / freshness failures
+that must not claim a valid anchor are surfaced at the aggregate level
+as ``verification_status="quarantined"``.
 
 What this v1 implementation DOES check:
 
@@ -57,7 +59,7 @@ CertStatus = Literal[
     "EXPIRED_VALID_AT_ISSUANCE",
     "REVOKED",
 ]
-AnchorVerificationStatus = Literal["verified", "failed", "not_performed"]
+AnchorVerificationStatus = Literal["verified", "quarantined", "failed", "not_performed"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +163,20 @@ def verify_chain_with_anchors(
                 "trust_roots_der was provided but the 'anchor' extras are "
                 "not installed; install with: pip install attestplane[anchor]"
             ) from exc
+
+    def _is_quarantine_anchor_error(exc: AnchorVerificationError) -> bool:
+        message = str(exc)
+        quarantine_markers = (
+            "signature does not verify against leaf cert",
+            "verification_time ",
+            "no parseable trust roots provided",
+            "not in trust roots or intermediates",
+            "chain depth exceeded",
+            "issuer DN does not match any configured trust root",
+            "OCSP responder reports the TSA leaf cert is revoked",
+            "OCSP responder reports cert status unknown",
+        )
+        return any(marker in message for marker in quarantine_markers)
 
     for anchor in anchors:
         provider = anchor.tsa_provider_id
@@ -303,12 +319,15 @@ def verify_chain_with_anchors(
                     intermediates_der=list(anchor.tsa_cert_chain),
                 )
             except AnchorVerificationError as exc:
+                parsed_cert_status: CertStatus = (
+                    "VALID_UNVERIFIED" if _is_quarantine_anchor_error(exc) else "MISSING_LTV_ARTIFACTS"
+                )
                 anchor_results.append(
                     SingleAnchorResult(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
-                        cert_status="MISSING_LTV_ARTIFACTS",
+                        cert_status=parsed_cert_status,
                         ltv_artifacts_present=True,
                         reason=str(exc),
                     )
@@ -322,6 +341,7 @@ def verify_chain_with_anchors(
             # already required len(ocsp_responses) > 0, so we have at
             # least one here.
             ocsp_failure: str | None = None
+            ocsp_quarantine = False
             ocsp_status: str = "good"
             if _ocsp_mod is not None and anchor.ocsp_responses:
                 try:
@@ -358,18 +378,21 @@ def verify_chain_with_anchors(
                                 break
                 except AnchorVerificationError as exc:
                     ocsp_failure = str(exc)
+                    ocsp_quarantine = _is_quarantine_anchor_error(exc)
 
             if ocsp_failure is not None:
-                # OCSP failed structurally — surface as MISSING_LTV
-                # rather than EXPIRED/REVOKED because the underlying
-                # signature might still be sound; we just couldn't
-                # confirm freshness.
+                # OCSP or freshness failed while verifying an otherwise
+                # well-formed live anchor. Preserve claim safety by
+                # routing trust/freshness failures to quarantine instead
+                # of a hard valid claim, but keep structural/format
+                # failures separate.
+                ocsp_cert_status: CertStatus = "VALID_UNVERIFIED" if ocsp_quarantine else "MISSING_LTV_ARTIFACTS"
                 anchor_results.append(
                     SingleAnchorResult(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
-                        cert_status="MISSING_LTV_ARTIFACTS",
+                        cert_status=ocsp_cert_status,
                         ltv_artifacts_present=True,
                         reason=f"OCSP: {ocsp_failure}",
                     )
@@ -381,7 +404,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
-                        cert_status="REVOKED",
+                        cert_status="VALID_UNVERIFIED",
                         ltv_artifacts_present=True,
                         reason="OCSP responder reports the TSA leaf cert is revoked",
                     )
@@ -393,7 +416,7 @@ def verify_chain_with_anchors(
                         seq=anchor.anchored_seq,
                         provider=provider,
                         valid=False,
-                        cert_status="MISSING_LTV_ARTIFACTS",
+                        cert_status="VALID_UNVERIFIED",
                         ltv_artifacts_present=True,
                         reason="OCSP responder reports cert status unknown",
                     )
@@ -428,6 +451,10 @@ def verify_chain_with_anchors(
         verification_status: AnchorVerificationStatus = "not_performed"
     elif all(a.valid for a in anchor_results):
         verification_status = "verified"
+    elif any(a.cert_status == "VALID_UNVERIFIED" for a in anchor_results) and not any(
+        a.cert_status not in {"VALID", "VALID_UNVERIFIED"} for a in anchor_results
+    ):
+        verification_status = "quarantined"
     else:
         verification_status = "failed"
 
