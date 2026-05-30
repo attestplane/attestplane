@@ -28,7 +28,7 @@ posture are described below for the upstream reviewer's convenience.
 | Field | Value |
 |-------|-------|
 | Project name | Attestplane |
-| Repository | `https://github.com/attestplane/attestplane` |
+| Repository | `https://github.com/attestplane/attestplane/` |
 | License | Apache-2.0 |
 | Contact | `security@attestplane.com` (institutional channel — see [`SECURITY.md`](../../SECURITY.md)) |
 | Project description | Verifiable audit substrate for AI agents. Apache-2.0. Pre-GA (v1.0 GA target 2026-08-15 per `SECURITY.md`). |

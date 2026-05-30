@@ -12,7 +12,7 @@ Apache-2.0 attestation and audit substrate for AI agent evidence chains.
 See the [project README][project-readme] for background, governance, and
 trademark policy. The full design rationale for this SDK lives in [ADR-0002][adr2].
 
-[project-readme]: https://github.com/attestplane/attestplane
+[project-readme]: https://github.com/attestplane/attestplane/
 [adr2]: ../../docs/adr/0002-substrate-data-model-and-hash-chain-v0.md
 
 ## Install
@@ -179,6 +179,6 @@ the project root.
 
 ## Reporting issues
 
-- **Bugs / feature requests:** https://github.com/attestplane/attestplane/issues
+- **Bugs / feature requests:** https://github.com/attestplane/attestplane/issues/
 - **Security vulnerabilities:** see [SECURITY.md](https://github.com/attestplane/attestplane/blob/main/SECURITY.md) — do not open public issues.
 - **Trademark questions:** see [TRADEMARK.md](https://github.com/attestplane/attestplane/blob/main/TRADEMARK.md).
