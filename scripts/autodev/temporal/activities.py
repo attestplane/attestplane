@@ -806,7 +806,7 @@ async def merge_pr_activity(issue_number: int, pr_number: int) -> dict:
     # Rebase succeeded — CI already confirmed clean above; squash-merge synchronously (Fix-1)
     _gh(["pr", "merge", str(pr_number), "--repo", REPO_SLUG,
          "--squash", "--delete-branch",
-         "--subject", f"feat: merge autodev PR #{pr_number} for issue #{issue_number}"])
+         "--subject", f"feat: merge autodev PR #{pr_number} for issue #{issue_number} [autodev]"])
 
     db.upsert_run(issue_number, stage="merged")
     db.log_event(issue_number, "merge", "completed", f"pr={pr_number}")
