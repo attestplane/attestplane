@@ -32,17 +32,19 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_STRUCTURE_INVALID,
+    VERIFY_REASON_TAXONOMY_VERSION,
 )
 
 ROOT = Path(__file__).resolve().parents[4]
+SDK_TEST_FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
-PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
+PASS_FIXTURE = SDK_TEST_FIXTURES / "valid_bundle.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
+GOLDEN_FIXTURE = SDK_TEST_FIXTURES / "verify_json_contract.golden"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
 VERIFY_JSON_EXIT_CODES = {
     "accept": VERIFY_JSON_EXIT_CODE_VERIFIED,
@@ -59,6 +61,10 @@ def _run_verify(
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out), captured.err
+
+
+def _canonicalized_json_text(payload: dict[str, object]) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _assert_matches_verify_result_v1(
@@ -97,7 +103,7 @@ def _assert_matches_verify_result_v1(
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
     assert payload["exit_code"] in set(VERIFY_JSON_EXIT_CODES.values())
-    assert payload["taxonomy_version"] == 1
+    assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
         str(payload["reason_code"]),
@@ -139,7 +145,11 @@ def _assert_matches_verify_result_v1(
             assert reason["explanation"]
 
 
-def test_verify_json_pass_fixture_emits_fixed_schema(
+def test_verify_json_output_contract_version_is_explicit() -> None:
+    assert VERIFY_JSON_GOLDEN["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
+
+
+def test_verify_json_output_contract_matches_versioned_golden_fixture(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
@@ -147,6 +157,17 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
     assert rc == VERIFY_JSON_EXIT_CODES["accept"]
     assert stderr == ""
     assert payload == VERIFY_JSON_GOLDEN
+
+
+def test_verify_json_output_contract_canonicalized_diff_is_stable(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+
+    assert rc == VERIFY_JSON_EXIT_CODES["accept"]
+    assert stderr == ""
+    assert _canonicalized_json_text(payload) == _canonicalized_json_text(VERIFY_JSON_GOLDEN)
+    assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(

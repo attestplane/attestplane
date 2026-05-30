@@ -246,6 +246,9 @@ def test_p3_2_signature_anchor_extension_fail_closed(
     expected_reason: str,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    if expected_field == "anchor_verification_status":
+        pytest.importorskip("asn1crypto")
+
     rc, payload = _run_with_flags(fixture, capsys, flags=flags)
     assert rc == expected_exit
     assert payload["ok"] is False
@@ -414,6 +417,9 @@ def _build_positive_anchor_bundle(tmp_path):  # type: ignore[no-untyped-def]
     response over the ProofBundle chain head hash. The trust root is the
     authority's own self-signed root cert.
     """
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+
     import base64
     import json
     from datetime import UTC, datetime
@@ -489,6 +495,9 @@ def test_p3_4_verify_anchor_wrong_trust_root_fails(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Anchor signed by authority A but verified against root of authority B fails."""
+    pytest.importorskip("asn1crypto")
+    pytest.importorskip("cryptography")
+
     import base64
     import json as json_mod
     from datetime import UTC, datetime
