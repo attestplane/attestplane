@@ -3,7 +3,7 @@
 Status: **WARN**
 
 Issue: `[P1][test] Expand regression coverage for the real commits`  
-URL: `https://github.com/attestplane/attestplaneissues80`
+URL: `https://github.com/attestplane/attestplane/issues/80`
 
 ## Scope Reviewed
 

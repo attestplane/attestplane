@@ -173,12 +173,12 @@ should expect type checks against this package to be precise.
 
 ## License
 
-Apache License 2.0. See [LICENSE](https://github.com/attestplane/attestplaneblob/main/LICENSE)
-and [NOTICE](https://github.com/attestplane/attestplaneblob/main/NOTICE) at
+Apache License 2.0. See [LICENSE](https://github.com/attestplane/attestplane/blob/main/LICENSE)
+and [NOTICE](https://github.com/attestplane/attestplane/blob/main/NOTICE) at
 the project root.
 
 ## Reporting issues
 
-- **Bugs / feature requests:** https://github.com/attestplane/attestplaneissues
-- **Security vulnerabilities:** see [SECURITY.md](https://github.com/attestplane/attestplaneblob/main/SECURITY.md) — do not open public issues.
-- **Trademark questions:** see [TRADEMARK.md](https://github.com/attestplane/attestplaneblob/main/TRADEMARK.md).
+- **Bugs / feature requests:** https://github.com/attestplane/attestplane/issues
+- **Security vulnerabilities:** see [SECURITY.md](https://github.com/attestplane/attestplane/blob/main/SECURITY.md) — do not open public issues.
+- **Trademark questions:** see [TRADEMARK.md](https://github.com/attestplane/attestplane/blob/main/TRADEMARK.md).

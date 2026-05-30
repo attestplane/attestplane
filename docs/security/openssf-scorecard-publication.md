@@ -96,7 +96,7 @@ Three independent verification paths are available to any reader:
 3. **Local re-run.** Any reader can re-run Scorecard locally against a
    pinned commit using the upstream Scorecard CLI; the GitHub Actions
    run logs at
-   `https://github.com/attestplane/attestplaneactions/workflows/scorecard.yml`
+   `https://github.com/attestplane/attestplane/actions/workflows/scorecard.yml`
    are the canonical source of truth.
 
 ## Honest note: the score will publicly track, and may go down

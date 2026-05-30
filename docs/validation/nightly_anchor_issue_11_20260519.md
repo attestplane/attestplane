@@ -8,9 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 ## Scope
 
 This report records the P0 diagnosis for
-[`#11`](https://github.com/attestplane/attestplaneissues11), the
+[`#11`](https://github.com/attestplane/attestplane/issues/11), the
 nightly A5 FreeTSA live verification failure from
-[run 26076696174](https://github.com/attestplane/attestplaneactions/runs/26076696174).
+[run 26076696174](https://github.com/attestplane/attestplane/actions/runs/26076696174).
 
 This report does not change release status and does not expand public
 claims. The default `attestplane verify` path remains `chain_report_only`.
@@ -83,14 +83,14 @@ After commit
 path:
 
 - Run:
-  <https://github.com/attestplane/attestplaneactions/runs/26085036796>
+  <https://github.com/attestplane/attestplane/actions/runs/26085036796>
 - Event: `workflow_dispatch`
 - Conclusion: `success`
 - Reported anchor result: `cert_status=VALID`, `ok=true`,
   `chain_ok=true`, `anchored_seqs=[0]`
 
 Issue
-[#11](https://github.com/attestplane/attestplaneissues11)
+[#11](https://github.com/attestplane/attestplane/issues/11)
 was closed after this remote live verification passed.
 
 ## Claim Safety
