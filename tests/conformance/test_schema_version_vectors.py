@@ -50,6 +50,8 @@ def test_schema_version_vectors_pin_expected_outcome(vector: dict[str, object]) 
         assert field in bundle
     for field in vector.get("chain_metadata_fields", ()):
         assert field in bundle["chain_metadata"]
+    for field in vector.get("report_fields", ()):
+        assert field in bundle["verification_report"]
 
 
 def test_schema_version_additive_optional_and_required_fields_are_paired() -> None:
@@ -70,6 +72,29 @@ def test_schema_version_additive_optional_and_required_fields_are_paired() -> No
     assert required_result.ok is False
     assert required_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
     assert "critical_future_field" in (required_result.metadata_reason or "")
+
+
+def test_schema_version_report_level_unknown_fields_are_paired() -> None:
+    additive_report_bundle = _bundle("report_unknown_field_ok")
+    required_report_bundle = _bundle("report_unknown_required_field")
+
+    additive_result = verify_proof_bundle(
+        additive_report_bundle, require_signed_attestation=True
+    )
+    required_result = verify_proof_bundle(
+        required_report_bundle, require_signed_attestation=True
+    )
+
+    assert additive_result.ok is True
+    assert additive_result.primary_reason is None
+    assert additive_result.secondary_reasons == ()
+    assert (
+        additive_report_bundle["verification_report"]["future_report_field"]
+        == "preserved"
+    )
+    assert required_result.ok is False
+    assert required_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert "critical_report_field" in (required_result.metadata_reason or "")
 
 
 def test_schema_version_additive_fixture_doc_pins_rule() -> None:

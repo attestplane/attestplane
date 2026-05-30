@@ -35,6 +35,24 @@
       "expected_reason_code": "att.verify.schema_unknown",
       "expected_secondary_reasons": [],
       "ok": false
+    },
+    {
+      "case_id": "report_unknown_field_ok",
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "ok": true,
+      "report_fields": [
+        "future_report_field"
+      ]
+    },
+    {
+      "case_id": "report_unknown_required_field",
+      "expected_reason_code": "att.verify.schema_unknown",
+      "expected_secondary_reasons": [],
+      "ok": false,
+      "report_fields": [
+        "critical_report_field"
+      ]
     }
   ]
 }

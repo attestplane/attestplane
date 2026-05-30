@@ -13,6 +13,11 @@ This directory pins the `schema_version` forward-compatibility rule set.
   verification.
 - `unknown_required_field` must continue to fail with the schema-unknown
   quarantine path.
+- `report_unknown_field_ok` and `report_unknown_required_field` extend the
+  pairing to the `verification_report` section. An unknown non-critical field
+  in the report is accepted; a `critical_`-prefixed field is rejected with
+  `att.verify.schema_unknown`. This proves the additive-optional convention
+  applies uniformly across all checked sections, not only `chain_metadata`.
 - `missing`, `unknown_major`, and `major_version_ahead` must continue to
   reject unsupported or missing `schema_version` values.
 
@@ -25,3 +30,5 @@ Relevant issue trail:
 - #185 - landed the additive forward-compatible `schema_version` rules
 - #173 / #210 - the negative/positive gap this fixture set closes
 - #363 - this positive acceptance vector and its documentation pin
+- #291 / #292 - implementation tracking for the verification_report-level
+  positive acceptance vector pair
