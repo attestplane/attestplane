@@ -164,7 +164,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
         (
             ["verify", "--explain", str(schema_unsupported_bundle)],
-            2,
+            3,
             FIXED_SIGNER_SUBJECT,
             "2",
             None,
@@ -239,7 +239,7 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
     )
     payload = json.loads(stdout_json)
     explanations = payload["explanation"]
-    assert rc_json == 2
+    assert rc_json == 3
     assert stderr_json == ""
     assert isinstance(explanations, list)
     assert len(explanations) > 1
@@ -253,7 +253,7 @@ def test_verify_explain_plain_text_emits_all_rejection_rationales(
         ["verify", "--explain", str(multi_reason_bundle)], capsys
     )
 
-    assert rc == 2
+    assert rc == 3
     assert stdout.startswith("FAIL signer_subject=")
     assert "schema_version=999" in stdout
     assert "taxonomy_version=1" in stdout
@@ -337,7 +337,7 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
         capsys,
     )
     payload_schema = json.loads(stdout_schema)
-    assert rc_schema == 2
+    assert rc_schema == 3
     assert payload_schema["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert (
         payload_schema["explanation"][0]["primary_reason"]

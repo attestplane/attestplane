@@ -27,23 +27,28 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_CODE_DESCRIPTIONS,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_STRUCTURE_INVALID,
 )
 
 ROOT = Path(__file__).resolve().parents[4]
 CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
-PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
-FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+GOLDEN_FIXTURES = ROOT / "tests" / "golden"
+VALID_FIXTURE = CONFORMANCE_FIXTURES / "valid.attest"
+REJECT_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
 QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
+VERSION_MISMATCH_FIXTURE = ROOT / "tests" / "fixtures" / "unknown_schema_version.json"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
-VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+VALID_GOLDEN = GOLDEN_FIXTURES / "verify_valid.json"
+REJECT_GOLDEN = GOLDEN_FIXTURES / "verify_reject.json"
+QUARANTINE_GOLDEN = GOLDEN_FIXTURES / "verify_quarantine.json"
 VERIFY_JSON_EXIT_CODES = {
-    "accept": 0,
-    "verification_failure": 1,
+    "valid": 0,
+    "hard_fail": 1,
     "quarantine": 2,
+    "require_version_mismatch": 3,
     "usage_error": 3,
 }
 
@@ -138,11 +143,12 @@ def _assert_matches_verify_result_v1(
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc, payload, stderr = _run_verify(["verify", "--json", str(VALID_FIXTURE)], capsys)
 
-    assert rc == VERIFY_JSON_EXIT_CODES["accept"]
+    assert rc == VERIFY_JSON_EXIT_CODES["valid"]
     assert stderr == ""
-    assert payload == VERIFY_JSON_GOLDEN
+    assert json.dumps(payload, indent=2, sort_keys=True) + "\n" == VALID_GOLDEN.read_text(encoding="utf-8")
+    assert payload == json.loads(VALID_GOLDEN.read_text(encoding="utf-8"))
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
@@ -153,7 +159,7 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
         capsys,
     )
 
-    assert rc == 0
+    assert rc == VERIFY_JSON_EXIT_CODES["valid"]
     assert stderr == ""
     _assert_matches_verify_result_v1(payload, expect_explanation=True)
     assert payload["result"] == "pass"
@@ -176,25 +182,12 @@ def test_verify_json_additive_optional_schema_bundle_passes_cleanly(
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+    rc, payload, stderr = _run_verify(["verify", "--json", str(REJECT_FIXTURE)], capsys)
 
-    assert rc == VERIFY_JSON_EXIT_CODES["verification_failure"]
+    assert rc == VERIFY_JSON_EXIT_CODES["hard_fail"]
     assert stderr == ""
-    assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["verification_failure"]
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert payload["taxonomy_version"] == 1
-    assert payload["bundle"]["schema_version"] == 1
-    assert payload["bundle"]["digest"] == "914bdd3745f9566e4cf0c3c2dd2747b701f50ad4cb3dc0eeede5f16207748ffd"
-    assert payload["reasons"] == [
-        {
-            "code": VERIFY_REASON_CANONICAL_MISMATCH,
-            "message": "canonicalization failed",
-            "path": "/events/0/event/payload/artifact_ref",
-        },
-    ]
-    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
+    assert json.dumps(payload, indent=2, sort_keys=True) + "\n" == REJECT_GOLDEN.read_text(encoding="utf-8")
+    assert payload == json.loads(REJECT_GOLDEN.read_text(encoding="utf-8"))
 
 
 def test_verify_json_unknown_required_field_fixture_is_quarantined(
@@ -204,20 +197,34 @@ def test_verify_json_unknown_required_field_fixture_is_quarantined(
 
     assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
     assert stderr == ""
+    assert json.dumps(payload, indent=2, sort_keys=True) + "\n" == QUARANTINE_GOLDEN.read_text(encoding="utf-8")
+    assert payload == json.loads(QUARANTINE_GOLDEN.read_text(encoding="utf-8"))
+
+
+def test_verify_json_unknown_schema_version_fixture_uses_require_version_mismatch(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(
+        ["verify", "--strict-schema", "--json", str(VERSION_MISMATCH_FIXTURE)],
+        capsys,
+    )
+
+    assert rc == VERIFY_JSON_EXIT_CODES["require_version_mismatch"]
+    assert stderr == ""
     assert payload["schema_version"] == 1
     assert payload["result"] == "fail"
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["require_version_mismatch"]
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
-    assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload["reasons"][0]["path"] == "/chain_metadata/schema_version"
+    assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 
 def test_verify_json_and_explain_keep_json_parseable(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(FAIL_FIXTURE)], capsys)
+    rc, payload, stderr = _run_verify(["verify", "--json", "--explain", str(REJECT_FIXTURE)], capsys)
 
     assert rc == 1
     assert stderr == ""

@@ -15,7 +15,7 @@ accompanies the structured JSON contract.
   `att.verify.schema_version_missing` and use the quarantine exit code.
 - An unsupported bundle or payload schema version should remain a rejected
   verifier result, surface `att.verify.schema_version_unsupported` in the
-  reason list, and use the quarantine exit code.
+  reason list, and use the dedicated require-version-mismatch exit code.
 - A fail-closed critical/required field should remain a rejected verifier
   result, surface `att.verify.schema_unknown` in the reason list, and use
   the quarantine exit code.
@@ -43,8 +43,9 @@ accompanies the structured JSON contract.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
 - Quarantined bundles map to exit code `2`. Hard verifier failures continue
-  to map to exit code `1`, and malformed input that cannot be parsed or read
-  continues to map to exit code `3`.
+  to map to exit code `1`, unsupported schema-version combinations map to
+  exit code `3`, and malformed input that cannot be parsed or read also
+  continues to use exit code `3`.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.

@@ -142,11 +142,12 @@ def test_verify_json_reports_unknown_schema_version(
     captured = capsys.readouterr()
     result = json.loads(captured.out)
 
-    assert rc == 2
+    assert rc == 3
     assert result["schema_version"] == 1
     assert result["result"] == "fail"
-    assert result["exit_code"] == 2
+    assert result["exit_code"] == 3
     assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
     assert result["reasons"][0]["path"] == "/chain_metadata/schema_version"
+    assert result["anchoring"] == {"status": "unanchored", "quarantined": False}
     assert captured.err == ""

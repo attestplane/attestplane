@@ -40,6 +40,16 @@ from attestplane.verify_reason_codes import (
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
 VERIFY_BUNDLE_SCHEMA_VERSION: int = 1
+VERIFY_JSON_EXIT_CODE_VALID: int = 0
+VERIFY_JSON_EXIT_CODE_HARD_FAIL: int = 1
+VERIFY_JSON_EXIT_CODE_QUARANTINE: int = 2
+VERIFY_JSON_EXIT_CODE_REQUIRE_VERSION_MISMATCH: int = 3
+VERIFY_JSON_EXIT_CODES_V1: dict[str, int] = {
+    "valid": VERIFY_JSON_EXIT_CODE_VALID,
+    "hard_fail": VERIFY_JSON_EXIT_CODE_HARD_FAIL,
+    "quarantine": VERIFY_JSON_EXIT_CODE_QUARANTINE,
+    "require_version_mismatch": VERIFY_JSON_EXIT_CODE_REQUIRE_VERSION_MISMATCH,
+}
 
 
 class _DuplicateKeyError(ValueError):
@@ -223,6 +233,12 @@ def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict
     }
 
 
+def _schema_version_mismatch_exit_code(reason_code: VerifyReasonCodeV1) -> int:
+    if reason_code == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED:
+        return VERIFY_JSON_EXIT_CODE_REQUIRE_VERSION_MISMATCH
+    return VERIFY_JSON_EXIT_CODE_QUARANTINE
+
+
 def _verify_success_summary(bundle: dict[str, Any]) -> str:
     return (
         f"signer_subject={_bundle_signer_subject(bundle)} "
@@ -362,15 +378,17 @@ def verify_result_exit_code(result: Any | None) -> int:
     - 0: success
     - 1: verification failure
     - 2: quarantine / fail-closed bundle contract rejection
-    - 3: usage, I/O, or malformed-input failure
+    - 3: require-version mismatch or pre-verification parse / I/O failure
     """
     if result is None:
-        return 1
+        return VERIFY_JSON_EXIT_CODE_HARD_FAIL
     if getattr(result, "ok", False):
-        return 0
+        return VERIFY_JSON_EXIT_CODE_VALID
+    if getattr(result, "primary_reason", None) == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED:
+        return VERIFY_JSON_EXIT_CODE_REQUIRE_VERSION_MISMATCH
     if getattr(result, "anchoring_quarantined", False):
-        return 2
-    return 1
+        return VERIFY_JSON_EXIT_CODE_QUARANTINE
+    return VERIFY_JSON_EXIT_CODE_HARD_FAIL
 
 
 def _bundle_digest(raw_bytes: bytes) -> str:
@@ -681,7 +699,7 @@ def build_verify_json_outcome(
                 detail=str(exc),
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=_schema_version_mismatch_exit_code(code),
             bundle=bundle,
             stderr_code=VERIFY_SCHEMA_ERROR,
             explanation=([_explanation_entry(code, path, str(exc))] if explain else None),
@@ -741,6 +759,11 @@ def build_verify_json_outcome(
 
 __all__ = [
     "VERIFY_BUNDLE_SCHEMA_VERSION",
+    "VERIFY_JSON_EXIT_CODE_HARD_FAIL",
+    "VERIFY_JSON_EXIT_CODE_QUARANTINE",
+    "VERIFY_JSON_EXIT_CODE_REQUIRE_VERSION_MISMATCH",
+    "VERIFY_JSON_EXIT_CODE_VALID",
+    "VERIFY_JSON_EXIT_CODES_V1",
     "VERIFY_RESULT_SCHEMA_VERSION",
     "VerifyJsonOutcome",
     "build_verify_json_outcome",

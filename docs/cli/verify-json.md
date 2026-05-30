@@ -4,6 +4,10 @@
 `attestplane verify`. It is intentionally separate from the legacy
 human-readable report fields.
 
+The pinned fixture for this contract is versioned alongside the tests. In
+this tree, `tests/golden/verify_valid.json` is the canonical pass-case golden
+for the current v1.8.19 contract surface.
+
 ## Output Contract
 
 The payload is fixed at schema version 1:
@@ -32,8 +36,8 @@ The payload is fixed at schema version 1:
 - `exit_code` is the process exit code that callers should gate on. In v1,
   `0` means accept, `1` means the verifier rejected the bundle, `2`
   means the bundle was quarantined by a fail-closed schema or contract
-  rejection, and `3` means a usage, I/O, or malformed-input problem
-  prevented verification.
+  rejection, and `3` means a require-version mismatch. Parsing and I/O
+  failures also surface through the same pre-verification `3` path.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -57,6 +61,9 @@ The payload is fixed at schema version 1:
 - `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
 - In v1, `anchoring.quarantined=true` maps to exit code `2`, while normal
   verification failures continue to use exit code `1`.
+- Unsupported schema-version or bundle-version combinations map to the
+  dedicated `3` exit code so CI can distinguish contract drift from ordinary
+  quarantine.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.

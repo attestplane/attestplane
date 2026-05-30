@@ -25,6 +25,7 @@ from typing import Any
 from attestplane import __version__
 from attestplane.cli.verify_json import (
     _anchoring_payload,
+    _schema_version_mismatch_exit_code,
     _verify_explanations,
     _verify_success_summary,
     build_verify_json_outcome,
@@ -537,7 +538,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                     }
                 ]
             )
-        return 2
+        return _schema_version_mismatch_exit_code(primary_reason)
     except CanonicalizationError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: canonicalization error in {bundle_path}: {exc}"
