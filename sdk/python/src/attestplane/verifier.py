@@ -468,6 +468,18 @@ def _schema_version_reason_code(metadata_reason: str | None) -> VerifyReasonCode
     return None
 
 
+def _taxonomy_version_reason_code(metadata_reason: str | None) -> VerifyReasonCodeV1 | None:
+    if metadata_reason is None:
+        return None
+    if metadata_reason == "chain_metadata.evidence_taxonomy_version is missing":
+        return VERIFY_REASON_SCHEMA_VERSION_MISSING
+    if metadata_reason == "chain_metadata.evidence_taxonomy_version must be an integer":
+        return VERIFY_REASON_SCHEMA_INVALID
+    if metadata_reason.startswith("chain_metadata.evidence_taxonomy_version="):
+        return VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    return None
+
+
 def _verification_reasons(
     *,
     chain_result: VerificationResult,
@@ -494,7 +506,11 @@ def _verification_reasons(
         if schema_version_reason is not None:
             reasons.append(schema_version_reason)
         else:
-            reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
+            taxonomy_version_reason = _taxonomy_version_reason_code(metadata_reason)
+            if taxonomy_version_reason is not None:
+                reasons.append(taxonomy_version_reason)
+            else:
+                reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if not policy_ok:
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if not retention_ok:
@@ -535,6 +551,7 @@ def _verify_metadata_closure(
     chain_result: VerificationResult,
     *,
     require_non_empty: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> tuple[bool, str | None]:
     metadata = bundle["chain_metadata"]
     report = bundle["verification_report"]
@@ -561,8 +578,20 @@ def _verify_metadata_closure(
         return False, report_unknown_required_field
     if metadata["genesis_hash_hex"] != GENESIS_HASH.hex():
         return False, "chain_metadata.genesis_hash_hex does not match substrate genesis hash"
-    if "evidence_taxonomy_version" in metadata and metadata["evidence_taxonomy_version"] != 1:
-        return False, "chain_metadata.evidence_taxonomy_version must be 1 when present"
+    if require_taxonomy_version is None:
+        if "evidence_taxonomy_version" in metadata and metadata["evidence_taxonomy_version"] != 1:
+            return False, "chain_metadata.evidence_taxonomy_version must be 1 when present"
+    else:
+        if "evidence_taxonomy_version" not in metadata:
+            return False, "chain_metadata.evidence_taxonomy_version is missing"
+        taxonomy_version = metadata["evidence_taxonomy_version"]
+        if not isinstance(taxonomy_version, int):
+            return False, "chain_metadata.evidence_taxonomy_version must be an integer"
+        if taxonomy_version != require_taxonomy_version:
+            return False, (
+                "chain_metadata.evidence_taxonomy_version="
+                f"{taxonomy_version!r}; this verifier requires {require_taxonomy_version!r}"
+            )
 
     head = head_of(events)
     if metadata["head_seq"] != head.seq:
@@ -616,6 +645,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -643,6 +673,7 @@ def verify_proof_bundle(
         events,
         chain_result,
         require_non_empty=require_non_empty,
+        require_taxonomy_version=require_taxonomy_version,
     )
     policy_ok, policy_reason = _verify_policy_trace_refs(bundle, events)
     retention_result = verify_retention_proofs(
@@ -735,6 +766,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -748,6 +780,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 
@@ -772,6 +805,7 @@ def main(argv: list[str] | None = None) -> int:
             bundle,
             require_non_empty=strict,
             require_signed_attestation=strict,
+            require_taxonomy_version=None,
         )
     except (BundleVerificationError, json.JSONDecodeError) as exc:
         sys.stderr.write(f"FAIL: {exc}\n")
