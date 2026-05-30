@@ -1,4 +1,5 @@
 {
+  "comment": "Forward-compatible schema_version coverage: additive-optional fields are accepted as valid, while breaking rejected shapes remain fail-closed for unknown required or structural changes. This closes the #173/#210 gap and pairs with the negative schema_version vectors landed in #184/#198 and #210.",
   "cases": [
     {
       "case_id": "additive_minor_ok",
