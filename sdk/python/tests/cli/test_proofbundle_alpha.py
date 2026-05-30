@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("asn1crypto")
+
 from attestplane.cli.main import main
 
 ROOT = Path(__file__).resolve().parents[4]
