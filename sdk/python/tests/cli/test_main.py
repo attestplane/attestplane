@@ -18,8 +18,12 @@ from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_MISSING,
 )
+
+ROOT = Path(__file__).resolve().parents[4]
 
 
 def _seed_jsonl_chain(path: Path, n: int = 3) -> None:
@@ -63,6 +67,7 @@ def test_verify_help_declares_partial_scope(capsys: pytest.CaptureFixture[str]) 
     assert "policy_trace_refs closure" in normalized
     assert "signature verification" in normalized
     assert "anchor verification" in normalized
+    assert "--require-taxonomy-version" in normalized
 
 
 def test_doctor_command(capsys: pytest.CaptureFixture[str]) -> None:
@@ -155,6 +160,56 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+
+
+@pytest.mark.parametrize(
+    ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
+    [
+        (1, None, 0, None),
+        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+    ],
+)
+def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(
+    taxonomy_version: int,
+    mutate: str | None,
+    expected_rc: int,
+    expected_reason: str | None,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle_path = ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
+    payload = json.loads(bundle_path.read_text(encoding="utf-8"))
+    if mutate == "remove":
+        del payload["chain_metadata"]["evidence_taxonomy_version"]
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    rc = main(
+        [
+            "verify",
+            "--json",
+            str(path),
+            "--require-taxonomy-version",
+            str(taxonomy_version),
+        ]
+    )
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
+
+    assert rc == expected_rc
+    assert captured.err == ""
+    assert result["schema_version"] == 1
+    assert result["exit_code"] == expected_rc
+    assert result["taxonomy_version"] == 1
+    assert result["result"] == ("pass" if expected_rc == 0 else "fail")
+    if expected_reason is None:
+        assert result["reason_code"] is None
+        assert result["reasons"] == []
+    else:
+        assert result["reason_code"] == expected_reason
+        assert result["reasons"][0]["code"] == expected_reason
+        assert result["reasons"][0]["path"] == "/chain_metadata/evidence_taxonomy_version"
 
 
 def test_verify_bundle_option_rejects_unsigned_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
