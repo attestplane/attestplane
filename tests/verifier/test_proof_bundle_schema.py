@@ -140,7 +140,6 @@ def test_bundle_verifier_rejects_unknown_schema_version_major() -> None:
     assert result.primary_reason == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 
-<<<<<<< Updated upstream
 def test_bundle_verifier_rejects_unknown_required_metadata_field() -> None:
     bundle = _load_fixture("valid_signed_attestation.json")
     bundle["chain_metadata"]["critical_future_field"] = True
@@ -152,14 +151,9 @@ def test_bundle_verifier_rejects_unknown_required_metadata_field() -> None:
     assert "critical_future_field" in (result.metadata_reason or "")
 
 
-def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:
-||||||| Stash base
-def test_cli_bundle_option_uses_strict_schema_mode(capsys) -> None:
-=======
 def test_cli_bundle_option_uses_strict_schema_mode(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
->>>>>>> Stashed changes
     rc = main(["verify", "--bundle", str(FIXTURES / "empty_attestations.json")])
     out = capsys.readouterr().out
 
