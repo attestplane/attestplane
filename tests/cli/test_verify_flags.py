@@ -13,6 +13,7 @@ from attestplane.cli.main import main
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_REQUIRED_FIELDS_MISSING,
+    VERIFY_TAXONOMY_VERSION_PINNING_FAILED,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -81,12 +82,14 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "1 verification failure" in out
     assert "2 quarantine" in out
     assert "3 usage" in out
+    assert "4 taxonomy-version pinning failure" in out
 
 
 def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
@@ -113,3 +116,33 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"] == []
     assert payload["bundle"]["schema_version"] == 1
+
+
+def test_verify_require_taxonomy_version_matches_and_fails_closed(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    valid_bundle = ROOT / "fixtures" / "valid_bundle.att"
+
+    rc = main(["verify", "--require-taxonomy-version", "1", str(valid_bundle)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out.startswith("OK")
+    assert captured.err == ""
+
+    rc = main(["verify", "--require-taxonomy-version", "999", str(valid_bundle)])
+    captured = capsys.readouterr()
+    assert rc == 4
+    assert captured.out.startswith("FAIL")
+    assert captured.err == ""
+
+    rc = main(
+        ["verify", "--require-taxonomy-version", "999", "--json", str(valid_bundle)]
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert rc == 4
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 4
+    assert payload["reason_code"] == "att.verify.schema_version_unsupported"
+    assert payload["taxonomy_version"] == 1
+    assert captured.err == f"{VERIFY_TAXONOMY_VERSION_PINNING_FAILED}\n"

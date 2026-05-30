@@ -14,12 +14,18 @@ from typing import Any
 from attestplane.canonical import CanonicalizationError
 from attestplane.hashchain import hash_event
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
-from attestplane.verifier import BundleSchemaError, classify_bundle_schema_error, verify_proof_bundle
+from attestplane.verifier import (
+    BundleSchemaError,
+    TaxonomyVersionPinningError,
+    classify_bundle_schema_error,
+    verify_proof_bundle,
+)
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_IO_ERROR,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
+    VERIFY_TAXONOMY_VERSION_PINNING_FAILED,
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_ANCHOR_INVALID,
@@ -363,9 +369,12 @@ def verify_result_exit_code(result: Any | None) -> int:
     - 1: verification failure
     - 2: quarantine / fail-closed bundle contract rejection
     - 3: usage, I/O, or malformed-input failure
+    - 4: taxonomy-version pinning failure
     """
     if result is None:
         return 1
+    if getattr(result, "error_code", None) == VERIFY_TAXONOMY_VERSION_PINNING_FAILED:
+        return 4
     if getattr(result, "ok", False):
         return 0
     if getattr(result, "anchoring_quarantined", False):
@@ -528,6 +537,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -669,6 +679,32 @@ def build_verify_json_outcome(
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=require_signed_attestation,
+            require_taxonomy_version=require_taxonomy_version,
+        )
+    except TaxonomyVersionPinningError as exc:
+        return _json_failure(
+            bundle_digest=bundle_digest,
+            reason=_reason_entry(
+                VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                "/chain_metadata/evidence_taxonomy_version",
+                summary="taxonomy version pinning failed",
+                detail=str(exc),
+                explain=explain,
+            ),
+            exit_code=4,
+            bundle=bundle,
+            stderr_code=VERIFY_TAXONOMY_VERSION_PINNING_FAILED,
+            explanation=(
+                [
+                    _explanation_entry(
+                        VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                        "/chain_metadata/evidence_taxonomy_version",
+                        str(exc),
+                    )
+                ]
+                if explain
+                else None
+            ),
         )
     except BundleSchemaError as exc:
         code, path = _schema_reason_for_bundle_error(exc)

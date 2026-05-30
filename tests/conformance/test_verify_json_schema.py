@@ -30,7 +30,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> tuple[int, dict[str, object]]:
     rc = main(argv)
-    assert rc in {0, 1, 2, 3}
+    assert rc in {0, 1, 2, 3, 4}
     return rc, json.loads(capsys.readouterr().out)
 
 
@@ -66,7 +66,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
-    assert payload["exit_code"] in {0, 1, 2, 3}
+    assert payload["exit_code"] in {0, 1, 2, 3, 4}
     assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
@@ -113,7 +113,7 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["schema_version"]["const"] == 1
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
     assert schema["properties"]["exit_code"]["minimum"] == 0
-    assert schema["properties"]["exit_code"]["maximum"] == 3
+    assert schema["properties"]["exit_code"]["maximum"] == 4
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["additionalProperties"] is False

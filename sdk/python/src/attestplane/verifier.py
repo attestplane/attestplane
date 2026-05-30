@@ -76,6 +76,10 @@ class BundleSchemaError(BundleVerificationError):
     """The bundle JSON does not conform to proof_bundle.schema.json."""
 
 
+class TaxonomyVersionPinningError(BundleVerificationError):
+    """The bundle/verifier taxonomy version does not satisfy a consumer pin."""
+
+
 @dataclass(frozen=True, slots=True)
 class BundleVerificationResult:
     """Outcome of verifying a proof bundle.
@@ -172,6 +176,16 @@ _FAIL_CLOSED_UNKNOWN_TOP_LEVEL_FIELDS = {"proof_type"}
 _ALLOWED_VERIFICATION_METHODS = {"canonical-bytes-walk", "canonical-bytes-walk+anchor"}
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _ANCHORING_STATUS = {"anchored", "quarantined", "unanchored"}
+
+
+def _bundle_taxonomy_version(bundle: dict[str, Any]) -> int | None:
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return None
+    taxonomy_version = chain_metadata.get("evidence_taxonomy_version")
+    if isinstance(taxonomy_version, int):
+        return taxonomy_version
+    return None
 
 
 def _validate_shape(bundle: Any) -> None:
@@ -601,6 +615,7 @@ def verify_proof_bundle(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Verify a parsed proof-bundle dict.
 
@@ -611,6 +626,15 @@ def verify_proof_bundle(
     where an empty-but-well-formed bundle should fail closed.
     """
     _validate_shape(bundle)
+    if require_taxonomy_version is not None:
+        bundle_taxonomy_version = _bundle_taxonomy_version(bundle)
+        verifier_taxonomy_version = resolve_verify_taxonomy_version()
+        if bundle_taxonomy_version != require_taxonomy_version or verifier_taxonomy_version != require_taxonomy_version:
+            raise TaxonomyVersionPinningError(
+                "chain_metadata.evidence_taxonomy_version="
+                f"{bundle_taxonomy_version!r} verifier_taxonomy_version={verifier_taxonomy_version!r} "
+                f"does not satisfy required taxonomy_version={require_taxonomy_version!r}"
+            )
     events = _rehydrate_events(bundle["events"])
     effective_require_signed_attestation = require_signed_attestation or require_non_empty
     if effective_require_signed_attestation:
@@ -720,6 +744,7 @@ def verify_proof_bundle_file(
     *,
     require_non_empty: bool = False,
     require_signed_attestation: bool = False,
+    require_taxonomy_version: int | None = None,
 ) -> BundleVerificationResult:
     """Convenience: load a bundle from disk and verify it."""
     p = Path(path)
@@ -733,6 +758,7 @@ def verify_proof_bundle_file(
         bundle,
         require_non_empty=require_non_empty,
         require_signed_attestation=require_signed_attestation,
+        require_taxonomy_version=require_taxonomy_version,
     )
 
 
@@ -774,6 +800,7 @@ __all__ = [
     "BundleVerificationError",
     "BundleVerificationResult",
     "classify_bundle_schema_error",
+    "TaxonomyVersionPinningError",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
 ]

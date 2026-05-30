@@ -30,7 +30,7 @@
     "exit_code": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 3
+      "maximum": 4
     },
     "reason_code": {
       "anyOf": [

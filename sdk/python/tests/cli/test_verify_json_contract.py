@@ -45,6 +45,7 @@ VERIFY_JSON_EXIT_CODES = {
     "verification_failure": 1,
     "quarantine": 2,
     "usage_error": 3,
+    "pinning_failure": 4,
 }
 
 

@@ -35,11 +35,13 @@ from attestplane.verify_errors import (
     VERIFY_IO_ERROR,
     VERIFY_REQUIRED_FIELDS_MISSING,
     VERIFY_SCHEMA_ERROR,
+    VERIFY_TAXONOMY_VERSION_PINNING_FAILED,
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_SCHEMA_INVALID,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
 )
 
 VERIFY_SCOPE = "chain_report_only"
@@ -101,7 +103,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=VERIFY_SCOPE_NOTICE,
         epilog=(
             "Exit codes: 0 success; 1 verification failure; 2 quarantine / "
-            "fail-closed bundle rejection; 3 usage, I/O, or malformed input."
+            "fail-closed bundle rejection; 3 usage, I/O, or malformed input; "
+            "4 taxonomy-version pinning failure."
         ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
@@ -131,6 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        help="fail closed unless the bundle and verifier taxonomy version both match the required value",
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -417,6 +426,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     from attestplane.canonical import CanonicalizationError
     from attestplane.verifier import (
         BundleSchemaError,
+        TaxonomyVersionPinningError,
         classify_bundle_schema_error,
         verify_proof_bundle,
     )
@@ -436,6 +446,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -449,6 +460,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
         )
     except FileNotFoundError as exc:
         explain = getattr(args, "explain", False)
@@ -538,6 +550,35 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 ]
             )
         return 2
+    except TaxonomyVersionPinningError as exc:
+        human = f"FAIL: taxonomy version pinning failed in {bundle_path}: {exc}"
+        explain = getattr(args, "explain", False)
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+        _emit(
+            {
+                "ok": False,
+                "error": "taxonomy_version_pinning",
+                "error_code": VERIFY_TAXONOMY_VERSION_PINNING_FAILED,
+                "primary_reason": VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                "secondary_reasons": [],
+                "detail": str(exc),
+                **_verify_scope_metadata(),
+            },
+            args.json_output,
+            human=human,
+        )
+        if explain:
+            _write_verify_explanations(
+                [
+                    {
+                        "primary_reason": VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+                        "pointer": "/chain_metadata/evidence_taxonomy_version",
+                        "message": str(exc),
+                    }
+                ]
+            )
+        return 4
     except CanonicalizationError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: canonicalization error in {bundle_path}: {exc}"
@@ -561,6 +602,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
