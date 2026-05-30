@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from attestplane.verifier import verify_proof_bundle
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_UNKNOWN,
