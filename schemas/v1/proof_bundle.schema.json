@@ -356,7 +356,7 @@
     },
     "anchoring": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["status", "quarantined"],
       "properties": {
         "status": {
@@ -366,6 +366,10 @@
         "quarantined": {
           "type": "boolean",
           "description": "True when the producer quarantined the bundle after a TSA or timestamp failure."
+        },
+        "reason_code": {
+          "type": "string",
+          "description": "Optional reason code explaining why the bundle was quarantined. When absent the verifier defaults to att.verify.anchor_invalid."
         }
       },
       "description": "Optional additive anchoring claim. Existing bundles remain valid without it."

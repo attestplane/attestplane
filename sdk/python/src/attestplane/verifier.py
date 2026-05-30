@@ -48,6 +48,7 @@ from attestplane.verify_errors import (
 )
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_ANCHOR_UNAVAILABLE,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -283,6 +284,22 @@ def _bundle_anchoring_status(bundle: dict[str, Any]) -> str | None:
     return str(status)
 
 
+def _bundle_anchoring_reason_code(bundle: dict[str, Any]) -> str | None:
+    """Read the optional ``reason_code`` from the ``anchoring`` section.
+
+    The producer sets this field when the quarantine has a known cause
+    (e.g. ``att.verify.anchor_unavailable`` for a transient TSA outage).
+    When absent the verifier defaults to ``VERIFY_REASON_ANCHOR_INVALID``.
+    """
+    anchoring = bundle.get("anchoring")
+    if not isinstance(anchoring, dict):
+        return None
+    reason = anchoring.get("reason_code")
+    if not isinstance(reason, str) or not reason:
+        return None
+    return reason
+
+
 def _schema_version_reason(metadata: dict[str, Any]) -> VerifyReasonCodeV1 | None:
     if "schema_version" not in metadata:
         return VERIFY_REASON_SCHEMA_VERSION_MISSING
@@ -498,6 +515,7 @@ def _verification_reasons(
     policy_ok: bool,
     retention_ok: bool,
     explicit_anchoring_quarantine: bool,
+    anchoring_reason_code: str | None = None,
 ) -> tuple[VerifyReasonCodeV1 | None, tuple[VerifyReasonCodeV1, ...]]:
     reasons: list[VerifyReasonCodeV1] = []
     if not chain_result.ok or not agreement:
@@ -517,7 +535,10 @@ def _verification_reasons(
     if not retention_ok:
         reasons.append(VERIFY_REASON_STRUCTURE_INVALID)
     if explicit_anchoring_quarantine:
-        reasons.append(VERIFY_REASON_ANCHOR_INVALID)
+        if anchoring_reason_code == VERIFY_REASON_ANCHOR_UNAVAILABLE:
+            reasons.append(VERIFY_REASON_ANCHOR_UNAVAILABLE)
+        else:
+            reasons.append(VERIFY_REASON_ANCHOR_INVALID)
     return _dedupe_reasons(reasons)
 
 
@@ -667,6 +688,7 @@ def verify_proof_bundle(
         {event.event_hash.hex() for event in events},
     )
     bundle_anchoring_status = _bundle_anchoring_status(bundle)
+    bundle_anchoring_reason = _bundle_anchoring_reason_code(bundle)
     explicit_quarantine = bundle_anchoring_status == "quarantined"
     error_code: VerifyErrorCode = VERIFY_OK
     if not chain_result.ok or not agreement:
@@ -695,6 +717,7 @@ def verify_proof_bundle(
         policy_ok=policy_ok,
         retention_ok=retention_result.ok,
         explicit_anchoring_quarantine=explicit_quarantine,
+        anchoring_reason_code=bundle_anchoring_reason,
     )
     anchoring_quarantined = explicit_quarantine or _result_is_quarantined(
         error_code=error_code,

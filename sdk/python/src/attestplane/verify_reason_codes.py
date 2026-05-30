@@ -18,6 +18,7 @@ VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
 
 VerifyReasonCodeV1 = Literal[
     "att.verify.anchor_invalid",
+    "att.verify.anchor_unavailable",
     "att.verify.canonical_mismatch",
     "att.verify.required_field_missing",
     "att.verify.schema_invalid",
@@ -39,9 +40,11 @@ VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verif
 VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = "att.verify.required_field_missing"
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
+VERIFY_REASON_ANCHOR_UNAVAILABLE: Final[VerifyReasonCodeV1] = "att.verify.anchor_unavailable"
 
 ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_ANCHOR_UNAVAILABLE,
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
     VERIFY_REASON_SCHEMA_INVALID,
@@ -55,6 +58,9 @@ ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
 
 VERIFY_REASON_TAXONOMY: Final[Mapping[VerifyReasonCodeV1, str]] = {
     VERIFY_REASON_ANCHOR_INVALID: "Anchor material is missing, malformed, unsupported, or failed verification.",
+    VERIFY_REASON_ANCHOR_UNAVAILABLE: (
+        "Anchor is quarantined because the TSA endpoint was unreachable, timed out, or returned a transient error."
+    ),
     VERIFY_REASON_CANONICAL_MISMATCH: (
         "Recomputed canonical bytes, event hashes, chain links, or embedded verification reports disagree."
     ),
@@ -111,6 +117,7 @@ def format_verify_taxonomy_version(value: int | None = None) -> str:
 __all__ = [
     "ALL_VERIFY_REASON_CODES_V1",
     "VERIFY_REASON_ANCHOR_INVALID",
+    "VERIFY_REASON_ANCHOR_UNAVAILABLE",
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
     "VERIFY_REASON_CODE_SCHEMA_VERSION",

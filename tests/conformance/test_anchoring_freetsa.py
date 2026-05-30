@@ -5,6 +5,10 @@
 The quarantined fixture below captures the 2026-05-27 live FreeTSA
 failure mode. A TSA failure must fail closed into quarantine and never
 surface as a claim-safe verified result.
+
+The TSA-unavailable fixture simulates a transient TSA outage (timeout /
+network error), which must surface a distinct reason code from an
+anchor-invalid response.
 """
 
 from __future__ import annotations
@@ -16,11 +20,27 @@ import pytest
 
 from attestplane.cli.main import main
 from attestplane.verifier import verify_proof_bundle
-from attestplane.verify_reason_codes import VERIFY_REASON_ANCHOR_INVALID
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_ANCHOR_UNAVAILABLE,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 FREE_TSA_QUARANTINED_FIXTURE = (
-    ROOT / "sdk" / "python" / "tests" / "conformance" / "free_tsa_quarantined_bundle.json"
+    ROOT
+    / "sdk"
+    / "python"
+    / "tests"
+    / "conformance"
+    / "free_tsa_quarantined_bundle.json"
+)
+FREE_TSA_UNAVAILABLE_FIXTURE = (
+    ROOT
+    / "sdk"
+    / "python"
+    / "tests"
+    / "conformance"
+    / "free_tsa_unavailable_bundle.json"
 )
 
 
@@ -56,3 +76,30 @@ def test_freetsa_quarantine_fixture_verifies_as_quarantined(
     assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
 
+
+def test_freetsa_unavailable_fixture_is_byte_stable() -> None:
+    assert FREE_TSA_UNAVAILABLE_FIXTURE.exists()
+    bundle = _load_fixture(FREE_TSA_UNAVAILABLE_FIXTURE)
+    assert bundle["anchoring"]["status"] == "quarantined"
+    assert bundle["anchoring"]["quarantined"] is True
+    assert bundle["anchoring"].get("reason_code") == "att.verify.anchor_unavailable"
+
+
+def test_freetsa_unavailable_fixture_verifies_as_unavailable(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = _load_fixture(FREE_TSA_UNAVAILABLE_FIXTURE)
+    result = verify_proof_bundle(bundle)
+
+    rc = main(["verify", "--json", str(FREE_TSA_UNAVAILABLE_FIXTURE)])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert result.ok is False
+    assert result.anchoring_status == "quarantined"
+    assert result.anchoring_quarantined is True
+    assert result.primary_reason == VERIFY_REASON_ANCHOR_UNAVAILABLE
+    assert rc == 2
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["reason_code"] == VERIFY_REASON_ANCHOR_UNAVAILABLE
+    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
