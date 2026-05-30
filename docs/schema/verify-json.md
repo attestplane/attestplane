@@ -25,6 +25,11 @@ accompanies the structured JSON contract.
   taxonomy version documented in `docs/errors.md`.
 - `taxonomy_version` pins the shared verifier rejection taxonomy used by both
   `verify --json` and `verify --explain`.
+- The optional `--require-taxonomy-version <X>` flag pins the bundle's
+  `chain_metadata.evidence_taxonomy_version` as a consumer-side gate. The flag
+  is opt-in and does not change behavior when absent; on mismatch it rejects
+  the bundle with the documented exit code `2` and a structured reason in the
+  JSON payload.
 - `reason_code` is the top-level machine-readable primary rejection code, or
   `null` on pass.
 - `anchoring.status` is an additive status enum that consumers can branch on

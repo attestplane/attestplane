@@ -41,6 +41,11 @@ The payload is fixed at schema version 1:
   CLI surfaces all resolve this value through the same public helper.
 - Consumer pinning: `taxonomy_version` is always present at the top level,
   including successful `verify --json` results.
+- `--require-taxonomy-version <X>` is an opt-in consumer pinning gate on
+  `chain_metadata.evidence_taxonomy_version`. A matching bundle continues to
+  pass normally; a mismatch surfaces a structured failure reason and uses
+  exit code `2`, the same documented contract-rejection exit code used by
+  other fail-closed bundle checks.
 - `reasons[]` is an ordered list of `{code, path, message}` entries.
 - When `--explain` is set, the payload also includes a top-level
   `explanation[]` array with `{primary_reason, pointer, message}` entries.

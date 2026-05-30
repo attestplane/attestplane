@@ -53,6 +53,51 @@ class VerifyJsonOutcome:
     stderr_code: str | None
 
 
+def _parse_cli_taxonomy_version(raw: str) -> int:
+    if not isinstance(raw, str):
+        raise ValueError("taxonomy version must be text")
+    text = raw.strip().lower()
+    match = re.fullmatch(r"v?([1-9][0-9]*)", text)
+    if match is None:
+        raise ValueError("taxonomy version must look like v1 or 1")
+    return int(match.group(1))
+
+
+def _bundle_taxonomy_version(bundle: dict[str, Any]) -> int | None:
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return None
+    value = chain_metadata.get("evidence_taxonomy_version")
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def _taxonomy_version_requirement_reason(
+    bundle: dict[str, Any],
+    *,
+    required_taxonomy_version: int,
+) -> tuple[VerifyReasonCodeV1, str, str] | None:
+    actual_taxonomy_version = _bundle_taxonomy_version(bundle)
+    path = "/chain_metadata/evidence_taxonomy_version"
+    if actual_taxonomy_version is None:
+        return (
+            VERIFY_REASON_SCHEMA_VERSION_MISSING,
+            path,
+            "chain_metadata.evidence_taxonomy_version is missing",
+        )
+    if actual_taxonomy_version != required_taxonomy_version:
+        return (
+            VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+            path,
+            (
+                "chain_metadata.evidence_taxonomy_version="
+                f"{actual_taxonomy_version}; required v{required_taxonomy_version}"
+            ),
+        )
+    return None
+
+
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -528,6 +573,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None = None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -703,6 +749,27 @@ def build_verify_json_outcome(
         )
 
     if result.ok:
+        taxonomy_reason = None
+        if require_taxonomy_version is not None:
+            taxonomy_reason = _taxonomy_version_requirement_reason(
+                bundle,
+                required_taxonomy_version=require_taxonomy_version,
+            )
+        if taxonomy_reason is not None:
+            code, path, detail = taxonomy_reason
+            return _json_failure(
+                bundle_digest=bundle_digest,
+                reason=_reason_entry(
+                    code,
+                    path,
+                    summary="bundle taxonomy version mismatch",
+                    detail=detail,
+                    explain=explain,
+                ),
+                exit_code=2,
+                bundle=bundle,
+                explanation=([_explanation_entry(code, path, detail)] if explain else None),
+            )
         return _json_pass(
             bundle_digest=bundle_digest,
             bundle=bundle,
@@ -744,5 +811,7 @@ __all__ = [
     "VERIFY_RESULT_SCHEMA_VERSION",
     "VerifyJsonOutcome",
     "build_verify_json_outcome",
+    "_parse_cli_taxonomy_version",
+    "_taxonomy_version_requirement_reason",
     "verify_result_exit_code",
 ]

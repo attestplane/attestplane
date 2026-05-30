@@ -25,6 +25,8 @@ from typing import Any
 from attestplane import __version__
 from attestplane.cli.verify_json import (
     _anchoring_payload,
+    _parse_cli_taxonomy_version,
+    _taxonomy_version_requirement_reason,
     _verify_explanations,
     _verify_success_summary,
     build_verify_json_outcome,
@@ -81,6 +83,16 @@ def _add_explain_flag(p: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_taxonomy_requirement_flag(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=_parse_cli_taxonomy_version,
+        metavar="VERSION",
+        help=("fail closed unless the bundle declares the requested evidence taxonomy version (for example: v1)"),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="attestplane",
@@ -132,6 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
     )
+    _add_taxonomy_requirement_flag(p_verify)
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
 
@@ -430,12 +443,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         getattr(args, "require_non_empty", False) or getattr(args, "require_events", False) or strict_bundle_mode
     )
     strict_schema = getattr(args, "strict_schema", False) or strict_bundle_mode
+    require_taxonomy_version = getattr(args, "require_taxonomy_version", None)
 
     if args.json_output:
         outcome = build_verify_json_outcome(
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=require_taxonomy_version,
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -450,6 +465,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
         )
+        taxonomy_reason = None
+        if result.ok and require_taxonomy_version is not None:
+            taxonomy_reason = _taxonomy_version_requirement_reason(
+                bundle,
+                required_taxonomy_version=require_taxonomy_version,
+            )
     except FileNotFoundError as exc:
         explain = getattr(args, "explain", False)
         human = f"FAIL: cannot read {bundle_path}: {exc}"
@@ -561,10 +582,59 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 bundle_path,
                 require_non_empty=require_non_empty,
                 require_signed_attestation=strict_schema,
+                require_taxonomy_version=require_taxonomy_version,
                 explain=True,
             )
             _write_verify_explanations(outcome.payload.get("explanation", []))
         return 1
+
+    if taxonomy_reason is not None:
+        code, path, detail = taxonomy_reason
+        explain = getattr(args, "explain", False)
+        payload = {
+            "ok": False,
+            "chain_id": result.chain_id,
+            "event_count": result.event_count,
+            "require_events": require_non_empty,
+            "require_non_empty": require_non_empty,
+            "strict_schema": strict_schema,
+            "strict_proof_bundle_schema": strict_bundle_mode,
+            "require_taxonomy_version": require_taxonomy_version,
+            "head_hash_hex": result.head_hash_hex,
+            "bundle_version": result.bundle_version,
+            "agreement": result.agreement,
+            "chain_result": {
+                "ok": result.chain_result.ok,
+                "first_bad_index": result.chain_result.first_bad_index,
+                "reason": result.chain_result.reason,
+            },
+            "bundle_reported_ok": result.bundle_reported_ok,
+            "error_code": result.error_code,
+            "primary_reason": code,
+            "secondary_reasons": [],
+            "reasons": [
+                {
+                    "code": code,
+                    "path": path,
+                    "message": detail,
+                }
+            ],
+            "retention_proofs_ok": result.retention_proofs_ok,
+            "retention_proofs_reason": result.retention_proofs_reason,
+            "signed_attestation_schema_ok": result.signed_attestation_schema_ok,
+            "signed_attestation_schema_reason": result.signed_attestation_schema_reason,
+            **_anchoring_payload(bundle, exit_code=2),
+            **_verify_scope_metadata(),
+        }
+        if explain:
+            payload["explanation"] = [{"primary_reason": code, "pointer": path, "message": detail}]
+        human = f"FAIL {_verify_success_summary(bundle)}"
+        if not explain:
+            human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+        _emit(payload, args.json_output, human=human)
+        if explain and not args.json_output:
+            _write_verify_explanations([{"primary_reason": code, "pointer": path, "message": detail}])
+        return 2
 
     payload = {
         "ok": result.ok,

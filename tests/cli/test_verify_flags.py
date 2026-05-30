@@ -81,6 +81,7 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
