@@ -274,6 +274,7 @@ async def create_pr_activity(issue_number: int, branch: str) -> dict:
         "--title", f"autodev: implement issue #{issue_number}",
         "--body", pr_body,
         "--label", "autodev-pr",
+        "--label", "release:none",
         "--head", branch,
         "--base", "main",
     ])
