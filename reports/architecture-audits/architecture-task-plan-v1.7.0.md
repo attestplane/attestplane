@@ -18,7 +18,7 @@
 
 ## P0 Issues
 
-### ISSUE 1 · [P0][verifier][sdk] Close SDK proof-bundle builder API boundary gaps and verify strict-mode typed error coverage
+### ISSUE 1 · [P0]\[verifier\]\[sdk\] Close SDK proof-bundle builder API boundary gaps and verify strict-mode typed error coverage
 
 Owner: verifier/SDK
 
@@ -56,7 +56,7 @@ Rollout / migration notes:
 
 ## P1 Issues
 
-### ISSUE 2 · [P1][conformance][cli] Pin strict-schema output-contract fixture for CI consumers
+### ISSUE 2 · [P1]\[conformance\]\[cli\] Pin strict-schema output-contract fixture for CI consumers
 
 Owner: conformance/CLI
 
@@ -93,7 +93,7 @@ Rollout / migration notes:
 
 ## P2 Issues
 
-### ISSUE 3 · [P2][docs][release] Finalize v1.7.0 integrator migration documentation
+### ISSUE 3 · [P2]\[docs\]\[release\] Finalize v1.7.0 integrator migration documentation
 
 Owner: docs/release
 

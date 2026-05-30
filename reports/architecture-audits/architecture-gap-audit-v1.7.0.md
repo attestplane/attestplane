@@ -18,14 +18,14 @@ The v1.7.0 milestone is a daily small-upgrade that carries the first
 product-bearing stable cut since v1.5.0. Three product changes (commits
 `3f551d9`, `5b32c86`, `8cb5458`) form the user-visible delta:
 
-1.  **Non-empty proof bundles on demand (`3f551d9`)** — adds the
+1. **Non-empty proof bundles on demand (`3f551d9`)** — adds the
     `--require-non-empty` / `--strict-schema` flags to the CLI and wires
     `require_non_empty` / `require_signed_attestation` through the Python
     and TypeScript verifiers.
-2.  **Product-delta gate (`5b32c86`)** — blocks stable releases that carry
+2. **Product-delta gate (`5b32c86`)** — blocks stable releases that carry
     no product changes, enforced in `scripts/release/release_gate.py` and
     `stable_auto_train.py`.
-3.  **Product autodev prioritization (`8cb5458`)** — ensures the stable
+3. **Product autodev prioritization (`8cb5458`)** — ensures the stable
     train does not advance on release-prep-only commits.
 
 The remaining infra commits (14 fix/ci/test commits, plus 17 release-prep
