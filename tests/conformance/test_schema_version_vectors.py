@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from attestplane.verifier import verify_proof_bundle
+from attestplane.verifier import BundleSchemaError, verify_proof_bundle
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
@@ -21,6 +21,10 @@ SCHEMA_VERSION_VECTORS = json.loads(
     (SCHEMA_VERSION_DIR / "vectors.json").read_text(encoding="utf-8")
 )["cases"]
 SCHEMA_VERSION_CASE_IDS = {str(vector["case_id"]) for vector in SCHEMA_VERSION_VECTORS}
+FORWARD_COMPAT_FIXTURE = ROOT / "tests" / "fixtures" / "forward_compat_additive.json"
+FORWARD_COMPAT_NEGATIVE_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "forward_compat_non_additive.json"
+)
 
 
 def _bundle(case: str) -> dict:
@@ -70,6 +74,27 @@ def test_schema_version_additive_optional_and_required_fields_are_paired() -> No
     assert required_result.ok is False
     assert required_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
     assert "critical_future_field" in (required_result.metadata_reason or "")
+
+
+def test_forward_compat_additive_fixture_is_accepted() -> None:
+    """Positive acceptance vector: unknown additive-optional fields pass."""
+    bundle = json.loads(FORWARD_COMPAT_FIXTURE.read_text(encoding="utf-8"))
+
+    assert "additive_optional_field" in bundle
+    result = verify_proof_bundle(bundle, require_signed_attestation=True)
+
+    assert result.ok is True
+    assert result.primary_reason is None
+    assert result.secondary_reasons == ()
+
+
+def test_forward_compat_non_additive_fixture_is_rejected() -> None:
+    """Negative boundary: unknown non-additive (critical_) field is rejected."""
+    bundle = json.loads(FORWARD_COMPAT_NEGATIVE_FIXTURE.read_text(encoding="utf-8"))
+
+    assert "critical_future_field" in bundle
+    with pytest.raises(BundleSchemaError, match="unknown top-level fields"):
+        verify_proof_bundle(bundle, require_signed_attestation=True)
 
 
 def test_schema_version_additive_fixture_doc_pins_rule() -> None:
