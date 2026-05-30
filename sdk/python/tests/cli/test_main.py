@@ -134,13 +134,9 @@ def test_export_then_verify_json_output(tmp_path: Path, capsys: pytest.CaptureFi
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "pass"
-    assert payload["exit_code"] == 0
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
+    assert payload["result"] == "accept"
     assert payload["reasons"] == []
-    assert payload["bundle"]["schema_version"] == 1
-    assert payload["bundle"]["digest"]
+    assert payload["bundle_digest"]
 
 
 def test_verify_explain_legacy_bundle_reports_unknown_taxonomy_version(
@@ -173,11 +169,8 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     assert rc == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
 
 
 @pytest.mark.parametrize(
@@ -218,16 +211,12 @@ def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(
     assert rc == expected_rc
     assert captured.err == ""
     assert result["schema_version"] == 1
-    assert result["exit_code"] == expected_rc
-    assert result["taxonomy_version"] == (1 if mutate is None else None)
-    assert result["result"] == ("pass" if expected_rc == 0 else "fail")
+    assert result["result"] == ("accept" if expected_rc == 0 else "reject")
     if expected_reason is None:
-        assert result["reason_code"] is None
         assert result["reasons"] == []
     else:
-        assert result["reason_code"] == expected_reason
-        assert result["reasons"][0]["code"] == expected_reason
-        assert result["reasons"][0]["path"] == "/chain_metadata/evidence_taxonomy_version"
+        assert result["reasons"][0]["reason_code"] == expected_reason
+        assert result["reasons"][0]["pointer"] == "/chain_metadata/evidence_taxonomy_version"
 
 
 def test_verify_bundle_option_rejects_unsigned_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -242,11 +231,8 @@ def test_verify_bundle_option_rejects_unsigned_bundle(tmp_path: Path, capsys: py
     assert rc == 2
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
 
 
 def test_module_entrypoint_dispatches_main(monkeypatch: pytest.MonkeyPatch) -> None:

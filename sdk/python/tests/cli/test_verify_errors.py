@@ -42,11 +42,8 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     assert rc == 2
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
 
@@ -66,9 +63,6 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert rc == 2
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"

@@ -1,16 +1,1 @@
-{
-  "anchoring": {
-    "quarantined": false,
-    "status": "absent"
-  },
-  "bundle": {
-    "digest": "a041e6306a6db3178805b70832cdc6ea1c96a83d07a281b0dea158da1bf48add",
-    "schema_version": 1
-  },
-  "exit_code": 0,
-  "reason_code": null,
-  "reasons": [],
-  "result": "pass",
-  "schema_version": 1,
-  "taxonomy_version": 1
-}
+{"bundle_digest": "a041e6306a6db3178805b70832cdc6ea1c96a83d07a281b0dea158da1bf48add", "reasons": [], "result": "accept", "schema_version": 1, "verifier_version": "1.8.4"}

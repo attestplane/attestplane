@@ -52,11 +52,8 @@ def test_verify_bundle_option_prints_incomplete_code_to_stderr(
     assert rc == 2
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
     assert captured.err == f"{VERIFY_BUNDLE_SCHEMA_INCOMPLETE}\n"
 
 
@@ -78,11 +75,8 @@ def test_verify_require_events_prints_empty_code_to_stderr(
     assert rc == 2
     payload = json.loads(captured.out)
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
     assert captured.err == f"{VERIFY_REQUIRED_FIELDS_MISSING}\n"
 
 
@@ -103,11 +97,8 @@ def test_verify_json_includes_reasons_list_for_schema_version_failures(
 
     assert rc == 2
     assert result["schema_version"] == 1
-    assert result["result"] == "fail"
-    assert result["exit_code"] == 2
-    assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
-    assert result["taxonomy_version"] == 1
-    assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
+    assert result["result"] == "reject"
+    assert result["reasons"][0]["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_MISSING
     assert captured.err == ""
 
 
@@ -128,10 +119,9 @@ def test_verify_json_reports_unknown_required_metadata_field(
 
     assert rc == 2
     assert result["schema_version"] == 1
-    assert result["result"] == "fail"
-    assert result["exit_code"] == 2
-    assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
-    assert result["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
+    assert result["result"] == "reject"
+    assert result["reasons"][0]["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert result["reasons"][0]["pointer"] == "/chain_metadata/critical_future_field"
     assert captured.err == ""
 
 
@@ -144,9 +134,9 @@ def test_verify_json_reports_unknown_schema_version(
 
     assert rc == 2
     assert result["schema_version"] == 1
-    assert result["result"] == "fail"
-    assert result["exit_code"] == 2
-    assert result["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
-    assert result["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
-    assert result["reasons"][0]["path"] == "/chain_metadata/schema_version"
+    assert result["result"] == "reject"
+    assert (
+        result["reasons"][0]["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    )
+    assert result["reasons"][0]["pointer"] == "/chain_metadata/schema_version"
     assert captured.err == ""

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from attestplane import __version__ as _attestplane_version
 from attestplane.cli.main import main
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
@@ -36,17 +37,18 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
 
     assert rc == 0
     assert payload["schema_version"] == 1
-    assert payload["result"] == "pass"
-    assert payload["exit_code"] == 0
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
+    assert payload["result"] == "accept"
     assert payload["reasons"] == []
-    assert payload["bundle"] == {
-        "schema_version": 1,
-        "digest": payload["bundle"]["digest"],
-    }
-    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
-    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
+    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle_digest"]))
+    assert payload["verifier_version"] == _attestplane_version
+    # Verify canonical key order (alphabetical)
+    assert list(payload) == [
+        "bundle_digest",
+        "reasons",
+        "result",
+        "schema_version",
+        "verifier_version",
+    ]
 
 
 def test_verify_json_fail_fixture_reports_canonicalization_reason(
@@ -56,17 +58,13 @@ def test_verify_json_fail_fixture_reports_canonicalization_reason(
 
     assert rc == 1
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 1
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert payload["taxonomy_version"] == 1
-    assert payload["bundle"]["schema_version"] == 1
-    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle"]["digest"]))
-    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
+    assert payload["result"] == "reject"
+    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle_digest"]))
+    assert payload["verifier_version"] == _attestplane_version
     assert payload["reasons"]
     reason = payload["reasons"][0]
-    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert reason["path"].startswith("/events/")
+    assert reason["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert reason["pointer"].startswith("/events/")
     assert "canonicalization" in reason["message"]
 
 
@@ -78,10 +76,8 @@ def test_verify_json_and_explain_keep_json_parseable(
     )
 
     assert rc == 1
-    assert payload["result"] == "fail"
-    assert payload["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
-    assert payload["taxonomy_version"] == 1
-    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
+    assert payload["result"] == "reject"
+    assert payload["verifier_version"] == _attestplane_version
     explanation = payload["explanation"]
     assert isinstance(explanation, list)
     assert explanation
@@ -90,9 +86,12 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert first["pointer"].startswith("/events/")
     assert "Unicode-NFC" in first["message"]
     reason = payload["reasons"][0]
-    assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
+    assert reason["reason_code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
-    assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+    assert (
+        reason["human_message"]
+        == VERIFY_REASON_CODE_DESCRIPTIONS[reason["reason_code"]]
+    )
 
 
 def test_verify_json_quarantine_fixture_reports_quarantined(
@@ -101,9 +100,7 @@ def test_verify_json_quarantine_fixture_reports_quarantined(
     rc, payload = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
 
     assert rc == 2
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    assert payload["result"] == "reject"
 
 
 def test_verify_json_explain_success_emits_compact_summary(
@@ -114,8 +111,8 @@ def test_verify_json_explain_success_emits_compact_summary(
     )
 
     assert rc == 0
-    assert payload["result"] == "pass"
-    assert payload["reason_code"] is None
+    assert payload["result"] == "accept"
+    assert payload["verifier_version"] == _attestplane_version
     explanation = payload["explanation"]
     assert isinstance(explanation, list)
     assert len(explanation) == 1

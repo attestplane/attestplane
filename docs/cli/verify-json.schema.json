@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attestplane.io/schemas/cli/verify-json-v1.json",
+  "title": "Attestplane CLI verify --json CI-gating output (v1)",
+  "description": "Structured CI-gating output for `attestplane verify --json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bundle_digest",
+    "reasons",
+    "result",
+    "schema_version",
+    "verifier_version"
+  ],
+  "properties": {
+    "bundle_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex digest of the input bundle bytes"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message",
+          "pointer",
+          "reason_code"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable summary of this verification reason"
+          },
+          "pointer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "JSON Pointer to the relevant location in the bundle"
+          },
+          "reason_code": {
+            "type": "string",
+            "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$",
+            "description": "Machine-readable verifier reason code"
+          },
+          "human_message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable human-readable rationale string (only present with --explain)"
+          }
+        }
+      }
+    },
+    "result": {
+      "type": "string",
+      "enum": ["accept", "reject"],
+      "description": "CI-gating verdict: accept or reject"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "CLI result schema version (additive, currently 1)"
+    },
+    "verifier_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "description": "attestplane verifier package version"
+    },
+    "explanation": {
+      "type": "array",
+      "description": "Human-readable explanation entries (only present with --explain)",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "primary_reason",
+          "pointer",
+          "message"
+        ],
+        "properties": {
+          "primary_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^att\\.verify\\.[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Primary reason code, or null on success"
+          },
+          "pointer": {
+            "type": "string",
+            "minLength": 1,
+            "description": "JSON Pointer to the relevant location"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable explanation message"
+          }
+        }
+      }
+    }
+  }
+}

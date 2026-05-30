@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from attestplane import __version__ as _attestplane_version
 from attestplane.canonical import CanonicalizationError
 from attestplane.hashchain import hash_event
 from attestplane.storage.jsonl import _deserialize_event as _deserialize_chained_event
@@ -135,12 +136,12 @@ def _reason_entry(
 ) -> dict[str, Any]:
     message = detail if explain and detail else summary
     reason: dict[str, Any] = {
-        "code": code,
-        "path": path,
         "message": message,
+        "pointer": path,
+        "reason_code": code,
     }
     if explain:
-        reason["explanation"] = verify_reason_code_explanation(code)
+        reason["human_message"] = verify_reason_code_explanation(code)
     return reason
 
 
@@ -275,8 +276,8 @@ def _verify_explanations(
     for reason in _bundle_failure_reason(result, explain=explain):
         explanations.append(
             _explanation_entry(
-                reason["code"],
-                reason["path"],
+                reason["reason_code"],
+                reason["pointer"],
                 str(reason["message"]),
             )
         )
@@ -368,19 +369,12 @@ def _json_failure(
     stderr_code: str | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
-    taxonomy_version = _resolve_bundle_taxonomy_version(bundle)
-    payload = {
-        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-        "result": "fail",
-        "exit_code": exit_code,
-        "reason_code": reason["code"],
-        "taxonomy_version": taxonomy_version,
+    payload: dict[str, Any] = {
+        "bundle_digest": bundle_digest,
         "reasons": [reason],
-        "bundle": {
-            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-            "digest": bundle_digest,
-        },
-        **_anchoring_payload(bundle, exit_code=exit_code),
+        "result": "reject",
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "verifier_version": _attestplane_version,
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -397,19 +391,12 @@ def _json_pass(
     bundle: dict[str, Any] | None = None,
     explanation: list[dict[str, Any]] | None = None,
 ) -> VerifyJsonOutcome:
-    taxonomy_version = _resolve_bundle_taxonomy_version(bundle)
-    payload = {
-        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-        "result": "pass",
-        "exit_code": 0,
-        "reason_code": None,
-        "taxonomy_version": taxonomy_version,
+    payload: dict[str, Any] = {
+        "bundle_digest": bundle_digest,
         "reasons": [],
-        "bundle": {
-            "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-            "digest": bundle_digest,
-        },
-        **_anchoring_payload(bundle, exit_code=0),
+        "result": "accept",
+        "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+        "verifier_version": _attestplane_version,
     }
     if explanation is not None:
         payload["explanation"] = explanation
@@ -803,17 +790,11 @@ def build_verify_json_outcome(
 
     return VerifyJsonOutcome(
         payload={
-            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
-            "result": "fail",
-            "exit_code": exit_code,
-            "reason_code": result.primary_reason,
-            "taxonomy_version": _resolve_bundle_taxonomy_version(bundle),
+            "bundle_digest": bundle_digest,
             "reasons": reasons,
-            "bundle": {
-                "schema_version": VERIFY_BUNDLE_SCHEMA_VERSION,
-                "digest": bundle_digest,
-            },
-            **_anchoring_payload(bundle, exit_code=exit_code),
+            "result": "reject" if not result.ok else "accept",
+            "schema_version": VERIFY_RESULT_SCHEMA_VERSION,
+            "verifier_version": _attestplane_version,
             **({"explanation": _verify_explanations(result, bundle=bundle, explain=explain)} if explain else {}),
         },
         exit_code=exit_code,

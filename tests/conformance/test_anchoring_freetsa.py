@@ -20,7 +20,12 @@ from attestplane.verify_reason_codes import VERIFY_REASON_ANCHOR_INVALID
 
 ROOT = Path(__file__).resolve().parents[2]
 FREE_TSA_QUARANTINED_FIXTURE = (
-    ROOT / "sdk" / "python" / "tests" / "conformance" / "free_tsa_quarantined_bundle.json"
+    ROOT
+    / "sdk"
+    / "python"
+    / "tests"
+    / "conformance"
+    / "free_tsa_quarantined_bundle.json"
 )
 
 
@@ -51,8 +56,5 @@ def test_freetsa_quarantine_fixture_verifies_as_quarantined(
     assert result.anchoring_quarantined is True
     assert result.primary_reason == VERIFY_REASON_ANCHOR_INVALID
     assert rc == 2
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
-
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_ANCHOR_INVALID

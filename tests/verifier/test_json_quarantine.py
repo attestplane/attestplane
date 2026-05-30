@@ -36,7 +36,7 @@ def test_verify_json_unanchored_bundle_reports_unanchored(
     result = verify_proof_bundle(_load_bundle(bundle_path))
 
     assert rc == 0
-    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
+    assert payload["result"] == "accept"
     assert result.anchoring_status == "absent"
     assert result.anchoring_quarantined is False
 
@@ -53,7 +53,7 @@ def test_verify_json_anchored_bundle_reports_anchored(
     result = verify_proof_bundle(_load_bundle(bundle_path))
 
     assert rc == 0
-    assert payload["anchoring"] == {"status": "verified", "quarantined": False}
+    assert payload["result"] == "accept"
     assert result.anchoring_status == "verified"
     assert result.anchoring_quarantined is False
 
@@ -66,6 +66,6 @@ def test_verify_json_quarantined_bundle_reports_quarantined(
     result = verify_proof_bundle(_load_bundle(QUARANTINE_FIXTURE))
 
     assert rc == 2
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    assert payload["result"] == "reject"
     assert result.anchoring_status == "quarantined"
     assert result.anchoring_quarantined is True

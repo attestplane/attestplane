@@ -54,9 +54,8 @@ def test_verify_strict_flag_combinations(
 
     assert rc == valid_rc
     assert valid["schema_version"] == 1
-    assert valid["result"] == ("pass" if valid_rc == 0 else "fail")
-    assert valid["exit_code"] == valid_rc
-    assert valid["bundle"]["schema_version"] == 1
+    assert valid["result"] == ("accept" if valid_rc == 0 else "reject")
+    assert valid["bundle_digest"]
 
     rc = main(["verify", str(EMPTY_BUNDLE), *flags, "--json"])
     captured = capsys.readouterr()
@@ -64,13 +63,12 @@ def test_verify_strict_flag_combinations(
 
     assert rc == invalid_rc
     assert invalid["schema_version"] == 1
-    assert invalid["exit_code"] == invalid_rc
     if invalid_code is None:
-        assert invalid["result"] == "pass"
+        assert invalid["result"] == "accept"
         assert invalid["reasons"] == []
         assert captured.err == ""
     else:
-        assert invalid["result"] == "fail"
+        assert invalid["result"] == "reject"
         assert invalid["reasons"]
         assert captured.err == f"{invalid_code}\n"
 
@@ -130,17 +128,14 @@ def test_verify_require_taxonomy_version_pin(
 
     assert rc == expected_rc
     assert payload["schema_version"] == 1
-    assert payload["exit_code"] == expected_rc
-    assert payload["taxonomy_version"] == 1
-    assert payload["result"] == ("pass" if expected_rc == 0 else "fail")
+    assert payload["result"] == ("accept" if expected_rc == 0 else "reject")
     if expected_reason is None:
-        assert payload["reason_code"] is None
         assert payload["reasons"] == []
     else:
-        assert payload["reason_code"] == expected_reason
-        assert payload["reasons"][0]["code"] == expected_reason
+        assert payload["reasons"][0]["reason_code"] == expected_reason
         assert (
-            payload["reasons"][0]["path"] == "/chain_metadata/evidence_taxonomy_version"
+            payload["reasons"][0]["pointer"]
+            == "/chain_metadata/evidence_taxonomy_version"
         )
     assert captured.err == ""
 
@@ -164,8 +159,5 @@ def test_verify_explain_surfaces_reserved_reason_for_additive_fields(
 
     assert rc == 0
     assert payload["schema_version"] == 1
-    assert payload["result"] == "pass"
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
+    assert payload["result"] == "accept"
     assert payload["reasons"] == []
-    assert payload["bundle"]["schema_version"] == 1

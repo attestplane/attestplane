@@ -466,12 +466,10 @@ def cmd_verify(args: argparse.Namespace) -> int:
             explain=getattr(args, "explain", False),
         )
         strict_anchoring = getattr(args, "strict_anchoring", False)
-        if strict_anchoring and outcome.exit_code == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE:
-            outcome.payload["exit_code"] = VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
         exit_code = outcome.exit_code
         if strict_anchoring and exit_code == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE:
             exit_code = VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
-        _emit(outcome.payload, True, human="")
+        sys.stdout.write(json.dumps(outcome.payload, sort_keys=True) + "\n")
         if outcome.stderr_code is not None:
             sys.stderr.write(f"{outcome.stderr_code}\n")
         return exit_code

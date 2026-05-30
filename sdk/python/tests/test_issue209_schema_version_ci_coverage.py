@@ -244,9 +244,7 @@ def test_additive_unknown_fields_surface_reserved_cli_explain_reason(
 
     assert rc == 0
     assert payload["schema_version"] == 1
-    assert payload["result"] == "pass"
-    assert payload["reason_code"] is None
-    assert payload["taxonomy_version"] == 1
+    assert payload["result"] == "accept"
     assert payload["reasons"] == []
 
 
@@ -264,11 +262,8 @@ def test_cli_schema_errors_return_structured_verify_reason(
 
     assert rc == 2
     assert payload["schema_version"] == 1
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == 2
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
-    assert payload["taxonomy_version"] == 1
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
 
 
 def test_verifier_file_and_module_entrypoints(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

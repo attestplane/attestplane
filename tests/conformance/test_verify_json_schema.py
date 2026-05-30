@@ -7,6 +7,7 @@ import json
 import re
 from pathlib import Path
 
+from attestplane import __version__ as _attestplane_version
 from attestplane.cli.main import main
 from attestplane.cli.verify_json import (
     VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
@@ -16,12 +17,12 @@ from attestplane.cli.verify_json import (
 )
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
-    VERIFY_REASON_TAXONOMY_VERSION,
     VERIFY_REASON_SCHEMA_UNKNOWN,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA_PATH = ROOT / "schemas" / "cli" / "verify-result-v1.json"
+# New CI-gating schema at docs/cli/verify-json.schema.json
+SCHEMA_PATH = ROOT / "docs" / "cli" / "verify-json.schema.json"
 CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
 OUTPUT_CONTRACT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures"
 VERIFY_JSON_OUTPUT_CONTRACT_VERSION = "1.8.19"
@@ -58,49 +59,35 @@ def _payload_json(argv: list[str], capsys) -> tuple[int, dict[str, object]]:
     return rc, json.loads(stdout)
 
 
-def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
+def _assert_matches_verify_json_schema(payload: dict[str, object]) -> None:
     schema = _schema()
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["additionalProperties"] is False
     assert schema["required"] == [
-        "schema_version",
-        "result",
-        "exit_code",
-        "reason_code",
-        "taxonomy_version",
+        "bundle_digest",
         "reasons",
-        "bundle",
-        "anchoring",
+        "result",
+        "schema_version",
+        "verifier_version",
     ]
 
     expected_keys = {
-        "schema_version",
-        "result",
-        "exit_code",
-        "reason_code",
-        "taxonomy_version",
+        "bundle_digest",
         "reasons",
-        "bundle",
-        "anchoring",
+        "result",
+        "schema_version",
+        "verifier_version",
     }
     if "explanation" in payload:
         expected_keys.add("explanation")
 
     assert set(payload) == expected_keys
     assert payload["schema_version"] == 1
-    assert payload["result"] in {"pass", "fail"}
-    assert isinstance(payload["exit_code"], int)
-    assert payload["exit_code"] in {
-        VERIFY_JSON_EXIT_CODE_VERIFIED,
-        VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE,
-        VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE,
-        VERIFY_JSON_EXIT_CODE_USAGE_ERROR,
-    }
-    assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
-    assert payload["reason_code"] is None or re.fullmatch(
-        r"att\.verify\.[a-z][a-z0-9_]*",
-        str(payload["reason_code"]),
-    )
+    assert payload["result"] in {"accept", "reject"}
+    assert isinstance(payload["bundle_digest"], str)
+    assert re.fullmatch(r"[0-9a-f]{64}", str(payload["bundle_digest"]))
+    assert isinstance(payload["verifier_version"], str)
+    assert payload["verifier_version"] == _attestplane_version
     assert isinstance(payload["reasons"], list)
     if "explanation" in payload:
         explanation = payload["explanation"]
@@ -111,53 +98,30 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
             assert entry["pointer"]
             assert entry["message"]
 
-    bundle = payload["bundle"]
-    assert isinstance(bundle, dict)
-    assert set(bundle) == {"schema_version", "digest"}
-    assert bundle["schema_version"] == 1
-    assert re.fullmatch(r"[0-9a-f]{64}", str(bundle["digest"]))
-
-    anchoring = payload["anchoring"]
-    assert isinstance(anchoring, dict)
-    assert set(anchoring) == {"status", "quarantined"}
-    assert anchoring["status"] in {"verified", "quarantined", "absent"}
-    assert isinstance(anchoring["quarantined"], bool)
-
     for reason in payload["reasons"]:
         assert isinstance(reason, dict)
-        expected_keys = {"code", "path", "message"}
-        if "explanation" in reason:
-            expected_keys.add("explanation")
-        assert set(reason) == expected_keys
-        assert re.fullmatch(r"att\.verify\.[a-z][a-z0-9_]*", str(reason["code"]))
-        assert reason["path"]
+        expected_reason_keys = {"message", "pointer", "reason_code"}
+        if "human_message" in reason:
+            expected_reason_keys.add("human_message")
+        assert set(reason) == expected_reason_keys
+        assert re.fullmatch(r"att\.verify\.[a-z][a-z0-9_]*", str(reason["reason_code"]))
+        assert reason["pointer"]
         assert reason["message"]
-        if "explanation" in reason:
-            assert reason["explanation"]
+        if "human_message" in reason:
+            assert reason["human_message"]
 
 
 def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     schema = _schema()
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["schema_version"]["const"] == 1
-    assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
-    assert schema["properties"]["exit_code"]["minimum"] == 0
-    assert (
-        schema["properties"]["exit_code"]["maximum"]
-        == VERIFY_JSON_EXIT_CODE_USAGE_ERROR
-    )
+    assert schema["properties"]["result"]["enum"] == ["accept", "reject"]
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
-    assert schema["properties"]["bundle"]["additionalProperties"] is False
-    assert schema["properties"]["anchoring"]["additionalProperties"] is False
-    assert schema["properties"]["anchoring"]["properties"]["status"]["enum"] == [
-        "verified",
-        "quarantined",
-        "absent",
-    ]
-    assert schema["properties"]["taxonomy_version"]["anyOf"] == [
-        {"type": "integer"},
-        {"type": "null"},
-    ]
+    assert schema["properties"]["bundle_digest"]["pattern"] == "^[0-9a-f]{64}$"
+    assert (
+        schema["properties"]["verifier_version"]["pattern"]
+        == "^[0-9]+\\.[0-9]+\\.[0-9]+"
+    )
 
 
 def test_verify_json_output_contract_version_is_explicit() -> None:
@@ -176,8 +140,7 @@ def test_verify_json_output_contract_matches_versioned_golden_fixture(capsys) ->
     assert rc == VERIFY_JSON_EXIT_CODE_VERIFIED
     assert stdout == PASS_GOLDEN_FIXTURE.read_text(encoding="utf-8")
     payload = json.loads(stdout)
-    _assert_matches_verify_result_v1(payload)
-    assert payload["anchoring"] == {"status": "absent", "quarantined": False}
+    _assert_matches_verify_json_schema(payload)
 
 
 def test_verify_json_fail_payload_matches_schema(capsys) -> None:
@@ -185,12 +148,12 @@ def test_verify_json_fail_payload_matches_schema(capsys) -> None:
     assert rc == VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
     assert stdout == FAIL_GOLDEN_FIXTURE.read_text(encoding="utf-8")
     payload = json.loads(stdout)
-    _assert_matches_verify_result_v1(payload)
+    _assert_matches_verify_json_schema(payload)
     assert payload["reasons"] == [
         {
-            "code": "att.verify.canonical_mismatch",
             "message": "canonicalization failed",
-            "path": "/events/0/event/payload/artifact_ref",
+            "pointer": "/events/0/event/payload/artifact_ref",
+            "reason_code": "att.verify.canonical_mismatch",
         },
     ]
 
@@ -200,13 +163,10 @@ def test_verify_json_unknown_required_field_is_quarantined(capsys) -> None:
         ["verify", "--json", str(ROOT_QUARANTINE_FIXTURE)], capsys
     )
     assert rc == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE
-    _assert_matches_verify_result_v1(payload)
-    assert payload["result"] == "fail"
-    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODE_PINNING_GATE_FAILURE
-    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
-    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
-    assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
-    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    _assert_matches_verify_json_schema(payload)
+    assert payload["result"] == "reject"
+    assert payload["reasons"][0]["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert payload["reasons"][0]["pointer"] == "/chain_metadata/critical_future_field"
 
 
 def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
@@ -214,13 +174,10 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
 ) -> None:
     rc, payload = _payload_json(["verify", "--json", str(FAIL_FIXTURE)], capsys)
     assert rc == VERIFY_JSON_EXIT_CODE_VERIFICATION_FAILURE
-    _assert_matches_verify_result_v1(payload)
-    json_reason_codes = [reason["code"] for reason in payload["reasons"]]
+    _assert_matches_verify_json_schema(payload)
+    json_reason_codes = [reason["reason_code"] for reason in payload["reasons"]]
     assert json_reason_codes
     assert all(code in ALL_VERIFY_REASON_CODES_V1 for code in json_reason_codes)
-    reason_code = payload["reason_code"]
-    assert isinstance(reason_code, str)
-    assert reason_code == json_reason_codes[0]
 
     rc = main(["verify", "--explain", str(FAIL_FIXTURE)])
     captured = capsys.readouterr()
@@ -232,5 +189,5 @@ def test_verify_reason_code_parity_vector_for_canonicalization_edge_bundle(
     first_reason = payload["reasons"][0]
     assert isinstance(first_reason, dict)
     assert captured.err.splitlines()[0].startswith(
-        f"{reason_code} {first_reason['path']}: "
+        f"{json_reason_codes[0]} {first_reason['pointer']}: "
     )

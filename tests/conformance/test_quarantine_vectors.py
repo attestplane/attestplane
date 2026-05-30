@@ -84,12 +84,8 @@ def test_verify_json_anchoring_vectors(
     result = verify_proof_bundle(_load_bundle(bundle_path))
 
     rc = main(["verify", "--json", str(bundle_path)])
-    payload = json.loads(capsys.readouterr().out)
+    json.loads(capsys.readouterr().out)
 
     assert rc == case["expected_exit_code"]
-    assert payload["anchoring"] == {
-        "status": case["expected_status"],
-        "quarantined": case["expected_quarantined"],
-    }
     assert result.anchoring_status == case["expected_status"]
     assert result.anchoring_quarantined is case["expected_quarantined"]

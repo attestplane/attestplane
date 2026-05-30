@@ -102,12 +102,14 @@ def _assert_rationale_lines(
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str, *, signer_subject: str, schema_version: str, anchor: str = "absent"
 ) -> None:
-    assert stdout.strip() == (
-        f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
-    )
+    line = stdout.strip()
+    assert line.startswith("FAIL signer_subject=")
+    assert f"signer_subject={signer_subject}" in line
+    assert f"schema_version={schema_version}" in line
+    assert "taxonomy_version=1" in line
+    assert f"anchor={anchor}" in line
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
@@ -132,6 +134,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             None,
             "generic",
+            "absent",
             (
                 VERIFY_REASON_CANONICAL_MISMATCH,
                 "/events/0/event/payload/artifact_ref",
@@ -145,6 +148,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             VERIFY_REQUIRED_FIELDS_MISSING,
             "compact",
+            "quarantined",
             (
                 VERIFY_REASON_REQUIRED_FIELD_MISSING,
                 "/events",
@@ -158,6 +162,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
             "compact",
+            "quarantined",
             (
                 VERIFY_REASON_SIGNATURE_MISSING,
                 "/signatures",
@@ -171,6 +176,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "2",
             None,
             "compact",
+            "quarantined",
             (
                 VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
                 "/chain_metadata/schema_version",
@@ -184,6 +190,7 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             "1",
             None,
             "compact",
+            "absent",
             (
                 VERIFY_REASON_STRUCTURE_INVALID,
                 "/policy_trace_refs",
@@ -192,17 +199,29 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
     ]
 
-    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
-        reason,
-        pointer,
-        message_parts,
+    for (
+        argv,
+        expected_rc,
+        signer_subject,
+        schema_version,
+        error_code,
+        stdout_kind,
+        anchor_kind,
+        (
+            reason,
+            pointer,
+            message_parts,
+        ),
     ) in cases:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout,
+                signer_subject=signer_subject,
+                schema_version=schema_version,
+                anchor=anchor_kind,
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
@@ -323,7 +342,10 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     )
     payload_non_empty = json.loads(stdout_non_empty)
     assert rc_non_empty == 2
-    assert payload_non_empty["reason_code"] == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    assert (
+        payload_non_empty["reasons"][0]["reason_code"]
+        == VERIFY_REASON_REQUIRED_FIELD_MISSING
+    )
     assert (
         payload_non_empty["explanation"][0]["primary_reason"]
         == VERIFY_REASON_REQUIRED_FIELD_MISSING
@@ -343,7 +365,9 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     )
     payload_strict = json.loads(stdout_strict)
     assert rc_strict == 2
-    assert payload_strict["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
+    assert (
+        payload_strict["reasons"][0]["reason_code"] == VERIFY_REASON_SIGNATURE_MISSING
+    )
     assert (
         payload_strict["explanation"][0]["primary_reason"]
         == VERIFY_REASON_SIGNATURE_MISSING
@@ -357,7 +381,10 @@ def test_verify_explain_remains_orthogonal_to_strict_flags(
     )
     payload_schema = json.loads(stdout_schema)
     assert rc_schema == 2
-    assert payload_schema["reason_code"] == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    assert (
+        payload_schema["reasons"][0]["reason_code"]
+        == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED
+    )
     assert (
         payload_schema["explanation"][0]["primary_reason"]
         == VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED

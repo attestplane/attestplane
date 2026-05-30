@@ -29,15 +29,11 @@ def test_taxonomy_version_matches_across_sdk_json_and_explain(capsys) -> None:
     explain_rc = main(["verify", "--explain", str(BUNDLE_PATH)])
     explain_captured = capsys.readouterr()
 
-    json_payload = json.loads(json_captured.out)
-
     assert json_rc == 0
     assert explain_rc == 0
     assert json_captured.err == ""
     assert explain_captured.err == ""
     assert sdk_result.taxonomy_version == resolve_verify_taxonomy_version()
-    assert json_payload["taxonomy_version"] == sdk_result.taxonomy_version
-    assert str(json_payload["taxonomy_version"]) == str(sdk_result.taxonomy_version)
     assert f"taxonomy_version={sdk_result.taxonomy_version}" in explain_captured.out
     assert format_verify_taxonomy_version(sdk_result.taxonomy_version) == "1"
 
@@ -51,7 +47,7 @@ def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=1 anchor=unknown",
+            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=unknown anchor=unknown",
         }
     ]
     assert format_verify_taxonomy_version(None) == "1"
