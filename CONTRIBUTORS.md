@@ -23,7 +23,7 @@ In order of first-merged contribution.
 
 | Handle | First contribution | Notes |
 |---|---|---|
-| [@nvphungdev](https://github.com/nvphungdev) | [#4 — English CONTRIBUTING guide](https://github.com/attestplane/attestplanepull/4) | First external contributor; translated CONTRIBUTING.md to English and preserved the Chinese original as `CONTRIBUTING_zh.md`. Shipped in [v0.0.1-alpha](https://github.com/attestplane/attestplanereleasestag/v0.0.1-alpha). |
+| [@nvphungdev](https://github.com/nvphungdev) | [#4 — English CONTRIBUTING guide](https://github.com/attestplane/attestplane/pull/4) | First external contributor; translated CONTRIBUTING.md to English and preserved the Chinese original as `CONTRIBUTING_zh.md`. Shipped in [v0.0.1-alpha](https://github.com/attestplane/attestplane/releases/tag/v0.0.1-alpha). |
 
 ## Adding yourself
 

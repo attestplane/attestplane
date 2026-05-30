@@ -19,12 +19,12 @@ Content decisions:
 - CI-only proxy strategy and local-Python-on-Opus-runner notes are separated
   under `Infrastructure`.
 - The local checkout contains same-plan evidence for related task
-  [Issue #117](https://github.com/attestplane/attestplaneissues117) and this
-  task [Issue #118](https://github.com/attestplane/attestplaneissues118).
+  [Issue #117](https://github.com/attestplane/attestplane/issues/117) and this
+  task [Issue #118](https://github.com/attestplane/attestplane/issues/118).
 - The exact milestone ISSUE 1 number for the #108-style boundary audit was not
   present in local files or runner evidence. The docs therefore link the known
   boundary-audit pattern
-  [Issue #108](https://github.com/attestplane/attestplaneissues108) without
+  [Issue #108](https://github.com/attestplane/attestplane/issues/108) without
   inventing a missing issue number.
 
 Release-boundary confirmation:
