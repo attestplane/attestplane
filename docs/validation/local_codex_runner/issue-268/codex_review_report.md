@@ -1,6 +1,6 @@
 # Codex Review Report
 
-Issue: `[P1][conformance] Pin a cross-surface \`taxonomy_version\` parity + stability vector`
+Issue: `\[P1\]\[conformance\] Pin a cross-surface \`taxonomy_version\` parity + stability vector`
 
 Status: PASS
 

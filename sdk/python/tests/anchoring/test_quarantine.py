@@ -8,9 +8,9 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-import jsonschema
 import pytest
 
+import jsonschema
 from attestplane import AttestSubstrate, EventDraft
 from attestplane.cli.main import main
 from attestplane.proof_bundle import ProofBundleBuilder

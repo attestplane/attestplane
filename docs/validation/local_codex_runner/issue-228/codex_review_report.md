@@ -4,7 +4,7 @@ Status: **PASS**
 
 ## Scope
 
-Issue: `[P1][test] Close the #173 ↔ #184/#198 negative-conformance vector gap`
+Issue: `\[P1\]\[test\] Close the #173 ↔ #184/#198 negative-conformance vector gap`
 
 This review used only local repository files, local command output, and the issue text supplied in the prompt. No network access was used.
 

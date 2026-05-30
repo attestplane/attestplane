@@ -6,8 +6,8 @@ Status: **PASS**
 
 Reviewed the current local diff for:
 
-- Issue: `[P2][docs] Summarize the user-visible delta for v1.5.10`
-- Issue URL: `https://github.com/attestplane/attestplaneissues98`
+- Issue: `\[P2\]\[docs\] Summarize the user-visible delta for v1.5.10`
+- Issue URL: `https://github.com/attestplane/attestplane/issues/98`
 
 This review used only local repository files, local command output, and the
 issue text supplied in the prompt.

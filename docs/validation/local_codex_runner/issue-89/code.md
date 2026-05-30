@@ -31,16 +31,16 @@ Local commit subjects from `git log --no-merges --pretty=tformat:'%h %s'
 v1.7.4..HEAD` include real work as well as release-prep metadata:
 
 ```text
-51cf2e2 Fix #94: [P2][docs] Summarize the user-visible delta for v1.5.9 (#190)
-80fe23f Fix #96: [P0][release] Confirm the v1.5.10 real-change boundary (#191)
+51cf2e2 Fix #94: \[P2\]\[docs\] Summarize the user-visible delta for v1.5.9 (#190)
+80fe23f Fix #96: \[P0\]\[release\] Confirm the v1.5.10 real-change boundary (#191)
 b4a5fd2 Fix #97: cover mixed real release-prep ranges (#192)
-4cd29d4 Fix #92: [P0][release] Confirm the v1.5.9 real-change boundary (#187)
-dd56009 Fix #114: [P0][release] Confirm the v1.6.2 real-change boundary (#189)
+4cd29d4 Fix #92: \[P0\]\[release\] Confirm the v1.5.9 real-change boundary (#187)
+dd56009 Fix #114: \[P0\]\[release\] Confirm the v1.6.2 real-change boundary (#189)
 f4dda59 Add multi-lane local Codex runner configuration
 d974910 chore(release): prepare v1.7.5
 3654115 Fix #172: align queue test with priority ordering
 71a028e Fix #172: CI follow-up round 1
-7dce5fc Fix #172: [P1][verifier] Introduce stable rejection reason-code taxonomy for `verify` failures
+7dce5fc Fix #172: \[P1\]\[verifier\] Introduce stable rejection reason-code taxonomy for `verify` failures
 bb2ec0a Guard docs gate against non-doc runner diffs
 c15606b Add canonicalization property tests
 d229378 Prioritize local runner issue queue

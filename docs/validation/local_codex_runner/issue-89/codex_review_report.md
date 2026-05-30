@@ -2,8 +2,8 @@
 
 Status: **PASS**
 
-Issue: `[P1][test] Expand regression coverage for the real commits`  
-URL: `https://github.com/attestplane/attestplaneissues89`
+Issue: `\[P1\]\[test\] Expand regression coverage for the real commits`
+URL: `https://github.com/attestplane/attestplane/issues/89`
 
 ## Scope Reviewed
 

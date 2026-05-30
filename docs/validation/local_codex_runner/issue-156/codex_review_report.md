@@ -1,6 +1,6 @@
 # Local Codex Runner Review
 
-Issue: #156, `[P1][sdk] Validate proof-bundle schema_version with forward-compatible additive rules`
+Issue: #156, `\[P1\]\[sdk\] Validate proof-bundle schema_version with forward-compatible additive rules`
 
 ## Verdict
 

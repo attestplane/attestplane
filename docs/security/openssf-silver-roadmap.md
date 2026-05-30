@@ -10,7 +10,7 @@ Attestplane is OpenSSF Best Practices project
 2026-05-20T21:04:10Z the project reached the **passing** tier at 100%.
 This document is the forward-looking roadmap toward the **silver** tier,
 which currently sits at **15%** per
-[`https://www.bestpractices.devprojects/12924badge.json`](https://www.bestpractices.devprojects/12924badge.json).
+[`https://www.bestpractices.dev/projects/12924/badge.json`](https://www.bestpractices.dev/projects/12924/badge.json).
 
 > **This is a roadmap, not a self-assessment.** It maps every silver-tier
 > criterion against the repository's current observed state, flags
@@ -29,7 +29,7 @@ which currently sits at **15%** per
 | Tier     | Status       | Percentage | Source                                                                                  |
 |----------|--------------|-----------:|-----------------------------------------------------------------------------------------|
 | Passing  | **achieved** | 100%       | [bestpractices.dev/projects/12924](https://www.bestpractices.devprojects/12924)        |
-| Silver   | in progress  | 15%        | [`bestpractices.dev/projects/12924/badge.json`](https://www.bestpractices.devprojects/12924badge.json) |
+| Silver   | in progress  | 15%        | [`bestpractices.dev/projects/12924/badge.json`](https://www.bestpractices.dev/projects/12924/badge.json) |
 | Gold     | in progress  | 13%        | (out of scope for this document)                                                        |
 
 Passing-tier evidence is mirrored in
@@ -136,7 +136,7 @@ applicable to this project's surface, with reason.
 
 | Criterion | State | Evidence or gap | Blocker |
 |---|---|---|---|
-| `report_tracker` | Met | [GitHub Issues](https://github.com/attestplane/attestplaneissues) is the public bug tracker; referenced from [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`SECURITY.md`](../../SECURITY.md). | None. |
+| `report_tracker` | Met | [GitHub Issues](https://github.com/attestplane/attestplane/issues) is the public bug tracker; referenced from [`CONTRIBUTING.md`](../../CONTRIBUTING.md) and [`SECURITY.md`](../../SECURITY.md). | None. |
 
 ### Reporting — Vulnerability report process
 
@@ -221,7 +221,7 @@ applicable to this project's surface, with reason.
 
 | Criterion | State | Evidence or gap | Blocker |
 |---|---|---|---|
-| `signed_releases` | Met | [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) commits to Sigstore keyless cosign + SLSA Build L3 (forward-only). Tag `v1.0.9` is the first release whose assets carry the **complete** chain — both Sigstore keyless cosign bundles ([`sign-release.yml` execute run](https://github.com/attestplane/attestplaneactions/runs/26192598447)) and SLSA Build L3 provenance ([`slsa-provenance.yml` execute run](https://github.com/attestplane/attestplaneactions/runs/26192349031)) — attached to a single release. From the autorelease-sign-and-slsa-integration PR onward, the autodev-train (`scripts/release/stable_auto_train.py`) auto-dispatches both workflows with `execute=true` after registry visibility is confirmed, so every autodev-train tag inherits the complete chain without manual workflow dispatch; signing failures are tracked separately on `PublicationStatus` so they do not block the publication cycle. Both verify with `cosign verify-blob` against the workflow-pinned identity and with `slsa-verifier verify-artifact` against the upstream generator and source repo. Evidence in [`CHANGELOG.md`](../../CHANGELOG.md) "First complete signed release: v1.0.9" and [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md) "Worked example: v1.0.9". Tag `v1.0.8` (the earlier "First signed release" entry) carries cosign bundles only because the SLSA generator pin fix ([PR #32](https://github.com/attestplane/attestplanepull/32), reconciling [ADR-0018 §"Tag-ref vs SHA-pin caveat"](../adr/0018-keyless-signing-and-slsa-provenance.md)) merged after `v1.0.8` was signed; `v1.0.9` is the first tag cut after that fix landed. | None for the OpenSSF criterion. SLSA pin fix is now in tree and the autodev-train autorelease integration extends the complete chain to every new tag rather than only manually-triggered runs. |
+| `signed_releases` | Met | [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md) commits to Sigstore keyless cosign + SLSA Build L3 (forward-only). Tag `v1.0.9` is the first release whose assets carry the **complete** chain — both Sigstore keyless cosign bundles ([`sign-release.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192598447)) and SLSA Build L3 provenance ([`slsa-provenance.yml` execute run](https://github.com/attestplane/attestplane/actions/runs/26192349031)) — attached to a single release. From the autorelease-sign-and-slsa-integration PR onward, the autodev-train (`scripts/release/stable_auto_train.py`) auto-dispatches both workflows with `execute=true` after registry visibility is confirmed, so every autodev-train tag inherits the complete chain without manual workflow dispatch; signing failures are tracked separately on `PublicationStatus` so they do not block the publication cycle. Both verify with `cosign verify-blob` against the workflow-pinned identity and with `slsa-verifier verify-artifact` against the upstream generator and source repo. Evidence in [`CHANGELOG.md`](../../CHANGELOG.md) "First complete signed release: v1.0.9" and [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md) "Worked example: v1.0.9". Tag `v1.0.8` (the earlier "First signed release" entry) carries cosign bundles only because the SLSA generator pin fix ([PR #32](https://github.com/attestplane/attestplane/pull/32), reconciling [ADR-0018 §"Tag-ref vs SHA-pin caveat"](../adr/0018-keyless-signing-and-slsa-provenance.md)) merged after `v1.0.8` was signed; `v1.0.9` is the first tag cut after that fix landed. | None for the OpenSSF criterion. SLSA pin fix is now in tree and the autodev-train autorelease integration extends the complete chain to every new tag rather than only manually-triggered runs. |
 | `version_tags_signed` (SUGGESTED) | unmet | Tags are annotated but not GPG-signed today. | GPG-signed tags depend on the GPG key publication tracked under "Items requiring future commitments". |
 
 ### Security — Other security issues

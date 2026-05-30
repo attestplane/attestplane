@@ -4,7 +4,7 @@ Status: **PASS**
 
 ## Scope
 
-Reviewed the current local diff for Issue #94, `[P2][docs] Summarize the user-visible delta for v1.5.9`.
+Reviewed the current local diff for Issue #94, `\[P2\]\[docs\] Summarize the user-visible delta for v1.5.9`.
 
 The tracked diff only changes `docs/release-notes/v1.5.9.draft.md`, replacing the terse `fix: consult opus for stable planning` entry with a bounded `User-Visible Delta` section.
 

@@ -16,7 +16,7 @@ instead of leaving empty cells ambiguous.
 ## Source metadata
 
 - **Version**: `alpha-2026-05`
-- **Source planning issue**: [#61](https://github.com/attestplane/attestplaneissues61)
+- **Source planning issue**: [#61](https://github.com/attestplane/attestplane/issues/61)
 - **Traceability scope**: [NIST AI RMF mapping](./nist-ai-rmf-1.0-mapping.md), [GDPR mapping](./gdpr-articles-5-22-30-mapping.md), [ISO/IEC 42001 mapping](./iso-iec-42001-aims-mapping.md), [Threat model v1](../security/threat-model-v1.md)
 
 Empty evidence cells are represented as `gap:` and linked to issue #61 so the
@@ -35,7 +35,7 @@ Source doc: [docs/spec/nist-ai-rmf-1.0-mapping.md](./nist-ai-rmf-1.0-mapping.md)
 | Measure 2.7 privacy, safety, accuracy, and robustness measurement | typed evidence categories record measured events and review activity | [evidence-event-taxonomy-v1](./evidence-event-taxonomy-v1.md), [ADR-0008](../adr/0008-evidence-event-taxonomy-v1.md) | — |
 | Measure 2.8 reason codes for verification outcomes | the verifier emits a reason-code taxonomy on every check | [ADR-0010](../adr/0010-verification-reason-codes.md) | — |
 | Manage 3.1 risk treatment, deletion, or redaction of evidence subjects | commit-then-redact preserves chain continuity while making removal reviewable | [ADR-0015](../adr/0015-retention-deletion-proof-profile.md) | — |
-| Workforce training, supplier flow-down, and organisational governance evidence | the current docs trace substrate-supporting evidence only; these controls live outside the substrate boundary | gap: no machine-readable organisational-controls artifact yet | [Issue #61](https://github.com/attestplane/attestplaneissues61) |
+| Workforce training, supplier flow-down, and organisational governance evidence | the current docs trace substrate-supporting evidence only; these controls live outside the substrate boundary | gap: no machine-readable organisational-controls artifact yet | [Issue #61](https://github.com/attestplane/attestplane/issues/61) |
 
 ## GDPR
 
@@ -51,7 +51,7 @@ Source doc: [docs/spec/gdpr-articles-5-22-30-mapping.md](./gdpr-articles-5-22-30
 | Art. 17 right to erasure | commit-then-redact keeps deletion reviewable without claiming legal sufficiency | [ADR-0015](../adr/0015-retention-deletion-proof-profile.md) | — |
 | Art. 32 security of processing | the event-signing scheme makes tampering and unauthorised alteration detectable | [ADR-0005](../adr/0005-event-signing-scheme.md) | — |
 | Art. 4(5) pseudonymisation | pseudonymous `SubjectRef`-style references keep raw identifiers out of the chain | [AIA-12 profile](./aia-12-aligned-profile.md) | — |
-| Article 35 DPIA and Article 42 certification traces | these are controller-specific legal and procedural artifacts, not substrate primitives | gap: controller-specific review is not machine-traced here | [Issue #61](https://github.com/attestplane/attestplaneissues61) |
+| Article 35 DPIA and Article 42 certification traces | these are controller-specific legal and procedural artifacts, not substrate primitives | gap: controller-specific review is not machine-traced here | [Issue #61](https://github.com/attestplane/attestplane/issues/61) |
 
 ## ISO/IEC 42001
 
@@ -69,7 +69,7 @@ Source doc: [docs/spec/iso-iec-42001-aims-mapping.md](./iso-iec-42001-aims-mappi
 | Annex A.7.3 data retention of AI system records | commit-then-redact supports retention and removal without breaking continuity | [ADR-0015](../adr/0015-retention-deletion-proof-profile.md) | — |
 | Annex A.7.4 integrity and signing of AI system records | event signing makes record alteration detectable | [ADR-0005](../adr/0005-event-signing-scheme.md) | — |
 | Annex A.9.3 verification and monitoring of AI system operation | reason codes make verification outcomes reviewable | [ADR-0010](../adr/0010-verification-reason-codes.md) | — |
-| Clause 4 context, Clause 9 performance evaluation, and Clause 10 improvement traces | these management-system clauses depend on organisational controls outside the substrate | gap: management-system evidence is not yet traced in machine-readable form | [Issue #61](https://github.com/attestplane/attestplaneissues61) |
+| Clause 4 context, Clause 9 performance evaluation, and Clause 10 improvement traces | these management-system clauses depend on organisational controls outside the substrate | gap: management-system evidence is not yet traced in machine-readable form | [Issue #61](https://github.com/attestplane/attestplane/issues/61) |
 
 ## Threat model v1
 
@@ -91,4 +91,4 @@ Source doc: [docs/security/threat-model-v1.md](../security/threat-model-v1.md)
 | AT-12 PII export to an unauthorised auditor | the export scope is governed by the controller-owned sidecar, not the verifier | [ADR-0015](../adr/0015-retention-deletion-proof-profile.md) | — |
 | AT-13 clock skew or local-time manipulation | authoritative time comes from TSA or Rekor, not the local clock | [ADR-0002](../adr/0002-substrate-data-model-and-hash-chain-v0.md), [ADR-0003](../adr/0003-tsa-rfc-3161-anchoring.md), [ADR-0006](../adr/0006-sigstore-rekor-redundant-anchor.md) | — |
 | AT-14 substrate-operator signing-key extraction | keyless release signing and constrained key-provider lifecycles reduce the value of theft | [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md), [ADR-0005](../adr/0005-event-signing-scheme.md), [ADR-0004](../adr/0004-aios-to-attestplane-boundary.md) | — |
-| Quorum-of-anchors, cryptographic selective disclosure, and PQC migration | these are documented as forward-looking mitigations, not yet as implemented evidence | gap: residual-risk roadmap items remain future work | [Issue #61](https://github.com/attestplane/attestplaneissues61) |
+| Quorum-of-anchors, cryptographic selective disclosure, and PQC migration | these are documented as forward-looking mitigations, not yet as implemented evidence | gap: residual-risk roadmap items remain future work | [Issue #61](https://github.com/attestplane/attestplane/issues/61) |

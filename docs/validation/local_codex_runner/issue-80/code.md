@@ -25,7 +25,7 @@ Representative commits in that range:
 - `d229378 Prioritize local runner issue queue`
 - `c15606b Add canonicalization property tests`
 - `bb2ec0a Guard docs gate against non-doc runner diffs`
-- `7dce5fc Fix #172: [P1][verifier] Introduce stable rejection reason-code taxonomy for \`verify\` failures`
+- `7dce5fc Fix #172: \[P1\]\[verifier\] Introduce stable rejection reason-code taxonomy for \`verify\` failures`
 - `71a028e Fix #172: CI follow-up round 1`
 - `3654115 Fix #172: align queue test with priority ordering`
 - `d974910 chore(release): prepare v1.7.5`

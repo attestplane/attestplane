@@ -4,7 +4,7 @@ Status: **PASS**
 
 ## Scope
 
-Issue: `[P1][sdk] Land negative conformance vectors mirroring #150 canonicalization edges`
+Issue: `\[P1\]\[sdk\] Land negative conformance vectors mirroring #150 canonicalization edges`
 
 This review used only local repository files, local command output, and the issue text supplied in the prompt. No network access was used.
 

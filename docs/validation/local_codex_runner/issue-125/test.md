@@ -50,17 +50,17 @@ evidence markdown files:
 
 ```text
 Summary: 11 error(s)
-docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "\[P2\]\[docs\]"]
 docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:11 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: "- Priority: P2"]
 docs/validation/local_codex_runner/issue-125/01_plan.prompt.md:25 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
-docs/validation/local_codex_runner/issue-125/02_code.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/02_code.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "\[P2\]\[docs\]"]
 docs/validation/local_codex_runner/issue-125/02_code.prompt.md:13 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: "- Priority: P2"]
 docs/validation/local_codex_runner/issue-125/02_code.prompt.md:27 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
-docs/validation/local_codex_runner/issue-125/03_fix_ci_round_1.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/03_fix_ci_round_1.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "\[P2\]\[docs\]"]
 docs/validation/local_codex_runner/issue-125/03_fix_ci_round_1.prompt.md:12 error MD032/blanks-around-lists Lists should be surrounded by blank lines [Context: "- Markdown lint: https://githu..."]
-docs/validation/local_codex_runner/issue-125/04_review.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/04_review.prompt.md:5:14 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "\[P2\]\[docs\]"]
 docs/validation/local_codex_runner/issue-125/codex_review_report.md:83 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
-docs/validation/local_codex_runner/issue-125/pr_body.md:5:32 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "[P2][docs]"]
+docs/validation/local_codex_runner/issue-125/pr_body.md:5:32 error MD052/reference-links-images Reference links and images should use a label that is defined [Missing link or image reference definition: "docs"] [Context: "\[P2\]\[docs\]"]
 ```
 
 Post-fix result:
@@ -114,8 +114,8 @@ required = [
     'Issue 1 tightens the minimum signed-attestation schema',
     'Issue 3 adds the SDK migration path',
     '## What Integrators Must Do',
-    'https://github.com/attestplane/attestplaneissues120',
-    'https://github.com/attestplane/attestplaneissues125',
+    'https://github.com/attestplane/attestplane/issues/120',
+    'https://github.com/attestplane/attestplane/issues/125',
 ]
 for rel in [Path('docs/release-notes/v1.7.0.md'), Path('docs/release-notes/v1.7.0.draft.md')]:
     text = rel.read_text(encoding='utf-8')

@@ -4,7 +4,7 @@ Status: PASS
 
 ## Scope
 
-Issue: `[P2][test] Canonicalization idempotency + commutativity property tests`
+Issue: `\[P2\]\[test\] Canonicalization idempotency + commutativity property tests`
 
 This review used only local repository files, local command output, and the issue text provided in the prompt. No network or external issue lookup was used.
 

@@ -2,8 +2,8 @@
 
 Status: **PASS**
 
-Issue: `[P0][release] Confirm the v1.5.5 real-change boundary`  
-URL: `https://github.com/attestplane/attestplaneissues75`
+Issue: `\[P0\]\[release\] Confirm the v1.5.5 real-change boundary`
+URL: `https://github.com/attestplane/attestplane/issues/75`
 
 ## Scope Reviewed
 

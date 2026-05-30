@@ -28,7 +28,7 @@ f4dda59 Add multi-lane local Codex runner configuration
 d974910 chore(release): prepare v1.7.5
 3654115 Fix #172: align queue test with priority ordering
 71a028e Fix #172: CI follow-up round 1
-7dce5fc Fix #172: [P1][verifier] Introduce stable rejection reason-code taxonomy for `verify` failures
+7dce5fc Fix #172: \[P1\]\[verifier\] Introduce stable rejection reason-code taxonomy for `verify` failures
 bb2ec0a Guard docs gate against non-doc runner diffs
 c15606b Add canonicalization property tests
 d229378 Prioritize local runner issue queue

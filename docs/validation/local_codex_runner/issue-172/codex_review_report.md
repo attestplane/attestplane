@@ -2,7 +2,7 @@
 
 Status: **PASS**
 
-Issue: `[P1][verifier] Introduce stable rejection reason-code taxonomy for verify failures`
+Issue: `\[P1\]\[verifier\] Introduce stable rejection reason-code taxonomy for verify failures`
 
 ## Findings
 

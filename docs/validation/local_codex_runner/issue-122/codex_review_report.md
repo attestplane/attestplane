@@ -4,7 +4,7 @@ Status: **PASS**
 
 ## Scope
 
-Issue: `[P1][conformance] Add negative conformance vectors for the non-empty / minimum-schema bundle contract`
+Issue: `\[P1\]\[conformance\] Add negative conformance vectors for the non-empty / minimum-schema bundle contract`
 
 This review used only local repository files, local command output, and the issue text supplied in the prompt. No network access was used.
 
