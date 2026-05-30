@@ -92,14 +92,15 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     assert "1 verification failure" in out
     assert "2 quarantine" in out
     assert "3 usage" in out
+    assert "taxonomy-version pin mismatch" in out
 
 
 @pytest.mark.parametrize(
     ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
     [
         (1, None, 0, None),
-        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
-        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+        (2, None, 3, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", 3, VERIFY_REASON_SCHEMA_VERSION_MISSING),
     ],
 )
 def test_verify_require_taxonomy_version_pin(

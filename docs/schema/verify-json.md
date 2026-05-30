@@ -45,6 +45,8 @@ accompanies the structured JSON contract.
 - Quarantined bundles map to exit code `2`. Hard verifier failures continue
   to map to exit code `1`, and malformed input that cannot be parsed or read
   continues to map to exit code `3`.
+- An explicit `--require-taxonomy-version` mismatch also maps to exit code
+  `3`, keeping the taxonomy pin distinct from quarantine.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.

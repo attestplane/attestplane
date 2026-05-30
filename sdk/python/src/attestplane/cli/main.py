@@ -24,6 +24,7 @@ from typing import Any
 
 from attestplane import __version__
 from attestplane.cli.verify_json import (
+    VERIFY_JSON_EXIT_CODE_REQUIRE_TAXONOMY_VERSION_MISMATCH,
     _anchoring_payload,
     _bundle_taxonomy_version_failure,
     _verify_explanations,
@@ -102,7 +103,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=VERIFY_SCOPE_NOTICE,
         epilog=(
             "Exit codes: 0 success; 1 verification failure; 2 quarantine / "
-            "fail-closed bundle rejection; 3 usage, I/O, or malformed input."
+            "fail-closed bundle rejection; 3 usage, I/O, malformed input, or "
+            "taxonomy-version pin mismatch."
         ),
     )
     p_verify.add_argument("bundle", nargs="?", type=Path, help="path to bundle.json")
@@ -498,7 +500,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
                         }
                     ]
                 )
-            return 2
+            return VERIFY_JSON_EXIT_CODE_REQUIRE_TAXONOMY_VERSION_MISMATCH
         result = verify_proof_bundle(
             bundle,
             require_non_empty=require_non_empty,

@@ -38,12 +38,14 @@ QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
-VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
+VALID_GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
+REJECT_GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.reject.json"
+QUARANTINE_GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.quarantine.json"
 VERIFY_JSON_EXIT_CODES = {
     "accept": 0,
     "verification_failure": 1,
     "quarantine": 2,
+    "require_taxonomy_version_mismatch": 3,
     "usage_error": 3,
 }
 
@@ -55,6 +57,15 @@ def _run_verify(
     rc = main(argv)
     captured = capsys.readouterr()
     return rc, json.loads(captured.out), captured.err
+
+
+def _run_verify_raw(
+    argv: list[str],
+    capsys: pytest.CaptureFixture[str],
+) -> tuple[int, str, str]:
+    rc = main(argv)
+    captured = capsys.readouterr()
+    return rc, captured.out, captured.err
 
 
 def _assert_matches_verify_result_v1(
@@ -138,11 +149,31 @@ def _assert_matches_verify_result_v1(
 def test_verify_json_pass_fixture_emits_fixed_schema(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    rc, payload, stderr = _run_verify(["verify", "--json", str(PASS_FIXTURE)], capsys)
+    rc, output, stderr = _run_verify_raw(["verify", "--json", str(PASS_FIXTURE)], capsys)
 
     assert rc == VERIFY_JSON_EXIT_CODES["accept"]
     assert stderr == ""
-    assert payload == VERIFY_JSON_GOLDEN
+    assert output == VALID_GOLDEN_FIXTURE.read_text(encoding="utf-8")
+
+
+def test_verify_json_reject_fixture_emits_fixed_schema(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, output, stderr = _run_verify_raw(["verify", "--json", str(FAIL_FIXTURE)], capsys)
+
+    assert rc == VERIFY_JSON_EXIT_CODES["verification_failure"]
+    assert stderr == ""
+    assert output == REJECT_GOLDEN_FIXTURE.read_text(encoding="utf-8")
+
+
+def test_verify_json_quarantine_fixture_emits_fixed_schema(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, output, stderr = _run_verify_raw(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+
+    assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert stderr == ""
+    assert output == QUARANTINE_GOLDEN_FIXTURE.read_text(encoding="utf-8")
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(

@@ -166,8 +166,8 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
     [
         (1, None, 0, None),
-        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
-        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+        (2, None, 3, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", 3, VERIFY_REASON_SCHEMA_VERSION_MISSING),
     ],
 )
 def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(

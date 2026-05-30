@@ -40,6 +40,7 @@ from attestplane.verify_reason_codes import (
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
 VERIFY_BUNDLE_SCHEMA_VERSION: int = 1
+VERIFY_JSON_EXIT_CODE_REQUIRE_TAXONOMY_VERSION_MISMATCH: int = 3
 
 
 class _DuplicateKeyError(ValueError):
@@ -405,7 +406,7 @@ def verify_result_exit_code(result: Any | None) -> int:
     - 0: success
     - 1: verification failure
     - 2: quarantine / fail-closed bundle contract rejection
-    - 3: usage, I/O, or malformed-input failure
+    - 3: usage, I/O, malformed-input, or explicit taxonomy-version pin mismatch
     """
     if result is None:
         return 1
@@ -701,7 +702,7 @@ def build_verify_json_outcome(
                 detail=detail,
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=VERIFY_JSON_EXIT_CODE_REQUIRE_TAXONOMY_VERSION_MISMATCH,
             bundle=bundle,
             explanation=([_explanation_entry(code, path, detail)] if explain else None),
         )
@@ -802,6 +803,7 @@ def build_verify_json_outcome(
 
 __all__ = [
     "VERIFY_BUNDLE_SCHEMA_VERSION",
+    "VERIFY_JSON_EXIT_CODE_REQUIRE_TAXONOMY_VERSION_MISMATCH",
     "VERIFY_RESULT_SCHEMA_VERSION",
     "VerifyJsonOutcome",
     "build_verify_json_outcome",

@@ -1,0 +1,22 @@
+{
+  "anchoring": {
+    "quarantined": true,
+    "status": "quarantined"
+  },
+  "bundle": {
+    "digest": "769cb4926ffdc6404ed733ceb54e5d1cac0aa9e60b15a32d8ea3d1ff3b59f56d",
+    "schema_version": 1
+  },
+  "exit_code": 2,
+  "reason_code": "att.verify.schema_unknown",
+  "reasons": [
+    {
+      "code": "att.verify.schema_unknown",
+      "message": "bundle metadata closure failed",
+      "path": "/chain_metadata/critical_future_field"
+    }
+  ],
+  "result": "fail",
+  "schema_version": 1,
+  "taxonomy_version": 1
+}
