@@ -297,6 +297,49 @@ def _schema_reason_for_bundle_error(exc: BaseException) -> tuple[VerifyReasonCod
     return code, path
 
 
+def _bundle_taxonomy_version_failure(
+    bundle: dict[str, Any],
+    required_taxonomy_version: int | None,
+) -> tuple[VerifyReasonCodeV1, str, str] | None:
+    if required_taxonomy_version is None:
+        return None
+
+    chain_metadata = bundle.get("chain_metadata")
+    if not isinstance(chain_metadata, dict):
+        return (
+            VERIFY_REASON_SCHEMA_INVALID,
+            "/chain_metadata",
+            "chain_metadata must be a JSON object",
+        )
+
+    if "evidence_taxonomy_version" not in chain_metadata:
+        return (
+            VERIFY_REASON_SCHEMA_VERSION_MISSING,
+            "/chain_metadata/evidence_taxonomy_version",
+            "chain_metadata.evidence_taxonomy_version is missing",
+        )
+
+    taxonomy_version = chain_metadata["evidence_taxonomy_version"]
+    if not isinstance(taxonomy_version, int):
+        return (
+            VERIFY_REASON_SCHEMA_INVALID,
+            "/chain_metadata/evidence_taxonomy_version",
+            "chain_metadata.evidence_taxonomy_version must be an integer",
+        )
+
+    if taxonomy_version != required_taxonomy_version:
+        return (
+            VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+            "/chain_metadata/evidence_taxonomy_version",
+            (
+                "chain_metadata.evidence_taxonomy_version="
+                f"{taxonomy_version!r}; this verifier requires {required_taxonomy_version!r}"
+            ),
+        )
+
+    return None
+
+
 def _json_failure(
     *,
     bundle_digest: str,
@@ -528,6 +571,7 @@ def build_verify_json_outcome(
     *,
     require_non_empty: bool,
     require_signed_attestation: bool,
+    require_taxonomy_version: int | None = None,
     explain: bool,
 ) -> VerifyJsonOutcome:
     try:
@@ -643,6 +687,23 @@ def build_verify_json_outcome(
                 if explain
                 else None
             ),
+        )
+
+    taxonomy_failure = _bundle_taxonomy_version_failure(bundle, require_taxonomy_version)
+    if taxonomy_failure is not None:
+        code, path, detail = taxonomy_failure
+        return _json_failure(
+            bundle_digest=bundle_digest,
+            reason=_reason_entry(
+                code,
+                path,
+                summary="bundle taxonomy version pin failed",
+                detail=detail,
+                explain=explain,
+            ),
+            exit_code=2,
+            bundle=bundle,
+            explanation=([_explanation_entry(code, path, detail)] if explain else None),
         )
 
     canonical_index, canonical_exc = _canonicalization_probe(bundle)

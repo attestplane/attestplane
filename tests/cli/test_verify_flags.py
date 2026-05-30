@@ -14,6 +14,10 @@ from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_REQUIRED_FIELDS_MISSING,
 )
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
+    VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -81,12 +85,64 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     out = " ".join(capsys.readouterr().out.split())
     assert "--require-non-empty" in out
     assert "--strict-schema" in out
+    assert "--require-taxonomy-version" in out
     assert "--explain" in out
     assert "proof-bundle contract" in out
     assert "0 success" in out
     assert "1 verification failure" in out
     assert "2 quarantine" in out
     assert "3 usage" in out
+
+
+@pytest.mark.parametrize(
+    ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
+    [
+        (1, None, 0, None),
+        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+    ],
+)
+def test_verify_require_taxonomy_version_pin(
+    taxonomy_version: int,
+    mutate: str | None,
+    expected_rc: int,
+    expected_reason: str | None,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    bundle = json.loads(VALID_SIGNED.read_text(encoding="utf-8"))
+    if mutate == "remove":
+        del bundle["chain_metadata"]["evidence_taxonomy_version"]
+    path = tmp_path / "taxonomy-version.json"
+    path.write_text(json.dumps(bundle), encoding="utf-8")
+
+    rc = main(
+        [
+            "verify",
+            str(path),
+            "--require-taxonomy-version",
+            str(taxonomy_version),
+            "--json",
+        ]
+    )
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == expected_rc
+    assert payload["schema_version"] == 1
+    assert payload["exit_code"] == expected_rc
+    assert payload["taxonomy_version"] == 1
+    assert payload["result"] == ("pass" if expected_rc == 0 else "fail")
+    if expected_reason is None:
+        assert payload["reason_code"] is None
+        assert payload["reasons"] == []
+    else:
+        assert payload["reason_code"] == expected_reason
+        assert payload["reasons"][0]["code"] == expected_reason
+        assert (
+            payload["reasons"][0]["path"] == "/chain_metadata/evidence_taxonomy_version"
+        )
+    assert captured.err == ""
 
 
 def test_verify_explain_surfaces_reserved_reason_for_additive_fields(

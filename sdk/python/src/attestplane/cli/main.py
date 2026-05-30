@@ -25,6 +25,7 @@ from typing import Any
 from attestplane import __version__
 from attestplane.cli.verify_json import (
     _anchoring_payload,
+    _bundle_taxonomy_version_failure,
     _verify_explanations,
     _verify_success_summary,
     build_verify_json_outcome,
@@ -131,6 +132,14 @@ def build_parser() -> argparse.ArgumentParser:
         dest="strict_schema",
         action="store_true",
         help="enforce the proof-bundle contract's minimum signed-attestation schema",
+    )
+    p_verify.add_argument(
+        "--require-taxonomy-version",
+        dest="require_taxonomy_version",
+        type=int,
+        help=(
+            "fail closed when chain_metadata.evidence_taxonomy_version is missing or does not match the required value"
+        ),
     )
     _add_explain_flag(p_verify)
     _add_format_flag(p_verify)
@@ -436,6 +445,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
             bundle_path,
             require_non_empty=require_non_empty,
             require_signed_attestation=strict_schema,
+            require_taxonomy_version=getattr(args, "require_taxonomy_version", None),
             explain=getattr(args, "explain", False),
         )
         _emit(outcome.payload, True, human="")
@@ -445,6 +455,40 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     try:
         bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+        taxonomy_failure = _bundle_taxonomy_version_failure(
+            bundle,
+            getattr(args, "require_taxonomy_version", None),
+        )
+        if taxonomy_failure is not None:
+            code, pointer, message = taxonomy_failure
+            explain = getattr(args, "explain", False)
+            human = f"FAIL: taxonomy version pin rejected in {bundle_path}: {message}"
+            if not explain:
+                human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
+            _emit(
+                {
+                    "ok": False,
+                    "error": "schema",
+                    "error_code": VERIFY_SCHEMA_ERROR,
+                    "primary_reason": code,
+                    "secondary_reasons": [],
+                    "detail": message,
+                    **_verify_scope_metadata(),
+                },
+                args.json_output,
+                human=human,
+            )
+            if explain and not args.json_output:
+                _write_verify_explanations(
+                    [
+                        {
+                            "primary_reason": code,
+                            "pointer": pointer,
+                            "message": message,
+                        }
+                    ]
+                )
+            return 2
         result = verify_proof_bundle(
             bundle,
             require_non_empty=require_non_empty,
