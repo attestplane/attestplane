@@ -14,8 +14,8 @@ from attestplane.cli.main import main  # noqa: E402
 from attestplane.verifier import verify_proof_bundle, verify_proof_bundle_file  # noqa: E402
 from attestplane.verify_errors import VERIFY_BUNDLE_SCHEMA_INCOMPLETE, VERIFY_OK  # noqa: E402
 from attestplane.verify_reason_codes import (  # noqa: E402
-    VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_SCHEMA_VERSION_MISSING,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
 )
 

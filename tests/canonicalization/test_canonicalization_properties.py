@@ -20,9 +20,9 @@ import unicodedata
 import pytest
 
 from attestplane.canonical import (
+    CanonicalizationError,
     INT64_MAX,
     INT64_MIN,
-    CanonicalizationError,
     canonicalize,
 )
 from attestplane.conformance.negative_vectors import (

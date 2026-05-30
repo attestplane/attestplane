@@ -16,8 +16,8 @@ from attestplane.cli.verify_json import (
 )
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
-    VERIFY_REASON_TAXONOMY_VERSION,
     VERIFY_REASON_SCHEMA_UNKNOWN,
+    VERIFY_REASON_TAXONOMY_VERSION,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
