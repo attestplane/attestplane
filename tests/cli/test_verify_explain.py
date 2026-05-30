@@ -104,10 +104,16 @@ def _assert_rationale_lines(
 def _assert_failure_summary(
     stdout: str, *, signer_subject: str, schema_version: str
 ) -> None:
-    assert stdout.strip() == (
+    line = stdout.strip()
+    prefix = (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 anchor="
     )
+    assert line.startswith(prefix)
+    suffix = line[len(prefix):]
+    # Some bundles produce anchor=absent; others produce
+    # anchor=quarantined quarantine_reason=att.verify.<reason>.
+    assert suffix in {"absent"} or suffix.startswith("quarantined quarantine_reason=")
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
