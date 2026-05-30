@@ -84,7 +84,7 @@ item links to its primary source-of-truth artifact in the repository.
 ### Open badge and cross-spec footprint
 
 - **OpenSSF Best Practices badge — passing tier (100%)**, project
-  [12924](https://www.bestpractices.devprojects/12924). Evidence
+  [12924](https://www.bestpractices.dev/projects/12924). Evidence
   mirrored at
   [`docs/security/openssf-best-practices.md`](../security/openssf-best-practices.md).
   Silver tier sits at **15%** as of 2026-05-20; the forward-looking
@@ -166,7 +166,7 @@ under inspection.
 | G2 | `AP-EVD/1.0` cross-SDK byte equivalence holds | The `cross-sdk-roundtrip` workflow is green for the release tag. Python ↔ TypeScript produce byte-identical event hashes for every fixture. |
 | G3 | Sigstore keyless cosign + SLSA Build L3 attached to the release | Follow [`docs/release/verifying-signatures.md`](../release/verifying-signatures.md). Apply forward-only per [ADR-0018](../adr/0018-keyless-signing-and-slsa-provenance.md); v1.0.9 is the first cut under this regime. |
 | G4 | `SECURITY.md` Response Timeline in effect | Holds **from v1.0 GA onwards** (target 2026-08-15) per [`SECURITY.md`](../../SECURITY.md). Pre-GA cadence is best-effort triage on the same intervals. |
-| G5 | OpenSSF Best Practices passing tier maintained | Public dashboard at [bestpractices.dev/projects/12924](https://www.bestpractices.devprojects/12924); on-disk mirror at [`docs/security/openssf-best-practices.md`](../security/openssf-best-practices.md). |
+| G5 | OpenSSF Best Practices passing tier maintained | Public dashboard at [bestpractices.dev/projects/12924](https://www.bestpractices.dev/projects/12924); on-disk mirror at [`docs/security/openssf-best-practices.md`](../security/openssf-best-practices.md). |
 
 ### Explicitly **not yet** stable usable
 

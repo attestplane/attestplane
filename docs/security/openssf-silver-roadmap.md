@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 # OpenSSF Best Practices Badge — Silver-tier roadmap
 
 Attestplane is OpenSSF Best Practices project
-[**12924**](https://www.bestpractices.devprojects/12924). On
+[**12924**](https://www.bestpractices.dev/projects/12924). On
 2026-05-20T21:04:10Z the project reached the **passing** tier at 100%.
 This document is the forward-looking roadmap toward the **silver** tier,
 which currently sits at **15%** per
-[`https://www.bestpractices.devprojects/12924badge.json`](https://www.bestpractices.devprojects/12924badge.json).
+[`https://www.bestpractices.dev/projects/12924/badge.json`](https://www.bestpractices.dev/projects/12924/badge.json).
 
 > **This is a roadmap, not a self-assessment.** It maps every silver-tier
 > criterion against the repository's current observed state, flags
@@ -28,8 +28,8 @@ which currently sits at **15%** per
 
 | Tier     | Status       | Percentage | Source                                                                                  |
 |----------|--------------|-----------:|-----------------------------------------------------------------------------------------|
-| Passing  | **achieved** | 100%       | [bestpractices.dev/projects/12924](https://www.bestpractices.devprojects/12924)        |
-| Silver   | in progress  | 15%        | [`bestpractices.dev/projects/12924/badge.json`](https://www.bestpractices.devprojects/12924badge.json) |
+| Passing  | **achieved** | 100%       | [bestpractices.dev/projects/12924](https://www.bestpractices.dev/projects/12924)        |
+| Silver   | in progress  | 15%        | [`bestpractices.dev/projects/12924/badge.json`](https://www.bestpractices.dev/projects/12924/badge.json) |
 | Gold     | in progress  | 13%        | (out of scope for this document)                                                        |
 
 Passing-tier evidence is mirrored in
@@ -73,7 +73,7 @@ This silver-tier roadmap is its forward-looking counterpart.
 The criterion identifiers below match the
 [OpenSSF criteria.yml](https://raw.githubusercontent.com/coreinfrastructure/best-practices-badge/main/criteria/criteria.yml)
 silver level (top-level key `'1'`) and the project form at
-[`bestpractices.dev/projects/12924/1`](https://www.bestpractices.devprojects/129241).
+[`bestpractices.dev/projects/12924/1`](https://www.bestpractices.dev/projects/12924/1).
 
 State legend: **Met** = evidence already in tree; **partial** = some
 evidence, gap noted; **unmet** = no evidence yet; **N/A** = not
@@ -83,7 +83,7 @@ applicable to this project's surface, with reason.
 
 | Criterion | State | Evidence or gap | Blocker |
 |---|---|---|---|
-| `achieve_passing` | Met | Passing tier reached 2026-05-20T21:04:10Z per [`bestpractices.dev/projects/12924`](https://www.bestpractices.devprojects/12924); mirrored in [`docs/security/openssf-best-practices.md`](openssf-best-practices.md). | None. |
+| `achieve_passing` | Met | Passing tier reached 2026-05-20T21:04:10Z per [`bestpractices.dev/projects/12924`](https://www.bestpractices.dev/projects/12924); mirrored in [`docs/security/openssf-best-practices.md`](openssf-best-practices.md). | None. |
 
 ### Basics — Basic project website content
 
@@ -388,5 +388,5 @@ When a silver criterion advances:
    updating the evidence link.
 
 This document is the record. The
-[bestpractices.dev dashboard](https://www.bestpractices.devprojects/12924)
+[bestpractices.dev dashboard](https://www.bestpractices.dev/projects/12924)
 remains the authoritative external scoreboard.

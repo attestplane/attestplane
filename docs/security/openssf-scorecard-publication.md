@@ -130,7 +130,7 @@ redundant.
 ## Complementary artifact
 
 This Scorecard publication pairs with the project's
-[OpenSSF Best Practices passing badge (project 12924)](https://www.bestpractices.devprojects/12924),
+[OpenSSF Best Practices passing badge (project 12924)](https://www.bestpractices.dev/projects/12924),
 documented in
 [`openssf-best-practices.md`](openssf-best-practices.md). Together
 they form the project's *OSSF posture* pair: Best Practices captures
