@@ -51,7 +51,7 @@ def test_missing_taxonomy_version_renders_stable_placeholder() -> None:
         {
             "primary_reason": None,
             "pointer": "/",
-            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=1 anchor=unknown",
+            "message": "signer_subject=unknown schema_version=unknown taxonomy_version=unknown anchor=unknown",
         }
     ]
     assert format_verify_taxonomy_version(None) == "1"

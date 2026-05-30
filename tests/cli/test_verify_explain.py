@@ -102,12 +102,17 @@ def _assert_rationale_lines(
 
 
 def _assert_failure_summary(
-    stdout: str, *, signer_subject: str, schema_version: str
+    stdout: str,
+    *,
+    signer_subject: str,
+    schema_version: str,
+    anchor: str = "absent",
 ) -> None:
-    assert stdout.strip() == (
+    expected = (
         f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
-        f"taxonomy_version=1 anchor=absent"
+        f"taxonomy_version=1 anchor={anchor}"
     )
+    assert stdout.strip() == expected
 
 
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
@@ -192,17 +197,36 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
         ),
     ]
 
-    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
+    cases_with_anchor: list[tuple[list[str], int, str, str, str | None, str, str, ...]] = []
+    for idx, (argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, (
         reason,
         pointer,
         message_parts,
-    ) in cases:
+    )) in enumerate(cases):
+        anchor = "absent"
+        # After the anchoring quarantine feature was added, several
+        # failure compact outputs render anchor=quarantined with a
+        # quarantine_reason instead of anchor=absent.
+        if idx == 1:
+            # require-non-empty + empty_bundle
+            anchor = "quarantined quarantine_reason=att.verify.required_field_missing"
+        elif idx == 2:
+            # strict-schema + missing_signatures
+            anchor = "quarantined quarantine_reason=att.verify.signature_missing"
+        elif idx == 3:
+            # schema_version changed to unsupported value
+            anchor = "quarantined quarantine_reason=att.verify.schema_version_unsupported"
+        cases_with_anchor.append(
+            (argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, anchor, reason, pointer, message_parts)
+        )
+
+    for argv, expected_rc, signer_subject, schema_version, error_code, stdout_kind, anchor, reason, pointer, message_parts in cases_with_anchor:
         rc, stdout, stderr = _run_verify(argv, capsys)
 
         assert rc == expected_rc
         if stdout_kind == "compact":
             _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
+                stdout, signer_subject=signer_subject, schema_version=schema_version, anchor=anchor,
             )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
