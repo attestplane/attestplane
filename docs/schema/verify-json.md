@@ -29,6 +29,8 @@ accompanies the structured JSON contract.
   `null` on pass.
 - `anchoring.status` is an additive status enum that consumers can branch on
   without parsing the free-form reason list.
+- `anchor_status` is a flat additive alias for `anchoring.status`; use it if
+  you already branch on the legacy top-level anchor field name.
 - `anchoring.quarantined` is the stable boolean companion to the exit code;
   it is `true` when the bundle was fail-closed into quarantine and `false`
   otherwise.

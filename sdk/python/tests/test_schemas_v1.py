@@ -14,8 +14,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
 import pytest
+
+pytest.importorskip("jsonschema")
+
+import jsonschema
 
 _SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "schemas" / "v1"
 

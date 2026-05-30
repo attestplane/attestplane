@@ -13,6 +13,7 @@
     "taxonomy_version",
     "reasons",
     "bundle",
+    "anchor_status",
     "anchoring"
   ],
   "properties": {
@@ -127,6 +128,14 @@
           "pattern": "^[0-9a-f]{64}$"
         }
       }
+    },
+    "anchor_status": {
+      "type": "string",
+      "enum": [
+        "anchored",
+        "quarantined",
+        "unanchored"
+      ]
     },
     "anchoring": {
       "type": "object",

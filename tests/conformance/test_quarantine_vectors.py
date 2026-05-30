@@ -71,13 +71,15 @@ def _materialize_bundle(case: dict[str, object], tmp_path: Path) -> Path:
     bundle = _load_bundle(Path(case["bundle_path"]))
     if case.get("mutate_anchor_ref"):
         bundle["chain_metadata"]["anchor_ref"] = "anchor://test/vector"
-    out = tmp_path / f'{case["case_id"]}.json'
+    out = tmp_path / f"{case['case_id']}.json"
     out.write_text(json.dumps(bundle), encoding="utf-8")
     return out
 
 
 @pytest.mark.parametrize("case", VECTOR_CASES, ids=lambda case: str(case["case_id"]))
-def test_verify_json_anchoring_vectors(case: dict[str, object], tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_verify_json_anchoring_vectors(
+    case: dict[str, object], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     bundle_path = _materialize_bundle(case, tmp_path)
     result = verify_proof_bundle(_load_bundle(bundle_path))
 
@@ -85,10 +87,10 @@ def test_verify_json_anchoring_vectors(case: dict[str, object], tmp_path: Path, 
     payload = json.loads(capsys.readouterr().out)
 
     assert rc == case["expected_exit_code"]
+    assert payload["anchor_status"] == case["expected_status"]
     assert payload["anchoring"] == {
         "status": case["expected_status"],
         "quarantined": case["expected_quarantined"],
     }
     assert result.anchoring_status == case["expected_status"]
     assert result.anchoring_quarantined is case["expected_quarantined"]
-

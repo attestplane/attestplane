@@ -3,6 +3,7 @@
     "digest": "a041e6306a6db3178805b70832cdc6ea1c96a83d07a281b0dea158da1bf48add",
     "schema_version": 1
   },
+  "anchor_status": "unanchored",
   "anchoring": {
     "quarantined": false,
     "status": "unanchored"

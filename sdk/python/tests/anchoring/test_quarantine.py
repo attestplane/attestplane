@@ -8,8 +8,11 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-import jsonschema
 import pytest
+
+pytest.importorskip("jsonschema")
+
+import jsonschema
 
 from attestplane import AttestSubstrate, EventDraft
 from attestplane.cli.main import main
@@ -76,4 +79,5 @@ def test_quarantined_bundle_surfaces_in_verify_json(tmp_path: Path, capsys: pyte
     assert payload["result"] == "fail"
     assert payload["exit_code"] == 2
     assert payload["reason_code"] == VERIFY_REASON_ANCHOR_INVALID
+    assert payload["anchor_status"] == "quarantined"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}

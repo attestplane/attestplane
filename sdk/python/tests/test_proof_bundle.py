@@ -11,8 +11,11 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
-import jsonschema
 import pytest
+
+pytest.importorskip("jsonschema")
+
+import jsonschema
 
 from attestplane.hashchain import chain_extend, genesis_head, hash_event
 from attestplane.obligations import load_eu_ai_act_article_12

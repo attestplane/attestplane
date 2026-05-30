@@ -216,10 +216,11 @@ def _anchoring_payload(bundle: dict[str, Any] | None, *, exit_code: int) -> dict
             status = "anchored" if _bundle_anchor_ref_present(bundle) else "unanchored"
         quarantined = False
     return {
+        "anchor_status": status,
         "anchoring": {
             "status": status,
             "quarantined": quarantined,
-        }
+        },
     }
 
 

@@ -184,6 +184,7 @@ class Rfc3161HttpProvider(TSAProvider):
         trust_roots_der: list[bytes] | None = None,
         ocsp_responses_der: list[bytes] | None = None,
         timeout_seconds: float = 30.0,
+        quarantine_transport_failures: bool = False,
     ) -> None:
         if not provider_id:
             raise ValueError("Rfc3161HttpProvider provider_id must be non-empty")
@@ -195,6 +196,7 @@ class Rfc3161HttpProvider(TSAProvider):
         self._trust_roots_der = list(trust_roots_der) if trust_roots_der else None
         self._ocsp_responses_der = list(ocsp_responses_der) if ocsp_responses_der else []
         self._timeout = timeout_seconds
+        self._quarantine_transport_failures = quarantine_transport_failures
 
     def request_timestamp(
         self,
@@ -204,11 +206,16 @@ class Rfc3161HttpProvider(TSAProvider):
         now: datetime | None = None,
     ) -> AnchorRecord:
         request_der = _build_request_der(request.digest, nonce=request.nonce)
-        response_der = self._transport.submit(
-            self._url,
-            request_der,
-            timeout_seconds=self._timeout,
-        )
+        try:
+            response_der = self._transport.submit(
+                self._url,
+                request_der,
+                timeout_seconds=self._timeout,
+            )
+        except TSAUnavailableError as exc:
+            if self._quarantine_transport_failures:
+                raise AnchorVerificationError(f"TSA at {self._url} unavailable during verification: {exc}") from exc
+            raise
         try:
             parsed = parse_timestamp_response(response_der)
         except AnchorVerificationError:
@@ -299,6 +306,7 @@ class FreeTSAProvider(Rfc3161HttpProvider):
             trust_roots_der=trust_roots_der,
             ocsp_responses_der=ocsp_responses_der,
             timeout_seconds=timeout_seconds,
+            quarantine_transport_failures=live_mode,
         )
 
 

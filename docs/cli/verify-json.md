@@ -20,6 +20,7 @@ The payload is fixed at schema version 1:
     "schema_version": 1,
     "digest": "..."
   },
+  "anchor_status": "unanchored",
   "anchoring": {
     "status": "unanchored",
     "quarantined": false
@@ -52,6 +53,8 @@ The payload is fixed at schema version 1:
 - `bundle.schema_version` is the proof-bundle schema version currently handled
   by this verifier contract.
 - `bundle.digest` is the SHA-256 digest of the input bundle bytes.
+- `anchor_status` is the top-level additive anchor status for consumers
+  that already branch on the legacy flat field name.
 - `anchoring.status` is a stable additive field that reports whether the
   bundle is `anchored`, `quarantined`, or `unanchored`.
 - `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
@@ -116,6 +119,7 @@ reported as `unknown` rather than omitted.
     "schema_version": 1,
     "digest": "..."
   },
+  "anchor_status": "unanchored",
   "anchoring": {
     "status": "unanchored",
     "quarantined": false
