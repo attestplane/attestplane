@@ -27,7 +27,7 @@ import {
   type SettlementPreconditionClaim,
   checkSettlementPrecondition,
 } from '../src/settlement_verifier.js';
-import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
+import { type ChainedEvent, type ChainHead, makeEventDraft } from '../src/types.js';
 import { BundleSchemaError, verifyProofBundle } from '../src/verifier.js';
 
 const NOW = new Date('2026-05-17T12:00:00.000Z');

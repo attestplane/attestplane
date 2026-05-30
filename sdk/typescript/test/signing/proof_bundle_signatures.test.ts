@@ -10,7 +10,7 @@ import {
 } from '../../src/proof_bundle.js';
 import { InMemoryKeyProvider } from '../../src/signing/providers.js';
 import { Signer } from '../../src/signing/signer.js';
-import { type ChainHead, type ChainedEvent, makeEventDraft } from '../../src/types.js';
+import { type ChainedEvent, type ChainHead, makeEventDraft } from '../../src/types.js';
 
 const NOW = new Date('2026-05-17T12:00:00Z');
 

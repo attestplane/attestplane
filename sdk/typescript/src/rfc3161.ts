@@ -18,7 +18,7 @@
  * anchor_vectors.json fixtures verify in both languages.
  */
 
-import { type KeyObject, createHash, createPublicKey, createVerify } from 'node:crypto';
+import { createHash, createPublicKey, createVerify, type KeyObject } from 'node:crypto';
 
 import { AnchorVerificationError } from './anchoring.js';
 import {

@@ -24,7 +24,7 @@
  * explicit `signed_seq` only.
  */
 
-import { type KeyObject, createPublicKey, verify as ed25519Verify } from 'node:crypto';
+import { createPublicKey, type KeyObject, verify as ed25519Verify } from 'node:crypto';
 
 import {
   type AnchorRecord,

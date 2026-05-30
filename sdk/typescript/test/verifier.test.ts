@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { chainExtend, genesisHead } from '../src/hashchain.js';
 import { type ProofBundle, ProofBundleBuilder } from '../src/proof_bundle.js';
-import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
+import { type ChainedEvent, type ChainHead, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
 import { resolveVerifyTaxonomyVersion } from '../src/verify_reason_codes.js';
 import {

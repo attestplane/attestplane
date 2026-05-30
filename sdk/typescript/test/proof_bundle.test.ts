@@ -18,7 +18,7 @@ import {
   ProofBundleBuilder,
   buildAuditorExport,
 } from '../src/proof_bundle.js';
-import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
+import { type ChainedEvent, type ChainHead, makeEventDraft } from '../src/types.js';
 import {
   BundleSchemaError,
   BundleVerificationError,

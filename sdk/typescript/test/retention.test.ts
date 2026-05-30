@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { chainExtend, genesisHead } from '../src/hashchain.js';
 import { ProofBundleBuilder } from '../src/proof_bundle.js';
 import { buildDeletionProof } from '../src/retention.js';
-import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
+import { type ChainedEvent, type ChainHead, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
 
 function chain(): ChainedEvent[] {

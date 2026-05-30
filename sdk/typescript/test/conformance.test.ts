@@ -23,13 +23,13 @@ import {
   headOf,
 } from '../src/hashchain.js';
 import {
-  type ChainHead,
   type ChainedEvent,
+  type ChainHead,
   type EventDraft,
-  type SubjectRef,
-  type SubjectScheme,
   makeEventDraft,
   makeSubjectRef,
+  type SubjectRef,
+  type SubjectScheme,
 } from '../src/types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { POLICY_CHECK_EVENT, TOOL_CALL_EVENT } from '../src/event_types.js';
 import { chainExtend, genesisHead } from '../src/hashchain.js';
 import { ProofBundleBuilder } from '../src/proof_bundle.js';
-import { type ChainHead, type ChainedEvent, makeEventDraft } from '../src/types.js';
+import { type ChainedEvent, type ChainHead, makeEventDraft } from '../src/types.js';
 import { verifyProofBundle } from '../src/verifier.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
