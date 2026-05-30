@@ -32,7 +32,7 @@ organisation.
 ## Source metadata
 
 - **Version**: `alpha-2026-05`
-- **Source planning issue**: [#61](https://github.com/attestplane/attestplaneissues61)
+- **Source planning issue**: [#61](https://github.com/attestplane/attestplane/issues/61)
 - **Traceability matrix**: [`docs/spec/compliance-traceability-matrix.md`](compliance-traceability-matrix.md)
 
 The traceability matrix records the claim -> argument -> evidence chain for

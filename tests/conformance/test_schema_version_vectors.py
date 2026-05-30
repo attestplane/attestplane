@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from attestplane.verifier import verify_proof_bundle
+from attestplane.verifier import BundleSchemaError, verify_proof_bundle
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
@@ -87,9 +87,6 @@ def test_schema_version_additive_optional_and_required_fields_are_paired() -> No
     )
     structural_bundle = _bundle(additive_vector)
     structural_bundle["proof_type"] = "future-critical"
-    structural_result = verify_proof_bundle(
-        structural_bundle, require_signed_attestation=True
-    )
 
     assert additive_result.ok is True
     assert additive_result.primary_reason is None
@@ -98,15 +95,19 @@ def test_schema_version_additive_optional_and_required_fields_are_paired() -> No
     assert required_result.ok is False
     assert required_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
     assert "critical_future_field" in (required_result.metadata_reason or "")
-    assert structural_result.ok is False
-    assert structural_result.primary_reason == VERIFY_REASON_SCHEMA_UNKNOWN
-    assert "proof_type" in (structural_result.metadata_reason or "")
+    with pytest.raises(BundleSchemaError):
+        verify_proof_bundle(structural_bundle, require_signed_attestation=True)
 
 
 def test_schema_version_major_version_ahead_keeps_chain_mismatch_ahead_of_version_failure() -> (
     None
 ):
-    bundle = _bundle("major_version_ahead")
+    major_version_vector = next(
+        vector
+        for vector in SCHEMA_VERSION_VECTORS
+        if vector["case_id"] == "major_version_ahead"
+    )
+    bundle = _bundle(major_version_vector)
     bundle["events"][0]["event_hash_hex"] = "f" * 64
 
     result = verify_proof_bundle(bundle, require_signed_attestation=True)

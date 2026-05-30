@@ -13,7 +13,7 @@ position on om-world.
 ## 1. Status snapshot
 
 - **Reviewer role accepted:** attestplane issue
-  [#7 comment](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977),
+  [#7 comment](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977),
   2026-05-20.
 - **om-world freeze target:** 2026-08-01 (om-world-side fact).
 - **om-world candidate diff window:** ~2026-07-25 (om-world-side fact).
@@ -30,9 +30,9 @@ position on om-world.
 ## 2. Scope of attestplane's Reviewer role
 
 Bounded by om-world's GENESIS-BUILDERS policy as cited in the
-[v0.2 Reviewer offer](https://github.com/attestplane/attestplaneissues7#issuecomment-4486794312)
+[v0.2 Reviewer offer](https://github.com/attestplane/attestplane/issues/7#issuecomment-4486794312)
 and accepted in attestplane's
-[issue #7 reply](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977):
+[issue #7 reply](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977):
 
 - Public attribution only — no token, no allocation, now or in any future
   state.
@@ -45,7 +45,7 @@ and accepted in attestplane's
   personal branding.
 
 Out-of-scope for the Reviewer role, declined explicitly in the
-[issue #7 reply](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977):
+[issue #7 reply](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977):
 
 - Joint marketing.
 - Hosted-service endorsement.
@@ -92,7 +92,7 @@ ask carried into v0.2 freeze, and the failure mode to watch for.
 - **Framing to preserve through freeze.** This is a profile for
   evidence-substrate-supports-deletion, not a legal compliance conclusion
   for any deployed system. Quoting attestplane's
-  [closure response on issue #7](https://github.com/attestplane/attestplaneissues7#issuecomment-4485790505),
+  [closure response on issue #7](https://github.com/attestplane/attestplane/issues/7#issuecomment-4485790505),
   attestplane "should explicitly not claim GDPR compliance,
   right-to-erasure automation, or legal sufficiency without
   controller-specific review." The om-world spec already carries this
@@ -115,7 +115,7 @@ ask carried into v0.2 freeze, and the failure mode to watch for.
   [`61979b1`](https://github.com/omworldprotocol/om-world/commit/61979b1).
 - **Framing to preserve through freeze.** Two explicit asks recorded in
   attestplane's
-  [issue #7 reply](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977):
+  [issue #7 reply](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977):
   - The **alpha qualifier** on attestplane in the cluster sentence.
   - The "evidence-substrate primitives, not a legal compliance conclusion
     for any deployed high-risk system" caveat.
@@ -203,7 +203,7 @@ discipline:
 - **Output of the review.**
   - If any red line in §4 fires: a public comment on om-world's v0.2
     candidate PR (or on attestplane issue
-    [#7](https://github.com/attestplane/attestplaneissues7) if om-world
+    [#7](https://github.com/attestplane/attestplane/issues/7) if om-world
     prefers), citing each section by name and explicitly naming the
     red-line failure.
   - If no red line fires: a short public review-acknowledgement comment,
@@ -217,19 +217,19 @@ discipline:
   general spec quality.
 - Token, allocation, or governance-economy discussion in om-world v0.2 —
   declined per the GENESIS-BUILDERS policy boundary and the attestplane
-  [issue #7 reply](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977).
+  [issue #7 reply](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977).
 - Joint marketing, hosted-service endorsement, governance entanglement,
   any economic axis — declined per the
-  [issue #7 reply](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977).
+  [issue #7 reply](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977).
 - General-purpose attestation spec review beyond the converged primitives.
 
 ## 8. Audit trail
 
 - attestplane issue
-  [#7](https://github.com/attestplane/attestplaneissues7) — the design
+  [#7](https://github.com/attestplane/attestplane/issues/7) — the design
   thread.
 - attestplane Reviewer-acceptance reply
-  [comment](https://github.com/attestplane/attestplaneissues7#issuecomment-4501108977).
+  [comment](https://github.com/attestplane/attestplane/issues/7#issuecomment-4501108977).
 - om-world adoption commit
   [`61979b1`](https://github.com/omworldprotocol/om-world/commit/61979b1).
 - om-world baseline spec text
@@ -244,7 +244,7 @@ discipline:
 - Reviewer role exit is unilateral per the GENESIS-BUILDERS policy
   ("opt-out at any time"). No notice period is contractually required;
   a short public comment on
-  [issue #7](https://github.com/attestplane/attestplaneissues7)
+  [issue #7](https://github.com/attestplane/attestplane/issues/7)
   is sufficient and is the expected channel.
 - If attestplane exits the Reviewer role, the spec adoptions in om-world
   remain — they were unconditional on attestplane's side at the time of

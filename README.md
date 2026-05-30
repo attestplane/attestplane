@@ -4,7 +4,7 @@
 
 *Architectural inspiration: SLSA — the OpenSSF supply-chain attestation framework — applied to AI agent runtime behaviour rather than build artefacts.*
 
-[![CI](https://github.com/attestplane/attestplaneactions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplaneactions/workflows/ci.yml)
+[![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplanereleases)
 [![PyPI](https://img.shields.io/pypi/v/attestplane?label=PyPI)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
@@ -13,7 +13,7 @@
 [![OpenSSF Best Practices](https://www.bestpractices.devprojects/12924badge)](https://www.bestpractices.devprojects/12924)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/attestplane/attestplane/badge)](https://scorecard.dev/viewer/?uri=github.com/attestplane/attestplane)
 [![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplanecommits/main)
-[![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplaneissues)
+[![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplanestargazers)
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
@@ -401,7 +401,7 @@ This combination of legal precision and direct engineering ownership is the subs
 
 ## Community and Support
 
-- **GitHub Discussions** — [github.com/attestplane/attestplane/discussions](https://github.com/attestplane/attestplanediscussions) — architecture questions, deployment guidance, framework mapping discussions
+- **GitHub Discussions** — [github.com/attestplane/attestplane/discussions](https://github.com/attestplane/attestplane/discussions) — architecture questions, deployment guidance, framework mapping discussions
 - **Discord** — coming M6 (2026-09); link will appear here
 - **Mailing list** — TBD; announcements will be posted in GitHub Discussions until then
 - **Compliance consulting engagements** — M5-M7 limited availability; contact via GitHub Discussions or the maintainer entity below
