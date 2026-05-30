@@ -49,6 +49,14 @@ def test_adapter_public_symbols_exported_from_root() -> None:
     assert RuntimeEvent.__name__ == "RuntimeEvent"
 
 
+def test_public_verify_helper_exposes_anchoring_state() -> None:
+    result = attestplane.verify(REPO_ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att")
+
+    assert isinstance(result, attestplane.VerifyResult)
+    assert result.anchoring.status == "quarantined"
+    assert result.anchoring.quarantined is True
+
+
 def test_supported_schema_versions_exported_from_sdk_surface() -> None:
     assert attestplane.SUPPORTED_SCHEMA_VERSIONS == (1,)
     assert attestplane_sdk.SUPPORTED_SCHEMA_VERSIONS == (1,)

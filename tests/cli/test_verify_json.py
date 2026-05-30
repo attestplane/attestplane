@@ -18,6 +18,7 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att"
 
 
 def _run_verify(
@@ -92,6 +93,17 @@ def test_verify_json_and_explain_keep_json_parseable(
     assert reason["code"] == VERIFY_REASON_CANONICAL_MISMATCH
     assert "Unicode-NFC" in reason["message"]
     assert reason["explanation"] == VERIFY_REASON_CODE_DESCRIPTIONS[reason["code"]]
+
+
+def test_verify_json_quarantine_fixture_reports_quarantined(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload = _run_verify(["verify", "--json", str(QUARANTINE_FIXTURE)], capsys)
+
+    assert rc == 2
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == 2
+    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
 
 
 def test_verify_json_explain_success_emits_compact_summary(

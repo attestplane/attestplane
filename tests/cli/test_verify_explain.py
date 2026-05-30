@@ -18,6 +18,7 @@ from attestplane.verify_errors import (
 from attestplane.verify_reason_codes import (
     VERIFY_REASON_CANONICAL_MISMATCH,
     VERIFY_REASON_REQUIRED_FIELD_MISSING,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
     VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
@@ -26,6 +27,7 @@ from attestplane.verify_reason_codes import (
 ROOT = Path(__file__).resolve().parents[2]
 PASS_FIXTURE = ROOT / "fixtures" / "positive" / "minimal.json"
 CANONICAL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att"
 SIGNED_FIXTURE = ROOT / "tests" / "fixtures" / "v1.7.0_signed.json"
 MISSING_SIGNATURES_FIXTURE = (
     ROOT / "tests" / "fixtures" / "bundles" / "missing_signatures.json"
@@ -211,6 +213,23 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
             pointer=pointer,
             message_parts=message_parts,
         )
+
+
+def test_verify_explain_quarantine_summary_mentions_cause(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, stdout, stderr = _run_verify(
+        ["verify", "--explain", str(QUARANTINE_FIXTURE)],
+        capsys,
+    )
+
+    assert rc == 2
+    assert stdout.startswith("FAIL signer_subject=")
+    assert "quarantine_reason=att.verify.schema_unknown" in stdout
+    assert "anchor=quarantined" in stdout
+    assert stderr.splitlines()[0].startswith(
+        f"{VERIFY_REASON_SCHEMA_UNKNOWN} /chain_metadata/critical_future_field: "
+    )
 
 
 def test_verify_explain_canonicalization_failure_summary_is_generic(

@@ -240,7 +240,17 @@ def _verify_human_summary(
 ) -> str:
     if bundle is None or result is None:
         return f"{status}"
-    return f"{status} {_verify_success_summary(bundle)}"
+    anchor_state = "unknown"
+    chain_metadata = bundle.get("chain_metadata")
+    if isinstance(chain_metadata, dict):
+        anchor_ref = chain_metadata.get("anchor_ref")
+        anchor_state = "present" if isinstance(anchor_ref, str) and anchor_ref else "absent"
+    if getattr(result, "anchoring_quarantined", False):
+        anchor_state = getattr(result, "anchoring_status", anchor_state)
+    summary = f"{status} {_verify_success_summary(bundle).rsplit('anchor=', 1)[0]}anchor={anchor_state}"
+    if getattr(result, "anchoring_quarantined", False):
+        summary = f"{summary} quarantine_reason={getattr(result, 'primary_reason', None) or 'unknown'}"
+    return summary
 
 
 def _write_verify_explanations(entries: list[dict[str, Any]]) -> None:
@@ -554,10 +564,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 3
     except BundleSchemaError as exc:
         explain = getattr(args, "explain", False)
+        primary_reason = classify_bundle_schema_error(exc)
         human = f"FAIL: schema error in {bundle_path}: {exc}"
+        if explain:
+            human = f"FAIL: schema error in {bundle_path}: quarantine_reason={primary_reason} {exc}"
         if not explain:
             human = f"{human}\n{VERIFY_SCOPE_NOTICE}"
-        primary_reason = classify_bundle_schema_error(exc)
         _emit(
             {
                 "ok": False,
