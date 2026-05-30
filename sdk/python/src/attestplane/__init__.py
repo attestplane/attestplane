@@ -183,6 +183,7 @@ from attestplane.verifier import (
     BundleSchemaError,
     BundleVerificationError,
     BundleVerificationResult,
+    VerifyAnchoringState,
     verify_proof_bundle,
     verify_proof_bundle_file,
 )
@@ -263,6 +264,7 @@ __all__ = [
     "BundleSchemaError",
     "BundleVerificationError",
     "BundleVerificationResult",
+    "VerifyAnchoringState",
     "DEFAULT_FORBIDDEN_FIELDS",
     "EmptyProofBundleError",
     "FORBIDDEN_PAYLOAD_FIELDS",
@@ -369,6 +371,16 @@ __all__ = [
     "verify_reason_code_explanation",
     "verify_reason_code_matches_format",
 ]
+
+VerifyResult = BundleVerificationResult
+verify = verify_proof_bundle_file
+
+__all__.extend(
+    [
+        "VerifyResult",
+        "verify",
+    ]
+)
 
 if _SIGNING_AVAILABLE:
     __all__.extend(

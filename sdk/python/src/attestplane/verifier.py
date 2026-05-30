@@ -77,6 +77,14 @@ class BundleSchemaError(BundleVerificationError):
 
 
 @dataclass(frozen=True, slots=True)
+class VerifyAnchoringState:
+    """Typed anchoring state exposed by :class:`BundleVerificationResult`."""
+
+    status: Literal["anchored", "quarantined", "unanchored"]
+    quarantined: bool
+
+
+@dataclass(frozen=True, slots=True)
 class BundleVerificationResult:
     """Outcome of verifying a proof bundle.
 
@@ -122,6 +130,13 @@ class BundleVerificationResult:
     secondary_reasons: tuple[VerifyReasonCodeV1, ...]
     anchoring_quarantined: bool
     anchoring_status: Literal["anchored", "quarantined", "unanchored"]
+
+    @property
+    def anchoring(self) -> VerifyAnchoringState:
+        return VerifyAnchoringState(
+            status=self.anchoring_status,
+            quarantined=self.anchoring_quarantined,
+        )
 
     def short_summary(self) -> str:
         if self.ok:
@@ -774,6 +789,7 @@ __all__ = [
     "BundleVerificationError",
     "BundleVerificationResult",
     "classify_bundle_schema_error",
+    "VerifyAnchoringState",
     "verify_proof_bundle",
     "verify_proof_bundle_file",
 ]
