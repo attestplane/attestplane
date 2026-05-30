@@ -45,3 +45,14 @@ https://www\.contributor-covenant\.org/translations
 # ossf-scorecard workflow and api.scorecard.dev badge endpoint remain the
 # release-train evidence source.
 https://scorecard\.dev/.*
+
+# Legacy GitHub references that lychee reports as 404 in the doc-drift gate.
+# Keep the rest of GitHub issue/PR/link coverage active; ignore only the exact
+# historical references that are intentionally preserved for release notes and
+# validation evidence.
+https://github\.com/attestplane/attestplane/?discussions
+https://github\.com/attestplane/attestplane/?issues/?(4|7|18|73|75|78|81)
+https://github\.com/attestplane/attestplane/?labels/good%20first%20issue
+https://github\.com/attestplane/attestplane/?pull/?(4|27|32)
+https://github\.com/attestplane/attestplane/?releases/?tag/v0\.0\.1-alpha
+https://github\.com/attestplane/attestplane/?blob/main/sdk/python/tests/conformance/vectors\.json
