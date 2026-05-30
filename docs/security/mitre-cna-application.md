@@ -165,7 +165,7 @@ project answers regardless of label wording.
 | Organisation legal name | Attestplane Pte. Ltd. (Singapore — registration status as of submission date; the maintainer updates this line at submission) |
 | Organisation type | Open-source project with commercial entity maintainer |
 | Organisation website | `https://attestplane.com` |
-| Public-facing project URL | `https://github.com/attestplane/attestplane` |
+| Public-facing project URL | `https://github.com/attestplane/attestplane/` |
 | Primary contact name | (maintainer fills in at submission; do not commit personal name to repo) |
 | Primary contact email (institutional) | `security@attestplane.com` |
 | Backup contact email | (second triage contact email — to be designated before submission per §1.4) |
@@ -211,7 +211,7 @@ project answers regardless of label wording.
 | cveform field | Value to paste |
 |---------------|----------------|
 | Disclosure policy URL | `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` |
-| Public repository URL | `https://github.com/attestplane/attestplane` |
+| Public repository URL | `https://github.com/attestplane/attestplane/` |
 | License | Apache-2.0 |
 | OpenSSF Best Practices badge | `https://www.bestpractices.dev/projects/12924/` (passing) |
 | Threat model | [`docs/security/threat-model-v1.md`](threat-model-v1.md) |

@@ -5,7 +5,7 @@
 *Architectural inspiration: SLSA — the OpenSSF supply-chain attestation framework — applied to AI agent runtime behaviour rather than build artefacts.*
 
 [![CI](https://github.com/attestplane/attestplane/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/attestplane/attestplane/actions/workflows/ci.yml)
-[![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases)
+[![Latest Release](https://img.shields.io/github/v/release/attestplane/attestplane?include_prereleases&sort=semver&display_name=tag&color=blueviolet&label=release)](https://github.com/attestplane/attestplane/releases/)
 [![PyPI](https://img.shields.io/pypi/v/attestplane?label=PyPI)](https://pypi.org/project/attestplane/)
 [![npm](https://img.shields.io/npm/v/@attestplane/attestplane?label=npm)](https://www.npmjs.com/package/@attestplane/attestplane)
 [![Apache 2.0 License](https://img.shields.io/github/license/attestplane/attestplane?color=blue)](LICENSE)
@@ -13,7 +13,7 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12924/badge)](https://www.bestpractices.dev/projects/12924/)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/attestplane/attestplane/badge)](https://scorecard.dev/viewer/?uri=github.com/attestplane/attestplane)
 [![Last Commit](https://img.shields.io/github/last-commit/attestplane/attestplane/main)](https://github.com/attestplane/attestplane/commits/main)
-[![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues)
+[![Open Issues](https://img.shields.io/github/issues/attestplane/attestplane)](https://github.com/attestplane/attestplane/issues/)
 [![GitHub Stars](https://img.shields.io/github/stars/attestplane/attestplane?style=social)](https://github.com/attestplane/attestplane/stargazers)
 [![DCO](https://img.shields.io/badge/contributor_agreement-DCO-lightgrey.svg)](CONTRIBUTING.md)
 
@@ -258,7 +258,7 @@ Not yet implemented:
 | `attestplane` (latest v1.0.x) | [PyPI](https://pypi.org/project/attestplane/) | GitHub OIDC trusted publishing; cosign + SLSA Build L3 since v1.0.9 |
 | `@attestplane/attestplane` (latest v1.0.x) | [npm](https://www.npmjs.com/package/@attestplane/attestplane) | npm provenance via GitHub OIDC; cosign + SLSA Build L3 since v1.0.9 |
 | API reference | [GitHub Pages stable docs](docs/contributor/api-reference.md) | versioned release-line docs; prerelease refs stay artifact-only |
-| GitHub Releases | [`v1.0.x` tags](https://github.com/attestplane/attestplane/releases) | wheel + sdist + npm tarball + checksums + artifact manifest + cosign bundles + `.intoto.jsonl` SLSA provenance |
+| GitHub Releases | [`v1.0.x` tags](https://github.com/attestplane/attestplane/releases/) | wheel + sdist + npm tarball + checksums + artifact manifest + cosign bundles + `.intoto.jsonl` SLSA provenance |
 | v1.6.2 release note | [docs/releases/v1.6.2.md](docs/releases/v1.6.2.md) | user-visible planned-task refetch race fix; CI-only items separated as infrastructure |
 
 Default PyPI and npm installs resolve to the latest v1.0.x tag. This is
@@ -401,7 +401,7 @@ This combination of legal precision and direct engineering ownership is the subs
 
 ## Community and Support
 
-- **GitHub Discussions** — [github.com/attestplane/attestplane/discussions](https://github.com/attestplane/attestplane/discussions) — architecture questions, deployment guidance, framework mapping discussions
+- **GitHub Discussions** — [github.com/attestplane/attestplane/discussions](https://github.com/attestplane/attestplane/discussions/) — architecture questions, deployment guidance, framework mapping discussions
 - **Discord** — coming M6 (2026-09); link will appear here
 - **Mailing list** — TBD; announcements will be posted in GitHub Discussions until then
 - **Compliance consulting engagements** — M5-M7 limited availability; contact via GitHub Discussions or the maintainer entity below
@@ -449,7 +449,7 @@ If you use Attestplane in academic work, a published audit report, or a regulato
   title        = {Attestplane: Open Trust Substrate for AI Agents},
   author       = {{Attestplane Pte. Ltd.}},
   year         = {2026},
-  url          = {https://github.com/attestplane/attestplane},
+  url          = {https://github.com/attestplane/attestplane/},
   license      = {Apache-2.0},
   version      = {0.0.3-alpha},
   note         = {Public alpha; substrate core only. Cite the specific

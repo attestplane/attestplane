@@ -83,7 +83,7 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 | Criterion | Evidence |
 |---|---|
 | `description_good` | [README.md](../../README.md) |
-| `interact` | [CONTRIBUTING.md](../../CONTRIBUTING.md), [Issues](https://github.com/attestplane/attestplane/issues), [Discussions](https://github.com/attestplane/attestplane/discussions) |
+| `interact` | [CONTRIBUTING.md](../../CONTRIBUTING.md), [Issues](https://github.com/attestplane/attestplane/issues/), [Discussions](https://github.com/attestplane/attestplane/discussions/) |
 | `contribution` | [CONTRIBUTING.md](../../CONTRIBUTING.md) |
 | `contribution_requirements` | [CONTRIBUTING.md §4 PR Checklist](../../CONTRIBUTING.md) |
 | `floss_license` | [LICENSE](../../LICENSE) (Apache-2.0) |
@@ -92,7 +92,7 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 | `documentation_basics` | [README.md](../../README.md) + [docs/](../) tree |
 | `documentation_interface` | [sdk/python/README.md](../../sdk/python/README.md), [sdk/typescript/README.md](../../sdk/typescript/README.md), [docs/spec/](../spec/) |
 | `sites_https` | attestplane.io, github.com, pypi.org, npmjs.com all HTTPS-only |
-| `discussion` | [GitHub Issues](https://github.com/attestplane/attestplane/issues), [Discussions](https://github.com/attestplane/attestplane/discussions) |
+| `discussion` | [GitHub Issues](https://github.com/attestplane/attestplane/issues/), [Discussions](https://github.com/attestplane/attestplane/discussions/) |
 | `english` | Primary docs in English; `CONTRIBUTING_zh.md` is a translation |
 | `maintained` | [Commit history](https://github.com/attestplane/attestplane/commits/main); v1.0 GA targeted 2026-08-15 |
 
@@ -115,10 +115,10 @@ each Met or N/A claim back at the in-repo evidence file or workflow.
 | Criterion | Evidence |
 |---|---|
 | `report_process` | [CONTRIBUTING.md](../../CONTRIBUTING.md), [SECURITY.md](../../SECURITY.md) |
-| `report_tracker` | [GitHub Issues](https://github.com/attestplane/attestplane/issues) |
+| `report_tracker` | [GitHub Issues](https://github.com/attestplane/attestplane/issues/) |
 | `report_responses` | Issue triage cadence in recent activity |
 | `enhancement_responses` | Feature requests in Issues + Discussions |
-| `report_archive` | [GitHub Issues archive](https://github.com/attestplane/attestplane/issues) |
+| `report_archive` | [GitHub Issues archive](https://github.com/attestplane/attestplane/issues/) |
 | `vulnerability_report_process` | [SECURITY.md](../../SECURITY.md) §Reporting a Vulnerability |
 | `vulnerability_report_private` | [SECURITY.md](../../SECURITY.md): email + GitHub Security Advisories |
 | `vulnerability_report_response` | [SECURITY.md](../../SECURITY.md) §Response Timeline (v1.0 GA onwards) |
