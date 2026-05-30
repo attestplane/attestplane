@@ -88,7 +88,7 @@ export function verifyReasonCodeExplanation(value: VerifyReasonCodeV1): string {
 }
 
 export function resolveVerifyTaxonomyVersion(
-  bundle: Record<string, unknown> | null = null,
+  bundle: { readonly chain_metadata?: unknown } | null = null,
 ): number | null {
   if (bundle === null) {
     return VERIFY_REASON_TAXONOMY_VERSION;
@@ -101,7 +101,7 @@ export function resolveVerifyTaxonomyVersion(
   ) {
     return null;
   }
-  const taxonomyVersion = chainMetadata.evidence_taxonomy_version;
+  const taxonomyVersion = (chainMetadata as Record<string, unknown>).evidence_taxonomy_version;
   return typeof taxonomyVersion === 'number' && Number.isInteger(taxonomyVersion)
     ? taxonomyVersion
     : null;
