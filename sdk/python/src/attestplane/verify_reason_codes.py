@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Final, Literal
+from typing import Final, Literal, cast
 
 VERIFY_REASON_TAXONOMY_VERSION: Final[int] = 1
 VERIFY_REASON_CODE_SCHEMA_VERSION: Final[int] = VERIFY_REASON_TAXONOMY_VERSION
@@ -39,6 +39,8 @@ VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED: Final[VerifyReasonCodeV1] = "att.verif
 VERIFY_REASON_REQUIRED_FIELD_MISSING: Final[VerifyReasonCodeV1] = "att.verify.required_field_missing"
 VERIFY_REASON_STRUCTURE_INVALID: Final[VerifyReasonCodeV1] = "att.verify.structure_invalid"
 VERIFY_REASON_ANCHOR_INVALID: Final[VerifyReasonCodeV1] = "att.verify.anchor_invalid"
+
+UNKNOWN_REASON_CODE: Final[str] = "unknown_reason_code"
 
 ALL_VERIFY_REASON_CODES_V1: Final[tuple[VerifyReasonCodeV1, ...]] = (
     VERIFY_REASON_ANCHOR_INVALID,
@@ -96,6 +98,13 @@ def verify_reason_code_explanation(value: VerifyReasonCodeV1) -> str:
     return VERIFY_REASON_TAXONOMY[value]
 
 
+def verify_reason_code_explanation_safe(value: str) -> str:
+    """Return explanation for a known code, or a forward-compatible fallback for unknown codes."""
+    if value in VERIFY_REASON_TAXONOMY:
+        return cast("dict[str, str]", VERIFY_REASON_TAXONOMY)[value]
+    return f"Unknown reason code: {value}"
+
+
 def resolve_verify_taxonomy_version() -> int:
     """Return the canonical public verifier taxonomy version."""
     return VERIFY_REASON_TAXONOMY_VERSION
@@ -110,6 +119,7 @@ def format_verify_taxonomy_version(value: int | None = None) -> str:
 
 __all__ = [
     "ALL_VERIFY_REASON_CODES_V1",
+    "UNKNOWN_REASON_CODE",
     "VERIFY_REASON_ANCHOR_INVALID",
     "VERIFY_REASON_CANONICAL_MISMATCH",
     "VERIFY_REASON_CODE_DESCRIPTIONS",
@@ -129,5 +139,6 @@ __all__ = [
     "is_known_verify_reason_code",
     "resolve_verify_taxonomy_version",
     "verify_reason_code_explanation",
+    "verify_reason_code_explanation_safe",
     "verify_reason_code_matches_format",
 ]

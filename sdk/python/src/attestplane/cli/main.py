@@ -261,7 +261,14 @@ def _verify_human_summary(
 
 
 def _write_verify_explanations(entries: list[dict[str, Any]]) -> None:
-    for entry in entries:
+    sorted_entries = sorted(
+        entries,
+        key=lambda e: (
+            e.get("primary_reason") or "",
+            e.get("pointer", "/"),
+        ),
+    )
+    for entry in sorted_entries:
         primary_reason = entry.get("primary_reason")
         pointer = entry.get("pointer", "/")
         message = entry.get("message", "")

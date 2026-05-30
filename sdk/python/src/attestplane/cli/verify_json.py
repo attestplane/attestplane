@@ -38,7 +38,7 @@ from attestplane.verify_reason_codes import (
     VERIFY_REASON_SIGNATURE_MISSING,
     VERIFY_REASON_STRUCTURE_INVALID,
     VerifyReasonCodeV1,
-    verify_reason_code_explanation,
+    verify_reason_code_explanation_safe,
 )
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
@@ -140,7 +140,7 @@ def _reason_entry(
         "message": message,
     }
     if explain:
-        reason["explanation"] = verify_reason_code_explanation(code)
+        reason["explanation"] = verify_reason_code_explanation_safe(code)
     return reason
 
 
@@ -280,6 +280,13 @@ def _verify_explanations(
                 str(reason["message"]),
             )
         )
+    # Deterministic sort: by reason_code (None first), then pointer
+    explanations.sort(
+        key=lambda e: (
+            e["primary_reason"] or "",
+            e.get("pointer", "/"),
+        )
+    )
     return explanations
 
 

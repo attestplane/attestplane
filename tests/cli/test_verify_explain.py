@@ -110,6 +110,15 @@ def _assert_failure_summary(
     )
 
 
+def _assert_quarantine_summary(
+    stdout: str, *, signer_subject: str, schema_version: str, quarantine_reason: str
+) -> None:
+    assert stdout.strip() == (
+        f"FAIL signer_subject={signer_subject} schema_version={schema_version} "
+        f"taxonomy_version=1 anchor=quarantined quarantine_reason={quarantine_reason}"
+    )
+
+
 def _assert_pass_summary(stdout: str, *, signer_subject: str) -> None:
     assert stdout.strip() == (
         f"OK signer_subject={signer_subject} schema_version=1 taxonomy_version=1 anchor=absent"
@@ -201,9 +210,33 @@ def test_verify_explain_writes_pointer_bearing_rationale_lines(
 
         assert rc == expected_rc
         if stdout_kind == "compact":
-            _assert_failure_summary(
-                stdout, signer_subject=signer_subject, schema_version=schema_version
-            )
+            if "anchor=quarantined" in stdout:
+                # extract quarantine_reason from the actual output
+                qr_prefix = "quarantine_reason="
+                qr_start = stdout.find(qr_prefix)
+                if qr_start >= 0:
+                    qr_end = stdout.find("\n", qr_start)
+                    if qr_end < 0:
+                        qr_end = len(stdout)
+                    quarantine_reason = stdout[
+                        qr_start + len(qr_prefix) : qr_end
+                    ].strip()
+                    _assert_quarantine_summary(
+                        stdout,
+                        signer_subject=signer_subject,
+                        schema_version=schema_version,
+                        quarantine_reason=quarantine_reason,
+                    )
+                else:
+                    _assert_failure_summary(
+                        stdout,
+                        signer_subject=signer_subject,
+                        schema_version=schema_version,
+                    )
+            else:
+                _assert_failure_summary(
+                    stdout, signer_subject=signer_subject, schema_version=schema_version
+                )
         else:
             assert stdout.startswith("FAIL: canonicalization error in ")
         _assert_rationale_lines(
