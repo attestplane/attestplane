@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 from attestplane.cli.main import main
+from attestplane.cli.verify_json import VERIFY_EXIT_CODE_PINNING_MISMATCH
 from attestplane.verify_reason_codes import (
     ALL_VERIFY_REASON_CODES_V1,
     VERIFY_REASON_TAXONOMY_VERSION,
@@ -16,11 +17,12 @@ from attestplane.verify_reason_codes import (
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "schemas" / "cli" / "verify-result-v1.json"
-CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
-PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
+PASS_FIXTURE = ROOT / "fixtures" / "valid_bundle.att"
+GOLDEN_FIXTURE = ROOT / "fixtures" / "golden" / "verify_json_v1.json"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
-UNKNOWN_REQUIRED_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
+UNKNOWN_REQUIRED_FIXTURE = (
+    ROOT / "fixtures" / "conformance" / "unknown_required_field.att"
+)
 ROOT_QUARANTINE_FIXTURE = ROOT / "fixtures" / "quarantined.bundle"
 
 
@@ -30,7 +32,7 @@ def _schema() -> dict[str, object]:
 
 def _payload(argv: list[str], capsys) -> tuple[int, dict[str, object]]:
     rc = main(argv)
-    assert rc in {0, 1, 2, 3}
+    assert rc in {0, 1, 2, 3, VERIFY_EXIT_CODE_PINNING_MISMATCH}
     return rc, json.loads(capsys.readouterr().out)
 
 
@@ -66,7 +68,7 @@ def _assert_matches_verify_result_v1(payload: dict[str, object]) -> None:
     assert payload["schema_version"] == 1
     assert payload["result"] in {"pass", "fail"}
     assert isinstance(payload["exit_code"], int)
-    assert payload["exit_code"] in {0, 1, 2, 3}
+    assert payload["exit_code"] in {0, 1, 2, 3, VERIFY_EXIT_CODE_PINNING_MISMATCH}
     assert payload["taxonomy_version"] == VERIFY_REASON_TAXONOMY_VERSION
     assert payload["reason_code"] is None or re.fullmatch(
         r"att\.verify\.[a-z][a-z0-9_]*",
@@ -113,7 +115,10 @@ def test_verify_result_schema_is_valid_draft_2020_12() -> None:
     assert schema["properties"]["schema_version"]["const"] == 1
     assert schema["properties"]["result"]["enum"] == ["pass", "fail"]
     assert schema["properties"]["exit_code"]["minimum"] == 0
-    assert schema["properties"]["exit_code"]["maximum"] == 3
+    assert (
+        schema["properties"]["exit_code"]["maximum"]
+        == VERIFY_EXIT_CODE_PINNING_MISMATCH
+    )
     assert schema["properties"]["reasons"]["items"]["additionalProperties"] is False
     assert schema["properties"]["bundle"]["additionalProperties"] is False
     assert schema["properties"]["anchoring"]["additionalProperties"] is False
@@ -128,7 +133,9 @@ def test_verify_json_output_contract_matches_versioned_golden_fixture(capsys) ->
     rc, payload = _payload(["verify", "--json", str(PASS_FIXTURE)], capsys)
     assert rc == 0
     expected = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
-    assert payload == expected
+    assert payload == expected, (
+        "run ./scripts/conformance/update_verify_json_golden.sh to refresh the golden fixture"
+    )
     assert payload["anchoring"] == {"status": "unanchored", "quarantined": False}
 
 

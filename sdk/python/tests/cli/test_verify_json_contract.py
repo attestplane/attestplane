@@ -31,20 +31,20 @@ from attestplane.verify_reason_codes import (
 )
 
 ROOT = Path(__file__).resolve().parents[4]
-CONFORMANCE_FIXTURES = ROOT / "fixtures" / "conformance"
-PASS_FIXTURE = CONFORMANCE_FIXTURES / "baseline.att"
+PASS_FIXTURE = ROOT / "fixtures" / "valid_bundle.att"
 FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
-QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "conformance" / "unknown_required_field.att"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
-GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
+GOLDEN_FIXTURE = ROOT / "fixtures" / "golden" / "verify_json_v1.json"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
 VERIFY_JSON_EXIT_CODES = {
     "accept": 0,
     "verification_failure": 1,
     "quarantine": 2,
     "usage_error": 3,
+    "taxonomy_pinning_mismatch": 4,
 }
 
 
@@ -142,7 +142,9 @@ def test_verify_json_pass_fixture_emits_fixed_schema(
 
     assert rc == VERIFY_JSON_EXIT_CODES["accept"]
     assert stderr == ""
-    assert payload == VERIFY_JSON_GOLDEN
+    assert payload == VERIFY_JSON_GOLDEN, (
+        "run ./scripts/conformance/update_verify_json_golden.sh to refresh the golden fixture"
+    )
 
 
 def test_verify_json_additive_optional_schema_bundle_passes_cleanly(

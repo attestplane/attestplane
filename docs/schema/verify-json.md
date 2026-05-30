@@ -43,13 +43,17 @@ accompanies the structured JSON contract.
 - `verify --explain` stays aligned with the same JSON contract and does not
   introduce a new schema or a new bundle policy.
 - Quarantined bundles map to exit code `2`. Hard verifier failures continue
-  to map to exit code `1`, and malformed input that cannot be parsed or read
-  continues to map to exit code `3`.
+  to map to exit code `1`, malformed input that cannot be parsed or read
+  continues to map to exit code `3`, and an explicit taxonomy pin mismatch
+  maps to exit code `4`.
 - When `--explain` is combined with `--json`, the payload remains valid JSON
   and exposes both `explanation[]` and the per-reason `explanation` field for
   callers that already inspect `reasons[]`.
 - Malformed input that cannot be parsed as JSON or read from disk uses the
   usage-error exit code, distinct from quarantine.
+- `--require-taxonomy-version` is a separate CI-gating pin: when the bundle's
+  `evidence_taxonomy_version` does not match the requested value, the CLI
+  returns exit code `4` and preserves the structured JSON contract.
 
 ## Negative Vectors
 

@@ -32,8 +32,8 @@ The payload is fixed at schema version 1:
 - `exit_code` is the process exit code that callers should gate on. In v1,
   `0` means accept, `1` means the verifier rejected the bundle, `2`
   means the bundle was quarantined by a fail-closed schema or contract
-  rejection, and `3` means a usage, I/O, or malformed-input problem
-  prevented verification.
+  rejection, `3` means a usage, I/O, or malformed-input problem prevented
+  verification, and `4` means the explicit taxonomy pin check failed.
 - `reason_code` is the machine-readable primary verifier rejection code, or
   `null` on success.
 - `taxonomy_version` pins the shared verifier rejection taxonomy that both
@@ -57,6 +57,9 @@ The payload is fixed at schema version 1:
 - `anchoring.quarantined` is a stable boolean mirror for the quarantine state.
 - In v1, `anchoring.quarantined=true` maps to exit code `2`, while normal
   verification failures continue to use exit code `1`.
+- A taxonomy pin mismatch raised by `--require-taxonomy-version` maps to exit
+  code `4` so CI can distinguish pinning drift from quarantine and from
+  ordinary malformed-input failures.
 - The verifier reason-code taxonomy is additive-only: new reason codes may be
   added, but existing codes are not renamed, removed, or reused within a
   stable `taxonomy_version`.

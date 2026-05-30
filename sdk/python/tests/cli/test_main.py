@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.cli.verify_json import VERIFY_EXIT_CODE_PINNING_MISMATCH
 from attestplane.hashchain import chain_extend, genesis_head
 from attestplane.storage.jsonl import JsonlStorageBackend
 from attestplane.types import ChainHead, EventDraft
@@ -166,8 +167,8 @@ def test_verify_require_events_rejects_empty_bundle(tmp_path: Path, capsys: pyte
     ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
     [
         (1, None, 0, None),
-        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
-        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+        (2, None, VERIFY_EXIT_CODE_PINNING_MISMATCH, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
+        (1, "remove", VERIFY_EXIT_CODE_PINNING_MISMATCH, VERIFY_REASON_SCHEMA_VERSION_MISSING),
     ],
 )
 def test_verify_require_taxonomy_version_pins_bundle_taxonomy_version(

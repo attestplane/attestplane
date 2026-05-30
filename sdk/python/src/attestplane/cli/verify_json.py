@@ -40,6 +40,7 @@ from attestplane.verify_reason_codes import (
 
 VERIFY_RESULT_SCHEMA_VERSION: int = 1
 VERIFY_BUNDLE_SCHEMA_VERSION: int = 1
+VERIFY_EXIT_CODE_PINNING_MISMATCH: int = 4
 
 
 class _DuplicateKeyError(ValueError):
@@ -701,7 +702,7 @@ def build_verify_json_outcome(
                 detail=detail,
                 explain=explain,
             ),
-            exit_code=2,
+            exit_code=VERIFY_EXIT_CODE_PINNING_MISMATCH,
             bundle=bundle,
             explanation=([_explanation_entry(code, path, detail)] if explain else None),
         )

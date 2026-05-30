@@ -10,6 +10,12 @@ from pathlib import Path
 import pytest
 
 from attestplane.cli.main import main
+from attestplane.cli.verify_json import VERIFY_EXIT_CODE_PINNING_MISMATCH
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_CANONICAL_MISMATCH,
+    VERIFY_REASON_SCHEMA_INVALID,
+    VERIFY_REASON_SCHEMA_UNKNOWN,
+)
 from attestplane.verify_errors import (
     VERIFY_BUNDLE_SCHEMA_INCOMPLETE,
     VERIFY_REQUIRED_FIELDS_MISSING,
@@ -26,6 +32,9 @@ EMPTY_BUNDLE = FIXTURES / "empty_bundle.json"
 SIGNED_BUNDLE = (
     ROOT / "tests" / "fixtures" / "bundles" / "valid_signed_attestation.json"
 )
+PASS_FIXTURE = ROOT / "fixtures" / "valid_bundle.att"
+FAIL_FIXTURE = ROOT / "fixtures" / "reject" / "canonicalization-edge.json"
+QUARANTINE_FIXTURE = ROOT / "fixtures" / "anchoring" / "quarantine_timeout.att"
 
 
 @pytest.mark.parametrize(
@@ -92,14 +101,100 @@ def test_verify_help_lists_strict_flags_and_exit_codes(
     assert "1 verification failure" in out
     assert "2 quarantine" in out
     assert "3 usage" in out
+    assert "4 taxonomy pin mismatch" in out
+
+
+@pytest.mark.parametrize(
+    ("case_id", "argv", "expected_rc", "expected_exit_code", "expected_reason_code"),
+    [
+        pytest.param(
+            "pass",
+            ["verify", "--json", str(PASS_FIXTURE)],
+            0,
+            0,
+            None,
+            id="pass",
+        ),
+        pytest.param(
+            "canonical_mismatch",
+            ["verify", "--json", str(FAIL_FIXTURE)],
+            1,
+            1,
+            VERIFY_REASON_CANONICAL_MISMATCH,
+            id="canonical_mismatch",
+        ),
+        pytest.param(
+            "quarantine",
+            ["verify", "--json", str(QUARANTINE_FIXTURE)],
+            2,
+            2,
+            VERIFY_REASON_SCHEMA_UNKNOWN,
+            id="quarantine",
+        ),
+        pytest.param(
+            "taxonomy_pinning_mismatch",
+            [
+                "verify",
+                "--json",
+                str(PASS_FIXTURE),
+                "--require-taxonomy-version",
+                "2",
+            ],
+            VERIFY_EXIT_CODE_PINNING_MISMATCH,
+            VERIFY_EXIT_CODE_PINNING_MISMATCH,
+            VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+            id="taxonomy_pinning_mismatch",
+        ),
+        pytest.param(
+            "usage_error",
+            ["verify", "--json", str(FIXTURES / "missing-bundle.json")],
+            3,
+            3,
+            VERIFY_REASON_SCHEMA_INVALID,
+            id="usage_error",
+        ),
+    ],
+)
+def test_verify_json_exit_code_contract_table(
+    case_id: str,
+    argv: list[str],
+    expected_rc: int,
+    expected_exit_code: int,
+    expected_reason_code: str | None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = main(argv)
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert rc == expected_rc
+    assert payload["schema_version"] == 1
+    assert payload["exit_code"] == expected_exit_code
+    assert payload["result"] == ("pass" if expected_exit_code == 0 else "fail")
+    if case_id == "quarantine":
+        assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+    if expected_reason_code is None:
+        assert payload["reason_code"] is None
+    else:
+        assert payload["reason_code"] == expected_reason_code
 
 
 @pytest.mark.parametrize(
     ("taxonomy_version", "mutate", "expected_rc", "expected_reason"),
     [
         (1, None, 0, None),
-        (2, None, 2, VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED),
-        (1, "remove", 2, VERIFY_REASON_SCHEMA_VERSION_MISSING),
+        (
+            2,
+            None,
+            VERIFY_EXIT_CODE_PINNING_MISMATCH,
+            VERIFY_REASON_SCHEMA_VERSION_UNSUPPORTED,
+        ),
+        (
+            1,
+            "remove",
+            VERIFY_EXIT_CODE_PINNING_MISMATCH,
+            VERIFY_REASON_SCHEMA_VERSION_MISSING,
+        ),
     ],
 )
 def test_verify_require_taxonomy_version_pin(
