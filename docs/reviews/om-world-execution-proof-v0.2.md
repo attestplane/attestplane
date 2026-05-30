@@ -64,7 +64,7 @@ ask carried into v0.2 freeze, and the failure mode to watch for.
   verifier plus versioned schemas plus exported evidence bytes; hosted
   indices/APIs are a convenience layer only.
 - **Current location in om-world.**
-  [`docs/execution-proof.md#on-chain-verification`](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md#on-chain-verification),
+  [`docs/execution-proof.md#on-chain-verification`](https://github.com/omworldprotocol/om-world/blob/61979b1/docs/execution-proof.md#on-chain-verification),
   introduced at commit
   [`61979b1`](https://github.com/omworldprotocol/om-world/commit/61979b1)
   as a first-class "Rule (verifier independence)" alongside the existing
@@ -86,7 +86,7 @@ ask carried into v0.2 freeze, and the failure mode to watch for.
   deletion, destroy the sidecar AND append a signed deletion-evidence
   event preserving append-only.
 - **Current location in om-world.**
-  [`docs/execution-proof.md#deletion-evidence-commit-then-redact`](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md#deletion-evidence-commit-then-redact),
+  [`docs/execution-proof.md#deletion-evidence-commit-then-redact`](https://github.com/omworldprotocol/om-world/blob/61979b1/docs/execution-proof.md#deletion-evidence-commit-then-redact),
   added as a top-level section at commit
   [`61979b1`](https://github.com/omworldprotocol/om-world/commit/61979b1).
 - **Framing to preserve through freeze.** This is a profile for
@@ -109,7 +109,7 @@ ask carried into v0.2 freeze, and the failure mode to watch for.
   cluster, with the AIA-12 *aligned* profile framing — not a "compliant"
   or "certified" framing — preserved verbatim.
 - **Current location in om-world.**
-  [`docs/execution-proof.md#related-work`](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md#related-work),
+  [`docs/execution-proof.md#related-work`](https://github.com/omworldprotocol/om-world/blob/61979b1/docs/execution-proof.md#related-work),
   alongside Trusteedxyz, Tyche Institute / EATF, and Occasio Labs;
   introduced at commit
   [`61979b1`](https://github.com/omworldprotocol/om-world/commit/61979b1).
@@ -158,7 +158,7 @@ discipline:
 - **Allowed landing points:**
   - `docs/architecture/verifier_independence.md` — short "Related"
     paragraph at the end pointing to
-    [`omworldprotocol/om-world` `docs/execution-proof.md#on-chain-verification`](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md#on-chain-verification).
+    [`omworldprotocol/om-world` `docs/execution-proof.md#on-chain-verification`](https://github.com/omworldprotocol/om-world/blob/61979b1/docs/execution-proof.md#on-chain-verification).
   - `docs/adr/0015-retention-deletion-proof-profile.md` — "References"
     footer naming the cross-adoption.
 - **Fenced off from cross-reference:**
@@ -233,9 +233,9 @@ discipline:
 - om-world adoption commit
   [`61979b1`](https://github.com/omworldprotocol/om-world/commit/61979b1).
 - om-world baseline spec text
-  [`docs/execution-proof.md`](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md).
+  [`docs/execution-proof.md`](https://github.com/omworldprotocol/om-world/blob/61979b1/docs/execution-proof.md).
 - om-world GENESIS-BUILDERS policy
-  [`GENESIS-BUILDERS.md`](https://github.com/omworldprotocol/om-world/blob/main/GENESIS-BUILDERS.md).
+  [`GENESIS-BUILDERS.md`](https://github.com/omworldprotocol/om-world/blob/61979b1/GENESIS-BUILDERS.md).
 - attestplane local closure record
   `docs/validation/issue_7_closure_report_20260519.md`.
 

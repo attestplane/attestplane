@@ -26,7 +26,7 @@ What does *not* require an ADR:
 
 ## Convention
 
-We use the [Michael Nygard ADR template](https://github.com/joelparkerhenderson/architecture-decision-record/blob/main/locales/en/templates/decision-record-template-by-michael-nygard/index.md). Each ADR is a separate file named `NNNN-short-title.md` where `NNNN` is a four-digit, zero-padded sequence number.
+We use the [Michael Nygard ADR template](https://raw.githubusercontent.com/joelparkerhenderson/architecture-decision-record/main/locales/en/templates/decision-record-template-by-michael-nygard/index.md). Each ADR is a separate file named `NNNN-short-title.md` where `NNNN` is a four-digit, zero-padded sequence number.
 
 | Field | Required | Notes |
 |---|---|---|

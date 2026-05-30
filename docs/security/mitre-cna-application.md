@@ -186,7 +186,7 @@ project answers regardless of label wording.
 
 | cveform field | Value to paste |
 |---------------|----------------|
-| Public vulnerability-disclosure policy URL | `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` |
+| Public vulnerability-disclosure policy URL | `../../SECURITY.md` |
 | Public security contact email (must match disclosure policy) | `security@attestplane.com` |
 | Acknowledgement SLA | 7 days from receipt (per `SECURITY.md § Response Timeline`) |
 | Triage / initial severity SLA | 14 days from receipt |
@@ -210,7 +210,7 @@ project answers regardless of label wording.
 
 | cveform field | Value to paste |
 |---------------|----------------|
-| Disclosure policy URL | `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` |
+| Disclosure policy URL | `../../SECURITY.md` |
 | Public repository URL | `https://github.com/attestplane/attestplane/` |
 | License | Apache-2.0 |
 | OpenSSF Best Practices badge | `https://www.bestpractices.dev/projects/12924/` (passing) |
@@ -225,7 +225,7 @@ Items the maintainer should have ready *before* opening the cveform
 submission. None of these need to be inlined into the form itself,
 but reviewers may request them by reply.
 
-- [ ] **Disclosure policy URL stable** at `https://github.com/attestplane/attestplane/blob/main/SECURITY.md` — confirmed reachable and not behind a redirect chain.
+- [ ] **Disclosure policy URL stable** at `../../SECURITY.md` — confirmed reachable and not behind a redirect chain.
 - [ ] **Acknowledgement SLA published** in the same document (7-day per `SECURITY.md`). Reviewers verify this with their own browser.
 - [ ] **Institutional security contact** (`security@attestplane.com`) confirmed receiving mail and routing to maintainer queue. Send a self-test from an external address.
 - [ ] **Second triage contact** designated and the contact aware of the responsibility (verbal/email confirmation retained).

@@ -102,11 +102,11 @@ versioned schemas. APIs are helpful, but not authoritative.
 
 The verifier-independence rule converged independently with the OM World
 Execution Proof spec. OM World's [`docs/execution-proof.md` §On-chain
-verification](https://github.com/omworldprotocol/om-world/blob/main/docs/execution-proof.md#on-chain-verification)
+verification](https://github.com/omworldprotocol/om-world/blob/61979b1/docs/execution-proof.md#on-chain-verification)
 now carries the same rule — the trust root MUST be the deterministic
 open-source verifier + versioned schemas + exported evidence bytes, with
 hosted indices/APIs as a convenience layer that verification correctness MUST
 NOT depend on. The cross-adoption is tracked in
 [issue #7](https://github.com/attestplane/attestplane/issues/7); attestplane is
 listed as a Genesis Reviewer of that spec
-([CONTRIBUTORS.md](https://github.com/omworldprotocol/om-world/blob/main/CONTRIBUTORS.md#execution-proof)).
+([CONTRIBUTORS.md](https://github.com/omworldprotocol/om-world/blob/61979b1/CONTRIBUTORS.md#execution-proof)).

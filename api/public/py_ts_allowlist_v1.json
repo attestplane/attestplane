@@ -1154,6 +1154,14 @@
     },
     {
       "classification": "language_specific",
+      "python": true,
+      "reason": "Python verifier exposes typed anchoring verification state; TypeScript currently exposes a different shaped result surface.",
+      "review_by": "v0.0.3-alpha",
+      "symbol": "VerifyAnchoringState",
+      "typescript": false
+    },
+    {
+      "classification": "language_specific",
       "python": false,
       "reason": "Same wire-level concept uses snake_case in Python and camelCase/factory naming in TypeScript.",
       "review_by": "v0.0.3-alpha",

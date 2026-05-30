@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 > **Companion to**: [`docs/validation/aios_to_attestplane_absorption_audit_20260517.md`](../validation/aios_to_attestplane_absorption_audit_20260517.md), [ADR-0009](../adr/0009-aios-absorption-boundary.md), [ADR-0004](../adr/0004-aios-to-attestplane-boundary.md).
 > **Status**: read-only mapping. Every absorbed shape must appear here with `source_path` / `shape_absorbed` / `fields_dropped` before its schema lands in `schemas/v1/`.
-> **Relationship**: Attestplane (Apache-2.0, this repo) was extracted from AIOS (proprietary commercial product) as the open-source compliance / substrate module. **The founder owns copyright to both repositories.** Verified: Attestplane LICENSE file = Apache-2.0 (`https://github.com/attestplane/attestplane/blob/main/LICENSE`); AIOS = proprietary commercial product (founder-authoritative).
+> **Relationship**: Attestplane (Apache-2.0, this repo) was extracted from AIOS (proprietary commercial product) as the open-source compliance / substrate module. **The founder owns copyright to both repositories.** Verified: Attestplane LICENSE file = Apache-2.0 (`../../LICENSE`); AIOS = proprietary commercial product (founder-authoritative).
 >
 > **Hard rule**: no AIOS Rust file appears as a verbatim copy under `sdk/`. The constraint is strategic, not legal — the founder may legally relicense any AIOS file to Apache-2.0 as part of an extraction, but the absorption discipline below prevents authority surface from drifting into the OSS substrate.
 >

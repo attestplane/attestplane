@@ -64,7 +64,7 @@ ADR:
 ## DCO sign-off confirmation
 
 - [ ] All commits in this PR include a `Signed-off-by:` trailer matching the commit author.
-- [ ] I have read [CONTRIBUTING.md](https://github.com/attestplane/attestplane/blob/main/CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](https://github.com/attestplane/attestplane/blob/main/CODE_OF_CONDUCT.md).
+- [ ] I have read [CONTRIBUTING.md](../CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 
 ## AI tool disclosure (transparency, not gatekeeping)
 
