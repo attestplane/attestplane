@@ -38,6 +38,9 @@ QUARANTINE_FIXTURE = CONFORMANCE_FIXTURES / "unknown_required_field.att"
 SCHEMA_VERSION_ADDITIVE_FIXTURE = (
     ROOT / "tests" / "conformance" / "schema_version" / "additive_with_unknown_field_ok" / "bundle.json"
 )
+SCHEMA_VERSION_REQUIRED_FIXTURE = (
+    ROOT / "tests" / "conformance" / "schema_version" / "unknown_required_field" / "bundle.json"
+)
 GOLDEN_FIXTURE = CONFORMANCE_FIXTURES / "golden" / "verify_json_v1.8.19.json"
 VERIFY_JSON_GOLDEN = json.loads(GOLDEN_FIXTURE.read_text(encoding="utf-8"))
 VERIFY_JSON_EXIT_CODES = {
@@ -210,6 +213,24 @@ def test_verify_json_unknown_required_field_fixture_is_quarantined(
     assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
     assert payload["taxonomy_version"] == 1
     assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
+    assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
+
+
+def test_verify_json_schema_version_unknown_required_field_is_quarantined(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc, payload, stderr = _run_verify(["verify", "--json", str(SCHEMA_VERSION_REQUIRED_FIXTURE)], capsys)
+
+    assert rc == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert stderr == ""
+    assert payload["schema_version"] == 1
+    assert payload["result"] == "fail"
+    assert payload["exit_code"] == VERIFY_JSON_EXIT_CODES["quarantine"]
+    assert payload["reason_code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert payload["taxonomy_version"] == 1
+    assert payload["reasons"][0]["code"] == VERIFY_REASON_SCHEMA_UNKNOWN
+    assert payload["reasons"][0]["message"] == "bundle metadata closure failed"
     assert payload["reasons"][0]["path"] == "/chain_metadata/critical_future_field"
     assert payload["anchoring"] == {"status": "quarantined", "quarantined": True}
 

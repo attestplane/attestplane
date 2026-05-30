@@ -29,6 +29,8 @@
     },
     {
       "case_id": "unknown_required_field",
+      "expected_error_code": "VERIFY_METADATA_CLOSURE_FAILED",
+      "expected_metadata_reason": "chain_metadata.critical_future_field is an unknown required field",
       "chain_metadata_fields": [
         "critical_future_field"
       ],
