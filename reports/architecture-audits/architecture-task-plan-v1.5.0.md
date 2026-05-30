@@ -13,11 +13,12 @@
 
 ## P0 Issues
 
-### ISSUE 1 · [P0][verifier][api] Wire ReasonCodeV1 into BundleVerificationResult
+### ISSUE 1 · [P0]\[verifier\]\[api\] Wire ReasonCodeV1 into BundleVerificationResult
 
 **Priority**: P0  
 **Owner**: verifier / SDK API  
 **Affected modules**:
+
 - Python SDK `verifier.py` — `BundleVerificationResult` dataclass
 - Python SDK `reason_codes.py` — `ReasonCodeV1` enum (already frozen, additive-only)
 - Python SDK `verify_reason_codes.py` — reason-derivation bridge
@@ -26,6 +27,7 @@
 - Proof bundle schema (if `reason_code` is exposed in `verification_report`)
 
 **Acceptance criteria**:
+
 1. `BundleVerificationResult` gains an additive `reason_code: ReasonCodeV1 | None` field that does not break existing consumers reading `ok`, `reasons`, `error_code`, or `anchoring`.
 2. Every verify outcome (OK, chain mismatch, schema invalid, signature missing, anchor invalid, etc.) produces the correct ADR-0010 ReasonCodeV1 value.
 3. The existing `VERIFY_REASON_*` / `att.verify.*` codes remain unchanged and continue to be emitted in `reasons`.
@@ -34,6 +36,7 @@
 6. Backward compatibility is maintained: old consumers see no new required fields, no removed fields, and no changed field names.
 
 **Validation commands**:
+
 ```bash
 cd sdk/python && python3.11 -m pytest tests/ -k 'verifier or reason_code or taxonomy' -x -q --tb=short 2>&1 | tail -20
 cd sdk/typescript && npm test -- --runInBand -t 'verifier|reasonCode|taxonomy'
@@ -41,23 +44,26 @@ git diff --check
 ```
 
 **Rollout / migration notes**:
+
 - The new `reason_code` field is additive-only (`None` when multiple distinct codes apply).
 - Do not remove or rename `error_code`, `reasons`, or any existing `BundleVerificationResult` fields.
 - The bridge logic should map every `VerifyReasonCodeV1` value to a canonical `ReasonCodeV1` value (e.g., `att.verify.canonical_mismatch` → `CHAIN_EVENT_HASH_MISMATCH`). For multi-reason outcomes, leave `reason_code` as `None` and document that consumers should iterate `reasons` for the full picture.
 
 ## P1 Issues
 
-### ISSUE 2 · [P1][test][conformance] Add cross-SDK conformance vectors for ReasonCodeV1
+### ISSUE 2 · [P1]\[test\]\[conformance\] Add cross-SDK conformance vectors for ReasonCodeV1
 
 **Priority**: P1  
 **Owner**: conformance  
 **Affected modules**:
+
 - Python conformance vectors
 - Python verifier conformance tests
 - TypeScript verifier conformance tests
 - Fixture-lock maintenance
 
 **Acceptance criteria**:
+
 1. Add a conformance vector set that maps every ReasonCodeV1 value (from `CHAIN_OK` through `VERIFIER_INTERNAL_ERROR`) to a known proof-bundle fixture and its expected verify outcome.
 2. Include positive vectors: bundles that verify cleanly → `CHAIN_OK`, valid-signature bundles → `SIGNATURE_OK`, valid-anchor bundles → `ANCHOR_OK`.
 3. Include negative vectors: tampered-hash bundle → `CHAIN_EVENT_HASH_MISMATCH`, missing-signature bundle → `SIGNATURE_MISSING`, expired-cert anchor → `ANCHOR_CERT_EXPIRED`, etc.
@@ -65,6 +71,7 @@ git diff --check
 5. The conformance fixtures are added to the existing fixture-lock validation to prevent accidental regeneration.
 
 **Validation commands**:
+
 ```bash
 cd sdk/python && python3.11 -m pytest tests/conformance -k 'reason_code or ReasonCodeV1' -x -q --tb=short 2>&1 | tail -20
 cd sdk/python && python3.11 -m pytest sdk/python/tests/conformance -k 'reason_code' -x -q --tb=short 2>&1 | tail -20
@@ -74,15 +81,17 @@ git diff --check
 ```
 
 **Rollout / migration notes**:
+
 - New fixture files must not be added under a path that would conflict with the existing v1 conformance vector layout.
 - Update locked fixture hashes explicitly; do not regenerate unrelated fixtures.
 - The vector schema must carry both the expected `ReasonCodeV1` value and the existing expected `att.verify.*` code(s) to pin the bridge mapping.
 
-### ISSUE 3 · [P1][conformance][obligations] Ship NIS2 Article 21 and GDPR Article 30 obligation registry stubs
+### ISSUE 3 · [P1]\[conformance\]\[obligations\] Ship NIS2 Article 21 and GDPR Article 30 obligation registry stubs
 
 **Priority**: P1  
 **Owner**: conformance / obligations  
 **Affected modules**:
+
 - `obligations/nis2_article_21.json` (new file)
 - `obligations/gdpr_article_30.json` (new file)
 - `obligations/__init__.py` — add `load_nis2_article_21`, `load_gdpr_article_30`
@@ -90,6 +99,7 @@ git diff --check
 - Python conformance tests for obligations
 
 **Acceptance criteria**:
+
 1. NIS2 Article 21 JSON registry follows the same schema as `eu_ai_act_article_12.json`, covering at least the incident notification (Art 21(2)), supply chain security (Art 21(2)(d)), and risk assessment (Art 21(1)) obligations, each mapped to the appropriate v1 event types.
 2. GDPR Article 30 JSON registry covers record-of-processing-activities (Art 30(1)), categories of processing (Art 30(1)(a-f)), and technical-organisational measures (Art 30(5)) obligations.
 3. Both registries load successfully via `Registry.load_file()` and pass the existing `test_obligation_registry_structure` suite.
@@ -97,6 +107,7 @@ git diff --check
 5. Each entry's `implementation_status` is set to `designed_toward` (stub, not field-supported) with a note referencing the future implementation issue.
 
 **Validation commands**:
+
 ```bash
 cd sdk/python && python3.11 -m pytest tests/ -k 'obligation or registry' -x -q --tb=short 2>&1 | tail -20
 cd sdk/python && python3.11 -c "from attestplane.obligations import load_all_registries; r = load_all_registries(); assert len(r) >= 4, f'expected >=4 registries, got {len(r)}'"
@@ -104,33 +115,38 @@ git diff --check
 ```
 
 **Rollout / migration notes**:
+
 - These are stub registries only. Do not claim field-level compliance for NIS2 or GDPR; every entry must carry `implementation_status: "designed_toward"` and an explicit `"note": "stub shipped for v1.5.0; field-level implementation tracked in #<follow-up-issue>"`.
 - Do not modify existing EU AI Act or DORA entries.
 
 ## P2 Issues
 
-### ISSUE 4 · [P2][docs][release] Document the v1.5.0 user-visible delta and validation evidence
+### ISSUE 4 · [P2]\[docs\]\[release\] Document the v1.5.0 user-visible delta and validation evidence
 
 **Priority**: P2  
 **Owner**: docs / release  
 **Affected modules**:
+
 - docs
 - validation evidence
 - runbooks
 
 **Acceptance criteria**:
+
 1. Document the v1.5.0 user-visible delta: `BundleVerificationResult.reason_code` (ADR-0010), new obligation registries (NIS2 Art 21, GDPR Art 30), and CLI `--json` serialization of `reason_code`.
 2. Record the validation evidence from ISSUE 1 and ISSUE 3 on the task issue before close.
 3. Link the documentation to the source planning issue and the three task issues.
 4. Keep wording within claim-safety boundaries and do not touch `CHANGELOG.md`.
 
 **Validation commands**:
+
 ```bash
 markdown-link-check docs/**/*.md
 git diff --check
 ```
 
 **Rollout / migration notes**:
+
 - This is support work for the product increments in ISSUE 1 and ISSUE 3.
 - Do not modify release tags, publish artifacts, or weaken gates.
 - Documentation must not imply that NIS2 or GDPR compliance is certified or audited.
