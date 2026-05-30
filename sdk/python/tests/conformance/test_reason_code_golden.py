@@ -167,10 +167,7 @@ def test_reason_code_golden_lock() -> None:
             diff = _diff_section(section, golden_sec, live_sec)
             errors.append(f"  [{section}] silent drift within version {live_sec['version']}:\n{diff}")
         elif live_sec["count"] != golden_sec["count"]:
-            errors.append(
-                f"  [{section}] count mismatch: golden={golden_sec['count']} "
-                f"live={live_sec['count']}"
-            )
+            errors.append(f"  [{section}] count mismatch: golden={golden_sec['count']} live={live_sec['count']}")
 
     if errors:
         msg_parts = [
@@ -182,14 +179,16 @@ def test_reason_code_golden_lock() -> None:
             "Details:",
         ]
         msg_parts.extend(errors)
-        msg_parts.extend([
-            "",
-            "To regenerate the golden snapshot after a deliberate version bump:",
-            "  REASON_CODE_GOLDEN_UPDATE=1 python3.11 -m pytest \\",
-            "      sdk/python/tests/conformance/test_reason_code_golden.py -x -q",
-            "",
-            "Then commit the updated reason_code_golden.json alongside the version bump.",
-        ])
+        msg_parts.extend(
+            [
+                "",
+                "To regenerate the golden snapshot after a deliberate version bump:",
+                "  REASON_CODE_GOLDEN_UPDATE=1 python3.11 -m pytest \\",
+                "      sdk/python/tests/conformance/test_reason_code_golden.py -x -q",
+                "",
+                "Then commit the updated reason_code_golden.json alongside the version bump.",
+            ]
+        )
         msg = "\n".join(msg_parts)
         raise AssertionError(msg)
 
