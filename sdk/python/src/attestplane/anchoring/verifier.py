@@ -43,15 +43,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
 from attestplane.anchoring.base import (
     ANCHOR_SCHEMA_VERSION,
     AnchorRecord,
     AnchorVerificationError,
+    TimestampRequest,
+    TSAUnavailableError,
 )
 from attestplane.hashchain import verify_chain
 from attestplane.types import ChainedEvent
+from attestplane.verify_reason_codes import (
+    VERIFY_REASON_ANCHOR_INVALID,
+    VERIFY_REASON_ANCHOR_QUARANTINED,
+)
 
 CertStatus = Literal[
     "VALID",
@@ -445,10 +451,143 @@ def verify_chain_with_anchors(
     )
 
 
+LIVE_ANCHOR_QUARANTINE_EXIT_CODE: Final[int] = 2
+"""Exit code for a live-anchor quarantine.
+
+Aligns with the CLI exit-code contract in
+:mod:`attestplane.cli.verify_json` (0=verified, 1=verification_failure,
+2=quarantine/pinning-gate, 3=usage_error). A quarantined anchor is a
+claim-safe 'unknown', distinct from a hard verification failure (1)."""
+
+
+LiveAnchorStatus = Literal["verified", "failed", "quarantined"]
+
+
+@dataclass(frozen=True, slots=True)
+class LiveAnchorResult:
+    """Outcome of :func:`verify_live_anchor_with_provider`.
+
+    claim-safe tri-state: ``verified`` (anchor cryptographically
+    verified), ``failed`` (TSA reachable but anchor invalid / expired /
+    tampered), ``quarantined`` (TSA unreachable -- neither a verified
+    nor a failed claim).
+    """
+
+    status: LiveAnchorStatus
+    exit_code: int
+    reason_code: str | None
+    claim_verified: bool
+    anchor_record: AnchorRecord | None
+    verification_result: AnchorVerificationResult | None
+
+
+def verify_live_anchor_with_provider(
+    event: ChainedEvent,
+    provider: Any,
+    *,
+    trust_roots_der: list[bytes] | None = None,
+    verification_time: datetime | None = None,
+    verify_ocsp: bool = True,
+) -> LiveAnchorResult:
+    """Request a live timestamp for ``event`` and verify it, claim-safe.
+
+    Failure-mode routing per ADR-0003 § 4:
+
+    - Provider raises :class:`TSAUnavailableError` (TSA unreachable /
+      timeout / 5xx) -> ``status="quarantined"``. This is NOT a verified
+      claim and NOT a hard failure; the anchor evidence simply could not
+      be obtained.
+    - Provider returns an :class:`AnchorRecord` that fails verification
+      (tampered token, expired cert, OCSP revoked) -> ``status="failed"``,
+      ``exit_code=1``.
+    - Provider returns an anchor that cryptographically verifies ->
+      ``status="verified"``, ``exit_code=0``.
+
+    A ``VALID_UNVERIFIED`` anchor (no ``trust_roots_der`` supplied, so no
+    LTV verification was possible) maps to ``failed``, never ``verified``:
+    claiming 'verified' without verification evidence would be a false
+    compliance assertion.
+    """
+    request = TimestampRequest(digest=event.event_hash)
+    now = verification_time or datetime.now(UTC)
+
+    try:
+        anchor = provider.request_timestamp(
+            request,
+            anchored_seq=event.seq,
+            now=now,
+        )
+    except TSAUnavailableError:
+        return LiveAnchorResult(
+            status="quarantined",
+            exit_code=LIVE_ANCHOR_QUARANTINE_EXIT_CODE,
+            reason_code=VERIFY_REASON_ANCHOR_QUARANTINED,
+            claim_verified=False,
+            anchor_record=None,
+            verification_result=None,
+        )
+
+    verification = verify_chain_with_anchors(
+        [event],
+        [anchor],
+        trust_roots_der=trust_roots_der,
+        verification_time=verification_time,
+        verify_ocsp=verify_ocsp,
+    )
+
+    if verification.ok:
+        return LiveAnchorResult(
+            status="verified",
+            exit_code=0,
+            reason_code=None,
+            claim_verified=True,
+            anchor_record=anchor,
+            verification_result=verification,
+        )
+
+    # Verification did not pass. Distinguish a claim-safe *quarantine* from
+    # a hard *failure*:
+    #
+    # - The anchor lacks the long-term-validation artifacts required to
+    #   fully evaluate it (e.g. a live TSA token with no embedded OCSP
+    #   response, or no cert chain). It can be neither proven valid nor
+    #   proven invalid -> ``quarantined`` (claim-safe "unknown", never a
+    #   verified claim, never a silent pass).
+    # - The anchor carries complete artifacts but is provably invalid
+    #   (tampered signature, expired/revoked cert) -> ``failed``.
+    #
+    # Claim-safety note: an anchor lacking artifacts is treated as
+    # "unknown" rather than "failed"; quarantine never asserts a verified
+    # claim, so this can never produce a false attestation.
+    lacks_ltv_artifacts = not anchor.ocsp_responses or not anchor.tsa_cert_chain
+    if lacks_ltv_artifacts:
+        return LiveAnchorResult(
+            status="quarantined",
+            exit_code=LIVE_ANCHOR_QUARANTINE_EXIT_CODE,
+            reason_code=VERIFY_REASON_ANCHOR_QUARANTINED,
+            claim_verified=False,
+            anchor_record=anchor,
+            verification_result=verification,
+        )
+
+    return LiveAnchorResult(
+        status="failed",
+        exit_code=1,
+        reason_code=VERIFY_REASON_ANCHOR_INVALID,
+        claim_verified=False,
+        anchor_record=anchor,
+        verification_result=verification,
+    )
+
+
 __all__ = [
+    "LIVE_ANCHOR_QUARANTINE_EXIT_CODE",
     "AnchorVerificationResult",
     "AnchorVerificationStatus",
     "CertStatus",
+    "LiveAnchorResult",
+    "LiveAnchorStatus",
     "SingleAnchorResult",
     "verify_chain_with_anchors",
+    "verify_live_anchor_with_provider",
 ]
