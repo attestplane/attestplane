@@ -7,6 +7,7 @@ import asyncio
 import importlib.util
 import sqlite3
 import sys
+from contextlib import closing
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -50,9 +51,16 @@ class _FakeClient:
         return self.handles[workflow_id]
 
 
-def test_cleanup_orphaned_runs_marks_non_running_workflows_failed(tmp_path: Path) -> None:
+def test_cleanup_orphaned_runs_marks_terminal_workflows_failed(tmp_path: Path) -> None:
+    # Startup cleanup only fails runs whose Temporal workflow is in a TERMINAL
+    # state (FAILED/TERMINATED/TIMED_OUT/CANCELED). It conservatively leaves:
+    #   - RUNNING workflows (still live),
+    #   - COMPLETED workflows (finished normally; overwriting would erase
+    #     merge-success records — M1),
+    #   - workflows whose describe() raises (status unknown — skip, don't guess).
+    # Rows already in a terminal DB stage (merged/failed/...) are not candidates.
     db_path = tmp_path / "autodev_state.db"
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             """
             CREATE TABLE pipeline_runs (
@@ -66,11 +74,12 @@ def test_cleanup_orphaned_runs_marks_non_running_workflows_failed(tmp_path: Path
         connection.executemany(
             "INSERT INTO pipeline_runs (issue_number, stage) VALUES (?, ?)",
             [
-                (1, "implementing"),
-                (2, "reviewing"),
-                (3, "approved"),
-                (4, "merged"),
-                (5, "failed"),
+                (1, "implementing"),  # RUNNING -> leave
+                (2, "reviewing"),     # COMPLETED -> leave (preserve success)
+                (3, "approved"),      # describe raises -> skip
+                (4, "merged"),        # not a candidate (terminal DB stage)
+                (5, "failed"),        # not a candidate
+                (6, "implementing"),  # TERMINATED -> mark failed
             ],
         )
 
@@ -79,27 +88,32 @@ def test_cleanup_orphaned_runs_marks_non_running_workflows_failed(tmp_path: Path
             "autodev-issue-1": _FakeHandle(WorkflowExecutionStatus.RUNNING),
             "autodev-issue-2": _FakeHandle(WorkflowExecutionStatus.COMPLETED),
             "autodev-issue-3": _FakeHandle(None, raises=True),
+            "autodev-issue-6": _FakeHandle(WorkflowExecutionStatus.TERMINATED),
         }
     )
 
     cleaned = asyncio.run(worker._cleanup_orphaned_runs(client, db_path))
 
-    assert cleaned == 2
+    # Only issue 6 (TERMINATED) is orphaned.
+    assert cleaned == 1
+    # Only non-terminal-DB-stage rows are inspected; 4 (merged) and 5 (failed) skipped.
     assert client.requested == [
         "autodev-issue-1",
         "autodev-issue-2",
         "autodev-issue-3",
+        "autodev-issue-6",
     ]
 
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         rows = connection.execute(
             "SELECT issue_number, stage, error FROM pipeline_runs ORDER BY issue_number"
         ).fetchall()
 
     assert rows == [
         (1, "implementing", None),
-        (2, "failed", "orphaned: workflow not running at startup"),
-        (3, "failed", "orphaned: workflow not running at startup"),
+        (2, "reviewing", None),
+        (3, "approved", None),
         (4, "merged", None),
         (5, "failed", None),
+        (6, "failed", "orphaned: workflow terminal at startup"),
     ]

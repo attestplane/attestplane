@@ -178,20 +178,18 @@ source = ["src/attestplane"]
 branch = true
 
 [tool.coverage.report]
-# fail_under = 87: lowered iteratively as P3.1 → P3.2 → P3.3 → P3.4
-# alpha CLI surface accrued in cli/proofbundle_alpha.py
-# (~462 stmts after P3.4 real DSSE PAE + RFC-3161 wiring at ~78%
-# coverage). The trajectory:
+# fail_under history:
 #   - pre-P3.1 baseline: 90%
-#   - 2026-05-18 P3.4 (real crypto wiring): 87%
-# This is tracked as a P1 follow-up tech debt: restore to >= 90% by
-# adding negative-branch coverage to cli/proofbundle_alpha (each
-# fail-closed return path) + anchoring/verifier cert-chain-walk
-# paths. See docs/validation/p3_*_verification_report.md for the
-# scope boundary, and ATTESTATION_GATES.md for the alpha-stage
-# coverage policy. Lowering is honest fail-closed disclosure, not
-# silent quality regression.
-fail_under = 87
+#   - 2026-05-18 P3.4 (real crypto wiring): lowered to 87% as honest
+#     fail-closed disclosure of the alpha CLI surface tech debt
+#     (cli/proofbundle_alpha.py + anchoring/verifier cert-chain walk
+#     accrued uncovered fail-closed return paths).
+#   - 2026-06-07: tech debt paid down. Added negative-branch coverage
+#     across the anchoring stack (rfc3161/ocsp/sigstore/eidas/verifier),
+#     signing, retention/replay/storage, and the alpha + verify_json CLI
+#     surfaces. Whole-SDK coverage restored to ~99.8%; gate ratcheted to
+#     95% to lock in the floor and prevent silent regression.
+fail_under = 95
 show_missing = true
 skip_covered = false
 
