@@ -35,6 +35,20 @@
       "expected_reason_code": "att.verify.schema_unknown",
       "expected_secondary_reasons": [],
       "ok": false
+    },
+    {
+      "case_id": "additive_top_level_unknown_field_ok",
+      "chain_metadata_fields": [],
+      "expected_reason_code": null,
+      "expected_secondary_reasons": [],
+      "ok": true
+    },
+    {
+      "case_id": "unknown_required_report_field",
+      "chain_metadata_fields": [],
+      "expected_reason_code": "att.verify.schema_unknown",
+      "expected_secondary_reasons": [],
+      "ok": false
     }
   ]
 }
