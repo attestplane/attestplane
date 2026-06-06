@@ -28,7 +28,7 @@ if temporal workflow start \
     --task-queue     "autodev" \
     --type           "AutodevPipeline" \
     --workflow-id    "autodev-issue-${ISSUE_NUMBER}" \
-    --execution-timeout "2h" \
+    --execution-timeout "6h" \
     --input          "${INPUT_JSON}" 2>&1; then
   echo "✅ Temporal workflow started for issue #${ISSUE_NUMBER}"
 else
