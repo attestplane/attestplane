@@ -96,7 +96,11 @@ stable or production-readiness claims. The minimum evidence is:
 
 ## npm Latest Decision
 
-The current npm default install path is intentionally moved to the CA line:
+> **Current state (2026-06-07):** `latest` = `1.10.0`, `ca` = `1.10.0`,
+> `beta` = `0.8.0-beta.0`, `rc` = `0.8.6-rc.1`. The `0.8.5` snapshot below is
+> the superseded historical record — see "Current Decision" at the top.
+
+The 2026-05-20 npm default install path was intentionally moved to the CA line:
 
 - `latest`: `0.8.5`
 - `ca`: `0.8.5`
