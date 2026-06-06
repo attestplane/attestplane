@@ -71,13 +71,25 @@ class AutodevPipeline:
 
         # Wait for CI; if it fails, run Codex once to auto-fix errors.
         # merge_pr_activity does its own final CI check before merging.
-        await workflow.execute_activity(
+        # fix_ci runs on _REVIEW_QUEUE to avoid occupying implement slots for up to 30 min.
+        # (M4 fix — restore P0 queue decoupling)
+        fix_result = await workflow.execute_activity(
             fix_ci_activity,
             args=[n, pr["pr_number"]],
-            task_queue=_TASK_QUEUE,
+            task_queue=_REVIEW_QUEUE,
             start_to_close_timeout=timedelta(minutes=60),
+            heartbeat_timeout=timedelta(minutes=3),
             retry_policy=_retry_3,
         )
+        # C5 fix: consume the return value so CI failure is visible in workflow history.
+        # We do NOT abort here — merge_pr_activity performs an independent CI gate before
+        # squash-merging, so a failed fix_ci only means the fast-path is skipped.
+        if not fix_result.get("ci_passed") and not fix_result.get("fixed"):
+            workflow.logger.warning(
+                "issue #%d PR #%d: CI not passing and auto-fix produced no changes — "
+                "review will proceed but merge_pr will re-check CI before merging",
+                n, pr["pr_number"],
+            )
 
         review = await workflow.execute_activity(
             review_pr_activity,
@@ -98,12 +110,14 @@ class AutodevPipeline:
         if review["decision"] != "APPROVE":
             return f"issue #{n}: PR #{pr['pr_number']} REQUEST_CHANGES – not merging"
 
-        await workflow.execute_activity(
+        merge_result = await workflow.execute_activity(
             merge_pr_activity,
             args=[n, pr["pr_number"]],
             task_queue=_REVIEW_QUEUE,
-            start_to_close_timeout=timedelta(minutes=10),
+            start_to_close_timeout=timedelta(minutes=45),  # H5: lock(600s)+rebase+CI(300s)+merge
             retry_policy=_retry_5,
         )
 
+        if not merge_result.get("merged"):
+            return f"issue #{n}: PR #{pr['pr_number']} not merged — {merge_result.get('reason', 'unknown')}"
         return f"issue #{n}: merged PR #{pr['pr_number']} ✓"
