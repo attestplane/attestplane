@@ -37,10 +37,14 @@ from attestplane.anchoring.base import (
 from attestplane.anchoring.composite import MultiTSAProvider
 from attestplane.anchoring.mock import MockTSAProvider
 from attestplane.anchoring.verifier import (
+    LIVE_ANCHOR_QUARANTINE_EXIT_CODE,
     AnchorVerificationResult,
     CertStatus,
+    LiveAnchorResult,
+    LiveAnchorStatus,
     SingleAnchorResult,
     verify_chain_with_anchors,
+    verify_live_anchor_with_provider,
 )
 from attestplane.anchoring.worker import (
     Anchorer,
@@ -98,6 +102,7 @@ __all__ = [
     "ANCHOR_SCHEMA_VERSION",
     "ETSI_QTST_URI",
     "ETSI_TSA_URI",
+    "LIVE_ANCHOR_QUARANTINE_EXIT_CODE",
     "AnchorBoundaryError",
     "AnchorError",
     "AnchorPolicy",
@@ -109,6 +114,8 @@ __all__ = [
     "AnchorerResult",
     "CertStatus",
     "EidasError",
+    "LiveAnchorResult",
+    "LiveAnchorStatus",
     "MockTSAProvider",
     "MultiTSAProvider",
     "PendingAnchor",
@@ -122,6 +129,7 @@ __all__ = [
     "load_qualified_tsa_trust_roots",
     "parse_trusted_list",
     "verify_chain_with_anchors",
+    "verify_live_anchor_with_provider",
 ]
 
 if _HTTP_AVAILABLE:
