@@ -21,21 +21,29 @@ Any exception requires a maintainer-recorded decision before dispatch.
 
 ## Current Latest Ownership
 
-`@attestplane/attestplane@0.8.5` owns both:
+As of 2026-06-07 (supersedes the historical `0.8.5` record below):
 
-- `latest`
-- `ca`
+- `latest`: `1.10.0`
+- `ca`: repointed to `1.10.0`
 
-This was an explicit maintainer decision made after the `v0.8.5-rc.5`
-evidence gate and before the stable `v0.8.5` package cut. It means default npm
-installs exercise the Controlled Availability package while the project remains
-pre-GA.
+`latest` advanced with the `v1.x` pre-GA line. `ca` (Controlled Availability)
+is a separate, manual maintainer dist-tag decision; it was **repointed from the
+unsupported `0.8.5` to the current supported `1.10.0`** so that
+`npm install @attestplane/attestplane@ca` resolves to a supported version. See
+`docs/release/ga-ca-cut-criteria.md` (2026-06-07 decision).
 
 This does not change the claim boundary:
 
-- `0.8.5` is Controlled Availability, not GA.
-- `0.8.5` is not a production-readiness claim.
-- `0.8.5` is not a regulatory certification or legal-compliance claim.
+- `1.10.0` is Controlled Availability / pre-GA, not GA.
+- `1.10.0` is not a production-readiness claim.
+- `1.10.0` is not a regulatory certification or legal-compliance claim.
+
+### Historical record (2026-05-20)
+
+`@attestplane/attestplane@0.8.5` previously owned both `latest` and `ca`, an
+explicit maintainer decision made after the `v0.8.5-rc.5` evidence gate. The
+`0.8.x` line is now no longer supported (see `SECURITY.md`); retained here for
+provenance.
 
 The beta dist-tag may remain pinned to `0.8.0-beta.0` for reproducible
 installation of the beta line.

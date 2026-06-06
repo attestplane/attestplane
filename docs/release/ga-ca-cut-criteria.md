@@ -6,6 +6,25 @@ This document records the minimum criteria for moving Attestplane from the
 It is intentionally a decision checklist, not an implementation script. Package
 publication must continue to run through GitHub `release-cd`.
 
+## Current Decision (2026-06-07, supersedes the 2026-05-20 v0.8.5 record below)
+
+The version scheme has advanced from the `v0.8.x` line to the `v1.x` pre-GA
+line; the current released version on all channels is `v1.10.0`. The `v0.8.x`
+line is **no longer supported** (see `SECURITY.md`).
+
+Decision recorded on 2026-06-07: `ca` continues to mean **Controlled
+Availability** and is **repointed from the unsupported `0.8.5` to the current
+supported pre-GA version `1.10.0`**. CA remains a manual, maintainer-controlled
+npm dist-tag decision, separate from `latest`. As before, CA is **not** GA,
+**not** a production-readiness claim, and **not** a regulatory or
+legal-compliance certification.
+
+Everything below this section (RC ordinals, evidence cuts, dist-tag examples
+anchored to `0.8.5`) is retained as the **historical 2026-05-20 record** and is
+superseded by this section for any current cut. When executing a CA/GA cut on
+the `v1.x` line, substitute the current version for the `0.8.x` examples and run
+the same classes of evidence checks.
+
 ## Naming Decision
 
 `ca` is not a SemVer, npm, or PEP 440 release-stage identifier. Do not publish
