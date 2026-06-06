@@ -118,7 +118,10 @@ async def _cleanup_orphaned_runs(client: Client, db_path: str) -> int:
                         """,
                         [_issue],
                     )
-                # Flush WAL so thread-local worker connections see orphan updates immediately. (M3 fix)
+                # Commit the batch before checkpointing: wal_checkpoint(TRUNCATE)
+                # cannot run inside an open write transaction (SQLITE_LOCKED). (M3 fix)
+                conn.commit()
+                # Flush WAL so thread-local worker connections see orphan updates immediately.
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
         await asyncio.to_thread(_phase3_write, orphaned)
