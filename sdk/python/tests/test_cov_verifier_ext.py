@@ -222,7 +222,7 @@ def test_verify_single_signature_precedes_valid_from() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_verify_single_signature_unparseable_public_key_der() -> None:
+def test_verify_single_signature_unparsable_public_key_der() -> None:
     """Lines 201-202: load_der_public_key raises → invalid."""
     chain = _build_chain(2)
     record = _make_valid_record(_SEED_00, chain, 1)

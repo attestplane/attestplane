@@ -580,7 +580,7 @@ def test_verify_invalid_der_public_key() -> None:
 
 def test_verify_non_ed25519_public_key() -> None:
     """Line 333: DER key that is not Ed25519 raises AnchorVerificationError."""
-    from cryptography.hazmat.primitives import serialization as ser
+    from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ec
 
     authority = TestRekorAuthority(log_id="test.rekor", now=_NOW)
@@ -592,8 +592,8 @@ def test_verify_non_ed25519_public_key() -> None:
     # Generate an EC key and use its public key DER
     ec_private = ec.generate_private_key(ec.SECP256R1())
     ec_pubkey_der = ec_private.public_key().public_bytes(
-        encoding=ser.Encoding.DER,
-        format=ser.PublicFormat.SubjectPublicKeyInfo,
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
     with pytest.raises(AnchorVerificationError, match="Ed25519"):
