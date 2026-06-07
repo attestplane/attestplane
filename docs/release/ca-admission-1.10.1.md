@@ -29,6 +29,10 @@ single-source-of-truth fix (PR #621) and self-reports correctly. See
 | 5 | Release notes stating CA is not GA / not production / not regulatory / not legal-compliance | **MET** | [`v1.10.1.md` → Explicit Boundaries](../release-notes/v1.10.1.md). |
 | 6 | Rollback owner and registry correction path | **PARTIAL** | Correction path: [`npm-dist-tag-policy.md` → Manual Recovery](npm-dist-tag-policy.md). Owner: `[MAINTAINER DECISION REQUIRED]`. |
 
+> Merging this PR does **not** make 1.10.1 admissible. The
+> `[MAINTAINER DECISION REQUIRED]` rows are hard blockers the maintainer must
+> fill in before admission, not post-merge TODOs.
+
 ## Scope Notes (no silent caps)
 
 - Criterion #4 evidence is a **focused public-surface roundtrip** against the
@@ -36,8 +40,10 @@ single-source-of-truth fix (PR #621) and self-reports correctly. See
   one SDK verified by the other), not a re-run of the full byte-frozen
   conformance vector suite on the wheel. The vectors are not shipped in the
   package; the full suite runs against source in CI, and the published artifact
-  is the reproducible byte-identical build of that source. This scope boundary
-  is intentional and disclosed rather than implied as full conformance.
+  is the reproducible byte-identical build of that source — the byte-identity
+  is itself a CI signal (the `reproducible-build` workflow's "Two independent
+  runners produced byte-identical wheel" job). This scope boundary is
+  intentional and disclosed rather than implied as full conformance.
 - The `ca-postpublish-verify` workflow is **read-only** (`permissions:
   contents: read`, no registry token/OIDC, never publishes or moves a
   dist-tag). It cannot run green until `1.10.1` is published via `release-cd`.

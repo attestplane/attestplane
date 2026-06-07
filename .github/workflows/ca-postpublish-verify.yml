@@ -97,6 +97,11 @@ jobs:
           npm install "@attestplane/attestplane@${VER}"
           cp "$GITHUB_WORKSPACE/scripts/release/ca_registry_smoke.mjs" ./ca_registry_smoke.mjs
 
+          # Assert both ends resolve to the SAME published version before the
+          # roundtrip, so a single-sided version mismatch cannot pass silently.
+          "$VENV/bin/python" "$RUNNER_TEMP/smoke.py" smoke "${VER}"
+          node "$PROJ/ca_registry_smoke.mjs" smoke "${VER}"
+
           # Python-produced bundle -> verified by the npm package.
           "$VENV/bin/python" "$RUNNER_TEMP/smoke.py" emit "$XCHG/py_bundle.json"
           node "$PROJ/ca_registry_smoke.mjs" verify "$XCHG/py_bundle.json"
