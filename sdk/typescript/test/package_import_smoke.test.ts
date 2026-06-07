@@ -5,6 +5,8 @@
  * used by README examples without implying production or compliance readiness.
  */
 
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -17,6 +19,19 @@ import {
   makeSubjectRef,
   verifyProofBundle,
 } from '../src/index.js';
+
+describe('version single source of truth', () => {
+  it('VERSION equals package.json version (no hand-maintained literal)', () => {
+    // VERSION must derive from the package manifest so it cannot drift from the
+    // published tarball. A previously hardcoded literal silently shipped a stale
+    // "1.8.4" inside the 1.9.x/1.10.0 releases; this asserts the invariant.
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string;
+    };
+    expect(VERSION).toBe(pkg.version);
+    expect(VERSION).not.toBe('0.0.0+unknown');
+  });
+});
 
 describe('root package export surface', () => {
   it('exports README quickstart symbols', () => {

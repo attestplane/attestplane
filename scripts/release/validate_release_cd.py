@@ -114,6 +114,51 @@ def read_npm_version(repo_root: Path, metadata_ref: str | None = None) -> str:
         raise ReleaseCdPolicyError("sdk/typescript/package.json missing version") from exc
 
 
+# Both SDKs must derive their runtime version from package metadata (pyproject
+# `version` / package.json `version`) rather than a hand-maintained literal, so
+# the module-level version can never drift from the published artifact. A
+# hardcoded literal previously shipped a stale "1.8.4" inside 1.9.x/1.10.0.
+# The optional `(?::[^=]+)?` tolerates a type annotation (`VERSION: string =`,
+# `__version__: str =`); the char class includes a backtick so a template
+# literal (`VERSION = `1.8.4``) is also caught.
+_VERSION_SOURCE_LITERALS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "sdk/python/src/attestplane/__init__.py",
+        re.compile(r'^__version__\b\s*(?::[^=]+)?=\s*["\']\d', re.M),
+    ),
+    (
+        "sdk/typescript/src/index_version.ts",
+        re.compile(r'\bVERSION\b\s*(?::[^=]+)?=\s*["\'`]\d'),
+    ),
+)
+
+
+def assert_version_sources_derive(repo_root: Path, metadata_ref: str | None = None) -> None:
+    """Fail if either SDK reintroduces a hand-maintained version literal.
+
+    Tolerant of a missing source file (other gates cover structural absence);
+    this guard only rejects a *present* file that hardcodes the version,
+    blocking reintroduction of the literal-drift class of bug.
+    """
+    for rel_path, literal_re in _VERSION_SOURCE_LITERALS:
+        if metadata_ref is not None:
+            try:
+                text = _git_show_text(repo_root, metadata_ref, rel_path)
+            except (ReleaseCdPolicyError, subprocess.CalledProcessError):
+                # Source file absent from the ref -> tolerated (see docstring).
+                continue
+        else:
+            source = repo_root / rel_path
+            if not source.is_file():
+                continue
+            text = source.read_text(encoding="utf-8")
+        if literal_re.search(text):
+            raise ReleaseCdPolicyError(
+                f"{rel_path} reintroduces a hardcoded version literal; the SDK "
+                f"version must derive from package metadata (single source of truth)"
+            )
+
+
 def decide_release(
     *,
     release_tag: str,
@@ -145,6 +190,8 @@ def decide_release(
             f"npm package version {npm_version!r} does not match {release_tag!r}; "
             f"expected {expected_npm!r}"
         )
+
+    assert_version_sources_derive(repo_root, metadata_ref=metadata_ref)
 
     return ReleaseCdDecision(
         release_tag=release_tag,

@@ -158,3 +158,69 @@ def test_release_cd_policy_can_read_metadata_from_git_ref(tmp_path: Path) -> Non
     )
 
     assert decision.npm_dist_tag == "rc"
+
+
+def _write_version_sources(root: Path, *, py_body: str, ts_body: str) -> None:
+    py_init = root / "sdk/python/src/attestplane/__init__.py"
+    ts_ver = root / "sdk/typescript/src/index_version.ts"
+    py_init.parent.mkdir(parents=True, exist_ok=True)
+    ts_ver.parent.mkdir(parents=True, exist_ok=True)
+    py_init.write_text(py_body, encoding="utf-8")
+    ts_ver.write_text(ts_body, encoding="utf-8")
+
+
+def test_version_sources_derive_accepts_derived_version(tmp_path: Path) -> None:
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__ = _pkg_version("attestplane")\n',
+        ts_body="export const VERSION: string = readPackageVersion();\n",
+    )
+    # No source file present -> tolerated; present-and-derived -> ok.
+    validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_tolerates_missing_files(tmp_path: Path) -> None:
+    validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_rejects_python_literal(tmp_path: Path) -> None:
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__ = "1.8.4"\n',
+        ts_body="export const VERSION: string = readPackageVersion();\n",
+    )
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
+        validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_rejects_typescript_literal(tmp_path: Path) -> None:
+    # Use the real idiomatic form the file would actually regress to
+    # (`export const VERSION: string = '...'`), not the bare form, so the test
+    # exercises the same shape the regex must catch.
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__ = _pkg_version("attestplane")\n',
+        ts_body="export const VERSION: string = '1.8.4';\n",
+    )
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
+        validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_rejects_typescript_template_literal(tmp_path: Path) -> None:
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__ = _pkg_version("attestplane")\n',
+        ts_body="export const VERSION = `1.8.4`;\n",
+    )
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
+        validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_rejects_annotated_python_literal(tmp_path: Path) -> None:
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__: str = "1.8.4"\n',
+        ts_body="export const VERSION: string = readPackageVersion();\n",
+    )
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
+        validate_release_cd.assert_version_sources_derive(tmp_path)
