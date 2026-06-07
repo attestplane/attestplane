@@ -17,7 +17,13 @@ PY_SRC = REPO_ROOT / "sdk" / "python" / "src"
 
 
 def test_import_attestplane_smoke() -> None:
-    assert attestplane.__version__ == "1.8.4"
+    # __version__ must equal the installed package metadata version (SSOT),
+    # never a hand-maintained literal. A previously hardcoded literal silently
+    # shipped a stale "1.8.4" inside the 1.9.x/1.10.0 wheels; assert the
+    # consistency invariant so the drift cannot recur.
+    from importlib.metadata import version as _pkg_version
+
+    assert attestplane.__version__ == _pkg_version("attestplane")
     assert attestplane.canonicalize({"a": 1}) == b'{"a":1}'
 
 

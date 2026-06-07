@@ -218,7 +218,17 @@ from attestplane.verify_reason_codes import (
     verify_reason_code_matches_format,
 )
 
-__version__ = "1.8.4"
+# Single source of truth: derive the version from the installed package
+# metadata (pyproject `version`) rather than a hand-maintained literal, so the
+# module's self-reported version can never drift from the published artifact.
+# (A hardcoded literal silently shipped "1.8.4" inside the 1.9.x/1.10.0 wheels.)
+try:
+    from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+    from importlib.metadata import version as _pkg_version
+
+    __version__ = _pkg_version("attestplane")
+except _PackageNotFoundError:  # pragma: no cover - source tree without dist-info
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     "ALL_EVENT_TYPES_V1",
