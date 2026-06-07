@@ -194,10 +194,33 @@ def test_version_sources_derive_rejects_python_literal(tmp_path: Path) -> None:
 
 
 def test_version_sources_derive_rejects_typescript_literal(tmp_path: Path) -> None:
+    # Use the real idiomatic form the file would actually regress to
+    # (`export const VERSION: string = '...'`), not the bare form, so the test
+    # exercises the same shape the regex must catch.
     _write_version_sources(
         tmp_path,
         py_body='__version__ = _pkg_version("attestplane")\n',
-        ts_body="export const VERSION = '1.8.4';\n",
+        ts_body="export const VERSION: string = '1.8.4';\n",
+    )
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
+        validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_rejects_typescript_template_literal(tmp_path: Path) -> None:
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__ = _pkg_version("attestplane")\n',
+        ts_body="export const VERSION = `1.8.4`;\n",
+    )
+    with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
+        validate_release_cd.assert_version_sources_derive(tmp_path)
+
+
+def test_version_sources_derive_rejects_annotated_python_literal(tmp_path: Path) -> None:
+    _write_version_sources(
+        tmp_path,
+        py_body='__version__: str = "1.8.4"\n',
+        ts_body="export const VERSION: string = readPackageVersion();\n",
     )
     with pytest.raises(validate_release_cd.ReleaseCdPolicyError, match="hardcoded version literal"):
         validate_release_cd.assert_version_sources_derive(tmp_path)

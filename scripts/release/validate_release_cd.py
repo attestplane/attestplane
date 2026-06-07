@@ -118,9 +118,18 @@ def read_npm_version(repo_root: Path, metadata_ref: str | None = None) -> str:
 # `version` / package.json `version`) rather than a hand-maintained literal, so
 # the module-level version can never drift from the published artifact. A
 # hardcoded literal previously shipped a stale "1.8.4" inside 1.9.x/1.10.0.
+# The optional `(?::[^=]+)?` tolerates a type annotation (`VERSION: string =`,
+# `__version__: str =`); the char class includes a backtick so a template
+# literal (`VERSION = `1.8.4``) is also caught.
 _VERSION_SOURCE_LITERALS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("sdk/python/src/attestplane/__init__.py", re.compile(r'^__version__\s*=\s*["\']\d', re.M)),
-    ("sdk/typescript/src/index_version.ts", re.compile(r'\bVERSION\s*=\s*["\']\d')),
+    (
+        "sdk/python/src/attestplane/__init__.py",
+        re.compile(r'^__version__\b\s*(?::[^=]+)?=\s*["\']\d', re.M),
+    ),
+    (
+        "sdk/typescript/src/index_version.ts",
+        re.compile(r'\bVERSION\b\s*(?::[^=]+)?=\s*["\'`]\d'),
+    ),
 )
 
 
