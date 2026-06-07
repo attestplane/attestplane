@@ -60,14 +60,22 @@ attestplane is openly published under Apache-2.0 on PyPI and npm, so
 package. The control is the **opt-in channel and the explicit pre-GA boundary**:
 
 - The controlled audience is integrators who **explicitly opt in** to the CA
-  line by installing the `ca` dist-tag or pinning the exact CA version
-  (`npm install @attestplane/attestplane@ca` / `pip install attestplane==1.10.1`),
-  for **pre-GA evaluation and integration** of the audit substrate.
+  line for **pre-GA evaluation and integration** of the audit substrate. On npm
+  this opt-in is the `ca` dist-tag (`npm install @attestplane/attestplane@ca`).
+  PyPI has no dist-tag concept, so there the opt-in is an **informed version
+  pin** (`pip install attestplane==1.10.1`) plus the pre-GA boundary that
+  travels with the release note — not a channel gate.
 - CA is **not** offered as a GA default, a production-readiness signal, or any
   regulatory/legal-compliance posture; those boundaries travel with the release
   note ([`v1.10.1.md`](../release-notes/v1.10.1.md)).
 - The default `latest` install resolving to this version reflects the openly
   published pre-GA line, not a production-readiness recommendation.
+
+**Ratification:** to satisfy criterion #1 (a *written maintainer decision*),
+the maintainer records their name/handle and the date here when accepting or
+editing the above — flipping the status alone is not the decision:
+
+- Ratified by: `[MAINTAINER NAME/HANDLE]` on `[DATE]`.
 
 ## Rollback Owner
 
