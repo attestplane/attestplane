@@ -24,6 +24,9 @@ def test_import_attestplane_smoke() -> None:
     from importlib.metadata import version as _pkg_version
 
     assert attestplane.__version__ == _pkg_version("attestplane")
+    # Guard the fallback: a real install must never resolve to the
+    # dist-info-missing sentinel.
+    assert attestplane.__version__ != "0.0.0+unknown"
     assert attestplane.canonicalize({"a": 1}) == b'{"a":1}'
 
 
