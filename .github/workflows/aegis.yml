@@ -1,0 +1,44 @@
+# Aegis AI 代码审核 CI 流水线（深度门 — 全 9 层，self-hosted runner，零额外费用）
+name: Aegis AI Code Review
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  aegis:
+    runs-on: [self-hosted, linux, x64, aegis]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Install aegis
+        run: cargo install --git https://github.com/merchloubna70-dot/aegis
+
+      - name: Install security tools
+        run: |
+          pip install semgrep 2>/dev/null || true
+          which gitleaks || curl -sSfL https://raw.githubusercontent.com/zricethezav/gitleaks/master/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Run Aegis
+        run: aegis check . --generator copilot --format both
+        env:
+          AEGIS_LLM_KEY: ${{ secrets.AEGIS_LLM_KEY }}
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aegis-report
+          path: |
+            aegis-report.md
+            aegis-report.json
