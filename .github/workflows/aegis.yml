@@ -34,13 +34,23 @@ jobs:
           which gitleaks || curl -sSfL https://raw.githubusercontent.com/zricethezav/gitleaks/master/scripts/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Run Aegis
-        run: aegis check . --generator copilot --format both --report-to http://127.0.0.1:3001/report
+        # 快速门本地跑 + 全层结果 POST 到 webhook 服务的 /report（aegis-full context）。
+        # 缺 --report-to 时 aegis-full 永不触发（审计 C2）。
+        run: >-
+          aegis check .
+          --generator copilot
+          --format both
+          --report-to "${AEGIS_REPORT_TO}"
         env:
           AEGIS_LLM_KEY: ${{ secrets.AEGIS_LLM_KEY }}
+          # /report 端点地址（同机 webhook 服务，默认 3001 端口）
+          AEGIS_REPORT_TO: ${{ secrets.AEGIS_REPORT_TO || 'http://127.0.0.1:3001/report' }}
+          # Bearer token：经 env 传入，不走 CLI argv（审计 M6，ps 不可见）
           AEGIS_REPORT_TOKEN: ${{ secrets.AEGIS_REPORT_TOKEN }}
+          # /report payload 元数据：repo/sha/pr_num 由 finalize() 从环境变量读取
           AEGIS_REPO: ${{ github.repository }}
-          AEGIS_SHA: ${{ github.event.pull_request.head.sha }}
-          AEGIS_PR_NUM: ${{ github.event.pull_request.number }}
+          AEGIS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          AEGIS_PR_NUM: ${{ github.event.pull_request.number || 0 }}
 
       - name: Upload report
         uses: actions/upload-artifact@v4
