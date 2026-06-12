@@ -4,14 +4,18 @@ name: Aegis AI Code Review
 on:
   pull_request:
     branches: [main, master]
+  push:
+    branches: [main, master]   # 直推 main 时事后告警（正常应被 branch protection 拦住）
 
 jobs:
   aegis:
+    # pull_request 触发时正常跑；push 触发只在直推 main 时跑（避免与 PR 触发重复烧 LLM key）
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: [self-hosted, linux, x64, aegis]
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0   # push 多 commit 时需要完整历史
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
