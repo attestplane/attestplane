@@ -63,3 +63,4 @@ data/autodev_state.db-shm
 data/autodev_state.db-wal
 data/temporal-server.log
 data/autodev-worker.log
+.mcp.json
