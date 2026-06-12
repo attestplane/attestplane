@@ -1,0 +1,48 @@
+# aegis.toml — Attestplane 代码审核配置
+[pipeline]
+l0_admission = true
+l1_static = true
+l2_hallucination = true
+l3_unit = false
+l4_diff = false
+l5_semantic = true
+l6_mutation = false
+l7_e2e = false
+l8_canary = false
+
+[thresholds]
+block_below = 60
+review_below = 75
+max_cyclomatic = 15
+max_cognitive = 20
+sast_block_severity = "HIGH"
+
+[weights]
+dependency_reality = 0.18
+security = 0.16
+behavior_regression = 0.16
+test_validity = 0.14
+type_static = 0.12
+intent_alignment = 0.10
+boundary_coverage = 0.08
+integration_e2e = 0.06
+
+[security]
+pin_paths = [
+    "attestplane/signing/",
+    "attestplane/ca/",
+    "deploy/",
+    ".env",
+    "secrets/",
+    "**/hsm*",
+    "**/signing*",
+]
+
+[hallucination.python]
+lock_files = ["requirements.txt", "uv.lock", "poetry.lock"]
+verify_cmd = "pip index versions"
+
+[report]
+format = "markdown"
+output = "aegis-report.md"
+include_fix_hints = true
