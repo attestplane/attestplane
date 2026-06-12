@@ -34,9 +34,13 @@ jobs:
           which gitleaks || curl -sSfL https://raw.githubusercontent.com/zricethezav/gitleaks/master/scripts/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Run Aegis
-        run: aegis check . --generator copilot --format both
+        run: aegis check . --generator copilot --format both --report-to http://127.0.0.1:3001/report
         env:
           AEGIS_LLM_KEY: ${{ secrets.AEGIS_LLM_KEY }}
+          AEGIS_REPORT_TOKEN: ${{ secrets.AEGIS_REPORT_TOKEN }}
+          AEGIS_REPO: ${{ github.repository }}
+          AEGIS_SHA: ${{ github.event.pull_request.head.sha }}
+          AEGIS_PR_NUM: ${{ github.event.pull_request.number }}
 
       - name: Upload report
         uses: actions/upload-artifact@v4
