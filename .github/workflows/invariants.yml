@@ -29,7 +29,7 @@ jobs:
     name: AP-EVD/1.0 schemas/v1 hash lock
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Verify canonical-JSON SHA-256 of every schemas/v1/*.schema.json
         run: bash scripts/check-schema-hashes.sh
 
@@ -37,7 +37,7 @@ jobs:
     name: Accepted ADR Decision sections frozen
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Verify ## Decision SHA-256 of every Accepted ADR
         run: bash scripts/check-adr-frozen-blocks.sh
 
@@ -45,7 +45,7 @@ jobs:
     name: Conformance fixtures byte-frozen
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Verify canonical-JSON SHA-256 of every fixture
         run: bash scripts/check-fixture-hashes.sh
 
@@ -53,7 +53,7 @@ jobs:
     name: Public API manifest drift gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Verify Python/TypeScript public API manifests
         run: bash scripts/check-public-api.sh
 
@@ -61,7 +61,7 @@ jobs:
     name: Deterministic fault-injection gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.12"

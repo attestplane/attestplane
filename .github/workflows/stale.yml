@@ -20,7 +20,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639  # v9.1.0 — pin to SHA per repo convention
+      - uses: actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899  # v9.1.0 — pin to SHA per repo convention
         with:
           days-before-stale: 90
           days-before-close: 30
