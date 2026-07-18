@@ -1,0 +1,11 @@
+# Fleet Firecracker CI — connected 2026-07-18
+# Tool: fc-ci-connect (Go)
+[ci]
+profile = "ci-lite"
+test = "ls && echo OK_attest"
+timeout_sec = 180
+
+[ci.meta]
+name = "attestplane"
+connected = "2026-07-18"
+note = "smoke in alpine FC rootfs; expand when toolchain rootfs lands"
